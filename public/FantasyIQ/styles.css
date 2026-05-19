@@ -277,6 +277,27 @@ h3 {
   margin: 4px 0;
 }
 
+.subscribe-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 38px;
+  margin-top: 12px;
+  border: 1px solid rgba(255, 241, 189, 0.72);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, var(--logo-gold), #b88735),
+    var(--accent-2);
+  color: #27170f;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 900;
+  text-align: center;
+  text-decoration: none;
+  box-shadow: 0 10px 22px rgba(59, 33, 21, 0.18);
+}
+
 .layout {
   position: relative;
   z-index: 1;
