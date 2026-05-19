@@ -13,6 +13,19 @@ from local_env import load_local_env
 API_BASE = "https://api.vercel.com"
 DEFAULT_PROJECT_NAME = "fantasyiq-paid"
 DEFAULT_SEASON = "2026"
+OPTIONAL_ENV_KEYS = [
+    "FANTASY_IQ_CUSTOMER_SLUG",
+    "FANTASY_IQ_CUSTOMER_NAME",
+    "FANTASY_IQ_CUSTOMER_TEAM_ID",
+    "FANTASY_IQ_CUSTOMER_TEAM_NAME",
+    "FANTASY_IQ_CUSTOMER_STATUS",
+    "FANTASY_IQ_LEAGUE_NAME",
+    "FANTASY_IQ_DEFAULT_CUSTOMER",
+    "FANTASY_IQ_CUSTOMERS_JSON",
+    "FANTASYIQ_ADMIN_TOKEN",
+    "FANTASYIQ_DASHBOARD_URL",
+    "STRIPE_WEBHOOK_SECRET",
+]
 
 
 def env(name: str, default: str = "") -> str:
@@ -84,6 +97,10 @@ def main() -> int:
         upsert_env_var(token, project, "FANTASY_IQ_LEAGUE_ID", league_id),
         upsert_env_var(token, project, "FANTASY_IQ_SEASON", season),
     ]
+    for key in OPTIONAL_ENV_KEYS:
+        value = env(key)
+        if value:
+            results.append(upsert_env_var(token, project, key, value))
 
     failed = [
         failure
@@ -97,6 +114,9 @@ def main() -> int:
     print(f"Updated Vercel env vars for project: {project}")
     print(f"FANTASY_IQ_LEAGUE_ID={league_id}")
     print(f"FANTASY_IQ_SEASON={season}")
+    for key in OPTIONAL_ENV_KEYS:
+        if env(key):
+            print(f"{key}=set")
     print("Redeploy the Vercel project after changing env vars.")
     return 0
 
