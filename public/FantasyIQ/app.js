@@ -411,6 +411,14 @@ function metricValue(value, fallback = "N/A") {
   return value === undefined || value === null || value === "" ? fallback : value;
 }
 
+function lastYearValue(row) {
+  const value = row?.["Last Year PPR"];
+  if (value === undefined || value === null || value === "" || value === "N/A") {
+    return row?.Category === "Rookie" ? "Rookie" : "No 2025";
+  }
+  return value;
+}
+
 function filteredRows() {
   if (!boardData) return [];
   const query = boardSearch.value.trim().toLowerCase();
@@ -481,7 +489,7 @@ function renderBoard() {
               return `<td><span class="tier-pill">${row["Pos Tier"] || cellValue(row, column)}</span></td>`;
             }
             if (column === "Last Year PPR") {
-              return `<td class="number">${metricValue(row[column])}</td>`;
+              return `<td class="number">${lastYearValue(row)}</td>`;
             }
             const numberClass = typeof row[column] === "number" ? " class=\"number\"" : "";
             return `<td${numberClass}>${cellValue(row, column)}</td>`;
@@ -640,7 +648,7 @@ function renderPlayerAutocomplete(config) {
   }
   box.innerHTML = suggestions
     .map((row, index) => {
-      const meta = `#${row.Rank} / ${row.Pos} / ${row.Team || "FA"} / Proj ${metricValue(row["Proj PPR Pts"])} / LY ${metricValue(row["Last Year PPR"])}`;
+      const meta = `#${row.Rank} / ${row.Pos} / ${row.Team || "FA"} / Proj ${metricValue(row["Proj PPR Pts"])} / LY ${lastYearValue(row)}`;
       return `<button class="player-suggestion ${index === 0 ? "active" : ""}" type="button" data-index="${index}">
         <span><strong>${htmlEscape(row.Player)}</strong><small>${htmlEscape(meta)}</small></span>
         <em>${Number(row["Value Score"] || 0).toFixed(1)}</em>
@@ -729,7 +737,7 @@ function showAnalysis(row) {
       <div class="analysis-chip"><span>Position Tier</span><strong>${row["Pos Tier"]}</strong></div>
       <div class="analysis-chip"><span>Pos Rank</span><strong>${row.Pos}${row["Pos Rank"]}</strong></div>
       <div class="analysis-chip"><span>Proj PPR</span><strong>${row["Proj PPR Pts"]}</strong></div>
-      <div class="analysis-chip"><span>Last Year</span><strong>${metricValue(row["Last Year PPR"])}</strong></div>
+      <div class="analysis-chip"><span>Last Year</span><strong>${lastYearValue(row)}</strong></div>
       <div class="analysis-chip"><span>Value</span><strong>${row["Value Score"]}</strong></div>
       <div class="analysis-chip"><span>Risk</span><strong>${row.Risk}/10</strong></div>
       <div class="analysis-chip"><span>Volume</span><strong>${row.Volume}</strong></div>
@@ -757,7 +765,7 @@ function showTrendAnalysis(row) {
       <div class="analysis-chip"><span>Board Rank</span><strong>${row["Board Rank"] || "Watch"}</strong></div>
       <div class="analysis-chip"><span>Position Tier</span><strong>${row["Pos Tier"] || "Watch"}</strong></div>
       <div class="analysis-chip"><span>Proj PPR</span><strong>${row["Proj PPR Pts"] || "TBD"}</strong></div>
-      <div class="analysis-chip"><span>Last Year</span><strong>${metricValue(row["Last Year PPR"])}</strong></div>
+      <div class="analysis-chip"><span>Last Year</span><strong>${lastYearValue(row)}</strong></div>
     </div>
     <p><strong>${row["Draft Action"]}</strong></p>
     <p><strong>Source signal:</strong> ${row["Source Signal"]}</p>
