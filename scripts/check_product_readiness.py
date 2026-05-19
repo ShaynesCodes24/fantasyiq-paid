@@ -59,6 +59,19 @@ def dashboard_check() -> CheckResult:
     return CheckResult("Dashboard", "FAIL", f"{DASHBOARD_URL} is neither demo mode nor paid customer mode")
 
 
+def root_check() -> CheckResult:
+    status, body = fetch(ROOT_URL)
+    if status != 200:
+        return CheckResult("Root URL", "FAIL", f"{ROOT_URL} returned HTTP {status}")
+    if "FantasyIQ" not in body:
+        return CheckResult("Root URL", "FAIL", f"{ROOT_URL} missing: FantasyIQ")
+    if "Start setup" in body and "buy.stripe.com" in body:
+        return CheckResult("Root URL", "PASS", f"{ROOT_URL} is in public sales mode")
+    if "Active" in body and "Configured for" in body:
+        return CheckResult("Root URL", "PASS", f"{ROOT_URL} redirects to paid customer dashboard")
+    return CheckResult("Root URL", "FAIL", f"{ROOT_URL} is neither sales mode nor paid dashboard mode")
+
+
 def stripe_check() -> CheckResult:
     status, _ = fetch(STRIPE_URL)
     if 200 <= status < 400:
@@ -115,7 +128,7 @@ def board_freshness_check() -> CheckResult:
 
 def main() -> int:
     checks = [
-        page_check("Landing page", ROOT_URL, ["FantasyIQ", "buy.stripe.com"]),
+        root_check(),
         dashboard_check(),
         page_check("Terms", f"{SITE_URL}/terms.html", ["Terms"]),
         page_check("Privacy", f"{SITE_URL}/privacy.html", ["Privacy"]),

@@ -9,6 +9,11 @@
   },
   "redirects": [
     {
+      "source": "/",
+      "destination": "/FantasyIQ/",
+      "permanent": false
+    },
+    {
       "source": "/FantasyIQ",
       "destination": "/FantasyIQ/",
       "permanent": false
