@@ -1,4 +1,4 @@
-# Fantasy IQ Launch Checklist
+# FantasyIQ Launch Checklist
 
 ## Before Selling
 

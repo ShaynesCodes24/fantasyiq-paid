@@ -1,9 +1,9 @@
 window.FANTASY_IQ_CONFIG = {
-  siteName: "fantasyiq",
+  siteName: "FantasyIQ",
   leagueName: "League Command Center",
   leagueSubtitle: "Configurable ESPN Fantasy Platform",
   logoUrl: "./assets/fantasy-iq-logo.svg",
-  logoAlt: "fantasyiq league logo",
+  logoAlt: "FantasyIQ league logo",
   draftCardLabel: "Subscription",
   draftCardValue: "$25 / year",
   draftCardNote: "Concierge setup for one ESPN league",

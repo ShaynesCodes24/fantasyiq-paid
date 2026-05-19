@@ -1,4 +1,4 @@
-﻿const navItems = document.querySelectorAll(".nav-item");
+const navItems = document.querySelectorAll(".nav-item");
 const panels = document.querySelectorAll(".panel");
 const tabs = document.querySelectorAll(".tab");
 const plans = document.querySelectorAll(".plan");
@@ -90,7 +90,7 @@ let selectedBoardPlayerKey = null;
 const LIVE_SYNC_INTERVAL_MS = 8000;
 
 function applyAppConfig() {
-  const siteName = appConfig.siteName || "fantasyiq";
+  const siteName = appConfig.siteName || "FantasyIQ";
   document.title = siteName;
 
   const brandTitle = document.querySelector(".brand-lockup h1");

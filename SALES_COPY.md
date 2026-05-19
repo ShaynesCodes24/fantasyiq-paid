@@ -1,9 +1,9 @@
-# Fantasy IQ Sales Copy
+# FantasyIQ Sales Copy
 
 ## Short Offer
 
 ```text
-Fantasy IQ is a custom ESPN fantasy football dashboard for your league.
+FantasyIQ is a custom ESPN fantasy football dashboard for your league.
 
 For $25/year, I configure a private dashboard link for your public ESPN league
 with live draft sync, ranked draft boards, mock draft practice, trade checks,
@@ -16,7 +16,7 @@ https://buy.stripe.com/eVq3cvdN71GX84E917efC00
 ## Checkout Description
 
 ```text
-Fantasy IQ League Dashboard - $25/year
+FantasyIQ League Dashboard - $25/year
 
 Includes one manually configured dashboard for one public ESPN fantasy football
 league. After payment, you will submit your ESPN league ID, season, league name,
@@ -26,7 +26,7 @@ draft date, and logo. Setup is handled manually.
 ## DM Reply
 
 ```text
-Yep, I can set up Fantasy IQ for your ESPN league. It is $25/year for one league.
+Yep, I can set up FantasyIQ for your ESPN league. It is $25/year for one league.
 
 I will need your ESPN league ID, season, draft date/time, league name, and logo.
 Live draft sync currently requires the ESPN league to be public.

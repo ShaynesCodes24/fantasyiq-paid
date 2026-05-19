@@ -11,7 +11,7 @@ https://buy.stripe.com/eVq3cvdN71GX84E917efC00
 ## Recommended Payment Link
 
 ```text
-Product name: Fantasy IQ League Dashboard
+Product name: FantasyIQ League Dashboard
 Price: $25/year
 Quantity: 1
 Description: One manually configured dashboard for one public ESPN fantasy football league.
@@ -25,7 +25,7 @@ Description: One manually configured dashboard for one public ESPN fantasy footb
 4. Add a new product:
 
 ```text
-Name: Fantasy IQ League Dashboard
+Name: FantasyIQ League Dashboard
 Description: One manually configured dashboard for one public ESPN fantasy football league.
 Price: $25.00 USD
 Billing period: Yearly / recurring
@@ -59,7 +59,7 @@ Do not paste your Stripe secret key into chat, put it in documentation, or commi
 it to the repo. The script creates:
 
 ```text
-Product: Fantasy IQ League Dashboard
+Product: FantasyIQ League Dashboard
 Price: $25/year recurring
 Required checkout fields: ESPN league ID, ESPN season, League name
 Support email metadata: shayneholladay@gmail.com

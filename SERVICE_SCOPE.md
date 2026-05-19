@@ -1,10 +1,10 @@
-# Fantasy IQ Service Scope
+# FantasyIQ Service Scope
 
 This is the plain-language scope for the $25/year concierge product.
 
 ## Included
 
-- One Fantasy IQ dashboard for one ESPN fantasy football league.
+- One FantasyIQ dashboard for one ESPN fantasy football league.
 - Manual setup after payment.
 - League name, subtitle, logo, and ESPN league ID configuration.
 - Live draft sync for public ESPN leagues.

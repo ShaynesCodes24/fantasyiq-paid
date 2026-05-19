@@ -1,6 +1,6 @@
-# Fantasy IQ Paid Customer Deploy
+# FantasyIQ Paid Customer Deploy
 
-White-label deploy package for a paid Fantasy IQ league dashboard. The first
+White-label deploy package for a paid FantasyIQ league dashboard. The first
 release is a concierge setup product: customers pay, send their ESPN league
 details, and you configure/deploy their dashboard manually.
 
@@ -64,7 +64,7 @@ Output Directory: dist
 Use this positioning for the paid offer:
 
 ```text
-Fantasy IQ gives your ESPN fantasy football league a custom draft command
+FantasyIQ gives your ESPN fantasy football league a custom draft command
 center with live public-league draft sync, ranked boards, mock draft practice,
 trade discipline, and league branding.
 ```
@@ -107,7 +107,7 @@ public/FantasyIQ/config.js
 Common fields:
 
 ```js
-siteName: "fantasyiq",
+siteName: "FantasyIQ",
 leagueName: "Customer League Name",
 leagueSubtitle: "ESPN PPR Redraft",
 logoUrl: "./assets/league-logo.jpeg",

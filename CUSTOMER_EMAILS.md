@@ -5,9 +5,9 @@ Replace bracketed placeholders before sending.
 ## After Payment
 
 ```text
-Subject: Fantasy IQ setup details
+Subject: FantasyIQ setup details
 
-Thanks for grabbing Fantasy IQ.
+Thanks for grabbing FantasyIQ.
 
 I will configure your ESPN league dashboard manually. Please reply with the
 details below:
@@ -34,11 +34,11 @@ shayneholladay@gmail.com
 ## Public League Problem
 
 ```text
-Subject: Fantasy IQ live sync needs public ESPN access
+Subject: FantasyIQ live sync needs public ESPN access
 
 I checked your ESPN league and the live sync endpoint is not publicly available.
 
-Fantasy IQ v1 supports public ESPN leagues. If you want live draft sync, please
+FantasyIQ v1 supports public ESPN leagues. If you want live draft sync, please
 make the league public before draft day and send me the league ID again.
 
 The rest of the dashboard can still be configured, but live ESPN draft sync will
@@ -48,9 +48,9 @@ not work until the league is public.
 ## Delivery
 
 ```text
-Subject: Your Fantasy IQ dashboard is live
+Subject: Your FantasyIQ dashboard is live
 
-Your Fantasy IQ dashboard is ready:
+Your FantasyIQ dashboard is ready:
 
 [dashboard link]
 
@@ -68,9 +68,9 @@ shayneholladay@gmail.com
 ## Renewal Reminder
 
 ```text
-Subject: Fantasy IQ renewal reminder
+Subject: FantasyIQ renewal reminder
 
-Your Fantasy IQ dashboard renews on [renewal date].
+Your FantasyIQ dashboard renews on [renewal date].
 
 The renewal is $25/year for your ESPN league dashboard. Reply here if you want
 to renew, update your league details, or cancel before renewal.
@@ -79,7 +79,7 @@ to renew, update your league details, or cancel before renewal.
 ## Support Reply
 
 ```text
-Subject: Re: Fantasy IQ support
+Subject: Re: FantasyIQ support
 
 Thanks for the note. I will check the dashboard setup and ESPN sync.
 
