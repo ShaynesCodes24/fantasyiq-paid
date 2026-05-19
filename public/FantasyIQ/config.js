@@ -2,6 +2,7 @@ window.FANTASY_IQ_CONFIG = {
   siteName: "FantasyIQ",
   leagueName: "No Guts, No Glory",
   leagueSubtitle: "ESPN league 584856941 / season 2026",
+  defaultLoadout: "katelyn",
   customerName: "Katelyn Holladay",
   customerTeamName: "KatAttack",
   customerTeamId: "5",
@@ -23,4 +24,28 @@ window.FANTASY_IQ_CONFIG = {
   heroSubtitle:
     "Katelyn's KatAttack command center for live draft sync, player values, mock tracking, and trade discipline.",
   useEspnLeagueBranding: true,
+  loadouts: {
+    katelyn: {
+      customerName: "Katelyn Holladay",
+      customerTeamName: "KatAttack",
+      customerTeamId: "5",
+      draftCardValue: "Active",
+      draftCardNote: "Katelyn Holladay / KatAttack",
+      demoLabel: "Customer dashboard",
+      demoMessage: "Configured for No Guts, No Glory.",
+      heroSubtitle:
+        "Katelyn's KatAttack command center for live draft sync, player values, mock tracking, and trade discipline.",
+    },
+    shayne: {
+      customerName: "Shayne Holladay",
+      customerTeamName: "Gronk if you like TDs",
+      customerTeamId: "1",
+      draftCardValue: "Owner",
+      draftCardNote: "Shayne Holladay / Gronk if you like TDs",
+      demoLabel: "Owner dashboard",
+      demoMessage: "Shayne's owner loadout for No Guts, No Glory.",
+      heroSubtitle:
+        "Shayne's Gronk if you like TDs command center for live draft sync, player values, mock tracking, and trade discipline.",
+    },
+  },
 };

@@ -91,7 +91,8 @@ const footballersTakeType = document.querySelector("#footballers-take-type");
 const footballersRank = document.querySelector("#footballers-rank");
 const footballersMarketPick = document.querySelector("#footballers-market-pick");
 const footballersTakeContext = document.querySelector("#footballers-take-context");
-const appConfig = window.FANTASY_IQ_CONFIG || {};
+const appConfig = resolveAppConfig(window.FANTASY_IQ_CONFIG || {});
+window.FANTASY_IQ_ACTIVE_CONFIG = appConfig;
 
 let boardData = null;
 let activeBoard = "combined";
@@ -102,6 +103,36 @@ let tradeHistoryData = null;
 let selectedBoardPlayerKey = null;
 const LIVE_SYNC_INTERVAL_MS = 8000;
 let activePlayerAutocomplete = null;
+
+function resolveAppConfig(config) {
+  const params = new URLSearchParams(window.location.search);
+  const loadouts = config.loadouts || {};
+  const requestedLoadout = (params.get("loadout") || params.get("customer") || params.get("dashboard") || "").toLowerCase();
+  const defaultLoadout = config.defaultLoadout && loadouts[config.defaultLoadout] ? config.defaultLoadout : "";
+  const loadoutKey = requestedLoadout && loadouts[requestedLoadout] ? requestedLoadout : defaultLoadout;
+  const loadoutConfig = loadoutKey ? loadouts[loadoutKey] : {};
+  const merged = { ...config, ...loadoutConfig, loadoutKey: loadoutKey || "default" };
+
+  if (params.get("name")) merged.customerName = params.get("name");
+  if (params.get("teamName")) merged.customerTeamName = params.get("teamName");
+  if (params.get("teamId")) merged.customerTeamId = params.get("teamId");
+
+  return merged;
+}
+
+function loadoutStorageKey(key) {
+  return `fantasy-dashboard:${appConfig.loadoutKey || "default"}:${key}`;
+}
+
+function customerBrandSubtitle(fallbackLeagueName) {
+  if (appConfig.customerName && appConfig.customerTeamName) {
+    return `${appConfig.customerName} / ${appConfig.customerTeamName}`;
+  }
+  if (appConfig.customerName && fallbackLeagueName) {
+    return `${appConfig.customerName} / ${fallbackLeagueName}`;
+  }
+  return appConfig.leagueSubtitle || "Configurable ESPN Fantasy Platform";
+}
 
 function applyAppConfig() {
   const siteName = appConfig.siteName || "FantasyIQ";
@@ -125,9 +156,7 @@ function applyAppConfig() {
   if (brandTitle) brandTitle.textContent = siteName;
   if (brandEyebrow) brandEyebrow.textContent = appConfig.customerTeamName || appConfig.leagueName || "League Command Center";
   if (brandSubtitle) {
-    brandSubtitle.textContent = appConfig.customerName && appConfig.leagueName
-      ? `${appConfig.customerName} / ${appConfig.leagueName}`
-      : appConfig.leagueSubtitle || "Configurable ESPN Fantasy Platform";
+    brandSubtitle.textContent = customerBrandSubtitle(appConfig.leagueName);
   }
   if (logo && appConfig.logoUrl) logo.src = appConfig.logoUrl;
   if (logo) logo.alt = appConfig.logoAlt || `${siteName} league logo`;
@@ -176,7 +205,7 @@ function applyEspnLeagueBranding() {
   if (brandEyebrow) brandEyebrow.textContent = appConfig.customerTeamName || liveDraft.leagueName || "League Command Center";
   if (brandSubtitle && liveDraft.leagueId) {
     brandSubtitle.textContent = appConfig.customerName
-      ? `${appConfig.customerName} / ${liveDraft.leagueName || "ESPN league"}`
+      ? customerBrandSubtitle(liveDraft.leagueName || "ESPN league")
       : `ESPN league ${liveDraft.leagueId} / season ${liveDraft.season || ""}`.trim();
   }
   if (logo && liveDraft.leagueLogo) {
@@ -1403,7 +1432,7 @@ function tradeHistoryTeamName(teamId) {
 
 function renderTradeHistoryTeamOptions() {
   if (!tradeHistoryTeam || !tradeHistoryData?.teams?.length) return;
-  const saved = localStorage.getItem("fantasy-dashboard:trade-history-team") || tradeHistoryTeam.value || appConfig.customerTeamId || "";
+  const saved = localStorage.getItem(loadoutStorageKey("trade-history-team")) || tradeHistoryTeam.value || appConfig.customerTeamId || "";
   tradeHistoryTeam.innerHTML = tradeHistoryData.teams
     .map((team) => `<option value="${team.teamId}">${htmlEscape(team.teamName)}</option>`)
     .join("");
@@ -1918,13 +1947,14 @@ function renderLiveTierBoard() {
 
 function renderTeamOptions() {
   if (!myTeamSelect || !liveDraft?.teams) return;
-  const saved = localStorage.getItem("fantasy-dashboard:my-team") || myTeamSelect.value || appConfig.customerTeamId || "";
+  const teamStorageKey = loadoutStorageKey("my-team");
+  const saved = localStorage.getItem(teamStorageKey) || myTeamSelect.value || appConfig.customerTeamId || "";
   myTeamSelect.innerHTML = `<option value="">Choose your team</option>${liveDraft.teams
     .map((team) => `<option value="${team.teamId}">${team.teamName}${team.manager ? ` (${team.manager})` : ""}</option>`)
     .join("")}`;
   if (saved) myTeamSelect.value = saved;
-  if (!localStorage.getItem("fantasy-dashboard:my-team") && appConfig.customerTeamId) {
-    localStorage.setItem("fantasy-dashboard:my-team", appConfig.customerTeamId);
+  if (!localStorage.getItem(teamStorageKey) && appConfig.customerTeamId) {
+    localStorage.setItem(teamStorageKey, appConfig.customerTeamId);
   }
 }
 
@@ -2906,7 +2936,7 @@ tradeGive?.addEventListener("input", renderTradeCalc);
 tradeGet?.addEventListener("input", renderTradeCalc);
 tradeRoster?.addEventListener("input", renderTradeCalc);
 tradeHistoryTeam?.addEventListener("change", () => {
-  localStorage.setItem("fantasy-dashboard:trade-history-team", tradeHistoryTeam.value);
+  localStorage.setItem(loadoutStorageKey("trade-history-team"), tradeHistoryTeam.value);
   renderTradeHistory();
 });
 reloadTradeHistory?.addEventListener("click", () => loadTradeHistory(true));
@@ -2933,7 +2963,7 @@ function setHideDrafted(value) {
 hideDrafted?.addEventListener("change", () => setHideDrafted(hideDrafted.checked));
 hideDraftedBoard?.addEventListener("change", () => setHideDrafted(hideDraftedBoard.checked));
 myTeamSelect?.addEventListener("change", () => {
-  localStorage.setItem("fantasy-dashboard:my-team", myTeamSelect.value);
+  localStorage.setItem(loadoutStorageKey("my-team"), myTeamSelect.value);
   renderLiveDraft();
 });
 manualSync?.addEventListener("click", () => loadLiveDraft(true));
