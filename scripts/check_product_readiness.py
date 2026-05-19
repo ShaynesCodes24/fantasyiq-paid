@@ -19,6 +19,12 @@ STRIPE_URL = os.environ.get(
 API_URL = os.environ.get("FANTASYIQ_API_URL", f"{SITE_URL}/api/live-draft")
 BOARDS_URL = os.environ.get("FANTASYIQ_BOARDS_URL", f"{SITE_URL}/api/live-boards")
 TRADE_HISTORY_URL = os.environ.get("FANTASYIQ_TRADE_HISTORY_URL", f"{SITE_URL}/api/trade-history")
+SETUP_VALIDATE_URL = os.environ.get(
+    "FANTASYIQ_SETUP_VALIDATE_URL",
+    f"{SITE_URL}/api/setup-validate?leagueId=584856941&teamId=5&season=2026",
+)
+CUSTOMER_STATUS_URL = os.environ.get("FANTASYIQ_CUSTOMER_STATUS_URL", f"{SITE_URL}/api/customer-status?customer=katelyn")
+WEBHOOK_URL = os.environ.get("FANTASYIQ_WEBHOOK_URL", f"{SITE_URL}/api/stripe-webhook")
 
 
 @dataclass
@@ -146,6 +152,40 @@ def trade_history_check() -> CheckResult:
     return CheckResult("Trade history API", "FAIL", f"{TRADE_HISTORY_URL} returned HTTP {status}: {payload.get('error', 'unknown error')}")
 
 
+def setup_validate_check() -> CheckResult:
+    status, body = fetch(SETUP_VALIDATE_URL)
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError:
+        return CheckResult("Setup validator", "FAIL", f"{SETUP_VALIDATE_URL} returned non-JSON HTTP {status}")
+    if status == 200 and payload.get("ok") is True:
+        return CheckResult("Setup validator", "PASS", f"{payload.get('leagueName')} / {payload.get('teamName')} validated")
+    return CheckResult("Setup validator", "FAIL", f"{SETUP_VALIDATE_URL} returned HTTP {status}: {payload.get('message', 'unknown error')}")
+
+
+def customer_status_check() -> CheckResult:
+    status, body = fetch(CUSTOMER_STATUS_URL)
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError:
+        return CheckResult("Customer status API", "FAIL", f"{CUSTOMER_STATUS_URL} returned non-JSON HTTP {status}")
+    if status == 200 and payload.get("ok") is True and payload.get("customer"):
+        customer = payload["customer"]
+        return CheckResult("Customer status API", "PASS", f"{customer.get('customerSlug')} routes to league {customer.get('leagueId')}")
+    return CheckResult("Customer status API", "FAIL", f"{CUSTOMER_STATUS_URL} returned HTTP {status}: {payload.get('message', 'unknown error')}")
+
+
+def webhook_install_check() -> CheckResult:
+    status, body = fetch(WEBHOOK_URL)
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError:
+        return CheckResult("Stripe webhook endpoint", "FAIL", f"{WEBHOOK_URL} returned non-JSON HTTP {status}")
+    if status == 200 and payload.get("ok") is True:
+        return CheckResult("Stripe webhook endpoint", "PASS", "endpoint installed; POST requires STRIPE_WEBHOOK_SECRET")
+    return CheckResult("Stripe webhook endpoint", "FAIL", f"{WEBHOOK_URL} returned HTTP {status}: {payload.get('message', 'unknown error')}")
+
+
 def main() -> int:
     checks = [
         root_check(),
@@ -157,6 +197,11 @@ def main() -> int:
         api_check(),
         board_freshness_check(),
         trade_history_check(),
+        page_check("Setup page", f"{SITE_URL}/setup.html", ["Validate ESPN league details"]),
+        page_check("Admin page", f"{SITE_URL}/admin.html", ["Customer operations"]),
+        setup_validate_check(),
+        customer_status_check(),
+        webhook_install_check(),
     ]
 
     for result in checks:

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import time
 import urllib.error
 import urllib.request
@@ -12,9 +11,11 @@ from http.server import BaseHTTPRequestHandler
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+try:
+    from customer_context import ConfigError, CustomerContext, require_customer_config, resolve_customer_context
+except ModuleNotFoundError:
+    from api.customer_context import ConfigError, CustomerContext, require_customer_config, resolve_customer_context
 
-DEFAULT_SEASON = 2026
-DEFAULT_DEMO_LEAGUE_ID = 584856941
 DEFAULT_LOOKBACK_YEARS = 5
 CACHE_TTL_SECONDS = 900
 
@@ -64,49 +65,12 @@ PRO_TEAM_BY_ID = {
     34: "HOU",
 }
 
-_history_cache: dict[str, Any] = {"key": None, "data": None, "ts": 0.0}
+_history_cache: dict[str, dict[str, Any]] = {}
 _player_cache: dict[int, dict[int, dict[str, Any]]] = {}
-
-
-class ConfigError(RuntimeError):
-    pass
-
-
-def int_env(name: str, default: int | None = None) -> int | None:
-    raw_value = os.environ.get(name)
-    if raw_value is None or raw_value.strip() == "":
-        return default
-    try:
-        return int(raw_value)
-    except ValueError as exc:
-        raise ConfigError(f"{name} must be a number.") from exc
-
-
-CONFIG_ERROR: str | None = None
-try:
-    DEMO_LEAGUE_ID = int_env("FANTASY_IQ_DEMO_LEAGUE_ID", DEFAULT_DEMO_LEAGUE_ID)
-    DEMO_MODE = os.environ.get("FANTASY_IQ_LEAGUE_ID") is None
-    LEAGUE_ID = int_env("FANTASY_IQ_LEAGUE_ID", DEMO_LEAGUE_ID)
-    SEASON = int_env("FANTASY_IQ_SEASON", DEFAULT_SEASON)
-except ConfigError as exc:
-    CONFIG_ERROR = str(exc)
-    DEMO_MODE = False
-    LEAGUE_ID = None
-    SEASON = DEFAULT_SEASON
 
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
-
-
-def require_config() -> tuple[int, int]:
-    if CONFIG_ERROR:
-        raise ConfigError(CONFIG_ERROR)
-    if SEASON is None:
-        raise ConfigError("FANTASY_IQ_SEASON is not configured for this customer dashboard.")
-    if LEAGUE_ID is None:
-        raise ConfigError("FANTASY_IQ_LEAGUE_ID is not configured for this customer dashboard.")
-    return LEAGUE_ID, SEASON
 
 
 def league_url(league_id: int, season: int) -> str:
@@ -446,12 +410,14 @@ def pattern_for_team(team: dict[str, Any], trades: list[dict[str, Any]]) -> dict
     }
 
 
-def build_payload(seasons: list[int], force: bool = False) -> dict[str, Any]:
-    league_id, current_season = require_config()
-    cache_key = f"{league_id}:{','.join(str(season) for season in seasons)}"
+def build_payload(request_path: str, seasons: list[int], force: bool = False) -> dict[str, Any]:
+    context = resolve_customer_context(request_path)
+    league_id, current_season = require_customer_config(context)
+    cache_key = f"{context.cache_key}:{','.join(str(season) for season in seasons)}"
     now = time.time()
-    if not force and _history_cache["key"] == cache_key and _history_cache["data"] and now - _history_cache["ts"] < CACHE_TTL_SECONDS:
-        return _history_cache["data"]
+    cached = _history_cache.get(cache_key)
+    if not force and cached and cached.get("data") and now - float(cached.get("ts") or 0) < CACHE_TTL_SECONDS:
+        return cached["data"]
 
     checked = []
     unavailable = []
@@ -477,9 +443,12 @@ def build_payload(seasons: list[int], force: bool = False) -> dict[str, Any]:
     response = {
         "ok": True,
         "source": "ESPN public league API",
+        "customer": context.public_dict(),
+        "customerSlug": context.slug,
+        "customerTeamId": context.customer_team_id,
         "leagueId": league_id,
         "season": current_season,
-        "demoMode": DEMO_MODE,
+        "demoMode": context.demo_mode,
         "leagueName": league_name,
         "syncedAt": utc_now(),
         "seasonsChecked": checked,
@@ -488,14 +457,13 @@ def build_payload(seasons: list[int], force: bool = False) -> dict[str, Any]:
         "trades": sorted(trades, key=lambda item: (item.get("season") or 0, item.get("date") or ""), reverse=True),
         "teamPatterns": team_patterns,
     }
-    _history_cache["key"] = cache_key
-    _history_cache["data"] = response
-    _history_cache["ts"] = now
+    _history_cache[cache_key] = {"data": response, "ts": now}
     return response
 
 
-def requested_seasons(query: str) -> tuple[list[int], bool]:
-    _, current_season = require_config()
+def requested_seasons(request_path: str, query: str) -> tuple[list[int], bool]:
+    context = resolve_customer_context(request_path)
+    _, current_season = require_customer_config(context)
     params = parse_qs(query)
     force = "force" in params or "force=1" in query
     seasons_param = params.get("seasons", [""])[0]
@@ -516,13 +484,17 @@ def requested_seasons(query: str) -> tuple[list[int], bool]:
     return list(range(current_season, current_season - lookback, -1)), force
 
 
-def error_payload(message: str) -> dict[str, Any]:
+def error_payload(message: str, request_path: str = "") -> dict[str, Any]:
+    try:
+        context = resolve_customer_context(request_path)
+    except ConfigError:
+        context = None
     return {
         "ok": False,
         "source": "ESPN public league API",
-        "leagueId": LEAGUE_ID,
-        "season": SEASON,
-        "demoMode": DEMO_MODE,
+        "leagueId": context.league_id if context else None,
+        "season": context.season if context else None,
+        "demoMode": context.demo_mode if context else False,
         "syncedAt": utc_now(),
         "error": message,
     }
@@ -541,12 +513,12 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         try:
-            seasons, force = requested_seasons(parsed.query)
-            self.send_json(build_payload(seasons, force=force))
+            seasons, force = requested_seasons(self.path, parsed.query)
+            self.send_json(build_payload(self.path, seasons, force=force))
         except ConfigError as exc:
-            self.send_json(error_payload(str(exc)), HTTPStatus.SERVICE_UNAVAILABLE)
+            self.send_json(error_payload(str(exc), self.path), HTTPStatus.SERVICE_UNAVAILABLE)
         except Exception as exc:
-            self.send_json(error_payload(str(exc)), HTTPStatus.BAD_GATEWAY)
+            self.send_json(error_payload(str(exc), self.path), HTTPStatus.BAD_GATEWAY)
 
     def do_HEAD(self) -> None:
         self.send_response(HTTPStatus.OK)

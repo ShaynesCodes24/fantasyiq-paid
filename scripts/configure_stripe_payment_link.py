@@ -16,10 +16,11 @@ DEFAULT_PAYMENT_LINK_URL = "https://buy.stripe.com/eVq3cvdN71GX84E917efC00"
 SUPPORT_EMAIL = "shayneholladay@gmail.com"
 WEBSITE_URL = "https://fantasyiq-paid.vercel.app/"
 DASHBOARD_URL = "https://fantasyiq-paid.vercel.app/FantasyIQ/"
+SETUP_URL = "https://fantasyiq-paid.vercel.app/setup.html"
 
 CONFIRMATION_MESSAGE = (
     "Thanks for subscribing to FantasyIQ. If any checkout field was missed, "
-    f"email {SUPPORT_EMAIL}. To find IDs in ESPN, open your league in a browser: "
+    f"visit {SETUP_URL} or email {SUPPORT_EMAIL}. To find IDs in ESPN, open your league in a browser: "
     "leagueId is in the URL after leagueId=, and teamId appears after teamId= "
     "when viewing your team page."
 )
@@ -133,6 +134,7 @@ def update_payment_link(key: str, link_id: str) -> dict[str, Any]:
             "metadata[support_email]": SUPPORT_EMAIL,
             "metadata[website_url]": WEBSITE_URL,
             "metadata[dashboard_url]": DASHBOARD_URL,
+            "metadata[setup_url]": SETUP_URL,
         },
     )
 

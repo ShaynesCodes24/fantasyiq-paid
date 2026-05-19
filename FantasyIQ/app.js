@@ -124,6 +124,19 @@ function loadoutStorageKey(key) {
   return `fantasy-dashboard:${appConfig.loadoutKey || "default"}:${key}`;
 }
 
+function apiUrl(path, params = {}) {
+  const url = new URL(path, window.location.origin);
+  if (appConfig.loadoutKey) {
+    url.searchParams.set("customer", appConfig.loadoutKey);
+  }
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== false && value !== "") {
+      url.searchParams.set(key, String(value));
+    }
+  });
+  return `${url.pathname}${url.search}`;
+}
+
 function customerBrandSubtitle(fallbackLeagueName) {
   if (appConfig.customerName && appConfig.customerTeamName) {
     return `${appConfig.customerName} / ${appConfig.customerTeamName}`;
@@ -368,7 +381,7 @@ if (initialBoard) {
 }
 
 savedInputs.forEach((input) => {
-  const key = `fantasy-dashboard:${input.dataset.save}`;
+  const key = loadoutStorageKey(input.dataset.save);
   input.checked = localStorage.getItem(key) === "true";
   input.addEventListener("change", () => {
     localStorage.setItem(key, String(input.checked));
@@ -1112,7 +1125,7 @@ function renderMockPickGrades() {
         .join("")}
     </div>
   `;
-  localStorage.setItem("fantasy-dashboard:mock-picks", mockPaste.value);
+  localStorage.setItem(loadoutStorageKey("mock-picks"), mockPaste.value);
 }
 
 function tradeSideValue(text) {
@@ -1536,7 +1549,7 @@ function renderTradeHistory() {
 function loadTradeHistory(force = false) {
   if (!tradeHistoryStatus) return;
   tradeHistoryStatus.textContent = force ? "Refreshing ESPN trade history..." : "Loading ESPN trade history and team tendencies.";
-  fetch(`/api/trade-history?lookback=6${force ? "&force=1" : ""}`, { cache: "no-store" })
+  fetch(apiUrl("/api/trade-history", { lookback: 6, force: force ? 1 : "" }), { cache: "no-store" })
     .then((response) => {
       if (!response.ok) throw new Error(`Trade history returned HTTP ${response.status}`);
       return response.json();
@@ -2498,7 +2511,7 @@ function simStartDraft() {
     if (simStatus) simStatus.innerHTML = "<strong>Board data is still loading.</strong> Try again in a second.";
     return;
   }
-  const selectedSlot = simSlot?.value || localStorage.getItem("fantasy-dashboard:sim-slot") || "random";
+  const selectedSlot = simSlot?.value || localStorage.getItem(loadoutStorageKey("sim-slot")) || "random";
   const slot = selectedSlot === "random" ? Math.floor(Math.random() * 12) + 1 : Number(selectedSlot || 1);
   const teams = {};
   for (let teamSlot = 1; teamSlot <= 12; teamSlot += 1) {
@@ -2512,7 +2525,7 @@ function simStartDraft() {
     picks: [],
     teams,
   };
-  localStorage.setItem("fantasy-dashboard:sim-slot", selectedSlot);
+  localStorage.setItem(loadoutStorageKey("sim-slot"), selectedSlot);
   simAdvanceToUserPick();
   renderMockSimulator();
 }
@@ -2784,7 +2797,7 @@ function liveServerHelp(error) {
 
 function loadLiveDraft(force = false) {
   if (!liveStatus) return;
-  fetch(`/api/live-draft${force ? "?force=1" : ""}`, { cache: "no-store" })
+  fetch(apiUrl("/api/live-draft", { force: force ? 1 : "" }), { cache: "no-store" })
     .then(async (response) => {
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(data?.error || `HTTP ${response.status}`);
@@ -2818,7 +2831,10 @@ function loadBoards() {
     boardStatus.textContent = "Loading live ESPN board...";
   }
   const liveBoardUrl = appConfig.liveBoardUrl || "/api/live-boards";
-  fetch(`${liveBoardUrl}${liveBoardUrl.includes("?") ? "&" : "?"}v=${Date.now()}`, { cache: "no-store" })
+  const boardRequestUrl = liveBoardUrl.startsWith("/api/")
+    ? apiUrl(liveBoardUrl, { v: Date.now() })
+    : `${liveBoardUrl}${liveBoardUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
+  fetch(boardRequestUrl, { cache: "no-store" })
     .then((response) => {
       if (!response.ok) throw new Error(`Live board returned HTTP ${response.status}`);
       return response.json();
@@ -2895,12 +2911,12 @@ footballersTakeType?.addEventListener("change", renderFootballersLayer);
 footballersRank?.addEventListener("input", renderFootballersLayer);
 footballersMarketPick?.addEventListener("input", renderFootballersLayer);
 footballersTakeContext?.addEventListener("input", renderFootballersLayer);
-const savedSimSlot = localStorage.getItem("fantasy-dashboard:sim-slot");
+const savedSimSlot = localStorage.getItem(loadoutStorageKey("sim-slot"));
 if (simSlot && savedSimSlot) {
   simSlot.value = savedSimSlot;
 }
 simSlot?.addEventListener("change", () => {
-  localStorage.setItem("fantasy-dashboard:sim-slot", simSlot.value);
+  localStorage.setItem(loadoutStorageKey("sim-slot"), simSlot.value);
 });
 simStart?.addEventListener("click", simStartDraft);
 simAuto?.addEventListener("click", () => {
@@ -2928,7 +2944,7 @@ simPositionButtons.forEach((button) => {
   });
 });
 if (mockPaste) {
-  mockPaste.value = localStorage.getItem("fantasy-dashboard:mock-picks") || "";
+  mockPaste.value = localStorage.getItem(loadoutStorageKey("mock-picks")) || "";
 }
 gradeMockPicks?.addEventListener("click", renderMockPickGrades);
 calculateTrade?.addEventListener("click", renderTradeCalc);
@@ -2942,7 +2958,7 @@ tradeHistoryTeam?.addEventListener("change", () => {
 reloadTradeHistory?.addEventListener("click", () => loadTradeHistory(true));
 loadTradeHistory();
 
-const savedHideDrafted = localStorage.getItem("fantasy-dashboard:hide-drafted");
+const savedHideDrafted = localStorage.getItem(loadoutStorageKey("hide-drafted"));
 const initialHideDrafted = savedHideDrafted === null ? true : savedHideDrafted === "true";
 if (hideDrafted) hideDrafted.checked = initialHideDrafted;
 if (hideDraftedBoard) hideDraftedBoard.checked = initialHideDrafted;
@@ -2950,7 +2966,7 @@ if (hideDraftedBoard) hideDraftedBoard.checked = initialHideDrafted;
 function setHideDrafted(value) {
   if (hideDrafted) hideDrafted.checked = value;
   if (hideDraftedBoard) hideDraftedBoard.checked = value;
-  localStorage.setItem("fantasy-dashboard:hide-drafted", String(value));
+  localStorage.setItem(loadoutStorageKey("hide-drafted"), String(value));
   renderBoard();
   renderRecommendations();
   renderLiveTierBoard();
@@ -2968,7 +2984,7 @@ myTeamSelect?.addEventListener("change", () => {
 });
 manualSync?.addEventListener("click", () => loadLiveDraft(true));
 liveSyncToggle?.addEventListener("change", () => {
-  localStorage.setItem("fantasy-dashboard:auto-sync", String(liveSyncToggle.checked));
+  localStorage.setItem(loadoutStorageKey("auto-sync"), String(liveSyncToggle.checked));
   if (liveSyncToggle.checked) {
     startLiveSync();
   } else {
@@ -2977,7 +2993,7 @@ liveSyncToggle?.addEventListener("change", () => {
   }
 });
 
-const savedAutoSync = localStorage.getItem("fantasy-dashboard:auto-sync");
+const savedAutoSync = localStorage.getItem(loadoutStorageKey("auto-sync"));
 if (liveSyncToggle && savedAutoSync !== null) {
   liveSyncToggle.checked = savedAutoSync === "true";
 }

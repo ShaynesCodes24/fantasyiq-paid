@@ -14,6 +14,11 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+try:
+    from customer_context import resolve_customer_context
+except ModuleNotFoundError:
+    from api.customer_context import resolve_customer_context
+
 
 DEFAULT_SEASON = 2026
 DEFAULT_LIMIT = 320
@@ -74,7 +79,7 @@ POSITION_COLORS = {
     "DST": "D9E1F2",
 }
 
-_board_cache: dict[str, Any] = {"data": None, "ts": 0.0}
+_board_cache: dict[str, dict[str, Any]] = {}
 _rookie_names: set[str] | None = None
 
 
@@ -634,12 +639,15 @@ def trend_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return trends[:80]
 
 
-def build_live_board_payload(force: bool = False, limit: int | None = None) -> dict[str, Any]:
+def build_live_board_payload(request_path: str = "", force: bool = False, limit: int | None = None) -> dict[str, Any]:
+    context = resolve_customer_context(request_path)
     now = time.time()
-    if not force and _board_cache["data"] and now - _board_cache["ts"] < CACHE_TTL_SECONDS:
-        return _board_cache["data"]
+    cache_key = f"{context.cache_key}:boards:{limit or 'default'}"
+    cached = _board_cache.get(cache_key)
+    if not force and cached and cached.get("data") and now - float(cached.get("ts") or 0) < CACHE_TTL_SECONDS:
+        return cached["data"]
 
-    season = int_env("FANTASY_IQ_SEASON", DEFAULT_SEASON)
+    season = context.season or int_env("FANTASY_IQ_SEASON", DEFAULT_SEASON)
     row_limit = limit or int_env("FANTASY_IQ_BOARD_LIMIT", DEFAULT_LIMIT)
     fetch_limit = max(row_limit + 80, 420)
     data = fetch_json(player_feed_url(season), {"x-fantasy-filter": player_filter(fetch_limit)})
@@ -651,6 +659,7 @@ def build_live_board_payload(force: bool = False, limit: int | None = None) -> d
         "syncedAt": utc_now(),
         "live": True,
         "source": "ESPN public fantasy player feed",
+        "customerSlug": context.slug,
         "season": season,
         "method": (
             "Live FantasyIQ board built from ESPN PPR ranks, ESPN projected fantasy points, "
@@ -681,8 +690,7 @@ def build_live_board_payload(force: bool = False, limit: int | None = None) -> d
             "trends": {"title": "Live Risers/Fallers", "rows": trend_rows(rows)},
         },
     }
-    _board_cache["data"] = payload
-    _board_cache["ts"] = now
+    _board_cache[cache_key] = {"data": payload, "ts": now}
     return payload
 
 
@@ -716,7 +724,7 @@ class handler(BaseHTTPRequestHandler):
             except ValueError:
                 limit = None
         try:
-            self.send_json(build_live_board_payload(force=force, limit=limit))
+            self.send_json(build_live_board_payload(self.path, force=force, limit=limit))
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError, ValueError) as exc:
             self.send_json(error_payload(str(exc)), HTTPStatus.BAD_GATEWAY)
 

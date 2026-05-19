@@ -73,9 +73,10 @@ Recommended checkout/onboarding flow:
 
 1. Customer pays $25/year.
 2. Checkout collects ESPN league ID, ESPN team ID, and season.
-3. You confirm the ESPN league is public.
-4. You configure and deploy one Vercel project for that customer.
-5. You email the customer their dashboard link and renewal date.
+3. Customer or owner validates the IDs at `/setup.html`.
+4. You confirm the ESPN league is public.
+5. You configure the Vercel env/customer registry for that customer.
+6. You email the customer their dashboard link and renewal date.
 
 ## Launch Files
 
@@ -88,6 +89,9 @@ Recommended checkout/onboarding flow:
 - `scripts/configure_vercel_env.py`: sets customer ESPN league env vars through the Vercel API.
 - `scripts/fulfill_latest_stripe_order.py`: fetches the latest paid Stripe checkout and updates `customers.csv`.
 - `scripts/check_product_readiness.py`: checks the live website, dashboard, Stripe link, and API.
+- `public/setup.html`: validates ESPN league ID, team ID, and season against ESPN before setup.
+- `public/admin.html`: token-protected owner view that reads `/api/admin-customers`.
+- `api/stripe_webhook.py`: verifies Stripe webhook signatures and prepares checkout fulfillment records.
 - `CUSTOMER_INTAKE.md`: customer-facing setup form.
 - `CUSTOMER_ONBOARDING.md`: internal fulfillment checklist.
 - `CUSTOMER_EMAILS.md`: reusable customer messages.
@@ -185,6 +189,34 @@ Live endpoint:
 /api/live-draft
 ```
 
+Multi-customer API calls can include a customer slug:
+
+```text
+/api/live-draft?customer=katelyn
+/api/trade-history?customer=katelyn
+```
+
+For one deployment serving multiple customers, set `FANTASY_IQ_CUSTOMERS_JSON`
+to an object keyed by customer slug:
+
+```json
+{
+  "katelyn": {
+    "customerName": "Katelyn Holladay",
+    "teamId": 5,
+    "teamName": "KatAttack",
+    "leagueId": 584856941,
+    "season": 2026,
+    "status": "configured"
+  }
+}
+```
+
+Set `FANTASYIQ_ADMIN_TOKEN` before using `/admin.html` in production.
+Set `STRIPE_WEBHOOK_SECRET` before pointing Stripe at `/api/stripe-webhook`.
+The webhook verifies Stripe signatures and can log locally, but durable
+automatic fulfillment still needs a real database or storage service.
+
 ## Live Player Boards
 
 The dashboard now loads player boards from:
@@ -210,7 +242,9 @@ This folder is ready for one-customer-per-deployment white-label sales.
 
 For v1, keep setup manual and track subscriptions in Stripe, a spreadsheet, or
 your customer records. Each renewal is simply another year of access/support for
-that league dashboard.
+that league dashboard. The repo now has setup validation, admin scaffolding,
+customer-scoped browser settings, multi-customer API routing, and a verified
+Stripe webhook endpoint ready for a future database.
 
 For a true SaaS subscription product later, add these next:
 

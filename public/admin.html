@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FantasyIQ Admin</title>
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body class="policy-page">
+    <header class="site-header">
+      <a class="brand" href="./">
+        <img src="./FantasyIQ/assets/fantasy-iq-logo.svg" alt="FantasyIQ logo" />
+        <span>FantasyIQ</span>
+      </a>
+      <nav aria-label="Admin navigation">
+        <a href="./setup.html">Setup validator</a>
+        <a href="./FantasyIQ/" class="dashboard-link">Dashboard</a>
+      </nav>
+    </header>
+
+    <main class="policy-main">
+      <section class="policy-card">
+        <p class="eyebrow">Owner Admin</p>
+        <h1>Customer operations</h1>
+        <p>
+          This view reads the protected admin endpoint. Set <strong>FANTASYIQ_ADMIN_TOKEN</strong> in Vercel, then enter it here
+          to review customer setup status.
+        </p>
+
+        <div class="tool-card">
+          <label class="stacked-field">
+            Admin token
+            <input id="admin-token" type="password" autocomplete="off" />
+          </label>
+          <div class="button-row">
+            <button class="primary" id="load-admin" type="button">Load customers</button>
+            <a class="primary dark" href="./setup.html">Validate a setup</a>
+          </div>
+          <div class="result-panel" id="admin-result">Admin data has not been loaded.</div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const tokenInput = document.querySelector("#admin-token");
+      const loadButton = document.querySelector("#load-admin");
+      const result = document.querySelector("#admin-result");
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function renderCustomers(customers) {
+        if (!customers?.length) return "<p>No customer rows found yet.</p>";
+        return `<div class="mini-table">${customers
+          .map(
+            (customer) => `<div>
+              <span>${escapeHtml(customer.status || "unknown")}</span>
+              <strong>${escapeHtml(customer.customer_name || customer.email || "Customer")}</strong>
+              <span>${escapeHtml(customer.league_name || customer.league_id)} / Team ${escapeHtml(customer.team_id)}</span>
+            </div>`,
+          )
+          .join("")}</div>`;
+      }
+
+      loadButton.addEventListener("click", async () => {
+        result.innerHTML = "<strong>Loading admin data...</strong>";
+        try {
+          const response = await fetch("/api/admin-customers", {
+            cache: "no-store",
+            headers: { "x-fantasyiq-admin-token": tokenInput.value.trim() },
+          });
+          const payload = await response.json();
+          if (!response.ok || !payload.ok) {
+            result.innerHTML = `<strong>Admin check failed.</strong><p>${escapeHtml(payload.message || response.statusText)}</p>`;
+            return;
+          }
+          result.innerHTML = `
+            <strong>${escapeHtml(payload.configuredCount)} configured / ${escapeHtml(payload.needsSetupCount)} need setup</strong>
+            ${renderCustomers(payload.customers)}
+            <p>${escapeHtml(payload.nextActions?.[0] || "")}</p>
+          `;
+        } catch (error) {
+          result.innerHTML = `<strong>Admin request failed.</strong><p>${escapeHtml(error.message)}</p>`;
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FantasyIQ Setup</title>
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body class="policy-page">
+    <header class="site-header">
+      <a class="brand" href="./">
+        <img src="./FantasyIQ/assets/fantasy-iq-logo.svg" alt="FantasyIQ logo" />
+        <span>FantasyIQ</span>
+      </a>
+      <nav aria-label="Setup navigation">
+        <a href="./FantasyIQ/" class="dashboard-link">Dashboard</a>
+        <a href="mailto:shayneholladay@gmail.com">Support</a>
+      </nav>
+    </header>
+
+    <main class="policy-main">
+      <section class="policy-card">
+        <p class="eyebrow">Customer Setup</p>
+        <h1>Validate ESPN league details</h1>
+        <p>
+          Use the same ESPN league ID, team ID, and season from checkout. The validator confirms the public ESPN league can be reached
+          and that the team ID belongs to that league.
+        </p>
+
+        <form class="tool-card" id="setup-form">
+          <div class="field-grid">
+            <label>
+              ESPN league ID
+              <input id="league-id" name="leagueId" inputmode="numeric" autocomplete="off" required />
+            </label>
+            <label>
+              ESPN team ID
+              <input id="team-id" name="teamId" inputmode="numeric" autocomplete="off" required />
+            </label>
+            <label>
+              Season
+              <input id="season" name="season" inputmode="numeric" value="2026" required />
+            </label>
+          </div>
+          <div class="button-row">
+            <button class="primary" type="submit">Validate setup</button>
+            <a class="primary dark" href="./FantasyIQ/">Open dashboard</a>
+          </div>
+          <div class="result-panel" id="setup-result">Waiting for ESPN details.</div>
+        </form>
+      </section>
+    </main>
+
+    <script>
+      const form = document.querySelector("#setup-form");
+      const result = document.querySelector("#setup-result");
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function renderTeams(teams) {
+        if (!teams?.length) return "";
+        return `<div class="mini-table">${teams
+          .map(
+            (team) => `<div>
+              <span>Team ${escapeHtml(team.teamId)}</span>
+              <strong>${escapeHtml(team.teamName)}</strong>
+              <span>${escapeHtml(team.manager || "Manager unavailable")}</span>
+            </div>`,
+          )
+          .join("")}</div>`;
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        result.innerHTML = "<strong>Checking ESPN...</strong>";
+        const data = new FormData(form);
+        const params = new URLSearchParams(data);
+        try {
+          const response = await fetch(`/api/setup-validate?${params.toString()}`, { cache: "no-store" });
+          const payload = await response.json();
+          if (payload.ok) {
+            result.innerHTML = `
+              <strong>Ready: ${escapeHtml(payload.leagueName)} / ${escapeHtml(payload.teamName)}</strong>
+              <p>Team ID ${escapeHtml(payload.teamId)} was found for the ${escapeHtml(payload.season)} season. Send this setup to support if your dashboard is not configured yet.</p>
+              ${renderTeams(payload.teams)}
+            `;
+            return;
+          }
+          result.innerHTML = `
+            <strong>${escapeHtml(payload.message || "Setup needs attention.")}</strong>
+            <p>Status: ${escapeHtml(payload.status || "unknown")}</p>
+            ${renderTeams(payload.teams)}
+          `;
+        } catch (error) {
+          result.innerHTML = `<strong>Setup check failed.</strong><p>${escapeHtml(error.message)}</p>`;
+        }
+      });
+    </script>
+  </body>
+</html>

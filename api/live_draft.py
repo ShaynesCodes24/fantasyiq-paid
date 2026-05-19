@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import time
 import urllib.error
 import urllib.request
@@ -11,40 +10,16 @@ from http.server import BaseHTTPRequestHandler
 from typing import Any
 from urllib.parse import urlparse
 
-
-DEFAULT_SEASON = 2026
-DEFAULT_DEMO_LEAGUE_ID = 584856941
-
-
-class ConfigError(RuntimeError):
-    pass
+try:
+    from customer_context import ConfigError, CustomerContext, require_customer_config, resolve_customer_context
+except ModuleNotFoundError:
+    from api.customer_context import ConfigError, CustomerContext, require_customer_config, resolve_customer_context
 
 
 class EspnSyncError(RuntimeError):
     pass
 
 
-def int_env(name: str, default: int | None = None) -> int | None:
-    raw_value = os.environ.get(name)
-    if raw_value is None or raw_value.strip() == "":
-        return default
-    try:
-        return int(raw_value)
-    except ValueError as exc:
-        raise ConfigError(f"{name} must be a number.") from exc
-
-
-CONFIG_ERROR: str | None = None
-try:
-    DEMO_LEAGUE_ID = int_env("FANTASY_IQ_DEMO_LEAGUE_ID", DEFAULT_DEMO_LEAGUE_ID)
-    DEMO_MODE = os.environ.get("FANTASY_IQ_LEAGUE_ID") is None
-    LEAGUE_ID = int_env("FANTASY_IQ_LEAGUE_ID", DEMO_LEAGUE_ID)
-    SEASON = int_env("FANTASY_IQ_SEASON", DEFAULT_SEASON)
-except ConfigError as exc:
-    CONFIG_ERROR = str(exc)
-    DEMO_MODE = False
-    LEAGUE_ID = None
-    SEASON = DEFAULT_SEASON
 PLAYERS_FILTER = json.dumps(
     {
         "players": {
@@ -99,26 +74,16 @@ PRO_TEAM_BY_ID = {
     34: "HOU",
 }
 
-_live_cache: dict[str, Any] = {"data": None, "ts": 0.0}
-_player_cache: dict[int, dict[str, Any]] | None = None
+_live_cache: dict[str, dict[str, Any]] = {}
+_player_cache: dict[int, dict[int, dict[str, Any]]] = {}
 
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
-def require_config() -> tuple[int, int]:
-    if CONFIG_ERROR:
-        raise ConfigError(CONFIG_ERROR)
-    if SEASON is None:
-        raise ConfigError("FANTASY_IQ_SEASON is not configured for this customer dashboard.")
-    if LEAGUE_ID is None:
-        raise ConfigError("FANTASY_IQ_LEAGUE_ID is not configured for this customer dashboard.")
-    return LEAGUE_ID, SEASON
-
-
-def league_url() -> str:
-    league_id, season = require_config()
+def league_url(context: CustomerContext) -> str:
+    league_id, season = require_customer_config(context)
     return (
         "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/"
         f"seasons/{season}/segments/0/leagues/{league_id}"
@@ -126,8 +91,8 @@ def league_url() -> str:
     )
 
 
-def players_url() -> str:
-    _, season = require_config()
+def players_url(context: CustomerContext) -> str:
+    _, season = require_customer_config(context)
     return (
         "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/"
         f"seasons/{season}/players?view=players_wl"
@@ -160,13 +125,13 @@ def fetch_json(url: str, extra_headers: dict[str, str] | None = None) -> Any:
         raise sync_error_from_http(exc) from exc
 
 
-def load_players(force: bool = False) -> dict[int, dict[str, Any]]:
-    global _player_cache
-    if _player_cache is not None and not force:
-        return _player_cache
-    players = fetch_json(players_url(), {"x-fantasy-filter": PLAYERS_FILTER})
-    _player_cache = {int(item["id"]): item for item in players if "id" in item}
-    return _player_cache
+def load_players(context: CustomerContext, force: bool = False) -> dict[int, dict[str, Any]]:
+    _, season = require_customer_config(context)
+    if season in _player_cache and not force:
+        return _player_cache[season]
+    players = fetch_json(players_url(context), {"x-fantasy-filter": PLAYERS_FILTER})
+    _player_cache[season] = {int(item["id"]): item for item in players if "id" in item}
+    return _player_cache[season]
 
 
 def team_name(team: dict[str, Any], members: dict[str, str]) -> str:
@@ -219,14 +184,16 @@ def normalize_pick(
     }
 
 
-def build_live_payload(force: bool = False) -> dict[str, Any]:
+def build_live_payload(request_path: str = "", force: bool = False) -> dict[str, Any]:
+    context = resolve_customer_context(request_path)
     now = time.time()
-    if not force and _live_cache["data"] and now - _live_cache["ts"] < 5:
-        return _live_cache["data"]
+    cached = _live_cache.get(context.cache_key)
+    if not force and cached and cached.get("data") and now - float(cached.get("ts") or 0) < 5:
+        return cached["data"]
 
-    league_id, season = require_config()
-    league = fetch_json(league_url())
-    players = load_players(force=force)
+    league_id, season = require_customer_config(context)
+    league = fetch_json(league_url(context))
+    players = load_players(context, force=force)
     members = {item.get("id"): item.get("displayName", "") for item in league.get("members", [])}
     teams: dict[int, dict[str, Any]] = {}
     for team in league.get("teams", []):
@@ -253,10 +220,13 @@ def build_live_payload(force: bool = False) -> dict[str, Any]:
     payload = {
         "ok": True,
         "source": "ESPN public league API",
+        "customer": context.public_dict(),
+        "customerSlug": context.slug,
+        "customerTeamId": context.customer_team_id,
         "leagueId": league_id,
         "season": season,
-        "demoMode": DEMO_MODE,
-        "leagueName": settings.get("name") or league.get("name") or "ESPN Fantasy League",
+        "demoMode": context.demo_mode,
+        "leagueName": settings.get("name") or league.get("name") or context.league_name or "ESPN Fantasy League",
         "leagueLogo": settings.get("logoUrl") or settings.get("imageUrl") or league.get("logoUrl"),
         "syncedAt": utc_now(),
         "drafted": bool(draft_detail.get("drafted")),
@@ -272,18 +242,21 @@ def build_live_payload(force: bool = False) -> dict[str, Any]:
         "draftedPlayerIds": [pick["playerId"] for pick in completed],
         "draftedNames": [pick["player"] for pick in completed if pick.get("player")],
     }
-    _live_cache["data"] = payload
-    _live_cache["ts"] = now
+    _live_cache[context.cache_key] = {"data": payload, "ts": now}
     return payload
 
 
-def error_payload(message: str) -> dict[str, Any]:
+def error_payload(message: str, request_path: str = "") -> dict[str, Any]:
+    try:
+        context = resolve_customer_context(request_path)
+    except ConfigError:
+        context = None
     return {
         "ok": False,
         "source": "ESPN public league API",
-        "leagueId": LEAGUE_ID,
-        "season": SEASON,
-        "demoMode": DEMO_MODE,
+        "leagueId": context.league_id if context else None,
+        "season": context.season if context else None,
+        "demoMode": context.demo_mode if context else False,
         "syncedAt": utc_now(),
         "error": message,
         "fallback": None,
@@ -304,13 +277,13 @@ class handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         force = "force=1" in parsed.query
         try:
-            self.send_json(build_live_payload(force=force))
+            self.send_json(build_live_payload(self.path, force=force))
         except ConfigError as exc:
-            self.send_json(error_payload(str(exc)), HTTPStatus.SERVICE_UNAVAILABLE)
+            self.send_json(error_payload(str(exc), self.path), HTTPStatus.SERVICE_UNAVAILABLE)
         except EspnSyncError as exc:
-            self.send_json(error_payload(str(exc)), HTTPStatus.BAD_GATEWAY)
+            self.send_json(error_payload(str(exc), self.path), HTTPStatus.BAD_GATEWAY)
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
-            self.send_json(error_payload(str(exc)), HTTPStatus.BAD_GATEWAY)
+            self.send_json(error_payload(str(exc), self.path), HTTPStatus.BAD_GATEWAY)
 
     def do_HEAD(self) -> None:
         self.send_response(HTTPStatus.OK)
