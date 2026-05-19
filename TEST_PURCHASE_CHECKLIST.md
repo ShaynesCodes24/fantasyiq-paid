@@ -8,6 +8,8 @@ Use this for one real checkout test before sharing FantasyIQ publicly.
 2. Click `Start setup` or `Subscribe`.
 3. Complete Stripe checkout with a real email.
 4. Fill in ESPN league ID, ESPN team ID, and ESPN season.
+   - League ID is the number after `leagueId=` in the ESPN browser URL.
+   - Team ID is the number after `teamId=` on the ESPN team/roster page URL.
 5. Confirm the hosted confirmation message appears.
 6. Forward the Stripe receipt or screenshot the confirmation page.
 7. Open the demo dashboard and confirm the board status says it synced a live ESPN board.

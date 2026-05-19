@@ -13,6 +13,17 @@ Best contact method:
 
 ## ESPN League Info
 
+How to find the ESPN IDs:
+
+```text
+1. Open your ESPN fantasy league in a web browser, not just the mobile app.
+2. Look at the page URL.
+3. The league ID is the number after leagueId=.
+4. Open your team page or roster page.
+5. The team ID is the number after teamId=.
+6. If you cannot find teamId=, send the full ESPN league URL and your team name.
+```
+
 ```text
 ESPN league ID:
 ESPN team ID:

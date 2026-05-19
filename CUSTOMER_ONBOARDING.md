@@ -15,6 +15,14 @@ Renewal date:
 
 2. Collect customer info:
 
+Customer ID instructions:
+
+```text
+leagueId is in the ESPN browser URL after leagueId=.
+teamId is in the ESPN team/roster page URL after teamId=.
+If teamId is missing, use the customer's team name and verify it against the ESPN team list.
+```
+
 ```text
 Name:
 Email:

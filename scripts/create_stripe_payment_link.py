@@ -18,9 +18,10 @@ UNIT_AMOUNT_CENTS = 2500
 CURRENCY = "usd"
 SUPPORT_EMAIL = "shayneholladay@gmail.com"
 CONFIRMATION_MESSAGE = (
-    "Thanks for subscribing to FantasyIQ. Setup is concierge: email your ESPN "
-    f"league ID, team ID, season, draft date/time, and logo to {SUPPORT_EMAIL}. "
-    "Your dashboard will be configured manually."
+    "Thanks for subscribing to FantasyIQ. If any checkout field was missed, "
+    f"email {SUPPORT_EMAIL}. To find IDs in ESPN, open your league in a browser: "
+    "leagueId is in the URL after leagueId=, and teamId appears after teamId= "
+    "when viewing your team page."
 )
 
 

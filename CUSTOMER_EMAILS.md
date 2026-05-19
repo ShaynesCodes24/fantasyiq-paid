@@ -12,9 +12,17 @@ Thanks for grabbing FantasyIQ.
 I will configure your ESPN league dashboard manually. Please reply with the
 details below:
 
+How to find the ESPN IDs:
+1. Open your ESPN fantasy league in a web browser, not just the mobile app.
+2. The league ID is the number after leagueId= in the URL.
+3. Open your team page or roster page.
+4. The team ID is the number after teamId= in the URL.
+5. If you cannot find teamId=, send the full ESPN league URL and your team name.
+
 Name:
 Email:
 ESPN league ID:
+ESPN team ID:
 Season:
 League name:
 Is the league public?

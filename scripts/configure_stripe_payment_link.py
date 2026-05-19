@@ -18,9 +18,10 @@ WEBSITE_URL = "https://fantasyiq-paid.vercel.app/"
 DASHBOARD_URL = "https://fantasyiq-paid.vercel.app/FantasyIQ/"
 
 CONFIRMATION_MESSAGE = (
-    "Thanks for subscribing to FantasyIQ. Setup is concierge: email your ESPN "
-    f"league ID, team ID, season, draft date/time, and logo to {SUPPORT_EMAIL}. "
-    "Your dashboard will be configured manually."
+    "Thanks for subscribing to FantasyIQ. If any checkout field was missed, "
+    f"email {SUPPORT_EMAIL}. To find IDs in ESPN, open your league in a browser: "
+    "leagueId is in the URL after leagueId=, and teamId appears after teamId= "
+    "when viewing your team page."
 )
 
 

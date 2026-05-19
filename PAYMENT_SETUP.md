@@ -99,7 +99,7 @@ The script finds the matching Payment Link URL, then configures:
 
 ```text
 Required fields: ESPN league ID, ESPN team ID, ESPN season
-After-payment message: email setup details to shayneholladay@gmail.com
+After-payment message: how to find leagueId/teamId plus support email
 Metadata: product, support email, website URL, dashboard URL
 ```
 
@@ -121,6 +121,18 @@ Draft date/time
 
 If custom fields are limited, collect only name/email at checkout and send
 `CUSTOMER_INTAKE.md` immediately after payment.
+
+## Finding ESPN IDs
+
+Send this instruction if a customer is unsure:
+
+```text
+Open your ESPN fantasy league in a web browser.
+The league ID is the number after leagueId= in the URL.
+Open your team page or roster page.
+The team ID is the number after teamId= in the URL.
+If you cannot find teamId=, send the full ESPN league URL and your team name.
+```
 
 ## After Payment
 
