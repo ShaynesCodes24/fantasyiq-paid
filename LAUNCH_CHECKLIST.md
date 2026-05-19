@@ -18,6 +18,7 @@
 ## For Each Customer
 
 - Confirm payment.
+- Run `python .\scripts\fulfill_latest_stripe_order.py` after setting `STRIPE_SECRET_KEY` locally.
 - Collect intake details.
 - Confirm ESPN league is public.
 - Configure `public/FantasyIQ/config.js`.

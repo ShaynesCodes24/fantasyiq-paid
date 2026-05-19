@@ -86,6 +86,7 @@ Recommended checkout/onboarding flow:
 - `scripts/create_stripe_payment_link.py`: optional local Stripe Payment Link creator.
 - `scripts/configure_stripe_payment_link.py`: updates the current Stripe link with intake fields.
 - `scripts/configure_vercel_env.py`: sets customer ESPN league env vars through the Vercel API.
+- `scripts/fulfill_latest_stripe_order.py`: fetches the latest paid Stripe checkout and updates `customers.csv`.
 - `scripts/check_product_readiness.py`: checks the live website, dashboard, Stripe link, and API.
 - `CUSTOMER_INTAKE.md`: customer-facing setup form.
 - `CUSTOMER_ONBOARDING.md`: internal fulfillment checklist.
