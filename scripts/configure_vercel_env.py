@@ -90,13 +90,20 @@ def main() -> int:
     load_local_env()
     token = require_env("VERCEL_TOKEN")
     project = env("VERCEL_PROJECT_NAME", DEFAULT_PROJECT_NAME)
-    league_id = require_env("FANTASY_IQ_LEAGUE_ID")
+    customers_json = env("FANTASY_IQ_CUSTOMERS_JSON")
+    league_id = env("FANTASY_IQ_LEAGUE_ID")
     season = env("FANTASY_IQ_SEASON", DEFAULT_SEASON)
+    if not customers_json and not league_id:
+        raise SystemExit("Set FANTASY_IQ_CUSTOMERS_JSON for multi-customer mode or FANTASY_IQ_LEAGUE_ID for one customer.")
 
-    results = [
-        upsert_env_var(token, project, "FANTASY_IQ_LEAGUE_ID", league_id),
-        upsert_env_var(token, project, "FANTASY_IQ_SEASON", season),
-    ]
+    results = []
+    if league_id:
+        results.extend(
+            [
+                upsert_env_var(token, project, "FANTASY_IQ_LEAGUE_ID", league_id),
+                upsert_env_var(token, project, "FANTASY_IQ_SEASON", season),
+            ]
+        )
     for key in OPTIONAL_ENV_KEYS:
         value = env(key)
         if value:
@@ -112,10 +119,13 @@ def main() -> int:
         return 1
 
     print(f"Updated Vercel env vars for project: {project}")
-    print(f"FANTASY_IQ_LEAGUE_ID={league_id}")
-    print(f"FANTASY_IQ_SEASON={season}")
+    if league_id:
+        print(f"FANTASY_IQ_LEAGUE_ID={league_id}")
+        print(f"FANTASY_IQ_SEASON={season}")
+    if customers_json:
+        print("FANTASY_IQ_CUSTOMERS_JSON=set")
     for key in OPTIONAL_ENV_KEYS:
-        if env(key):
+        if env(key) and key != "FANTASY_IQ_CUSTOMERS_JSON":
             print(f"{key}=set")
     print("Redeploy the Vercel project after changing env vars.")
     return 0

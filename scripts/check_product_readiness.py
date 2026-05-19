@@ -43,6 +43,23 @@ def fetch(url: str, timeout: int = 30) -> tuple[int, str]:
         return exc.code, exc.read().decode("utf-8", errors="replace")
 
 
+def post_json(url: str, payload: dict[str, object], timeout: int = 30) -> tuple[int, str]:
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "FantasyIQ readiness check",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return response.status, response.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as exc:
+        return exc.code, exc.read().decode("utf-8", errors="replace")
+
+
 def page_check(name: str, url: str, required_text: list[str]) -> CheckResult:
     status, body = fetch(url)
     if status != 200:
@@ -181,9 +198,25 @@ def webhook_install_check() -> CheckResult:
         payload = json.loads(body)
     except json.JSONDecodeError:
         return CheckResult("Stripe webhook endpoint", "FAIL", f"{WEBHOOK_URL} returned non-JSON HTTP {status}")
-    if status == 200 and payload.get("ok") is True:
-        return CheckResult("Stripe webhook endpoint", "PASS", "endpoint installed; POST requires STRIPE_WEBHOOK_SECRET")
-    return CheckResult("Stripe webhook endpoint", "FAIL", f"{WEBHOOK_URL} returned HTTP {status}: {payload.get('message', 'unknown error')}")
+    if status != 200 or payload.get("ok") is not True:
+        return CheckResult("Stripe webhook endpoint", "FAIL", f"{WEBHOOK_URL} returned HTTP {status}: {payload.get('message', 'unknown error')}")
+
+    post_status, post_body = post_json(
+        WEBHOOK_URL,
+        {"id": "evt_readiness_check", "type": "checkout.session.completed", "data": {"object": {}}},
+    )
+    try:
+        post_payload = json.loads(post_body)
+    except json.JSONDecodeError:
+        return CheckResult("Stripe webhook endpoint", "FAIL", f"{WEBHOOK_URL} POST returned non-JSON HTTP {post_status}")
+    message = str(post_payload.get("message", ""))
+    if post_status == 400 and "Missing Stripe-Signature header" in message:
+        return CheckResult("Stripe webhook endpoint", "PASS", "endpoint installed and rejects unsigned POSTs")
+    if post_status == 503 and "STRIPE_WEBHOOK_SECRET" in message:
+        return CheckResult("Stripe webhook endpoint", "FAIL", "STRIPE_WEBHOOK_SECRET is not configured in the live deployment")
+    if post_status == 400 and "signature" in message.lower():
+        return CheckResult("Stripe webhook endpoint", "PASS", "endpoint installed and verifies Stripe signatures")
+    return CheckResult("Stripe webhook endpoint", "FAIL", f"{WEBHOOK_URL} POST returned HTTP {post_status}: {message or 'unknown error'}")
 
 
 def main() -> int:

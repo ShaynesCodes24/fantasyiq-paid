@@ -2,18 +2,21 @@
 
 ## Before Selling
 
-- Create a $25/year payment link.
-- Use `shayneholladay@gmail.com` as the customer support email.
-- Use the live Stripe payment link: `https://buy.stripe.com/eVq3cvdN71GX84E917efC00`.
-- Run `python .\scripts\configure_stripe_payment_link.py` after setting `STRIPE_SECRET_KEY` locally.
-- Use `fantasyiq-paid` as the Vercel project name.
-- Set Vercel Build Command to `node scripts/build_static.js`.
-- Set Vercel Output Directory to `dist`.
-- Decide where customer records will live.
+- Done: Create a $25/year payment link.
+- Done: Use `shayneholladay@gmail.com` as the customer support email.
+- Done: Use the live Stripe payment link: `https://buy.stripe.com/eVq3cvdN71GX84E917efC00`.
+- Done: Configure the Stripe payment link fields and after-payment message.
+- Done: Use `fantasyiq-paid` as the Vercel project name.
+- Done: Set Vercel Build Command to `node scripts/build_static.js`.
+- Done: Set Vercel Output Directory to `dist`.
+- For v1: Keep customer records in `customers.csv`; move to persistent storage before relying on automatic webhook fulfillment.
 - Confirm your Vercel account can deploy one project per customer.
-- Test the public demo dashboard and one customer dashboard using a real public ESPN league.
+- Done: Configure Katelyn as the first real customer using her public ESPN league.
+- Next: Test the public demo dashboard after redeploying the public sales config.
 - Use `https://fantasyiq-paid.vercel.app/FantasyIQ/` as Stripe's business website.
-- Run `python .\scripts\check_product_readiness.py` before sharing the offer publicly.
+- Done: Run `python .\scripts\check_product_readiness.py` before sharing the offer publicly.
+- Done: Run `python .\scripts\check_security_setup.py` before sharing the offer publicly.
+- Done: Run `python .\scripts\secure_launch_setup.py` for the automated launch setup status.
 
 ## For Each Customer
 
@@ -39,6 +42,6 @@
 
 These should be resolved before advertising widely:
 
-- Confirm the live Stripe payment link opens correctly.
-- Configure the Stripe payment link fields and after-payment message.
-- Verify at least one test customer deploy on Vercel with `FANTASY_IQ_LEAGUE_ID`.
+- Done: Confirm the live Stripe payment link opens correctly.
+- Done: Configure the Stripe payment link fields and after-payment message.
+- Done: Verify at least one test customer deploy on Vercel with `FANTASY_IQ_LEAGUE_ID`.

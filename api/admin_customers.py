@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import csv
 import json
-import os
 from datetime import date, datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlparse
 
 try:
     from customer_context import ConfigError, all_customer_contexts, env
@@ -37,11 +35,7 @@ def utc_now() -> str:
 
 
 def auth_token_from(handler: BaseHTTPRequestHandler) -> str:
-    header = handler.headers.get("x-fantasyiq-admin-token", "").strip()
-    if header:
-        return header
-    params = parse_qs(urlparse(handler.path).query)
-    return (params.get("token") or [""])[0].strip()
+    return handler.headers.get("x-fantasyiq-admin-token", "").strip()
 
 
 def require_admin(handler: BaseHTTPRequestHandler) -> None:

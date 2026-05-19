@@ -83,12 +83,15 @@ Recommended checkout/onboarding flow:
 - `SALES_COPY.md`: public offer copy for posts, checkout, and DMs.
 - `PAYMENT_SETUP.md`: simple payment link setup checklist.
 - `LAUNCH_CHECKLIST.md`: pre-sale and per-customer launch checklist.
-- `TEST_PURCHASE_CHECKLIST.md`: one real checkout/refund test flow.
+- `TEST_PURCHASE_CHECKLIST.md`: first customer purchase and checkout validation record.
 - `scripts/create_stripe_payment_link.py`: optional local Stripe Payment Link creator.
 - `scripts/configure_stripe_payment_link.py`: updates the current Stripe link with intake fields.
+- `scripts/configure_stripe_webhook.py`: creates or updates the Stripe webhook endpoint.
 - `scripts/configure_vercel_env.py`: sets customer ESPN league env vars through the Vercel API.
 - `scripts/fulfill_latest_stripe_order.py`: fetches the latest paid Stripe checkout and updates `customers.csv`.
 - `scripts/check_product_readiness.py`: checks the live website, dashboard, Stripe link, and API.
+- `scripts/check_security_setup.py`: checks tracked files, deploy ignores, and public Vercel config for secure setup.
+- `scripts/secure_launch_setup.py`: orchestrates secure local checks plus optional Stripe, Vercel env, deploy, and readiness steps.
 - `public/setup.html`: validates ESPN league ID, team ID, and season against ESPN before setup.
 - `public/admin.html`: token-protected owner view that reads `/api/admin-customers`.
 - `api/stripe_webhook.py`: verifies Stripe webhook signatures and prepares checkout fulfillment records.
@@ -96,6 +99,7 @@ Recommended checkout/onboarding flow:
 - `CUSTOMER_ONBOARDING.md`: internal fulfillment checklist.
 - `CUSTOMER_EMAILS.md`: reusable customer messages.
 - `SERVICE_SCOPE.md`: plain-language paid service scope and limits.
+- `SECURITY_SETUP.md`: secure setup checklist for secrets, admin access, and customer records.
 - `customers.example.csv`: lightweight customer tracker template.
 - `.env.example`: required environment variables for each deployment.
 
