@@ -84,6 +84,17 @@ Remove-Item Env:\STRIPE_SECRET_KEY
 Remove-Item Env:\STRIPE_PAYMENT_LINK_URL
 ```
 
+Or create a temporary local file that is ignored by git:
+
+```powershell
+@"
+STRIPE_SECRET_KEY=sk_live_your_key_here
+STRIPE_PAYMENT_LINK_URL=https://buy.stripe.com/eVq3cvdN71GX84E917efC00
+"@ | Set-Content .env.local
+python .\scripts\configure_stripe_payment_link.py
+Remove-Item .env.local
+```
+
 The script finds the matching Payment Link URL, then configures:
 
 ```text

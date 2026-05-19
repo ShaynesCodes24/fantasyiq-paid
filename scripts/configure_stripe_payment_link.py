@@ -8,6 +8,8 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
+from local_env import load_local_env
+
 
 API_BASE = "https://api.stripe.com/v1"
 DEFAULT_PAYMENT_LINK_URL = "https://buy.stripe.com/eVq3cvdN71GX84E917efC00"
@@ -135,6 +137,7 @@ def update_payment_link(key: str, link_id: str) -> dict[str, Any]:
 
 
 def main() -> int:
+    load_local_env()
     key = stripe_key()
     link_id = payment_link_id(key)
     updated = update_payment_link(key, link_id)

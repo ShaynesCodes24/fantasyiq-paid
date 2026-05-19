@@ -7,6 +7,8 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
+from local_env import load_local_env
+
 
 API_BASE = "https://api.vercel.com"
 DEFAULT_PROJECT_NAME = "fantasyiq-paid"
@@ -72,6 +74,7 @@ def upsert_env_var(token: str, project: str, key: str, value: str) -> dict[str, 
 
 
 def main() -> int:
+    load_local_env()
     token = require_env("VERCEL_TOKEN")
     project = env("VERCEL_PROJECT_NAME", DEFAULT_PROJECT_NAME)
     league_id = require_env("FANTASY_IQ_LEAGUE_ID")

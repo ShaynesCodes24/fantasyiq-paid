@@ -149,6 +149,10 @@ Remove-Item Env:\FANTASY_IQ_SEASON
 
 Redeploy the Vercel project after changing environment variables.
 
+The setup scripts also read a temporary `.env.local` file if you prefer not to
+set shell environment variables. `.env.local` is ignored by git and should be
+deleted after the setup command finishes.
+
 The customer league must be public unless future private ESPN authentication is added.
 
 Live endpoint:

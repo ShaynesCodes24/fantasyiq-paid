@@ -8,6 +8,8 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
+from local_env import load_local_env
+
 
 API_BASE = "https://api.stripe.com/v1"
 PRODUCT_NAME = "FantasyIQ League Dashboard"
@@ -107,6 +109,7 @@ def create_payment_link() -> str:
 
 
 if __name__ == "__main__":
+    load_local_env()
     url = create_payment_link()
     print(url)
     print()
