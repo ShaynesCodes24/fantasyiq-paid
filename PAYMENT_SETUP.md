@@ -36,8 +36,8 @@ Quantity: 1
 
 ```text
 ESPN league ID
+ESPN team ID
 ESPN season
-League name
 Draft date/time
 ```
 
@@ -61,7 +61,7 @@ it to the repo. The script creates:
 ```text
 Product: FantasyIQ League Dashboard
 Price: $25/year recurring
-Required checkout fields: ESPN league ID, ESPN season, League name
+Required checkout fields: ESPN league ID, ESPN team ID, ESPN season
 Support email metadata: shayneholladay@gmail.com
 ```
 
@@ -98,7 +98,7 @@ Remove-Item .env.local
 The script finds the matching Payment Link URL, then configures:
 
 ```text
-Required fields: ESPN league ID, ESPN season, League name
+Required fields: ESPN league ID, ESPN team ID, ESPN season
 After-payment message: email setup details to shayneholladay@gmail.com
 Metadata: product, support email, website URL, dashboard URL
 ```
@@ -114,8 +114,8 @@ Collect these in checkout if your payment provider supports custom fields:
 Name
 Email
 ESPN league ID
+ESPN team ID
 ESPN season
-League name
 Draft date/time
 ```
 

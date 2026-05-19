@@ -19,7 +19,7 @@ CURRENCY = "usd"
 SUPPORT_EMAIL = "shayneholladay@gmail.com"
 CONFIRMATION_MESSAGE = (
     "Thanks for subscribing to FantasyIQ. Setup is concierge: email your ESPN "
-    f"league ID, season, league name, draft date/time, and logo to {SUPPORT_EMAIL}. "
+    f"league ID, team ID, season, draft date/time, and logo to {SUPPORT_EMAIL}. "
     "Your dashboard will be configured manually."
 )
 
@@ -88,15 +88,15 @@ def create_payment_link() -> str:
             "custom_fields[0][label][custom]": "ESPN league ID",
             "custom_fields[0][type]": "text",
             "custom_fields[0][optional]": "false",
-            "custom_fields[1][key]": "season",
+            "custom_fields[1][key]": "teamid",
             "custom_fields[1][label][type]": "custom",
-            "custom_fields[1][label][custom]": "ESPN season",
+            "custom_fields[1][label][custom]": "ESPN team ID",
             "custom_fields[1][type]": "numeric",
             "custom_fields[1][optional]": "false",
-            "custom_fields[2][key]": "leaguename",
+            "custom_fields[2][key]": "season",
             "custom_fields[2][label][type]": "custom",
-            "custom_fields[2][label][custom]": "League name",
-            "custom_fields[2][type]": "text",
+            "custom_fields[2][label][custom]": "ESPN season",
+            "custom_fields[2][type]": "numeric",
             "custom_fields[2][optional]": "false",
             "after_completion[type]": "hosted_confirmation",
             "after_completion[hosted_confirmation][custom_message]": CONFIRMATION_MESSAGE,

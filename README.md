@@ -72,7 +72,7 @@ trade discipline, and league branding.
 Recommended checkout/onboarding flow:
 
 1. Customer pays $25/year.
-2. Customer submits the intake form in `CUSTOMER_INTAKE.md`.
+2. Checkout collects ESPN league ID, ESPN team ID, and season.
 3. You confirm the ESPN league is public.
 4. You configure and deploy one Vercel project for that customer.
 5. You email the customer their dashboard link and renewal date.

@@ -15,6 +15,7 @@ Best contact method:
 
 ```text
 ESPN league ID:
+ESPN team ID:
 Season:
 League name:
 Is the league public? yes/no

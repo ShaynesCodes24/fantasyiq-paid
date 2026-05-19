@@ -21,6 +21,7 @@
 - Run `python .\scripts\fulfill_latest_stripe_order.py` after setting `STRIPE_SECRET_KEY` locally.
 - Collect intake details.
 - Confirm ESPN league is public.
+- Confirm the customer's ESPN team ID.
 - Configure `public/FantasyIQ/config.js`.
 - Set `isDemoPreview: false` in `public/FantasyIQ/config.js`.
 - Upload or set the customer logo.

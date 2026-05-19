@@ -17,11 +17,13 @@ from local_env import load_local_env
 API_BASE = "https://api.stripe.com/v1"
 DEFAULT_PAYMENT_LINK_URL = "https://buy.stripe.com/eVq3cvdN71GX84E917efC00"
 DEFAULT_DASHBOARD_URL = "https://fantasyiq-paid.vercel.app/FantasyIQ/"
+ESPN_BASE = "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl"
 CUSTOMER_CSV = Path("customers.csv")
 CUSTOMER_CSV_FIELDS = [
     "customer_name",
     "email",
     "league_id",
+    "team_id",
     "season",
     "league_name",
     "payment_provider",
@@ -78,6 +80,47 @@ def stripe_request(
     except urllib.error.HTTPError as exc:
         response_body = exc.read().decode("utf-8", errors="replace")
         raise SystemExit(f"Stripe API error {exc.code}: {response_body}") from exc
+
+
+def fetch_json(url: str) -> dict[str, Any]:
+    request = urllib.request.Request(
+        url,
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "FantasyIQ fulfillment setup",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=25) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def fetch_league_details(league_id: str, season: str, team_id: str) -> tuple[str, str, str]:
+    if not league_id or not season:
+        return "", "", ""
+    url = (
+        f"{ESPN_BASE}/seasons/{season}/segments/0/leagues/{league_id}"
+        "?view=mSettings&view=mTeam"
+    )
+    try:
+        league = fetch_json(url)
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
+        return "", "", ""
+
+    settings = league.get("settings") or {}
+    members = {item.get("id"): item.get("displayName", "") for item in league.get("members", [])}
+    league_name = str(settings.get("name") or league.get("name") or "").strip()
+    customer_team_name = ""
+    customer_manager = ""
+
+    for team in league.get("teams", []):
+        if str(team.get("id") or "") != str(team_id):
+            continue
+        customer_team_name = str(team.get("name") or f"{team.get('location', '')} {team.get('nickname', '')}".strip()).strip()
+        owner = team.get("primaryOwner")
+        customer_manager = members.get(owner, "")
+        break
+
+    return league_name, customer_team_name, customer_manager
 
 
 def find_payment_link_by_url(key: str, url: str) -> dict[str, Any]:
@@ -164,12 +207,16 @@ def row_from_session(session: dict[str, Any]) -> dict[str, str]:
     customer = session.get("customer_details") or {}
     paid_at = utc_date_from_timestamp(int(session.get("created") or 0))
     league_id = custom_field_value(session, "leagueid")
+    team_id = custom_field_value(session, "teamid")
     season = custom_field_value(session, "season") or env("FANTASY_IQ_SEASON", "2026")
     league_name = custom_field_value(session, "leaguename")
+    espn_league_name, team_name, manager_name = fetch_league_details(league_id, season, team_id)
+    league_name = league_name or espn_league_name
     return {
         "customer_name": str(customer.get("name") or "").strip(),
         "email": str(customer.get("email") or "").strip(),
         "league_id": league_id,
+        "team_id": team_id,
         "season": season,
         "league_name": league_name,
         "payment_provider": "stripe",
@@ -178,7 +225,7 @@ def row_from_session(session: dict[str, Any]) -> dict[str, str]:
         "renewal_date": renewal_date(paid_at),
         "dashboard_url": env("FANTASYIQ_DASHBOARD_URL", DEFAULT_DASHBOARD_URL),
         "status": "paid_needs_setup",
-        "notes": "Fetched from latest paid Stripe Checkout Session.",
+        "notes": f"Fetched from Stripe. ESPN team: {team_name or '(missing)'}; manager: {manager_name or '(missing)'}.",
     }
 
 
@@ -189,7 +236,23 @@ def read_existing_refs(path: Path) -> set[str]:
         return {row.get("payment_reference", "") for row in csv.DictReader(handle)}
 
 
+def migrate_customer_csv(path: Path = CUSTOMER_CSV) -> None:
+    if not path.exists():
+        return
+    with path.open("r", newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        if reader.fieldnames == CUSTOMER_CSV_FIELDS:
+            return
+        rows = list(reader)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=CUSTOMER_CSV_FIELDS)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({field: row.get(field, "") for field in CUSTOMER_CSV_FIELDS})
+
+
 def append_customer(row: dict[str, str], path: Path = CUSTOMER_CSV) -> bool:
+    migrate_customer_csv(path)
     existing_refs = read_existing_refs(path)
     if row["payment_reference"] in existing_refs:
         return False
@@ -207,8 +270,10 @@ def print_summary(row: dict[str, str], appended: bool) -> None:
     print(f"Customer: {row['customer_name'] or '(missing name)'}")
     print(f"Email: {row['email'] or '(missing email)'}")
     print(f"League ID: {row['league_id'] or '(missing)'}")
+    print(f"Team ID: {row['team_id'] or '(missing)'}")
     print(f"Season: {row['season'] or '(missing)'}")
     print(f"League name: {row['league_name'] or '(missing)'}")
+    print(f"Notes: {row['notes'] or '(none)'}")
     print(f"Payment reference: {row['payment_reference']}")
     print(f"Paid at: {row['paid_at']}")
     print(f"Renewal date: {row['renewal_date']}")
@@ -216,6 +281,7 @@ def print_summary(row: dict[str, str], appended: bool) -> None:
     print()
     print("Vercel env values to use:")
     print(f"FANTASY_IQ_LEAGUE_ID={row['league_id']}")
+    print(f"FANTASY_IQ_CUSTOMER_TEAM_ID={row['team_id']}")
     print(f"FANTASY_IQ_SEASON={row['season']}")
 
 
@@ -230,6 +296,9 @@ def main() -> int:
 
     if not row["league_id"]:
         print("Missing ESPN league ID. Ask the customer for it before configuring Vercel.")
+        return 2
+    if not row["team_id"]:
+        print("Missing ESPN team ID. Ask the customer for it before personalizing the dashboard.")
         return 2
     return 0
 

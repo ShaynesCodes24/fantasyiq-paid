@@ -7,7 +7,7 @@ Use this for one real checkout test before sharing FantasyIQ publicly.
 1. Open `https://fantasyiq-paid.vercel.app/`.
 2. Click `Start setup` or `Subscribe`.
 3. Complete Stripe checkout with a real email.
-4. Fill in ESPN league ID, ESPN season, and league name.
+4. Fill in ESPN league ID, ESPN team ID, and ESPN season.
 5. Confirm the hosted confirmation message appears.
 6. Forward the Stripe receipt or screenshot the confirmation page.
 7. Open the demo dashboard and confirm the board status says it synced a live ESPN board.

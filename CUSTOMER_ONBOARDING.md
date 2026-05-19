@@ -19,6 +19,7 @@ Renewal date:
 Name:
 Email:
 ESPN league ID:
+ESPN team ID:
 Season:
 League name:
 Scoring format:
