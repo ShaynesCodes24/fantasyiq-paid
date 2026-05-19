@@ -71,6 +71,7 @@ FANTASY_IQ_SEASON
 
 ```text
 Dashboard link:
+Access code:
 Renewal date:
 Support contact:
 ```
@@ -81,6 +82,7 @@ Support contact:
 Your FantasyIQ dashboard is live:
 
 Dashboard:
+Access code:
 Renewal date:
 
 Live draft sync is connected to your public ESPN league. Before draft day,

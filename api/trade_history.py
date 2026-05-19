@@ -12,9 +12,9 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 try:
-    from customer_context import ConfigError, CustomerContext, require_customer_config, resolve_customer_context
+    from customer_context import ConfigError, CustomerContext, authorize_customer_context, require_customer_config, resolve_customer_context
 except ModuleNotFoundError:
-    from api.customer_context import ConfigError, CustomerContext, require_customer_config, resolve_customer_context
+    from api.customer_context import ConfigError, CustomerContext, authorize_customer_context, require_customer_config, resolve_customer_context
 
 DEFAULT_LOOKBACK_YEARS = 5
 CACHE_TTL_SECONDS = 900
@@ -410,8 +410,8 @@ def pattern_for_team(team: dict[str, Any], trades: list[dict[str, Any]]) -> dict
     }
 
 
-def build_payload(request_path: str, seasons: list[int], force: bool = False) -> dict[str, Any]:
-    context = resolve_customer_context(request_path)
+def build_payload(request_path: str, seasons: list[int], headers: Any | None = None, force: bool = False) -> dict[str, Any]:
+    context = authorize_customer_context(request_path, headers)
     league_id, current_season = require_customer_config(context)
     cache_key = f"{context.cache_key}:{','.join(str(season) for season in seasons)}"
     now = time.time()
@@ -514,7 +514,9 @@ class handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         try:
             seasons, force = requested_seasons(self.path, parsed.query)
-            self.send_json(build_payload(self.path, seasons, force=force))
+            self.send_json(build_payload(self.path, seasons, self.headers, force=force))
+        except PermissionError as exc:
+            self.send_json(error_payload(str(exc), self.path), HTTPStatus.UNAUTHORIZED)
         except ConfigError as exc:
             self.send_json(error_payload(str(exc), self.path), HTTPStatus.SERVICE_UNAVAILABLE)
         except Exception as exc:

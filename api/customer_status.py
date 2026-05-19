@@ -6,9 +6,9 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
 
 try:
-    from customer_context import ConfigError, resolve_customer_context
+    from customer_context import ConfigError, access_code_from, resolve_customer_context, verify_customer_access
 except ModuleNotFoundError:
-    from api.customer_context import ConfigError, resolve_customer_context
+    from api.customer_context import ConfigError, access_code_from, resolve_customer_context, verify_customer_access
 
 
 def utc_now() -> str:
@@ -28,7 +28,21 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         try:
             context = resolve_customer_context(self.path)
-            self.send_json({"ok": True, "customer": context.public_dict(), "syncedAt": utc_now()})
+            authenticated = not bool(context.access_code)
+            if access_code_from(self.path, self.headers):
+                verify_customer_access(context, self.path, self.headers)
+                authenticated = True
+            self.send_json(
+                {
+                    "ok": True,
+                    "customer": context.public_dict(),
+                    "accessRequired": bool(context.access_code),
+                    "authenticated": authenticated,
+                    "syncedAt": utc_now(),
+                }
+            )
+        except PermissionError as exc:
+            self.send_json({"ok": False, "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.UNAUTHORIZED)
         except ConfigError as exc:
             self.send_json({"ok": False, "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.BAD_REQUEST)
 

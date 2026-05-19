@@ -11,9 +11,9 @@ from typing import Any
 from urllib.parse import urlparse
 
 try:
-    from customer_context import ConfigError, CustomerContext, require_customer_config, resolve_customer_context
+    from customer_context import ConfigError, CustomerContext, authorize_customer_context, require_customer_config, resolve_customer_context
 except ModuleNotFoundError:
-    from api.customer_context import ConfigError, CustomerContext, require_customer_config, resolve_customer_context
+    from api.customer_context import ConfigError, CustomerContext, authorize_customer_context, require_customer_config, resolve_customer_context
 
 
 class EspnSyncError(RuntimeError):
@@ -184,8 +184,8 @@ def normalize_pick(
     }
 
 
-def build_live_payload(request_path: str = "", force: bool = False) -> dict[str, Any]:
-    context = resolve_customer_context(request_path)
+def build_live_payload(request_path: str = "", headers: Any | None = None, force: bool = False) -> dict[str, Any]:
+    context = authorize_customer_context(request_path, headers)
     now = time.time()
     cached = _live_cache.get(context.cache_key)
     if not force and cached and cached.get("data") and now - float(cached.get("ts") or 0) < 5:
@@ -277,7 +277,9 @@ class handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         force = "force=1" in parsed.query
         try:
-            self.send_json(build_live_payload(self.path, force=force))
+            self.send_json(build_live_payload(self.path, self.headers, force=force))
+        except PermissionError as exc:
+            self.send_json(error_payload(str(exc), self.path), HTTPStatus.UNAUTHORIZED)
         except ConfigError as exc:
             self.send_json(error_payload(str(exc), self.path), HTTPStatus.SERVICE_UNAVAILABLE)
         except EspnSyncError as exc:

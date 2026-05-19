@@ -25,6 +25,7 @@ class CustomerContext:
     customer_team_name: str = ""
     league_name: str = ""
     status: str = "configured"
+    access_code: str = ""
     demo_mode: bool = False
     source: str = "env"
 
@@ -42,6 +43,7 @@ class CustomerContext:
             "leagueName": self.league_name,
             "season": self.season,
             "status": self.status,
+            "accessRequired": bool(self.access_code),
             "demoMode": self.demo_mode,
             "source": self.source,
         }
@@ -87,6 +89,7 @@ def normalize_customer_entry(slug: str, entry: dict[str, Any]) -> CustomerContex
         customer_team_name=str(entry_value(entry, "team_name", "teamName", "customerTeamName", default="")).strip(),
         league_name=str(entry_value(entry, "league_name", "leagueName", default="")).strip(),
         status=str(entry_value(entry, "status", default="configured")).strip() or "configured",
+        access_code=str(entry_value(entry, "access_code", "accessCode", "customerAccessCode", "code", default="")).strip(),
         demo_mode=False,
         source="FANTASY_IQ_CUSTOMERS_JSON",
     )
@@ -131,6 +134,7 @@ def fallback_context(slug: str = "default") -> CustomerContext:
         customer_team_name=env("FANTASY_IQ_CUSTOMER_TEAM_NAME"),
         league_name=env("FANTASY_IQ_LEAGUE_NAME"),
         status=env("FANTASY_IQ_CUSTOMER_STATUS", "configured"),
+        access_code=env("FANTASY_IQ_CUSTOMER_ACCESS_CODE"),
         demo_mode=not bool(configured_league),
         source="env",
     )
@@ -175,9 +179,41 @@ def resolve_customer_context(path: str = "") -> CustomerContext:
             customer_team_name=context.customer_team_name,
             league_name=context.league_name,
             status=context.status,
+            access_code=context.access_code,
             demo_mode=context.demo_mode,
             source=context.source,
         )
+    return context
+
+
+def access_code_from(path: str, headers: Any | None = None) -> str:
+    parsed = urlparse(path)
+    params = parse_qs(parsed.query)
+    value = (
+        params.get("accessCode", [""])[0]
+        or params.get("access", [""])[0]
+        or params.get("code", [""])[0]
+    )
+    if value:
+        return value.strip()
+    if headers is not None:
+        return (
+            headers.get("x-fantasyiq-access-code", "")
+            or headers.get("x-fantasy-iq-access-code", "")
+        ).strip()
+    return ""
+
+
+def verify_customer_access(context: CustomerContext, path: str = "", headers: Any | None = None) -> None:
+    if context.demo_mode or not context.access_code:
+        return
+    if access_code_from(path, headers) != context.access_code:
+        raise PermissionError("Valid customer access code required.")
+
+
+def authorize_customer_context(path: str = "", headers: Any | None = None) -> CustomerContext:
+    context = resolve_customer_context(path)
+    verify_customer_access(context, path, headers)
     return context
 
 

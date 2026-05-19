@@ -62,6 +62,9 @@ Your FantasyIQ dashboard is ready:
 
 [dashboard link]
 
+Access code:
+[access code]
+
 Renewal date:
 [renewal date]
 

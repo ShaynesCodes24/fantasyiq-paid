@@ -13,7 +13,8 @@ $25 per league / year
 Sales model:
 
 ```text
-Concierge setup. No customer login or self-serve provisioning required for v1.
+Concierge setup with a simple per-customer access code. No customer accounts,
+password resets, or self-serve provisioning required for v1.
 ```
 
 Website URL shape:
@@ -200,6 +201,10 @@ Multi-customer API calls can include a customer slug:
 /api/trade-history?customer=katelyn
 ```
 
+Paid customer API calls require the customer's access code once `accessCode` is
+set in the registry. The dashboard login stores that code in the browser and
+sends it with live draft/trade requests.
+
 For one deployment serving multiple customers, set `FANTASY_IQ_CUSTOMERS_JSON`
 to an object keyed by customer slug:
 
@@ -211,7 +216,8 @@ to an object keyed by customer slug:
     "teamName": "KatAttack",
     "leagueId": 584856941,
     "season": 2026,
-    "status": "configured"
+    "status": "configured",
+    "accessCode": "customer_code_here"
   }
 }
 ```

@@ -124,10 +124,29 @@ function loadoutStorageKey(key) {
   return `fantasy-dashboard:${appConfig.loadoutKey || "default"}:${key}`;
 }
 
+function requiresCustomerAccess() {
+  return Boolean(appConfig.loadoutKey && appConfig.loadoutKey !== "default");
+}
+
+function savedCustomerAccessCode() {
+  return localStorage.getItem(loadoutStorageKey("access-code")) || "";
+}
+
+function setCustomerAccessCode(value) {
+  localStorage.setItem(loadoutStorageKey("access-code"), value.trim());
+}
+
+function clearCustomerAccessCode() {
+  localStorage.removeItem(loadoutStorageKey("access-code"));
+}
+
 function apiUrl(path, params = {}) {
   const url = new URL(path, window.location.origin);
   if (appConfig.loadoutKey) {
     url.searchParams.set("customer", appConfig.loadoutKey);
+  }
+  if (requiresCustomerAccess() && savedCustomerAccessCode()) {
+    url.searchParams.set("accessCode", savedCustomerAccessCode());
   }
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== false && value !== "") {
@@ -135,6 +154,91 @@ function apiUrl(path, params = {}) {
     }
   });
   return `${url.pathname}${url.search}`;
+}
+
+function customerAccessGate() {
+  return document.querySelector("#customer-access-gate");
+}
+
+function removeCustomerAccessGate() {
+  document.body.classList.remove("access-locked");
+  customerAccessGate()?.remove();
+}
+
+function showCustomerAccessGate(message = "") {
+  if (!requiresCustomerAccess() || customerAccessGate()) return;
+  document.body.classList.add("access-locked");
+  const customerLabel = appConfig.customerName || appConfig.customerTeamName || "your dashboard";
+  const gate = document.createElement("section");
+  gate.id = "customer-access-gate";
+  gate.className = "access-gate";
+  gate.innerHTML = `
+    <form class="access-card">
+      <p class="eyebrow">Customer Login</p>
+      <h2>Open ${htmlEscape(customerLabel)}</h2>
+      <p>Enter the dashboard access code from your FantasyIQ setup email.</p>
+      <label>
+        Access code
+        <input id="customer-access-code" type="password" autocomplete="off" required />
+      </label>
+      <button type="submit" class="primary-action">Unlock Dashboard</button>
+      <div class="access-message">${message ? htmlEscape(message) : ""}</div>
+      <small>Need help? Email ${htmlEscape(appConfig.supportEmail || "support")}.</small>
+    </form>
+  `;
+  document.body.appendChild(gate);
+  const input = gate.querySelector("#customer-access-code");
+  const output = gate.querySelector(".access-message");
+  input?.focus();
+  gate.querySelector("form")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const code = input.value.trim();
+    if (!code) return;
+    output.textContent = "Checking access...";
+    try {
+      const url = apiUrl("/api/customer-status", { accessCode: code, v: Date.now() });
+      const response = await fetch(url, { cache: "no-store" });
+      const payload = await response.json();
+      if (!response.ok || !payload.ok || payload.authenticated === false) {
+        output.textContent = payload.message || "That access code did not work.";
+        return;
+      }
+      setCustomerAccessCode(code);
+      removeCustomerAccessGate();
+      loadBoards();
+      loadTradeHistory(true);
+      startLiveSync();
+    } catch (error) {
+      output.textContent = "Could not verify the code. Refresh and try again.";
+    }
+  });
+}
+
+function ensureCustomerAccess() {
+  if (!requiresCustomerAccess()) return true;
+  if (savedCustomerAccessCode()) return true;
+  showCustomerAccessGate();
+  return false;
+}
+
+function handleCustomerAccessFailure(message = "Enter the current customer access code.") {
+  if (!requiresCustomerAccess()) return false;
+  clearCustomerAccessCode();
+  window.clearInterval(liveTimer);
+  showCustomerAccessGate(message);
+  if (liveStatus) liveStatus.innerHTML = "<strong>Customer login required.</strong>";
+  if (tradeHistoryStatus) tradeHistoryStatus.textContent = "Customer login required.";
+  return true;
+}
+
+async function jsonOrAccessError(response, fallbackMessage) {
+  const data = await response.json().catch(() => null);
+  if (response.status === 401) {
+    handleCustomerAccessFailure(data?.error || data?.message || "Enter the current customer access code.");
+    throw new Error("Customer login required.");
+  }
+  if (!response.ok) throw new Error(data?.error || data?.message || fallbackMessage || `HTTP ${response.status}`);
+  return data;
 }
 
 function customerBrandSubtitle(fallbackLeagueName) {
@@ -1548,12 +1652,10 @@ function renderTradeHistory() {
 
 function loadTradeHistory(force = false) {
   if (!tradeHistoryStatus) return;
+  if (!ensureCustomerAccess()) return;
   tradeHistoryStatus.textContent = force ? "Refreshing ESPN trade history..." : "Loading ESPN trade history and team tendencies.";
   fetch(apiUrl("/api/trade-history", { lookback: 6, force: force ? 1 : "" }), { cache: "no-store" })
-    .then((response) => {
-      if (!response.ok) throw new Error(`Trade history returned HTTP ${response.status}`);
-      return response.json();
-    })
+    .then((response) => jsonOrAccessError(response, `Trade history returned HTTP ${response.status}`))
     .then((data) => {
       tradeHistoryData = data;
       renderTradeHistory();
@@ -2797,14 +2899,11 @@ function liveServerHelp(error) {
 
 function loadLiveDraft(force = false) {
   if (!liveStatus) return;
+  if (!ensureCustomerAccess()) return;
   fetch(apiUrl("/api/live-draft", { force: force ? 1 : "" }), { cache: "no-store" })
-    .then(async (response) => {
-      const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(data?.error || `HTTP ${response.status}`);
-      if (!data) throw new Error("Live sync returned an empty response");
-      return data;
-    })
+    .then((response) => jsonOrAccessError(response, `HTTP ${response.status}`))
     .then((data) => {
+      if (!data) throw new Error("Live sync returned an empty response");
       if (data.ok) {
         liveDraft = data;
       } else if (data.fallback) {
@@ -2821,12 +2920,14 @@ function loadLiveDraft(force = false) {
 
 function startLiveSync() {
   if (!liveSyncToggle?.checked) return;
+  if (!ensureCustomerAccess()) return;
   window.clearInterval(liveTimer);
   loadLiveDraft();
   liveTimer = window.setInterval(() => loadLiveDraft(), LIVE_SYNC_INTERVAL_MS);
 }
 
 function loadBoards() {
+  if (!ensureCustomerAccess()) return;
   if (boardStatus) {
     boardStatus.textContent = "Loading live ESPN board...";
   }

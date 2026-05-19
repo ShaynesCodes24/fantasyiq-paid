@@ -29,6 +29,7 @@ FANTASY_IQ_SEASON
 FANTASY_IQ_CUSTOMER_TEAM_ID
 FANTASY_IQ_CUSTOMER_NAME
 FANTASY_IQ_CUSTOMER_TEAM_NAME
+FANTASY_IQ_CUSTOMER_ACCESS_CODE
 ```
 
 ## Admin Access
@@ -89,7 +90,7 @@ $env:VERCEL_TOKEN="your_vercel_token_here"
 $env:VERCEL_PROJECT_NAME="fantasyiq-paid"
 $env:FANTASYIQ_ADMIN_TOKEN="long_random_admin_token_here"
 $env:STRIPE_WEBHOOK_SECRET="whsec_your_webhook_secret_here"
-$env:FANTASY_IQ_CUSTOMERS_JSON='{"katelyn":{"customerName":"Katelyn Holladay","teamId":5,"teamName":"KatAttack","leagueId":584856941,"season":2026,"status":"configured"}}'
+$env:FANTASY_IQ_CUSTOMERS_JSON='{"katelyn":{"customerName":"Katelyn Holladay","teamId":5,"teamName":"KatAttack","leagueId":584856941,"season":2026,"status":"configured","accessCode":"customer_code_here"}}'
 python .\scripts\secure_launch_setup.py --apply-vercel-env
 Remove-Item Env:\VERCEL_TOKEN
 Remove-Item Env:\FANTASYIQ_ADMIN_TOKEN
