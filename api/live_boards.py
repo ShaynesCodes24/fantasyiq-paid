@@ -106,6 +106,9 @@ def clean_text(value: Any) -> str:
 def short_text(value: str, limit: int = 620) -> str:
     if len(value) <= limit:
         return value
+    sentence_cut = value.rfind(". ", 0, limit)
+    if sentence_cut >= int(limit * 0.55):
+        return value[: sentence_cut + 1]
     trimmed = value[: limit - 1].rsplit(" ", 1)[0].rstrip(".,;:")
     return f"{trimmed}."
 
