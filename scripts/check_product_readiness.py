@@ -46,6 +46,19 @@ def page_check(name: str, url: str, required_text: list[str]) -> CheckResult:
     return CheckResult(name, "PASS", url)
 
 
+def dashboard_check() -> CheckResult:
+    status, body = fetch(DASHBOARD_URL)
+    if status != 200:
+        return CheckResult("Dashboard", "FAIL", f"{DASHBOARD_URL} returned HTTP {status}")
+    if "FantasyIQ" not in body:
+        return CheckResult("Dashboard", "FAIL", f"{DASHBOARD_URL} missing: FantasyIQ")
+    if "Public demo preview" in body and "Subscribe" in body and "buy.stripe.com" in body:
+        return CheckResult("Dashboard", "PASS", f"{DASHBOARD_URL} is in public demo mode")
+    if "Active" in body and "Configured for" in body and "Public demo preview" not in body:
+        return CheckResult("Dashboard", "PASS", f"{DASHBOARD_URL} is in paid customer mode")
+    return CheckResult("Dashboard", "FAIL", f"{DASHBOARD_URL} is neither demo mode nor paid customer mode")
+
+
 def stripe_check() -> CheckResult:
     status, _ = fetch(STRIPE_URL)
     if 200 <= status < 400:
@@ -103,7 +116,7 @@ def board_freshness_check() -> CheckResult:
 def main() -> int:
     checks = [
         page_check("Landing page", ROOT_URL, ["FantasyIQ", "buy.stripe.com"]),
-        page_check("Dashboard", DASHBOARD_URL, ["FantasyIQ", "Public demo preview", "Subscribe", "buy.stripe.com"]),
+        dashboard_check(),
         page_check("Terms", f"{SITE_URL}/terms.html", ["Terms"]),
         page_check("Privacy", f"{SITE_URL}/privacy.html", ["Privacy"]),
         page_check("Refund policy", f"{SITE_URL}/refund-policy.html", ["Refund"]),
