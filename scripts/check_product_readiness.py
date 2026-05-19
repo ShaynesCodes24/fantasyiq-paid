@@ -91,7 +91,7 @@ def board_freshness_check() -> CheckResult:
     except ValueError:
         return CheckResult("Board freshness", "WARN", f"Could not parse board updated date: {raw_updated or 'missing'}")
 
-    age_days = (date.today() - updated).days
+    age_days = max(0, (date.today() - updated).days)
     source = "live" if payload.get("live") else "bundled"
     if age_days <= 45:
         return CheckResult("Board freshness", "PASS", f"{source} rankings updated {raw_updated} ({age_days} day(s) old)")
