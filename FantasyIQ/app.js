@@ -1044,6 +1044,116 @@ function tradePositionSummary(players) {
     .join(" / ") || "No matched positions";
 }
 
+function riskBand(risk) {
+  if (!risk) {
+    return {
+      label: "Waiting on players",
+      className: "watch",
+      detail: "Incoming risk is the average volatility of the players you receive.",
+    };
+  }
+  if (risk <= 3.5) {
+    return {
+      label: "Stable",
+      className: "good",
+      detail: "The incoming side is mostly predictable. That usually means safer weekly points and fewer panic decisions.",
+    };
+  }
+  if (risk <= 5) {
+    return {
+      label: "Manageable",
+      className: "good",
+      detail: "This is normal fantasy uncertainty. Let the value edge and roster fit decide the deal.",
+    };
+  }
+  if (risk <= 6.5) {
+    return {
+      label: "Volatile",
+      className: "watch",
+      detail: "The incoming side has more role, injury, age, or team-environment uncertainty. Upside is fine, but do not pay full price for it.",
+    };
+  }
+  return {
+    label: "High risk",
+    className: "danger",
+    detail: "The incoming side is fragile. You need a clear discount, major upside, or a roster emergency to justify it.",
+  };
+}
+
+function tradeRiskRead(giveTotals, getTotals, get) {
+  const band = riskBand(getTotals.risk);
+  const riskDelta = getTotals.risk - giveTotals.risk;
+  const comparison = !get.length
+    ? "Add the players you would receive to get a risk read."
+    : giveTotals.risk === 0
+      ? "The number is a 1-10 average from the live board, where higher means less predictable."
+      : riskDelta >= 2
+        ? `That is ${riskDelta.toFixed(1)} points riskier than what you are sending.`
+        : riskDelta <= -2
+          ? `That is ${Math.abs(riskDelta).toFixed(1)} points safer than what you are sending.`
+          : "That is close to the risk level you are sending away.";
+  const riskyPlayers = get
+    .filter((item) => item.row)
+    .sort((a, b) => b.risk - a.risk)
+    .slice(0, 2)
+    .map((item) => `${item.row.Player}: ${item.risk}/10${item.row.Action ? `, ${item.row.Action.toLowerCase()}` : ""}`);
+  return {
+    ...band,
+    comparison,
+    notes: riskyPlayers,
+  };
+}
+
+function tradeDealShape(give, get, net, warnings, giveTotals, getTotals) {
+  if (!give.length || !get.length) {
+    return {
+      label: "Waiting on both sides",
+      detail: "Add at least one player to each side and FantasyIQ will read the structure of the offer.",
+    };
+  }
+  const giveBest = giveTotals.best?.value || 0;
+  const getBest = getTotals.best?.value || 0;
+  const bestPlayerDelta = getBest - giveBest;
+  const projectionDelta = getTotals.projection - giveTotals.projection;
+
+  if (bestPlayerDelta <= -10) {
+    return {
+      label: "Star tax",
+      detail: "You are probably giving up the best player. Make sure the total value and roster need are strong enough to cover that.",
+    };
+  }
+  if (give.length > get.length && bestPlayerDelta >= 0) {
+    return {
+      label: "Consolidation win",
+      detail: "You are turning multiple pieces into equal-or-better player quality. That is usually a clean trade shape.",
+    };
+  }
+  if (get.length > give.length) {
+    return {
+      label: "Depth add",
+      detail: "You are adding bodies. Useful if your bench is thin, but it can water down starter quality.",
+    };
+  }
+  if (net >= 4 && warnings.length) {
+    return {
+      label: "Value with conditions",
+      detail: "The math leans your way, but the warnings need a real answer before you accept.",
+    };
+  }
+  if (Math.abs(net) <= 3 && Math.abs(projectionDelta) <= 10) {
+    return {
+      label: "Need-for-need",
+      detail: "This is close enough that team context matters more than the raw score.",
+    };
+  }
+  return {
+    label: net >= 0 ? "Clean edge" : "Thin edge",
+    detail: net >= 0
+      ? "The incoming side gives you a measurable value edge. Check risk and lineup need, then negotiate from strength."
+      : "You are giving up value on paper. Only do it if it fixes a real weekly lineup problem.",
+  };
+}
+
 function renderTradePlayers(container, players, emptyMessage) {
   if (!container) return;
   if (!players.length) {
@@ -1129,8 +1239,11 @@ function renderTradeCalc() {
   const giveTotal = giveTotals.value;
   const getTotal = getTotals.value;
   const net = getTotal - giveTotal;
+  const projectionDelta = getTotals.projection - giveTotals.projection;
   const unknowns = [...give, ...get].filter((item) => !item.row).map((item) => item.name);
   const warnings = tradeFitWarnings(give, get, roster);
+  const riskRead = tradeRiskRead(giveTotals, getTotals, get);
+  const dealShape = tradeDealShape(give, get, net, warnings, giveTotals, getTotals);
   const verdict =
     !give.length || !get.length
       ? "Enter both sides"
@@ -1154,7 +1267,7 @@ function renderTradeCalc() {
   const summary =
     !give.length || !get.length
       ? "Type one player per line on each side. The calculator updates from the live ESPN board."
-      : `${net >= 0 ? "+" : ""}${net.toFixed(1)} net value, ${getTotals.projection - giveTotals.projection >= 0 ? "+" : ""}${(getTotals.projection - giveTotals.projection).toFixed(1)} projected PPR.`;
+      : `${net >= 0 ? "+" : ""}${net.toFixed(1)} net value, ${projectionDelta >= 0 ? "+" : ""}${projectionDelta.toFixed(1)} projected PPR. ${riskRead.label} incoming risk.`;
 
   if (tradeGiveTotal) tradeGiveTotal.textContent = giveTotal.toFixed(1);
   if (tradeGetTotal) tradeGetTotal.textContent = getTotal.toFixed(1);
@@ -1169,9 +1282,22 @@ function renderTradeCalc() {
     <p>${htmlEscape(summary)}</p>
     <div class="trade-score-grid">
       <div><span>Net Value</span><strong>${net >= 0 ? "+" : ""}${net.toFixed(1)}</strong></div>
-      <div><span>Projected PPR</span><strong>${getTotals.projection - giveTotals.projection >= 0 ? "+" : ""}${(getTotals.projection - giveTotals.projection).toFixed(1)}</strong></div>
-      <div><span>Incoming Risk</span><strong>${getTotals.risk.toFixed(1)}/10</strong></div>
+      <div><span>Projected PPR</span><strong>${projectionDelta >= 0 ? "+" : ""}${projectionDelta.toFixed(1)}</strong></div>
+      <div><span>Incoming Risk</span><strong class="${riskRead.className}">${getTotals.risk.toFixed(1)}/10</strong><small>${htmlEscape(riskRead.label)}</small></div>
       <div><span>Roster Fit</span><strong>${roster.length ? "Active" : "Pending"}</strong></div>
+    </div>
+    <div class="trade-detail-grid">
+      <article class="trade-risk-read ${riskRead.className}">
+        <span>Incoming risk explained</span>
+        <strong>${htmlEscape(riskRead.label)}</strong>
+        <p>${htmlEscape(riskRead.detail)} ${htmlEscape(riskRead.comparison)}</p>
+        ${riskRead.notes.length ? `<ul>${riskRead.notes.map((note) => `<li>${htmlEscape(note)}</li>`).join("")}</ul>` : ""}
+      </article>
+      <article class="trade-shape-read">
+        <span>Deal shape</span>
+        <strong>${htmlEscape(dealShape.label)}</strong>
+        <p>${htmlEscape(dealShape.detail)}</p>
+      </article>
     </div>
     <p><strong>Positions:</strong> Send ${tradePositionSummary(give)}. Receive ${tradePositionSummary(get)}.</p>
     ${warnings.length ? `<div class="trade-warning-list">${warnings.map((warning) => `<span>${htmlEscape(warning)}</span>`).join("")}</div>` : ""}
