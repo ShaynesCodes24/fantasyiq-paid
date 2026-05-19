@@ -611,9 +611,9 @@ textarea {
 }
 
 .command-hero h2 {
-  max-width: 760px;
+  max-width: 100%;
   margin-bottom: 10px;
-  font-size: 38px;
+  font-size: 32px;
   line-height: 1.04;
 }
 
