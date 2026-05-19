@@ -190,12 +190,13 @@ const boardColumns = [
   "Player",
   "Pos",
   "Team",
-  "Bye",
-  "Category",
   "Proj PPR Pts",
+  "Last Year PPR",
   "Value Score",
   "Risk",
   "Action",
+  "Bye",
+  "Category",
 ];
 
 const trendColumns = [
@@ -203,8 +204,9 @@ const trendColumns = [
   "Player",
   "Pos",
   "Team",
-  "Board Rank",
   "Proj PPR Pts",
+  "Last Year PPR",
+  "Board Rank",
   "Trend Score",
   "Confidence",
   "Draft Action",
@@ -249,6 +251,13 @@ function visibleBoardColumns() {
     columns.splice(insertAt, 0, "Tier");
   }
   return columns;
+}
+
+function columnHeader(column) {
+  if (column === "Tier") return "Pos Tier";
+  if (column === "Proj PPR Pts") return "Proj PPR";
+  if (column === "Last Year PPR") return "Last Yr PPR";
+  return column;
 }
 
 function setActive(items, activeItem) {
@@ -398,6 +407,10 @@ function cellValue(row, key) {
   return row[key] ?? "";
 }
 
+function metricValue(value, fallback = "N/A") {
+  return value === undefined || value === null || value === "" ? fallback : value;
+}
+
 function filteredRows() {
   if (!boardData) return [];
   const query = boardSearch.value.trim().toLowerCase();
@@ -405,7 +418,7 @@ function filteredRows() {
   const drafted = liveDraftedKeys();
   return boardData.boards[activeBoard].rows.filter((row) => {
     const matchesPosition = !pos || (pos === "FLEX" ? ["RB", "WR", "TE"].includes(row.Pos) : row.Pos === pos);
-    const searchable = `${row.Player} ${row.Pos} ${row.Team} ${row.Category} ${row.Tier} ${row["Pos Tier"]} ${row.Action} ${row.Analysis} ${row.Trend} ${row["Source Signal"]} ${row.Catalyst} ${row["Why Rising/Falling"]} ${row["Draft Action"]}`.toLowerCase();
+    const searchable = `${row.Player} ${row.Pos} ${row.Team} ${row.Category} ${row.Tier} ${row["Pos Tier"]} ${row.Action} ${row.Analysis} ${row["Risk Notes"]} ${row.Trend} ${row["Source Signal"]} ${row.Catalyst} ${row["Why Rising/Falling"]} ${row["Draft Action"]}`.toLowerCase();
     const matchesDraftStatus = !hideDraftedEnabled() || !drafted.has(normalizePlayerName(row.Player));
     return matchesPosition && matchesDraftStatus && (!query || searchable.includes(query));
   });
@@ -444,7 +457,7 @@ function renderBoard() {
   if (rows.length && !rows.some((row) => normalizePlayerName(row.Player) === selectedBoardPlayerKey)) {
     selectedBoardPlayerKey = normalizePlayerName(rows[0].Player);
   }
-  thead.innerHTML = `<tr>${columns.map((column) => `<th>${column === "Tier" ? "Pos Tier" : column}</th>`).join("")}</tr>`;
+  thead.innerHTML = `<tr>${columns.map((column) => `<th>${columnHeader(column)}</th>`).join("")}</tr>`;
   let previousTier = "";
   tbody.innerHTML = rows
     .map((row, index) => {
@@ -466,6 +479,9 @@ function renderBoard() {
             }
             if (column === "Tier") {
               return `<td><span class="tier-pill">${row["Pos Tier"] || cellValue(row, column)}</span></td>`;
+            }
+            if (column === "Last Year PPR") {
+              return `<td class="number">${metricValue(row[column])}</td>`;
             }
             const numberClass = typeof row[column] === "number" ? " class=\"number\"" : "";
             return `<td${numberClass}>${cellValue(row, column)}</td>`;
@@ -624,7 +640,7 @@ function renderPlayerAutocomplete(config) {
   }
   box.innerHTML = suggestions
     .map((row, index) => {
-      const meta = `#${row.Rank} / ${row.Pos} / ${row.Team || "FA"} / ${row["Pos Tier"] || row.Category || "Tier"}`;
+      const meta = `#${row.Rank} / ${row.Pos} / ${row.Team || "FA"} / Proj ${metricValue(row["Proj PPR Pts"])} / LY ${metricValue(row["Last Year PPR"])}`;
       return `<button class="player-suggestion ${index === 0 ? "active" : ""}" type="button" data-index="${index}">
         <span><strong>${htmlEscape(row.Player)}</strong><small>${htmlEscape(meta)}</small></span>
         <em>${Number(row["Value Score"] || 0).toFixed(1)}</em>
@@ -713,6 +729,7 @@ function showAnalysis(row) {
       <div class="analysis-chip"><span>Position Tier</span><strong>${row["Pos Tier"]}</strong></div>
       <div class="analysis-chip"><span>Pos Rank</span><strong>${row.Pos}${row["Pos Rank"]}</strong></div>
       <div class="analysis-chip"><span>Proj PPR</span><strong>${row["Proj PPR Pts"]}</strong></div>
+      <div class="analysis-chip"><span>Last Year</span><strong>${metricValue(row["Last Year PPR"])}</strong></div>
       <div class="analysis-chip"><span>Value</span><strong>${row["Value Score"]}</strong></div>
       <div class="analysis-chip"><span>Risk</span><strong>${row.Risk}/10</strong></div>
       <div class="analysis-chip"><span>Volume</span><strong>${row.Volume}</strong></div>
@@ -721,13 +738,15 @@ function showAnalysis(row) {
     </div>
     <p><strong>${row.Action}</strong></p>
     <p><strong>Projection source:</strong> ${row["Projection Source"]}</p>
+    ${row["Prior Year Source"] ? `<p><strong>Prior-year source:</strong> ${htmlEscape(row["Prior Year Source"])}</p>` : ""}
+    ${row["Risk Notes"] ? `<p><strong>Risk read:</strong> ${htmlEscape(row["Risk Notes"])}</p>` : ""}
     <p>${row.Analysis}</p>
   `;
 }
 
 function showTrendAnalysis(row) {
-  const trendClass = row.Trend === "Riser" ? "trend-riser" : "trend-faller";
-  const trendLabel = row.Trend === "Riser" ? "Rising" : "Falling";
+  const trendClass = row.Trend === "Rising" ? "trend-riser" : row.Trend === "Falling" ? "trend-faller" : "watch";
+  const trendLabel = row.Trend || "Watch";
   analysisPane.innerHTML = `
     <p class="eyebrow">${row.Pos || "Watch"} / ${row.Team || "TBD"} / ${trendLabel}</p>
     <h3>${row.Player}</h3>
@@ -738,6 +757,7 @@ function showTrendAnalysis(row) {
       <div class="analysis-chip"><span>Board Rank</span><strong>${row["Board Rank"] || "Watch"}</strong></div>
       <div class="analysis-chip"><span>Position Tier</span><strong>${row["Pos Tier"] || "Watch"}</strong></div>
       <div class="analysis-chip"><span>Proj PPR</span><strong>${row["Proj PPR Pts"] || "TBD"}</strong></div>
+      <div class="analysis-chip"><span>Last Year</span><strong>${metricValue(row["Last Year PPR"])}</strong></div>
     </div>
     <p><strong>${row["Draft Action"]}</strong></p>
     <p><strong>Source signal:</strong> ${row["Source Signal"]}</p>

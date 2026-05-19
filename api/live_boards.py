@@ -153,18 +153,45 @@ def ppr_rank(player: dict[str, Any]) -> int:
     return rank if rank > 0 else 9999
 
 
-def projected_ppr_points(player: dict[str, Any], season: int) -> float:
+def weekly_ppr_points(player: dict[str, Any], season: int, stat_source_id: int) -> dict[int, float]:
     weekly: dict[int, float] = {}
     for stat in player.get("stats") or []:
         if stat.get("seasonId") != season:
             continue
-        if stat.get("statSourceId") != 1 or stat.get("statSplitTypeId") != 1:
+        if stat.get("statSourceId") != stat_source_id or stat.get("statSplitTypeId") != 1:
             continue
         period = int(stat.get("scoringPeriodId") or 0)
         if not 1 <= period <= 18:
             continue
         weekly[period] = max(weekly.get(period, 0.0), float(stat.get("appliedTotal") or 0.0))
+    return weekly
+
+
+def season_ppr_points(player: dict[str, Any], season: int, stat_source_id: int) -> float:
+    weekly = weekly_ppr_points(player, season, stat_source_id)
     return round(sum(weekly.values()), 1)
+
+
+def projected_ppr_points(player: dict[str, Any], season: int) -> float:
+    return season_ppr_points(player, season, 1)
+
+
+def last_year_ppr_profile(player: dict[str, Any], season: int) -> dict[str, Any]:
+    weekly = weekly_ppr_points(player, season - 1, 0)
+    values = list(weekly.values())
+    total = round(sum(values), 1)
+    scoring_weeks = sum(1 for value in values if value > 0.5)
+    volatility = 0.0
+    if len(values) > 1:
+        average = sum(values) / len(values)
+        variance = sum((value - average) ** 2 for value in values) / len(values)
+        volatility = variance ** 0.5
+    return {
+        "points": total,
+        "scoring_weeks": scoring_weeks,
+        "weeks": len(values),
+        "volatility": round(volatility, 1),
+    }
 
 
 def position_tier(pos: str, pos_rank: int) -> str:
@@ -227,24 +254,139 @@ def category_for(row_seed: dict[str, Any]) -> str:
     return "Staple"
 
 
-def risk_for(player: dict[str, Any], rank: int, projected: float, ownership: dict[str, Any]) -> int:
-    risk = 3.0
+def risk_profile_for(
+    player: dict[str, Any],
+    rank: int,
+    projected: float,
+    last_year: float,
+    last_year_weeks: int,
+    volatility: float,
+    ownership: dict[str, Any],
+    pos: str,
+) -> tuple[int, str]:
+    risk = 2.6
+    notes: list[str] = []
+    player_name = normalize_name(str(player.get("fullName") or ""))
+    rookie = player_name in rookie_names()
     injury_status = str(player.get("injuryStatus") or "ACTIVE").upper()
     if injury_status not in {"ACTIVE", "NORMAL", ""}:
-        risk += 2.5
+        severe_statuses = {"OUT", "DOUBTFUL", "IR", "INJURED_RESERVE", "SUSPENDED", "PUP"}
+        risk += 2.7 if injury_status in severe_statuses else 1.6
+        notes.append(f"injury status is {injury_status.replace('_', ' ').title()}")
     if player.get("injured"):
-        risk += 2.0
+        risk += 1.4
+        notes.append("ESPN has the injured flag on")
+
+    if last_year <= 0:
+        if rookie:
+            risk += 2.2 if rank <= 60 else 1.2
+            notes.append("no prior NFL scoring sample")
+        elif projected >= 120 or rank <= 120:
+            risk += 1.8
+            notes.append("projected role without prior-year PPR production")
+        else:
+            risk += 0.7
+    else:
+        if last_year >= 220 and last_year_weeks >= 12:
+            risk -= 0.5
+        elif last_year >= 150 and last_year_weeks >= 10:
+            risk -= 0.2
+
+        if last_year_weeks <= 4 and projected >= 90:
+            risk += 2.0
+            notes.append("tiny prior-year scoring sample")
+        elif last_year_weeks <= 8 and projected >= 120:
+            risk += 1.4
+            notes.append("limited prior-year scoring sample")
+        elif last_year_weeks <= 11 and rank <= 80:
+            risk += 0.7
+            notes.append("missed meaningful prior-year scoring weeks")
+
+        projection_jump = (projected - last_year) / last_year if last_year > 0 else 0.0
+        if projected >= 100 and projection_jump >= 1.0:
+            risk += 1.6
+            notes.append("projection requires a major rebound")
+        elif projected >= 100 and projection_jump >= 0.45:
+            risk += 1.1
+            notes.append("projection is well above last year")
+        elif projected >= 100 and projection_jump >= 0.25:
+            risk += 0.5
+            notes.append("projection needs growth from last year")
+
+        average_week = last_year / last_year_weeks if last_year_weeks else 0.0
+        volatility_ratio = volatility / average_week if average_week else 0.0
+        if volatility >= 14 and volatility_ratio >= 0.85 and last_year_weeks >= 8:
+            risk += 1.0
+            notes.append("weekly scoring was very volatile")
+        elif volatility >= 11 and volatility_ratio >= 0.65 and last_year_weeks >= 8:
+            risk += 0.6
+            notes.append("weekly scoring had volatility")
+
     if rank > 120:
-        risk += 1.0
+        risk += 0.8
     if rank > 200:
-        risk += 1.0
+        risk += 0.7
     if projected <= 0:
         risk += 2.0
-    if float(ownership.get("percentStarted") or 0.0) < 15 and rank <= 120:
+        notes.append("no current projection")
+
+    started = float(ownership.get("percentStarted") or 0.0)
+    owned = float(ownership.get("percentOwned") or 0.0)
+    if started < 30 and rank <= 80:
         risk += 1.0
+        notes.append("low ESPN start rate for the rank")
+    elif started < 15 and rank <= 120:
+        risk += 0.8
+        notes.append("low ESPN start rate for the tier")
+    if owned < 80 and rank <= 100:
+        risk += 0.6
+        notes.append("ownership is light for a ranked starter")
+
+    adp = ownership.get("averageDraftPosition")
+    if adp is not None:
+        market_delta = float(adp) - rank
+        if market_delta <= -15:
+            risk += 0.6
+            notes.append("market price is ahead of board rank")
+        elif market_delta >= 20 and rank <= 120:
+            risk -= 0.3
+
     if abs(float(ownership.get("averageDraftPositionPercentChange") or 0.0)) >= 10:
         risk += 0.5
-    return int(round(clamp(risk, 1, 10)))
+        notes.append("ADP is moving quickly")
+    if float(ownership.get("auctionValueAverageChange") or 0.0) <= -3:
+        risk += 0.4
+        notes.append("auction value is sliding")
+    if pos in {"K", "DST"}:
+        risk += 0.5
+        notes.append("position is more matchup dependent")
+
+    risk_score = int(round(clamp(risk, 1, 10)))
+    if not notes:
+        notes.append("healthy profile with projection, ADP, and prior-year production in range")
+    return risk_score, "; ".join(notes[:4])
+
+
+def risk_for(player: dict[str, Any], rank: int, projected: float, ownership: dict[str, Any]) -> int:
+    profile = last_year_ppr_profile(player, DEFAULT_SEASON)
+    return risk_profile_for(
+        player,
+        rank,
+        projected,
+        float(profile["points"]),
+        int(profile["scoring_weeks"]),
+        float(profile["volatility"]),
+        ownership,
+        POSITION_BY_ID.get(player.get("defaultPositionId"), ""),
+    )[0]
+
+
+def points_display(value: float) -> float | str:
+    return round(value, 1) if value > 0 else "N/A"
+
+
+def year_label(season: int) -> str:
+    return str(season - 1)
 
 
 def action_for(row_seed: dict[str, Any]) -> str:
@@ -272,9 +414,11 @@ def analysis_for(row: dict[str, Any], ownership: dict[str, Any]) -> str:
     started = float(ownership.get("percentStarted") or 0.0)
     return (
         f"Live ESPN feed ranks {row['Player']} #{row['Rank']} overall and {row['Pos']}{row['Pos Rank']}. "
-        f"Current ADP is {adp_text}, projected PPR is {row['Proj PPR Pts']}, ownership is {owned:.1f}%, "
+        f"Current ADP is {adp_text}, projected PPR is {row['Proj PPR Pts']}, last-year PPR is "
+        f"{row['Last Year PPR']}, ownership is {owned:.1f}%, "
         f"and start rate is {started:.1f}%. FantasyIQ value is recalculated from ESPN rank, ADP, projection, "
-        "ownership, and injury flags whenever the live board refreshes."
+        f"prior-year production, volatility, ownership, and injury flags whenever the live board refreshes. "
+        f"Risk read: {row['Risk Notes']}."
     )
 
 
@@ -290,12 +434,23 @@ def build_row_seed(player: dict[str, Any], season: int) -> dict[str, Any] | None
         return None
     ownership = player.get("ownership") or {}
     projected = projected_ppr_points(player, season)
+    last_year_profile = last_year_ppr_profile(player, season)
+    last_year = float(last_year_profile["points"])
     adp = float(ownership.get("averageDraftPosition") or rank + 30)
     market_delta = adp - rank
     percent_change = float(ownership.get("percentChange") or 0.0)
     auction_change = float(ownership.get("auctionValueAverageChange") or 0.0)
     adp_value = clamp(50 + market_delta * 1.15 + percent_change * 6 + auction_change * 2, 10, 95)
-    risk = risk_for(player, rank, projected, ownership)
+    risk, risk_notes = risk_profile_for(
+        player,
+        rank,
+        projected,
+        last_year,
+        int(last_year_profile["scoring_weeks"]),
+        float(last_year_profile["volatility"]),
+        ownership,
+        pos,
+    )
     overall = clamp(100 - (rank - 1) * 0.28, 40, 99)
     volume = clamp(45 + float(ownership.get("percentStarted") or 0.0) * 0.45, 35, 96)
     upside = clamp(overall + float(ownership.get("auctionValueAverage") or 0.0) * 0.22 + max(market_delta, 0) * 0.1, 45, 99)
@@ -309,6 +464,8 @@ def build_row_seed(player: dict[str, Any], season: int) -> dict[str, Any] | None
         "rank": rank,
         "pos": pos,
         "projected": projected,
+        "last_year": last_year,
+        "last_year_profile": last_year_profile,
         "ownership": ownership,
         "outlook": str(player.get("seasonOutlook") or ""),
         "market_delta": market_delta,
@@ -317,6 +474,7 @@ def build_row_seed(player: dict[str, Any], season: int) -> dict[str, Any] | None
         "adp_change": float(ownership.get("averageDraftPositionPercentChange") or 0.0),
         "adp_value": round(adp_value, 1),
         "risk": risk,
+        "risk_notes": risk_notes,
         "overall": round(overall),
         "floor": round(floor),
         "volume": round(volume),
@@ -349,7 +507,11 @@ def build_rows(players: list[dict[str, Any]], season: int, limit: int) -> list[d
             "Bye": "",
             "Category": category,
             "Proj PPR Pts": seed["projected"],
+            "Last Year PPR": points_display(seed["last_year"]),
+            "Last Year Weeks": seed["last_year_profile"]["scoring_weeks"],
+            "Last Year Volatility": seed["last_year_profile"]["volatility"],
             "Projection Source": "ESPN live PPR projections",
+            "Prior Year Source": f"ESPN {year_label(season)} actual PPR scoring",
             "Overall": seed["overall"],
             "Floor": seed["floor"],
             "Volume": seed["volume"],
@@ -358,6 +520,7 @@ def build_rows(players: list[dict[str, Any]], season: int, limit: int) -> list[d
             "Ceiling": seed["ceiling"],
             "ADP Value": seed["adp_value"],
             "Risk": seed["risk"],
+            "Risk Notes": seed["risk_notes"],
             "Value Score": seed["value_score"],
             "Action": action_for(seed),
             "Analysis": "",
@@ -394,6 +557,7 @@ def trend_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         trend = {
             **row,
             "Trend": direction,
+            "Board Rank": row["Rank"],
             "Trend Score": round(trend_score, 1),
             "Confidence": "High" if trend_score >= 18 else "Medium" if trend_score >= 8 else "Watch",
             "Draft Action": "Move up the queue" if direction == "Rising" else "Compare price to rank" if direction == "Value Gap" else "Discount only",
@@ -429,7 +593,8 @@ def build_live_board_payload(force: bool = False, limit: int | None = None) -> d
         "season": season,
         "method": (
             "Live FantasyIQ board built from ESPN PPR ranks, ESPN projected fantasy points, "
-            "ADP, ownership, start rate, market movement, and injury flags."
+            "prior-year actual PPR points, ADP, ownership, start rate, market movement, volatility, "
+            "and injury flags."
         ),
         "positionColors": POSITION_COLORS,
         "boards": {
