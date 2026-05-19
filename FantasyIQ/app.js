@@ -2732,6 +2732,9 @@ function loadBoards() {
       if (boardStatus) {
         boardStatus.textContent = "Live board unavailable. Loading bundled board fallback...";
       }
+      if (window.FANTASY_BOARDS) {
+        return window.FANTASY_BOARDS;
+      }
       return fetch(`./data/boards.json?v=${Date.now()}`, { cache: "no-store" }).then((response) => {
         if (!response.ok) throw new Error(`Bundled board returned HTTP ${response.status}`);
         return response.json();
@@ -2757,18 +2760,7 @@ function loadBoards() {
 }
 
 if (boardTable) {
-  if (window.FANTASY_BOARDS) {
-    boardData = window.FANTASY_BOARDS;
-    renderBoard();
-    renderLiveDraft();
-    renderLiveTierBoard();
-    renderMockSimulator();
-    renderFootballersPlayerCheck();
-    renderTradeCalc();
-    refreshActivePlayerAutocomplete();
-  } else {
-    loadBoards();
-  }
+  loadBoards();
 }
 
 setupPlayerAutocomplete();
