@@ -831,7 +831,7 @@ li + li {
 }
 
 .paste-box,
-.trade-calculator textarea {
+.trade-shell textarea {
   width: 100%;
   min-height: 132px;
   border: 1px solid var(--line);
@@ -854,23 +854,192 @@ li + li {
   box-shadow: 0 10px 22px rgba(59, 33, 21, 0.18);
 }
 
-.trade-calculator {
+.trade-shell {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+}
+
+.trade-card,
+.trade-verdict,
+.trade-rules article {
+  border: 1px solid rgba(216, 195, 146, 0.74);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 252, 241, 0.98), rgba(255, 248, 232, 0.95)),
+    var(--surface-2);
+  box-shadow: var(--shadow-soft);
+}
+
+.trade-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.trade-card-roster,
+.trade-verdict {
+  grid-column: 1 / -1;
+}
+
+.trade-card-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.trade-card-head span,
+.trade-verdict-label,
+.trade-rules span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.trade-card-head strong {
+  color: var(--accent);
+  font-size: 30px;
+  line-height: 1;
+}
+
+.trade-card textarea {
+  min-height: 148px;
+  background: #fffdf6;
+}
+
+.trade-card-roster textarea {
+  min-height: 86px;
+}
+
+.trade-chip-list {
+  display: grid;
+  gap: 8px;
+}
+
+.trade-player-chip {
+  display: grid;
+  gap: 3px;
+  border: 1px solid rgba(216, 195, 146, 0.72);
+  border-radius: 8px;
+  background: #fffaf0;
+  padding: 10px;
+}
+
+.trade-player-chip strong {
+  color: var(--ink);
+}
+
+.trade-player-chip span,
+.trade-player-chip small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.trade-player-chip.missing {
+  border-color: rgba(161, 63, 47, 0.45);
+  background: #fff3ef;
+}
+
+.trade-roster-pills,
+.trade-warning-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.trade-roster-pills span,
+.trade-warning-list span {
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.trade-roster-pills span {
+  background: #eef7f2;
+  color: var(--good);
+}
+
+.trade-warning-list span {
+  background: #fff0e9;
+  color: var(--warn);
+}
+
+.trade-verdict {
+  padding: 18px;
+}
+
+.trade-verdict > strong {
+  display: block;
+  margin: 5px 0 8px;
+  font-size: 34px;
+  line-height: 1;
+}
+
+.trade-verdict strong.good {
+  color: var(--good);
+}
+
+.trade-verdict strong.watch {
+  color: #93691d;
+}
+
+.trade-verdict strong.danger {
+  color: var(--warn);
+}
+
+.trade-score-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.trade-score-grid div {
+  border: 1px solid rgba(216, 195, 146, 0.72);
+  border-radius: 8px;
+  background: #fffaf0;
+  padding: 10px;
+}
+
+.trade-score-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.trade-score-grid strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 22px;
+}
+
+.trade-rules {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+  margin-top: 14px;
 }
 
-.trade-calculator label {
-  display: grid;
-  gap: 8px;
+.trade-rules article {
+  padding: 15px;
+}
+
+.trade-rules strong {
+  display: block;
+  margin: 6px 0;
+}
+
+.trade-rules p {
+  margin-bottom: 0;
   color: var(--muted);
   font-size: 13px;
-  font-weight: 800;
-}
-
-.trade-calculator .primary-action {
-  grid-column: 1 / -1;
-  justify-self: start;
 }
 
 .grader button {
@@ -1999,7 +2168,9 @@ code {
   .command-grid,
   .strategy-grid,
   .round-guide,
-  .trade-calculator,
+  .trade-shell,
+  .trade-score-grid,
+  .trade-rules,
   .mini-table div,
   .live-hero-grid,
   .live-grid,

@@ -21,6 +21,12 @@ const tradeGet = document.querySelector("#trade-get");
 const tradeRoster = document.querySelector("#trade-roster");
 const calculateTrade = document.querySelector("#calculate-trade");
 const tradeOutput = document.querySelector("#trade-output");
+const tradeGiveTotal = document.querySelector("#trade-give-total");
+const tradeGetTotal = document.querySelector("#trade-get-total");
+const tradeGiveList = document.querySelector("#trade-give-list");
+const tradeGetList = document.querySelector("#trade-get-list");
+const tradeRosterStatus = document.querySelector("#trade-roster-status");
+const tradeRosterPills = document.querySelector("#trade-roster-pills");
 const boardCount = document.querySelector("#board-count");
 const liveSyncStatus = document.querySelector("#live-sync-status");
 const liveStatus = document.querySelector("#live-status");
@@ -812,6 +818,8 @@ function tradeSideValue(text) {
       name,
       row,
       value: row ? Number(row["Value Score"] || 0) : 0,
+      risk: row ? Number(row.Risk || 0) : 0,
+      projection: row ? Number(row["Proj PPR Pts"] || 0) : 0,
     };
   });
 }
@@ -825,41 +833,155 @@ function positionCounts(players) {
   return counts;
 }
 
+function tradeTotals(players) {
+  return {
+    value: players.reduce((sum, item) => sum + item.value, 0),
+    projection: players.reduce((sum, item) => sum + item.projection, 0),
+    risk: players.length ? players.reduce((sum, item) => sum + item.risk, 0) / players.length : 0,
+    best: players.reduce((best, item) => (!best || item.value > best.value ? item : best), null),
+  };
+}
+
+function tradePositionSummary(players) {
+  const counts = positionCounts(players);
+  return ["QB", "RB", "WR", "TE", "DST", "K"]
+    .filter((pos) => counts[pos])
+    .map((pos) => `${pos} ${counts[pos]}`)
+    .join(" / ") || "No matched positions";
+}
+
+function renderTradePlayers(container, players, emptyMessage) {
+  if (!container) return;
+  if (!players.length) {
+    container.textContent = emptyMessage;
+    return;
+  }
+  container.innerHTML = players
+    .map((item) => {
+      if (!item.row) {
+        return `<div class="trade-player-chip missing"><strong>${htmlEscape(item.name)}</strong><span>No board match</span><small>Check spelling or use full player name.</small></div>`;
+      }
+      return `<div class="trade-player-chip">
+        <strong>${htmlEscape(item.row.Player)}</strong>
+        <span>${item.row.Pos}${item.row["Pos Rank"] || ""} / #${item.row.Rank} / ${htmlEscape(item.row["Pos Tier"] || item.row.Category || "Tier")}</span>
+        <small>Value ${item.value.toFixed(1)} / Proj ${item.projection.toFixed(1)} / Risk ${item.risk}/10</small>
+      </div>`;
+    })
+    .join("");
+}
+
+function renderRosterPills(roster) {
+  if (!tradeRosterPills) return;
+  if (!roster.length) {
+    tradeRosterPills.textContent = "Add roster names to unlock fit warnings.";
+    return;
+  }
+  const counts = positionCounts(roster);
+  tradeRosterPills.innerHTML = ["QB", "RB", "WR", "TE", "DST", "K"]
+    .map((pos) => `<span>${pos} ${counts[pos] || 0}</span>`)
+    .join("");
+}
+
+function tradeFitWarnings(give, get, roster) {
+  const warnings = [];
+  const before = positionCounts(roster);
+  const after = { ...before };
+  give.forEach((item) => {
+    if (item.row?.Pos && after[item.row.Pos] !== undefined) after[item.row.Pos] -= 1;
+  });
+  get.forEach((item) => {
+    if (item.row?.Pos) after[item.row.Pos] = (after[item.row.Pos] || 0) + 1;
+  });
+
+  if (roster.length) {
+    if ((after.RB || 0) < 3) warnings.push("RB room gets thin.");
+    if ((after.WR || 0) < 4) warnings.push("WR room gets thin.");
+    if ((after.TE || 0) < 1) warnings.push("No TE left after trade.");
+    const giveCounts = positionCounts(give);
+    const getCounts = positionCounts(get);
+    ["RB", "WR", "TE", "QB"].forEach((pos) => {
+      if ((giveCounts[pos] || 0) > (getCounts[pos] || 0) && (after[pos] || 0) <= 2 && ["RB", "WR"].includes(pos)) {
+        warnings.push(`You are losing ${pos} depth.`);
+      }
+    });
+  }
+
+  const giveBest = tradeTotals(give).best;
+  const getBest = tradeTotals(get).best;
+  if (giveBest?.value && getBest?.value && giveBest.value - getBest.value >= 10) {
+    warnings.push(`You are giving up the best player: ${giveBest.row?.Player || giveBest.name}.`);
+  }
+  if (tradeTotals(get).risk - tradeTotals(give).risk >= 2) {
+    warnings.push("Incoming side carries meaningfully more risk.");
+  }
+  return warnings;
+}
+
 function renderTradeCalc() {
   if (!tradeOutput) return;
+  if (!boardData) {
+    tradeOutput.innerHTML = `
+      <span class="trade-verdict-label">Trade verdict</span>
+      <strong>Loading board</strong>
+      <p>Live ESPN board values are still loading. Try again in a moment.</p>
+    `;
+    return;
+  }
   const give = tradeSideValue(tradeGive?.value || "");
   const get = tradeSideValue(tradeGet?.value || "");
   const roster = tradeSideValue(tradeRoster?.value || "");
-  const giveTotal = give.reduce((sum, item) => sum + item.value, 0);
-  const getTotal = get.reduce((sum, item) => sum + item.value, 0);
+  const giveTotals = tradeTotals(give);
+  const getTotals = tradeTotals(get);
+  const giveTotal = giveTotals.value;
+  const getTotal = getTotals.value;
   const net = getTotal - giveTotal;
-  const giveCounts = positionCounts(give);
-  const getCounts = positionCounts(get);
-  const rosterCounts = positionCounts(roster);
   const unknowns = [...give, ...get].filter((item) => !item.row).map((item) => item.name);
+  const warnings = tradeFitWarnings(give, get, roster);
   const verdict =
-    net >= 8
-      ? "Do it if roster fit checks out"
-      : net >= 0
-        ? "Fair, negotiate for a small sweetener"
-        : net >= -6
-          ? "Only do it for roster construction"
-          : "Reject or counter";
-  const rosterFit =
-    roster.length === 0
-      ? "Roster-fit module is waiting for your drafted roster."
-      : `Roster context loaded: QB ${rosterCounts.QB || 0}, RB ${rosterCounts.RB || 0}, WR ${rosterCounts.WR || 0}, TE ${rosterCounts.TE || 0}.`;
+    !give.length || !get.length
+      ? "Enter both sides"
+      : unknowns.length
+        ? "Fix unknown players"
+        : net >= 10 && !warnings.length
+          ? "Accept"
+          : net >= 4
+            ? "Lean accept"
+            : net >= -3
+              ? "Fair, negotiate"
+              : net >= -9
+                ? "Only for roster fit"
+                : "Reject or counter";
+  const verdictClass =
+    verdict === "Accept" || verdict === "Lean accept"
+      ? "good"
+      : verdict === "Reject or counter" || verdict === "Fix unknown players"
+        ? "danger"
+        : "watch";
+  const summary =
+    !give.length || !get.length
+      ? "Type one player per line on each side. The calculator updates from the live ESPN board."
+      : `${net >= 0 ? "+" : ""}${net.toFixed(1)} net value, ${getTotals.projection - giveTotals.projection >= 0 ? "+" : ""}${(getTotals.projection - giveTotals.projection).toFixed(1)} projected PPR.`;
+
+  if (tradeGiveTotal) tradeGiveTotal.textContent = giveTotal.toFixed(1);
+  if (tradeGetTotal) tradeGetTotal.textContent = getTotal.toFixed(1);
+  if (tradeRosterStatus) tradeRosterStatus.textContent = roster.length ? "Loaded" : "Optional";
+  renderTradePlayers(tradeGiveList, give, "No outgoing players yet.");
+  renderTradePlayers(tradeGetList, get, "No incoming players yet.");
+  renderRosterPills(roster);
+
   tradeOutput.innerHTML = `
-    <strong>${verdict}</strong>
-    <div class="analysis-grid">
-      <div class="analysis-chip"><span>Value Getting</span><strong>${getTotal.toFixed(1)}</strong></div>
-      <div class="analysis-chip"><span>Value Losing</span><strong>${giveTotal.toFixed(1)}</strong></div>
-      <div class="analysis-chip"><span>Net Edge</span><strong>${net.toFixed(1)}</strong></div>
-      <div class="analysis-chip"><span>Roster Fit</span><strong>${roster.length ? "Active" : "Pending"}</strong></div>
+    <span class="trade-verdict-label">Trade verdict</span>
+    <strong class="${verdictClass}">${verdict}</strong>
+    <p>${htmlEscape(summary)}</p>
+    <div class="trade-score-grid">
+      <div><span>Net Value</span><strong>${net >= 0 ? "+" : ""}${net.toFixed(1)}</strong></div>
+      <div><span>Projected PPR</span><strong>${getTotals.projection - giveTotals.projection >= 0 ? "+" : ""}${(getTotals.projection - giveTotals.projection).toFixed(1)}</strong></div>
+      <div><span>Incoming Risk</span><strong>${getTotals.risk.toFixed(1)}/10</strong></div>
+      <div><span>Roster Fit</span><strong>${roster.length ? "Active" : "Pending"}</strong></div>
     </div>
-    <p>${rosterFit}</p>
-    <p><strong>Positions:</strong> Give RB ${giveCounts.RB || 0}, WR ${giveCounts.WR || 0}, TE ${giveCounts.TE || 0}, QB ${giveCounts.QB || 0}. Get RB ${getCounts.RB || 0}, WR ${getCounts.WR || 0}, TE ${getCounts.TE || 0}, QB ${getCounts.QB || 0}.</p>
-    ${unknowns.length ? `<p><strong>Unknown players:</strong> ${unknowns.join(", ")}. Add or correct names from the board.</p>` : ""}
+    <p><strong>Positions:</strong> Send ${tradePositionSummary(give)}. Receive ${tradePositionSummary(get)}.</p>
+    ${warnings.length ? `<div class="trade-warning-list">${warnings.map((warning) => `<span>${htmlEscape(warning)}</span>`).join("")}</div>` : ""}
+    ${unknowns.length ? `<p><strong>Unknown players:</strong> ${unknowns.map(htmlEscape).join(", ")}.</p>` : ""}
   `;
 }
 
@@ -2147,6 +2269,7 @@ function loadBoards() {
       renderLiveTierBoard();
       renderMockSimulator();
       renderFootballersPlayerCheck();
+      renderTradeCalc();
     })
     .catch((error) => {
       if (boardStatus) {
@@ -2165,6 +2288,7 @@ if (boardTable) {
     renderLiveTierBoard();
     renderMockSimulator();
     renderFootballersPlayerCheck();
+    renderTradeCalc();
   } else {
     loadBoards();
   }
@@ -2241,6 +2365,9 @@ if (mockPaste) {
 }
 gradeMockPicks?.addEventListener("click", renderMockPickGrades);
 calculateTrade?.addEventListener("click", renderTradeCalc);
+tradeGive?.addEventListener("input", renderTradeCalc);
+tradeGet?.addEventListener("input", renderTradeCalc);
+tradeRoster?.addEventListener("input", renderTradeCalc);
 
 const savedHideDrafted = localStorage.getItem("fantasy-dashboard:hide-drafted");
 const initialHideDrafted = savedHideDrafted === null ? true : savedHideDrafted === "true";

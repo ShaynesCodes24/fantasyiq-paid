@@ -53,7 +53,7 @@
         <button class="nav-item" data-section="live">Draft Room</button>
         <button class="nav-item" data-section="simulator">Mock Simulator</button>
         <button class="nav-item" data-section="mock">Mock Grader</button>
-        <button class="nav-item" data-section="trade">Trade Gate</button>
+        <button class="nav-item" data-section="trade">Trade Calculator</button>
         <button class="nav-item" data-section="workbooks">Workbooks</button>
       </nav>
 
@@ -70,7 +70,7 @@
                 <button class="secondary-action nav-jump" type="button" data-jump="draft">Draft Plan</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="live">Draft Room</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="simulator">Mock Simulator</button>
-                <button class="secondary-action nav-jump" type="button" data-jump="trade">Trade Gate</button>
+                <button class="secondary-action nav-jump" type="button" data-jump="trade">Trade Calculator</button>
               </div>
             </div>
             <div class="iq-card">
@@ -97,9 +97,9 @@
               <small>3 rounds</small>
             </div>
             <div class="metric">
-              <span>Main Leak</span>
-              <strong>Bad trades</strong>
-              <small>Use the trade gate</small>
+              <span>Trade Calculator</span>
+              <strong>Net value</strong>
+              <small>Use the calculator before accepting</small>
             </div>
           </div>
 
@@ -120,7 +120,7 @@
               <small>Simulated draft reps with live-style tools</small>
             </article>
             <article class="command-tile">
-              <span>Trade AI</span>
+              <span>Trade Calculator</span>
               <strong>Net value check</strong>
               <small>Roster-fit ready after draft</small>
             </article>
@@ -613,49 +613,63 @@
         <section class="panel" id="trade">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Trade Gate</p>
-              <h2>Slow down bad trades</h2>
+              <p class="eyebrow">Trade Calculator</p>
+              <h2>Compare value, risk, and roster fit</h2>
             </div>
           </div>
 
-          <div class="split">
-            <div class="box">
-              <h3>Passes If</h3>
-              <ul>
-                <li>Improves starting lineup.</li>
-                <li>Fixes a real weakness.</li>
-                <li>Converts bench surplus into points.</li>
-                <li>Adds rising role or playoff upside.</li>
-              </ul>
-            </div>
-            <div class="box warning">
-              <h3>Reject If</h3>
-              <ul>
-                <li>You give up the best player without structure.</li>
-                <li>You are reacting to one bad week.</li>
-                <li>You pay peak price for yesterday's points.</li>
-                <li>You cannot explain why they want it.</li>
-              </ul>
-            </div>
+          <div class="trade-shell">
+            <section class="trade-card trade-card-out">
+              <div class="trade-card-head">
+                <span>You Send</span>
+                <strong id="trade-give-total">0.0</strong>
+              </div>
+              <textarea id="trade-give" placeholder="One player per line&#10;Example: DK Metcalf"></textarea>
+              <div class="trade-chip-list" id="trade-give-list">No outgoing players yet.</div>
+            </section>
+
+            <section class="trade-card trade-card-in">
+              <div class="trade-card-head">
+                <span>You Receive</span>
+                <strong id="trade-get-total">0.0</strong>
+              </div>
+              <textarea id="trade-get" placeholder="One player per line&#10;Example: Chuba Hubbard"></textarea>
+              <div class="trade-chip-list" id="trade-get-list">No incoming players yet.</div>
+            </section>
+
+            <section class="trade-card trade-card-roster">
+              <div class="trade-card-head">
+                <span>Roster Context</span>
+                <strong id="trade-roster-status">Optional</strong>
+              </div>
+              <textarea id="trade-roster" placeholder="Optional: paste your roster, one player per line"></textarea>
+              <div class="trade-roster-pills" id="trade-roster-pills">Add roster names to unlock fit warnings.</div>
+            </section>
+
+            <section class="trade-verdict" id="trade-output">
+              <span class="trade-verdict-label">Trade verdict</span>
+              <strong>Enter trade pieces</strong>
+              <p>Use live ESPN board value, projected PPR, risk, position scarcity, and roster balance before accepting.</p>
+            </section>
           </div>
 
-          <h3>Trade Calculator</h3>
-          <div class="trade-calculator">
-            <label>
-              I give
-              <textarea id="trade-give" placeholder="One player per line"></textarea>
-            </label>
-            <label>
-              I receive
-              <textarea id="trade-get" placeholder="One player per line"></textarea>
-            </label>
-            <label>
-              My roster after draft
-              <textarea id="trade-roster" placeholder="Optional for now. One player per line. After draft, this adds roster-fit logic."></textarea>
-            </label>
-            <button id="calculate-trade" type="button" class="primary-action">Calculate Trade</button>
+          <div class="trade-rules">
+            <article>
+              <span>Green lights</span>
+              <strong>Accept when it improves starters</strong>
+              <p>Prefer trades that add value, solve a weak position, or turn bench depth into weekly points.</p>
+            </article>
+            <article>
+              <span>Red flags</span>
+              <strong>Counter when value is cloudy</strong>
+              <p>Be careful giving up the best player, stacking one position, or buying a name after a spike week.</p>
+            </article>
+            <article>
+              <span>Roster fit</span>
+              <strong>Paste your roster for context</strong>
+              <p>The calculator checks whether the deal creates a thin RB/WR/TE room or fixes a real need.</p>
+            </article>
           </div>
-          <div id="trade-output" class="result">Enter trade pieces to compare value gained, value lost, net edge, and roster-fit warning.</div>
         </section>
 
         <section class="panel" id="workbooks">
