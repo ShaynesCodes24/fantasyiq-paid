@@ -27,6 +27,12 @@ const tradeGiveList = document.querySelector("#trade-give-list");
 const tradeGetList = document.querySelector("#trade-get-list");
 const tradeRosterStatus = document.querySelector("#trade-roster-status");
 const tradeRosterPills = document.querySelector("#trade-roster-pills");
+const tradeHistoryTeam = document.querySelector("#trade-history-team");
+const reloadTradeHistory = document.querySelector("#reload-trade-history");
+const tradeHistoryStatus = document.querySelector("#trade-history-status");
+const tradeHistoryAnalysis = document.querySelector("#trade-history-analysis");
+const tradeHistorySummary = document.querySelector("#trade-history-summary");
+const tradeHistoryList = document.querySelector("#trade-history-list");
 const boardCount = document.querySelector("#board-count");
 const liveSyncStatus = document.querySelector("#live-sync-status");
 const liveStatus = document.querySelector("#live-status");
@@ -92,6 +98,7 @@ let activeBoard = "combined";
 let liveDraft = null;
 let liveTimer = null;
 let mockSim = null;
+let tradeHistoryData = null;
 let selectedBoardPlayerKey = null;
 const LIVE_SYNC_INTERVAL_MS = 8000;
 let activePlayerAutocomplete = null;
@@ -1170,6 +1177,141 @@ function renderTradeCalc() {
     ${warnings.length ? `<div class="trade-warning-list">${warnings.map((warning) => `<span>${htmlEscape(warning)}</span>`).join("")}</div>` : ""}
     ${unknowns.length ? `<p><strong>Unknown players:</strong> ${unknowns.map(htmlEscape).join(", ")}.</p>` : ""}
   `;
+}
+
+function tradeHistoryPlayerList(players, emptyLabel) {
+  if (!players?.length) return `<span class="trade-history-empty">${htmlEscape(emptyLabel)}</span>`;
+  return `<ul>${players
+    .map((player) => {
+      const meta = [player.pos, player.proTeam].filter(Boolean).join(" / ");
+      return `<li><strong>${htmlEscape(player.name)}</strong>${meta ? `<small>${htmlEscape(meta)}</small>` : ""}</li>`;
+    })
+    .join("")}</ul>`;
+}
+
+function tradeHistoryTeamName(teamId) {
+  return tradeHistoryData?.teams?.find((team) => String(team.teamId) === String(teamId))?.teamName || `Team ${teamId}`;
+}
+
+function renderTradeHistoryTeamOptions() {
+  if (!tradeHistoryTeam || !tradeHistoryData?.teams?.length) return;
+  const saved = localStorage.getItem("fantasy-dashboard:trade-history-team") || tradeHistoryTeam.value || appConfig.customerTeamId || "";
+  tradeHistoryTeam.innerHTML = tradeHistoryData.teams
+    .map((team) => `<option value="${team.teamId}">${htmlEscape(team.teamName)}</option>`)
+    .join("");
+  if (saved && tradeHistoryData.teams.some((team) => String(team.teamId) === String(saved))) {
+    tradeHistoryTeam.value = saved;
+  } else {
+    tradeHistoryTeam.value = String(tradeHistoryData.teams[0].teamId);
+  }
+}
+
+function renderTradeHistoryStatus() {
+  if (!tradeHistoryStatus || !tradeHistoryData) return;
+  const unavailable = tradeHistoryData.unavailableSeasons || [];
+  const exposedTrades = tradeHistoryData.trades?.length || 0;
+  const years = tradeHistoryData.seasonsChecked?.join(", ") || "configured seasons";
+  const blockedText = unavailable.length
+    ? `<p><strong>Limited ESPN history:</strong> ${unavailable
+        .map((item) => `${item.season}: ${item.reason}`)
+        .map(htmlEscape)
+        .join(" ")}</p>`
+    : "";
+  tradeHistoryStatus.innerHTML = `
+    <strong>${exposedTrades} completed trade${exposedTrades === 1 ? "" : "s"} found.</strong>
+    Checked seasons: ${htmlEscape(years)}. ${tradeHistoryData.source || "ESPN public league API"} synced ${formatSyncTime(tradeHistoryData.syncedAt)}.
+    ${blockedText}
+  `;
+}
+
+function renderTradeHistory() {
+  if (!tradeHistoryStatus || !tradeHistoryAnalysis || !tradeHistorySummary || !tradeHistoryList) return;
+  if (!tradeHistoryData) {
+    tradeHistoryStatus.textContent = "Loading ESPN trade history and team tendencies.";
+    return;
+  }
+  if (!tradeHistoryData.ok) {
+    tradeHistoryStatus.innerHTML = `<strong>Could not load trade history.</strong> ${htmlEscape(tradeHistoryData.error || "Try again shortly.")}`;
+    return;
+  }
+
+  renderTradeHistoryTeamOptions();
+  renderTradeHistoryStatus();
+
+  const selectedTeamId = tradeHistoryTeam?.value || appConfig.customerTeamId || tradeHistoryData.teams?.[0]?.teamId;
+  const pattern = tradeHistoryData.teamPatterns?.[String(selectedTeamId)];
+  if (!pattern) {
+    tradeHistoryAnalysis.textContent = "Select a team to see its trade pattern read.";
+    tradeHistorySummary.textContent = "No team selected.";
+    tradeHistoryList.textContent = "No trade history loaded for this team.";
+    return;
+  }
+
+  tradeHistoryAnalysis.innerHTML = `
+    <div class="trade-pattern-verdict">
+      <strong>${htmlEscape(pattern.style)}</strong>
+      <small>${htmlEscape(pattern.frequency)}</small>
+    </div>
+    <ul>${(pattern.insights || []).map((item) => `<li>${htmlEscape(item)}</li>`).join("")}</ul>
+    <h4>Negotiation notes</h4>
+    <ul>${(pattern.recommendations || []).map((item) => `<li>${htmlEscape(item)}</li>`).join("")}</ul>
+  `;
+
+  tradeHistorySummary.innerHTML = `
+    <div class="trade-history-stats">
+      <div><span>Trades</span><strong>${pattern.tradeCount}</strong></div>
+      <div><span>Sent</span><strong>${pattern.sentCount}</strong></div>
+      <div><span>Received</span><strong>${pattern.receivedCount}</strong></div>
+      <div><span>Buys</span><strong>${htmlEscape(pattern.mostReceivedPosition)}</strong></div>
+      <div><span>Sells</span><strong>${htmlEscape(pattern.mostSentPosition)}</strong></div>
+      <div><span>Partner</span><strong>${htmlEscape(pattern.mostCommonPartner)}</strong></div>
+    </div>
+  `;
+
+  const trades = pattern.trades || [];
+  if (!trades.length) {
+    tradeHistoryList.innerHTML = `
+      <article class="trade-history-row empty">
+        <strong>No exposed trades for ${htmlEscape(pattern.teamName)} yet.</strong>
+        <p>ESPN did not return completed trades for this team in the checked seasons. If ESPN exposes history later, this section will populate automatically.</p>
+      </article>
+    `;
+    return;
+  }
+
+  tradeHistoryList.innerHTML = trades
+    .map((trade) => {
+      const partners = (trade.partners || []).map((partner) => partner.teamName).join(", ") || "Unknown partner";
+      return `<article class="trade-history-row">
+        <div class="trade-history-row-head">
+          <strong>${htmlEscape(trade.season)}${trade.date ? ` / ${htmlEscape(trade.date)}` : ""}</strong>
+          <span>with ${htmlEscape(partners)}</span>
+        </div>
+        <div class="trade-history-sides">
+          <div><span>Sent</span>${tradeHistoryPlayerList(trade.sent, "No sent players listed")}</div>
+          <div><span>Received</span>${tradeHistoryPlayerList(trade.received, "No received players listed")}</div>
+        </div>
+      </article>`;
+    })
+    .join("");
+}
+
+function loadTradeHistory(force = false) {
+  if (!tradeHistoryStatus) return;
+  tradeHistoryStatus.textContent = force ? "Refreshing ESPN trade history..." : "Loading ESPN trade history and team tendencies.";
+  fetch(`/api/trade-history?lookback=6${force ? "&force=1" : ""}`, { cache: "no-store" })
+    .then((response) => {
+      if (!response.ok) throw new Error(`Trade history returned HTTP ${response.status}`);
+      return response.json();
+    })
+    .then((data) => {
+      tradeHistoryData = data;
+      renderTradeHistory();
+    })
+    .catch((error) => {
+      console.error(error);
+      tradeHistoryStatus.innerHTML = "<strong>Could not load trade history.</strong> ESPN may be blocking historical transaction data right now.";
+    });
 }
 
 function formatSyncTime(iso) {
@@ -2559,6 +2701,12 @@ calculateTrade?.addEventListener("click", renderTradeCalc);
 tradeGive?.addEventListener("input", renderTradeCalc);
 tradeGet?.addEventListener("input", renderTradeCalc);
 tradeRoster?.addEventListener("input", renderTradeCalc);
+tradeHistoryTeam?.addEventListener("change", () => {
+  localStorage.setItem("fantasy-dashboard:trade-history-team", tradeHistoryTeam.value);
+  renderTradeHistory();
+});
+reloadTradeHistory?.addEventListener("click", () => loadTradeHistory(true));
+loadTradeHistory();
 
 const savedHideDrafted = localStorage.getItem("fantasy-dashboard:hide-drafted");
 const initialHideDrafted = savedHideDrafted === null ? true : savedHideDrafted === "true";

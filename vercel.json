@@ -35,6 +35,14 @@
     {
       "source": "/api/live-boards.json",
       "destination": "/api/live_boards"
+    },
+    {
+      "source": "/api/trade-history",
+      "destination": "/api/trade_history"
+    },
+    {
+      "source": "/api/trade-history.json",
+      "destination": "/api/trade_history"
     }
   ],
   "headers": [

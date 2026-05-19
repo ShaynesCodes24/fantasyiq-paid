@@ -18,6 +18,7 @@ STRIPE_URL = os.environ.get(
 )
 API_URL = os.environ.get("FANTASYIQ_API_URL", f"{SITE_URL}/api/live-draft")
 BOARDS_URL = os.environ.get("FANTASYIQ_BOARDS_URL", f"{SITE_URL}/api/live-boards")
+TRADE_HISTORY_URL = os.environ.get("FANTASYIQ_TRADE_HISTORY_URL", f"{SITE_URL}/api/trade-history")
 
 
 @dataclass
@@ -126,6 +127,25 @@ def board_freshness_check() -> CheckResult:
     return CheckResult("Board freshness", "FAIL", f"{source} rankings updated {raw_updated} ({age_days} days old)")
 
 
+def trade_history_check() -> CheckResult:
+    status, body = fetch(TRADE_HISTORY_URL)
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError:
+        return CheckResult("Trade history API", "FAIL", f"{TRADE_HISTORY_URL} returned non-JSON HTTP {status}")
+
+    if status == 200 and payload.get("ok") is True:
+        trades = len(payload.get("trades") or [])
+        teams = len(payload.get("teams") or [])
+        unavailable = len(payload.get("unavailableSeasons") or [])
+        detail = f"{TRADE_HISTORY_URL} loaded {teams} teams and {trades} exposed trade(s)"
+        if unavailable:
+            detail += f"; {unavailable} season(s) unavailable through ESPN"
+        return CheckResult("Trade history API", "PASS", detail)
+
+    return CheckResult("Trade history API", "FAIL", f"{TRADE_HISTORY_URL} returned HTTP {status}: {payload.get('error', 'unknown error')}")
+
+
 def main() -> int:
     checks = [
         root_check(),
@@ -136,6 +156,7 @@ def main() -> int:
         stripe_check(),
         api_check(),
         board_freshness_check(),
+        trade_history_check(),
     ]
 
     for result in checks:
