@@ -103,5 +103,5 @@ if __name__ == "__main__":
     url = create_payment_link()
     print(url)
     print()
-    print("Replace PAYMENT_LINK_PLACEHOLDER in the product docs with this URL.")
+    print("Use this URL anywhere the product docs mention the Stripe payment link.")
     sys.exit(0)

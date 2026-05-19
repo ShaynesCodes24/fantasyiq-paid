@@ -10,7 +10,7 @@ with live draft sync, ranked draft boards, mock draft practice, trade checks,
 and your league branding.
 
 Payment:
-PAYMENT_LINK_PLACEHOLDER
+https://buy.stripe.com/eVq3cvdN71GX84E917efC00
 ```
 
 ## Checkout Description
@@ -34,7 +34,7 @@ Live draft sync currently requires the ESPN league to be public.
 After payment, I send you an intake form and then deliver your dashboard link.
 
 Payment link:
-PAYMENT_LINK_PLACEHOLDER
+https://buy.stripe.com/eVq3cvdN71GX84E917efC00
 ```
 
 ## Public League Requirement

@@ -90,10 +90,10 @@ Recommended checkout/onboarding flow:
 - `customers.example.csv`: lightweight customer tracker template.
 - `.env.example`: required environment variables for each deployment.
 
-Current payment link placeholder:
+Current payment link:
 
 ```text
-PAYMENT_LINK_PLACEHOLDER
+https://buy.stripe.com/eVq3cvdN71GX84E917efC00
 ```
 
 ## Configure A Customer

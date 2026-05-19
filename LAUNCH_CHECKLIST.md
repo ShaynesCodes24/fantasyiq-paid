@@ -4,7 +4,7 @@
 
 - Create a $25/year payment link.
 - Use `shayneholladay@gmail.com` as the customer support email.
-- Replace `PAYMENT_LINK_PLACEHOLDER` after the real payment link is created.
+- Use the live Stripe payment link: `https://buy.stripe.com/eVq3cvdN71GX84E917efC00`.
 - Use `fantasy-iq-paid` as the Vercel project name.
 - Set Vercel Build Command to `node scripts/build_static.js`.
 - Set Vercel Output Directory to `dist`.
@@ -32,5 +32,5 @@
 
 These should be resolved before advertising widely:
 
-- Payment link is still `PAYMENT_LINK_PLACEHOLDER`.
+- Confirm the live Stripe payment link opens correctly.
 - No test customer deploy has been verified on Vercel.

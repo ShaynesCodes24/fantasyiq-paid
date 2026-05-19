@@ -2,10 +2,10 @@
 
 Use a simple payment link for v1. Do not build self-serve provisioning yet.
 
-Current placeholder:
+Current payment link:
 
 ```text
-PAYMENT_LINK_PLACEHOLDER
+https://buy.stripe.com/eVq3cvdN71GX84E917efC00
 ```
 
 ## Recommended Payment Link
@@ -42,7 +42,7 @@ Draft date/time
 ```
 
 6. Create the link.
-7. Replace every `PAYMENT_LINK_PLACEHOLDER` in these product docs with the real Stripe URL.
+7. Replace the payment link in these product docs if Stripe creates a new URL later.
 
 ## Optional Local Script
 
