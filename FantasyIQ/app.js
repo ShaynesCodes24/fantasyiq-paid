@@ -419,6 +419,33 @@ function lastYearValue(row) {
   return value;
 }
 
+function compactText(value, limit = 170) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (text.length <= limit) return text;
+  return `${text.slice(0, limit - 1).replace(/\s+\S*$/, "")}.`;
+}
+
+function playerSynopsisText(row) {
+  return row?.["Daily Synopsis"] || row?.["Player Outlook"] || row?.Analysis || "No player synopsis is available yet.";
+}
+
+function playerSynopsisBlock(row, options = {}) {
+  const compact = options.compact ? " compact" : "";
+  const latest = row?.["Latest News Date"] || "No dated update";
+  const refreshed = row?.["Synopsis Updated"] || boardData?.updated || "Today";
+  const source = row?.["News Status"] || row?.["Synopsis Source"] || "Refreshed from the current FantasyIQ board.";
+  return `<article class="player-synopsis${compact}">
+    <span>Daily Player Synopsis</span>
+    <strong>Updated ${htmlEscape(refreshed)} / Latest note: ${htmlEscape(latest)}</strong>
+    <p>${htmlEscape(options.compact ? compactText(playerSynopsisText(row)) : playerSynopsisText(row))}</p>
+    ${options.compact ? "" : `<small>${htmlEscape(source)}</small>`}
+  </article>`;
+}
+
+function playerFocusButton(row, className = "player-focus-button") {
+  return `<button type="button" class="${className}" data-player-focus="${htmlEscape(row.Player)}">${htmlEscape(row.Player)}</button>`;
+}
+
 function filteredRows() {
   if (!boardData) return [];
   const query = boardSearch.value.trim().toLowerCase();
@@ -426,7 +453,7 @@ function filteredRows() {
   const drafted = liveDraftedKeys();
   return boardData.boards[activeBoard].rows.filter((row) => {
     const matchesPosition = !pos || (pos === "FLEX" ? ["RB", "WR", "TE"].includes(row.Pos) : row.Pos === pos);
-    const searchable = `${row.Player} ${row.Pos} ${row.Team} ${row.Category} ${row.Tier} ${row["Pos Tier"]} ${row.Action} ${row.Analysis} ${row["Risk Notes"]} ${row.Trend} ${row["Source Signal"]} ${row.Catalyst} ${row["Why Rising/Falling"]} ${row["Draft Action"]}`.toLowerCase();
+    const searchable = `${row.Player} ${row.Pos} ${row.Team} ${row.Category} ${row.Tier} ${row["Pos Tier"]} ${row.Action} ${row.Analysis} ${row["Daily Synopsis"]} ${row["Player Outlook"]} ${row["Risk Notes"]} ${row.Trend} ${row["Source Signal"]} ${row.Catalyst} ${row["Why Rising/Falling"]} ${row["Draft Action"]}`.toLowerCase();
     const matchesDraftStatus = !hideDraftedEnabled() || !drafted.has(normalizePlayerName(row.Player));
     return matchesPosition && matchesDraftStatus && (!query || searchable.includes(query));
   });
@@ -744,6 +771,7 @@ function showAnalysis(row) {
       <div class="analysis-chip"><span>Upside</span><strong>${row.Upside}</strong></div>
       ${draftedChip}
     </div>
+    ${playerSynopsisBlock(row)}
     <p><strong>${row.Action}</strong></p>
     <p><strong>Projection source:</strong> ${row["Projection Source"]}</p>
     ${row["Prior Year Source"] ? `<p><strong>Prior-year source:</strong> ${htmlEscape(row["Prior Year Source"])}</p>` : ""}
@@ -767,12 +795,36 @@ function showTrendAnalysis(row) {
       <div class="analysis-chip"><span>Proj PPR</span><strong>${row["Proj PPR Pts"] || "TBD"}</strong></div>
       <div class="analysis-chip"><span>Last Year</span><strong>${lastYearValue(row)}</strong></div>
     </div>
+    ${playerSynopsisBlock(row)}
     <p><strong>${row["Draft Action"]}</strong></p>
     <p><strong>Source signal:</strong> ${row["Source Signal"]}</p>
     <p><strong>Catalyst:</strong> ${row.Catalyst}</p>
     <p>${row["Why Rising/Falling"]}</p>
   `;
 }
+
+function openPlayerAnalysis(playerName) {
+  const row = findPlayer(playerName);
+  if (!row) return;
+  activeBoard = "combined";
+  selectedBoardPlayerKey = normalizePlayerName(row.Player);
+  const combinedTab = document.querySelector('.workbook-tabs .tab[data-board="combined"]');
+  if (combinedTab) {
+    document.querySelectorAll(".workbook-tabs .tab").forEach((tab) => {
+      tab.classList.toggle("active", tab === combinedTab);
+    });
+  }
+  activateSection("workbooks");
+  renderBoard();
+  showAnalysis(row);
+}
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-player-focus]");
+  if (!button) return;
+  event.preventDefault();
+  openPlayerAnalysis(button.dataset.playerFocus);
+});
 
 function renderFootballersPlayerCheck() {
   if (!footballersPlayerOutput) return;
@@ -838,6 +890,7 @@ function renderFootballersPlayerCheck() {
       <small>${htmlEscape(decision.detail)}</small>
     </div>
     <strong>${htmlEscape(row.Player)}</strong>
+    ${playerSynopsisBlock(row, { compact: true })}
     <div class="comparison-grid">
       <article>
         <span>Footballers Say</span>
@@ -1194,9 +1247,10 @@ function renderTradePlayers(container, players, emptyMessage) {
         return `<div class="trade-player-chip missing"><strong>${htmlEscape(item.name)}</strong><span>No board match</span><small>Check spelling or use full player name.</small></div>`;
       }
       return `<div class="trade-player-chip">
-        <strong>${htmlEscape(item.row.Player)}</strong>
+        ${playerFocusButton(item.row)}
         <span>${item.row.Pos}${item.row["Pos Rank"] || ""} / #${item.row.Rank} / ${htmlEscape(item.row["Pos Tier"] || item.row.Category || "Tier")}</span>
         <small>Value ${item.value.toFixed(1)} / Proj ${item.projection.toFixed(1)} / Risk ${item.risk}/10</small>
+        ${playerSynopsisBlock(item.row, { compact: true })}
       </div>`;
     })
     .join("");
@@ -1746,7 +1800,7 @@ function renderTierPlayerRow(row, options = {}) {
   const projection = row["Proj PPR Pts"] ?? "TBD";
   return `<div class="sim-player-row tier-player-row">
     <div>
-      <strong>${htmlEscape(row.Player)}</strong>
+      ${playerFocusButton(row)}
       <small>#${row.Rank} / ${row.Pos} / ${row.Team} / ${projection} PPR / ${htmlEscape(row["Pos Tier"] || row.Category)}</small>
     </div>
     ${action}
@@ -1781,13 +1835,14 @@ function renderRecommendationCard(row, counts, index = 0) {
   const survivalText = decision.survival.label === "Select team" ? "team needed" : `${decision.survival.pct}% back`;
   return `<div class="pick-card recommendation ${priority} ${decision.className}">
     <span>#${row.Rank} / ${row.Pos} / ${row.Team}</span>
-    <strong>${row.Player}</strong>
+    ${playerFocusButton(row)}
     <div class="rec-meta">
       <em>${decision.label}</em>
       <b class="${decision.survival.className}">${survivalText}</b>
       <b>${row["Pos Tier"] || row.Category}</b>
     </div>
     <small>${decision.reason} Proj PPR: ${row["Proj PPR Pts"]}. Value: ${row["Value Score"]}. ${decision.survival.detail}</small>
+    ${playerSynopsisBlock(row, { compact: true })}
   </div>`;
 }
 
@@ -1891,9 +1946,10 @@ function renderPickCards(container, picks, emptyMessage) {
           : `${pick.fantasyTeam} is queued here.`;
       return `<div class="pick-card ${pick.status === "drafted" ? "made" : ""}">
         <span>R${pick.round} P${pick.roundPick} / Overall ${pick.overall}</span>
-        <strong>${playerText}</strong>
+        ${value?.row ? playerFocusButton(value.row) : `<strong>${htmlEscape(playerText)}</strong>`}
         ${valueLabel}
         <small>${pick.fantasyTeam}${pick.manager ? ` / ${pick.manager}` : ""}. ${detail}</small>
+        ${value?.row ? playerSynopsisBlock(value.row, { compact: true }) : ""}
       </div>`;
     })
     .join("");
@@ -1925,9 +1981,10 @@ function renderMyRoster() {
         const row = pickBoardRow(pick);
         return `<div class="pick-card made">
           <span>R${pick.round} P${pick.roundPick}</span>
-          <strong>${pick.player}</strong>
+          ${row ? playerFocusButton(row) : `<strong>${htmlEscape(pick.player)}</strong>`}
           <em>${row?.Pos || pick.pos || "Player"}</em>
           <small>${row ? `Board rank ${row.Rank}. ${row.Action}` : "No board match yet."}</small>
+          ${row ? playerSynopsisBlock(row, { compact: true }) : ""}
         </div>`;
       })
       .join("")}
@@ -2496,13 +2553,14 @@ function renderSimRecommendationCard(item, index = 0) {
   const survivalText = decision.survival.pct ? `${decision.survival.pct}% back` : "no turn";
   return `<div class="pick-card recommendation ${index < 3 ? "priority" : ""} ${decision.className}">
     <span>#${row.Rank} / ${row.Pos} / ${row.Team}</span>
-    <strong>${htmlEscape(row.Player)}</strong>
+    ${playerFocusButton(row)}
     <div class="rec-meta">
       <em>${decision.label}</em>
       <b class="${decision.survival.className}">${survivalText}</b>
       <b>${htmlEscape(row["Pos Tier"] || row.Category)}</b>
     </div>
     <small>${htmlEscape(decision.reason)} Proj PPR: ${row["Proj PPR Pts"]}. Value: ${row["Value Score"]}. ${htmlEscape(decision.survival.detail)}</small>
+    ${playerSynopsisBlock(row, { compact: true })}
     <button type="button" class="sim-draft-button" data-sim-player="${normalizePlayerName(row.Player)}">Draft</button>
   </div>`;
 }
@@ -2539,7 +2597,7 @@ function renderSimRecommendations() {
     </div>
     <div class="recommendation-block compact-block">
       <h4>Avoid Under Clock</h4>
-      ${avoids.map((row) => `<div class="pick-card recommendation wait"><strong>${htmlEscape(row.Player)}</strong><small>${row.Pos} is already filled or poorly timed for this roster.</small></div>`).join("") || "<p>No avoid flags yet.</p>"}
+      ${avoids.map((row) => `<div class="pick-card recommendation wait">${playerFocusButton(row)}<small>${row.Pos} is already filled or poorly timed for this roster.</small>${playerSynopsisBlock(row, { compact: true })}</div>`).join("") || "<p>No avoid flags yet.</p>"}
     </div>
   `;
   simRecommendations.querySelectorAll(".sim-draft-button").forEach((button) => {
@@ -2582,7 +2640,7 @@ function renderSimRoster() {
     <div class="roster-counts">
       <span>QB ${team.counts.QB}</span><span>RB ${team.counts.RB}</span><span>WR ${team.counts.WR}</span><span>TE ${team.counts.TE}</span><span>DST ${team.counts.DST}</span><span>K ${team.counts.K}</span>
     </div>
-    ${team.picks.map((pick) => `<div class="pick-card made"><span>R${pick.round} P${pick.roundPick}</span><strong>${htmlEscape(pick.row.Player)}</strong><em>${pick.row.Pos}</em><small>Board rank ${pick.row.Rank}. ${htmlEscape(pick.row.Action)}</small></div>`).join("") || "<p>No picks yet.</p>"}
+    ${team.picks.map((pick) => `<div class="pick-card made"><span>R${pick.round} P${pick.roundPick}</span>${playerFocusButton(pick.row)}<em>${pick.row.Pos}</em><small>Board rank ${pick.row.Rank}. ${htmlEscape(pick.row.Action)}</small>${playerSynopsisBlock(pick.row, { compact: true })}</div>`).join("") || "<p>No picks yet.</p>"}
   `;
 }
 
@@ -2634,7 +2692,7 @@ function renderSimLog() {
     return;
   }
   simLog.innerHTML = simRecentPicks(14)
-    .map((pick) => `<div class="pick-card ${pick.pickedByUser ? "priority" : ""}"><span>R${pick.round} P${pick.roundPick} / Team ${pick.slot}</span><strong>${htmlEscape(pick.row.Player)}</strong><em>${pick.row.Pos}</em><small>${pick.pickedByUser ? "Your pick" : "Opponent pick"} / board rank ${pick.row.Rank}</small></div>`)
+    .map((pick) => `<div class="pick-card ${pick.pickedByUser ? "priority" : ""}"><span>R${pick.round} P${pick.roundPick} / Team ${pick.slot}</span>${playerFocusButton(pick.row)}<em>${pick.row.Pos}</em><small>${pick.pickedByUser ? "Your pick" : "Opponent pick"} / board rank ${pick.row.Rank}</small>${playerSynopsisBlock(pick.row, { compact: true })}</div>`)
     .join("");
 }
 

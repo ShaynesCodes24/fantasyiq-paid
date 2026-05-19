@@ -1860,6 +1860,70 @@ code {
   background: #fff0eb;
 }
 
+.player-synopsis {
+  display: grid;
+  gap: 7px;
+  margin: 12px 0;
+  border: 1px solid rgba(15, 111, 95, 0.22);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  background: #f6fbf8;
+  padding: 10px 12px;
+}
+
+.player-synopsis span {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.player-synopsis strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.player-synopsis p,
+.player-synopsis small {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.player-synopsis.compact {
+  margin: 6px 0 0;
+  padding: 8px;
+  border-left-width: 3px;
+}
+
+.player-synopsis.compact strong {
+  font-size: 12px;
+}
+
+.player-synopsis.compact p {
+  font-size: 12px;
+}
+
+.player-focus-button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.player-focus-button:hover {
+  color: var(--accent-dark);
+}
+
 .live-switches {
   display: flex;
   flex-wrap: wrap;

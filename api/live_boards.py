@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.request
+from html import unescape
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
@@ -93,6 +95,27 @@ def clamp(value: float, low: float, high: float) -> float:
 
 def normalize_name(name: str) -> str:
     return "".join(ch for ch in name.lower() if ch.isalnum())
+
+
+def clean_text(value: Any) -> str:
+    text = unescape(str(value or ""))
+    text = re.sub(r"<[^>]+>", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def short_text(value: str, limit: int = 620) -> str:
+    if len(value) <= limit:
+        return value
+    trimmed = value[: limit - 1].rsplit(" ", 1)[0].rstrip(".,;:")
+    return f"{trimmed}."
+
+
+def date_from_epoch_millis(value: Any) -> str:
+    try:
+        timestamp = int(value) / 1000
+    except (TypeError, ValueError):
+        return ""
+    return datetime.fromtimestamp(timestamp, timezone.utc).date().isoformat()
 
 
 def rookie_names() -> set[str]:
@@ -422,6 +445,40 @@ def analysis_for(row: dict[str, Any], ownership: dict[str, Any]) -> str:
     )
 
 
+def daily_synopsis_for(row: dict[str, Any], seed: dict[str, Any], season: int) -> dict[str, str]:
+    player = seed["player"]
+    outlook = clean_text(seed.get("outlook"))
+    news_date = date_from_epoch_millis(player.get("lastNewsDate"))
+    today = datetime.now(timezone.utc).date().isoformat()
+    last_year = row["Last Year PPR"]
+    last_year_text = f"{year_label(season)} PPR: {last_year}" if last_year != "N/A" else f"No {year_label(season)} NFL PPR sample"
+    status_parts = [
+        f"{row['Pos']}{row['Pos Rank']} / rank #{row['Rank']}",
+        f"projected {row['Proj PPR Pts']} PPR",
+        last_year_text,
+        f"risk {row['Risk']}/10",
+    ]
+    fallback = (
+        f"{row['Player']} is a {row['Pos']} for {row['Team']} with {', '.join(status_parts)}. "
+        f"FantasyIQ's current action is: {row['Action']}. Risk read: {row['Risk Notes']}."
+    )
+    body = outlook or fallback
+    headline = f"Daily FantasyIQ read: {', '.join(status_parts)}."
+    news_status = (
+        f"Latest ESPN player note is dated {news_date}; synopsis refreshed from the live board on {today}."
+        if news_date
+        else f"No dated ESPN player note is available; synopsis refreshed from the live board on {today}."
+    )
+    return {
+        "Daily Synopsis": short_text(f"{headline} {body}"),
+        "Synopsis Updated": today,
+        "Latest News Date": news_date or "No dated update",
+        "News Status": news_status,
+        "Player Outlook": short_text(body),
+        "Synopsis Source": "ESPN live player outlook, ESPN public fantasy board data, and FantasyIQ daily board model",
+    }
+
+
 def build_row_seed(player: dict[str, Any], season: int) -> dict[str, Any] | None:
     pos = POSITION_BY_ID.get(player.get("defaultPositionId"))
     if not pos:
@@ -537,6 +594,7 @@ def build_rows(players: list[dict[str, Any]], season: int, limit: int) -> list[d
             "ESPN ADP Change": seed["adp_change"],
         }
         row["Analysis"] = analysis_for(row, seed["ownership"])
+        row.update(daily_synopsis_for(row, seed, season))
         rows.append(row)
 
     return rows
