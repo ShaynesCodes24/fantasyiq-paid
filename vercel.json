@@ -1,0 +1,43 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "node scripts/build_static.js",
+  "installCommand": "",
+  "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/FantasyIQ",
+      "destination": "/FantasyIQ/",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/live-draft",
+      "destination": "/api/live_draft"
+    },
+    {
+      "source": "/api/live-draft.json",
+      "destination": "/api/live_draft"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/FantasyIQ/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    }
+  ]
+}

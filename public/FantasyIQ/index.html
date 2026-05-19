@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fantasy IQ</title>
+    <link rel="stylesheet" href="./styles.css?v=20260518_product_01" />
+  </head>
+  <body>
+    <div class="field-overlay" aria-hidden="true">
+      <span class="field-endzone field-endzone-left">Fantasy</span>
+      <span class="field-endzone field-endzone-right">IQ</span>
+      <span class="yard-number yard-10 yard-top">10</span>
+      <span class="yard-number yard-20 yard-top">20</span>
+      <span class="yard-number yard-30 yard-top">30</span>
+      <span class="yard-number yard-40 yard-top">40</span>
+      <span class="yard-number yard-50 yard-top">50</span>
+      <span class="yard-number yard-40r yard-top">40</span>
+      <span class="yard-number yard-30r yard-top">30</span>
+      <span class="yard-number yard-20r yard-top">20</span>
+      <span class="yard-number yard-10r yard-top">10</span>
+      <span class="yard-number yard-10 yard-bottom">10</span>
+      <span class="yard-number yard-20 yard-bottom">20</span>
+      <span class="yard-number yard-30 yard-bottom">30</span>
+      <span class="yard-number yard-40 yard-bottom">40</span>
+      <span class="yard-number yard-50 yard-bottom">50</span>
+      <span class="yard-number yard-40r yard-bottom">40</span>
+      <span class="yard-number yard-30r yard-bottom">30</span>
+      <span class="yard-number yard-20r yard-bottom">20</span>
+      <span class="yard-number yard-10r yard-bottom">10</span>
+    </div>
+    <header class="topbar">
+      <div class="brand-lockup">
+        <img src="./assets/fantasy-iq-logo.svg" alt="Fantasy IQ league logo" />
+        <div>
+          <p class="eyebrow">League Command Center</p>
+          <h1>Fantasy IQ</h1>
+          <small>Configurable ESPN Fantasy Platform</small>
+        </div>
+      </div>
+      <div class="draft-card">
+        <span>Subscription</span>
+        <strong>$25 / year</strong>
+        <small>Configured for your ESPN league</small>
+      </div>
+    </header>
+
+    <main class="layout">
+      <nav class="sidebar" aria-label="Dashboard sections">
+        <button class="nav-item active" data-section="command">Command</button>
+        <button class="nav-item" data-section="footballers">Footballers</button>
+        <button class="nav-item" data-section="draft">Draft Prep</button>
+        <button class="nav-item" data-section="live">Draft Room</button>
+        <button class="nav-item" data-section="simulator">Mock Simulator</button>
+        <button class="nav-item" data-section="mock">Mock Grader</button>
+        <button class="nav-item" data-section="trade">Trade Gate</button>
+        <button class="nav-item" data-section="workbooks">Workbooks</button>
+      </nav>
+
+      <section class="content">
+        <section class="panel active" id="command">
+          <div class="command-hero">
+            <div>
+              <p class="eyebrow">Command Center</p>
+              <h2>Draft smarter. Trade cleaner. Win your league.</h2>
+              <p>Draft prep, player values, mock tracking, live room sync, and trade discipline in one command center.</p>
+              <div class="hero-actions">
+                <button class="primary-action nav-jump" type="button" data-jump="workbooks">Open Big Board</button>
+                <button class="secondary-action nav-jump" type="button" data-jump="footballers">Footballers Layer</button>
+                <button class="secondary-action nav-jump" type="button" data-jump="draft">Draft Plan</button>
+                <button class="secondary-action nav-jump" type="button" data-jump="live">Draft Room</button>
+                <button class="secondary-action nav-jump" type="button" data-jump="simulator">Mock Simulator</button>
+                <button class="secondary-action nav-jump" type="button" data-jump="trade">Trade Gate</button>
+              </div>
+            </div>
+            <div class="iq-card">
+              <span>Fantasy IQ</span>
+              <strong>94</strong>
+              <small>System online</small>
+            </div>
+          </div>
+
+          <div class="metric-grid">
+            <div class="metric">
+              <span>League</span>
+              <strong>12 teams</strong>
+              <small>ESPN / PPR / redraft</small>
+            </div>
+            <div class="metric">
+              <span>Roster</span>
+              <strong>9 starters</strong>
+              <small>7 bench / 1 IR</small>
+            </div>
+            <div class="metric">
+              <span>Playoffs</span>
+              <strong>6 teams</strong>
+              <small>3 rounds</small>
+            </div>
+            <div class="metric">
+              <span>Main Leak</span>
+              <strong>Bad trades</strong>
+              <small>Use the trade gate</small>
+            </div>
+          </div>
+
+          <div class="command-grid">
+            <article class="command-tile">
+              <span>Board Universe</span>
+              <strong id="board-count">Loading</strong>
+              <small>Source-backed PPR board, no placeholder rows</small>
+            </article>
+            <article class="command-tile">
+              <span>Draft Mode</span>
+              <strong id="live-sync-status">ESPN auto sync</strong>
+              <small>Polls your public league draft feed</small>
+            </article>
+            <article class="command-tile">
+              <span>Mock Intelligence</span>
+              <strong>Practice room</strong>
+              <small>Simulated draft reps with live-style tools</small>
+            </article>
+            <article class="command-tile">
+              <span>Trade AI</span>
+              <strong>Net value check</strong>
+              <small>Roster-fit ready after draft</small>
+            </article>
+            <article class="command-tile">
+              <span>Data Audit</span>
+              <strong>Professional sources</strong>
+              <small>FantasyPros backbone, ESPN/RotoWire checks, PFF/DraftSharks signals</small>
+            </article>
+            <article class="command-tile">
+              <span>Opinion Layer</span>
+              <strong>Footballers</strong>
+              <small>Podcast, rankings, and UDK context kept separate from projections</small>
+            </article>
+          </div>
+
+          <div class="split">
+            <div class="box">
+              <h3>Next Actions</h3>
+              <label><input type="checkbox" data-save="draft-order" /> Live random draft order decided</label>
+              <label><input type="checkbox" data-save="playoff-seed" /> Confirm playoff seeding rules</label>
+              <label><input type="checkbox" data-save="draft-tool" /> Test live draft sync before draft day</label>
+              <label><input type="checkbox" data-save="first-mock" /> Run first mock draft</label>
+            </div>
+            <div class="box">
+              <h3>System Phases</h3>
+              <div class="phase-list">
+                <div><strong>1</strong><span>Build board and sleepers</span><em>Live</em></div>
+                <div><strong>2</strong><span>Mock from random slots</span><em>Next</em></div>
+                <div><strong>3</strong><span>Finalize draft slot</span><em>Draft night</em></div>
+                <div><strong>4</strong><span>Load roster for trade engine</span><em>Post-draft</em></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" id="footballers">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Player Cross-Check</p>
+              <h2>Footballers vs FantasyIQ</h2>
+            </div>
+            <div class="live-switches">
+              <a class="source-button" href="https://www.thefantasyfootballers.com/" target="_blank" rel="noopener">Official Site</a>
+              <a class="source-button" href="https://www.thefantasyfootballers.com/fantasy-football-rankings/" target="_blank" rel="noopener">Rankings</a>
+            </div>
+          </div>
+
+          <div class="result footballers-rule">
+            <strong>Simple rule:</strong> enter what they said, then compare it directly against FantasyIQ. If both agree, trust it more. If they disagree, use price and risk as the tiebreaker.
+          </div>
+
+          <div class="footballers-crosscheck">
+            <section class="box footballers-player-check">
+              <p class="eyebrow">Their Side</p>
+              <h3>What did the Footballers say?</h3>
+              <div class="footballers-input-grid">
+                <label>
+                  Player
+                  <input id="footballers-player-check" type="search" placeholder="Example: Nico Collins" />
+                </label>
+                <label>
+                  Their Take
+                  <select id="footballers-take-type">
+                    <option value="neutral">Neutral / context only</option>
+                    <option value="higher">They like him more</option>
+                    <option value="lower">They like him less</option>
+                    <option value="sleeper">Sleeper / underpriced</option>
+                    <option value="breakout">Breakout call</option>
+                    <option value="value">Good value</option>
+                    <option value="bust">Bust / fade</option>
+                    <option value="news">News or role change</option>
+                    <option value="research">Their research supports him</option>
+                  </select>
+                </label>
+                <label>
+                  Their Rank / Pick
+                  <input id="footballers-rank" type="number" min="1" max="400" placeholder="Optional" />
+                </label>
+                <label>
+                  Draft Cost
+                  <input id="footballers-market-pick" type="number" min="1" max="250" placeholder="Optional ADP/pick" />
+                </label>
+              </div>
+              <label class="footballers-context-box">
+                What they said
+                <textarea id="footballers-take-context" class="paste-box" placeholder="Short version: targets up, injury concern, role change, ADP value, fade, etc."></textarea>
+              </label>
+            </section>
+            <section class="box">
+              <p class="eyebrow">Head-to-Head</p>
+              <h3>Straight comparison</h3>
+              <div id="footballers-player-output" class="result">Type a player to see what they say next to what FantasyIQ says.</div>
+            </section>
+          </div>
+
+        </section>
+
+        <section class="panel" id="draft">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Draft Prep</p>
+              <h2>Flexible slot plans</h2>
+            </div>
+          </div>
+
+          <div class="tabs" role="tablist" aria-label="Draft slot ranges">
+            <button class="tab active" data-plan="early">Picks 1-4</button>
+            <button class="tab" data-plan="middle">Picks 5-8</button>
+            <button class="tab" data-plan="late">Picks 9-12</button>
+          </div>
+
+          <article class="plan active" id="early-plan">
+            <h3>Early Slot</h3>
+            <p>Secure a clean elite anchor. Do not get cute if you land a top-two pick.</p>
+            <ul>
+              <li>Round 1: elite WR/RB anchor.</li>
+              <li>Rounds 2-3: balance first pick and protect RB/WR foundation.</li>
+              <li>QB/TE: only if clear value falls.</li>
+            </ul>
+          </article>
+
+          <article class="plan" id="middle-plan">
+            <h3>Middle Slot</h3>
+            <p>Exploit the first tier break and let the room make the first mistake.</p>
+            <ul>
+              <li>Round 1: last elite player in the tier.</li>
+              <li>Rounds 2-3: stay flexible across WR/RB.</li>
+              <li>QB: usually Round 5-7.</li>
+            </ul>
+          </article>
+
+          <article class="plan" id="late-plan">
+            <h3>Late Slot</h3>
+            <p>Build a paired foundation at the turn and win through structure.</p>
+            <ul>
+              <li>Rounds 1-2: WR/WR or WR/RB unless RB value is obvious.</li>
+              <li>Rounds 3-4: avoid luxury overload.</li>
+              <li>Nico Collins is fair only at market value.</li>
+            </ul>
+          </article>
+
+          <div class="strategy-grid">
+            <article class="strategy-card">
+              <p class="eyebrow">Strategy A</p>
+              <h3>Hero RB</h3>
+              <p>One premium RB anchor, then attack WR value and upside RBs later.</p>
+            </article>
+            <article class="strategy-card">
+              <p class="eyebrow">Strategy B</p>
+              <h3>WR Avalanche</h3>
+              <p>Stack target earners early, then build RB through value pockets and contingent upside.</p>
+            </article>
+            <article class="strategy-card">
+              <p class="eyebrow">Strategy C</p>
+              <h3>Balanced Hammer</h3>
+              <p>RB/WR flexibility through six rounds, with one luxury position only when value falls.</p>
+            </article>
+            <article class="strategy-card">
+              <p class="eyebrow">Strategy D</p>
+              <h3>Elite TE Edge</h3>
+              <p>Take a true target-share TE edge, but only if RB/WR tiers stay healthy.</p>
+            </article>
+          </div>
+
+          <h3>16-Round Draft Guide</h3>
+          <div class="round-guide">
+            <div><strong>1</strong><span>Elite anchor. Do not reach for uniqueness.</span></div>
+            <div><strong>2</strong><span>Balance first pick or double down on falling elite value.</span></div>
+            <div><strong>3</strong><span>Secure second or third weekly RB/WR starter.</span></div>
+            <div><strong>4</strong><span>Watch for tier cliffs; avoid luxury panic.</span></div>
+            <div><strong>5</strong><span>First clean QB/TE value window if core is stable.</span></div>
+            <div><strong>6</strong><span>Must have at least four RB/WR unless value was extreme.</span></div>
+            <div><strong>7</strong><span>Upside WR/RB pocket. Start beating ADP.</span></div>
+            <div><strong>8</strong><span>Fill QB/TE if value fell; otherwise keep stacking upside.</span></div>
+            <div><strong>9</strong><span>Target role ambiguity before it becomes obvious.</span></div>
+            <div><strong>10</strong><span>Draft bench players with trade value or breakout paths.</span></div>
+            <div><strong>11</strong><span>Handcuff-plus or high-route WR.</span></div>
+            <div><strong>12</strong><span>One-week-away RBs and camp role risers.</span></div>
+            <div><strong>13</strong><span>Late TE/QB only if you skipped the position.</span></div>
+            <div><strong>14</strong><span>DST only if early schedule is strong.</span></div>
+            <div><strong>15</strong><span>Final upside stash over safety.</span></div>
+            <div><strong>16</strong><span>Kicker last.</span></div>
+          </div>
+
+          <button class="primary-action nav-jump" type="button" data-jump="live">Open Live Draft Room</button>
+        </section>
+
+        <section class="panel" id="live">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Draft Room</p>
+              <h2>Live ESPN draft sync</h2>
+            </div>
+            <div class="live-switches">
+              <label><input id="live-sync-toggle" type="checkbox" checked /> Auto sync</label>
+              <button id="manual-sync" type="button">Sync Now</button>
+            </div>
+          </div>
+
+          <div class="result live-alert" id="live-status">
+            Connecting to ESPN public draft sync...
+          </div>
+
+          <div class="live-hero-grid">
+            <article class="live-clock">
+              <span>On The Clock</span>
+              <strong id="live-current-pick">Waiting for ESPN</strong>
+              <small id="live-current-team">Draft has not started yet.</small>
+            </article>
+            <article class="live-stat">
+              <span>Picks Made</span>
+              <strong id="live-completed">0</strong>
+              <small id="live-total">of 192</small>
+              <div class="progress-shell"><div id="live-progress-bar"></div></div>
+            </article>
+            <article class="live-stat">
+              <span>Last Sync</span>
+              <strong id="live-last-sync">Pending</strong>
+              <small id="live-source">ESPN public league API</small>
+            </article>
+            <label class="live-select">
+              My ESPN Team
+              <select id="my-team-select">
+                <option value="">Choose after draft order appears</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="cheat-grid">
+            <section class="live-panel cheat-panel">
+              <p class="eyebrow">Next Pick Radar</p>
+              <h3>Will it make it back?</h3>
+              <div id="next-pick-radar" class="intel-list">Select your ESPN team to unlock pick radar.</div>
+            </section>
+            <section class="live-panel cheat-panel">
+              <p class="eyebrow">Tier Cliffs</p>
+              <h3>Scarcity alerts</h3>
+              <div id="tier-alerts" class="intel-list">Waiting for board data.</div>
+            </section>
+            <section class="live-panel cheat-panel">
+              <p class="eyebrow">Room Behavior</p>
+              <h3>Run detector</h3>
+              <div id="room-detector" class="intel-list">Waiting for ESPN picks.</div>
+            </section>
+            <section class="live-panel cheat-panel">
+              <p class="eyebrow">Golden Zone</p>
+              <h3>Risk meter</h3>
+              <div id="risk-meter" class="intel-list">Select your ESPN team after the order appears.</div>
+            </section>
+          </div>
+
+          <div class="live-grid">
+            <section class="live-panel">
+              <div class="live-section-head">
+                <div>
+                  <p class="eyebrow">Decision Engine</p>
+                  <h3>Top pick recommendations</h3>
+                </div>
+                <label class="compact-toggle"><input id="hide-drafted" type="checkbox" checked /> Hide drafted</label>
+              </div>
+              <div id="live-recommendations" class="pick-list">
+                Waiting for board data.
+              </div>
+            </section>
+
+            <section class="live-panel">
+              <p class="eyebrow">My Build</p>
+              <h3>Roster tracker</h3>
+              <div id="live-my-roster" class="pick-list">
+                Select your ESPN team after the order appears.
+              </div>
+            </section>
+          </div>
+
+          <section class="live-panel">
+            <div class="live-section-head">
+              <div>
+                <p class="eyebrow">Position Tiers</p>
+                <h3>Live available board</h3>
+              </div>
+              <span class="tier-note">Dark dividers mark each position tier.</span>
+            </div>
+            <div class="tier-board-tools">
+              <input id="live-tier-search" type="search" placeholder="Search available player" />
+              <div class="position-toggles draft-position-tabs" aria-label="Live draft position tier filters">
+                <button type="button" class="live-tier-toggle active" data-live-tier-pos="">All</button>
+                <button type="button" class="live-tier-toggle" data-live-tier-pos="QB">QB</button>
+                <button type="button" class="live-tier-toggle" data-live-tier-pos="RB">RB</button>
+                <button type="button" class="live-tier-toggle" data-live-tier-pos="WR">WR</button>
+                <button type="button" class="live-tier-toggle" data-live-tier-pos="TE">TE</button>
+                <button type="button" class="live-tier-toggle flex-toggle" data-live-tier-pos="FLEX">FLEX</button>
+                <button type="button" class="live-tier-toggle" data-live-tier-pos="DST">DST</button>
+                <button type="button" class="live-tier-toggle" data-live-tier-pos="K">K</button>
+              </div>
+            </div>
+            <div id="live-tier-board" class="sim-player-list tiered-player-list">
+              Waiting for board data.
+            </div>
+          </section>
+
+          <div class="live-grid">
+            <section class="live-panel">
+              <p class="eyebrow">ESPN Feed</p>
+              <h3>Recent picks</h3>
+              <div id="live-recent-picks" class="pick-list">
+                No picks have been made yet.
+              </div>
+            </section>
+            <section class="live-panel">
+              <p class="eyebrow">Upcoming</p>
+              <h3>Next picks</h3>
+              <div id="live-next-picks" class="pick-list">
+                Waiting for ESPN.
+              </div>
+            </section>
+          </div>
+
+          <section class="live-panel">
+            <p class="eyebrow">Round 1</p>
+            <h3>Draft order from ESPN</h3>
+            <div id="draft-order-grid" class="draft-order-grid">
+              Waiting for live random order.
+            </div>
+          </section>
+        </section>
+
+        <section class="panel" id="simulator">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Mock Simulator</p>
+              <h2>Practice draft room</h2>
+            </div>
+            <div class="live-switches">
+              <label>
+                Draft Slot
+                <select id="sim-slot">
+                  <option value="random">Random</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                  <option value="10">10</option>
+                  <option value="11">11</option>
+                  <option value="12">12</option>
+                </select>
+              </label>
+              <button id="sim-start" type="button">Start Mock</button>
+              <button id="sim-auto" type="button">Auto To My Pick</button>
+              <button id="sim-reset" type="button">Reset</button>
+            </div>
+          </div>
+
+          <div class="result live-alert" id="sim-status">
+            Start a mock, then practice making picks while the room auto-drafts around you.
+          </div>
+
+          <div class="live-hero-grid">
+            <article class="live-clock">
+              <span>Practice Clock</span>
+              <strong id="sim-current-pick">No mock started</strong>
+              <small id="sim-current-team">Choose a slot and start.</small>
+            </article>
+            <article class="live-stat">
+              <span>Mock Progress</span>
+              <strong id="sim-completed">0</strong>
+              <small id="sim-total">of 192</small>
+              <div class="progress-shell"><div id="sim-progress-bar"></div></div>
+            </article>
+            <article class="live-stat">
+              <span>Roster Shape</span>
+              <strong id="sim-shape">0 players</strong>
+              <small id="sim-shape-detail">QB 0 / RB 0 / WR 0 / TE 0</small>
+            </article>
+            <article class="live-stat">
+              <span>Mock Grade</span>
+              <strong id="sim-grade">Pending</strong>
+              <small id="sim-grade-detail">Grade appears after picks.</small>
+            </article>
+          </div>
+
+          <div class="cheat-grid">
+            <section class="live-panel cheat-panel">
+              <p class="eyebrow">Practice Radar</p>
+              <h3>Next turn</h3>
+              <div id="sim-radar" class="intel-list">Start a mock to unlock pick radar.</div>
+            </section>
+            <section class="live-panel cheat-panel">
+              <p class="eyebrow">Tier Cliffs</p>
+              <h3>Practice scarcity</h3>
+              <div id="sim-tier-alerts" class="intel-list">Waiting for mock.</div>
+            </section>
+            <section class="live-panel cheat-panel">
+              <p class="eyebrow">Room Behavior</p>
+              <h3>Run detector</h3>
+              <div id="sim-room-detector" class="intel-list">Waiting for picks.</div>
+            </section>
+            <section class="live-panel cheat-panel">
+              <p class="eyebrow">Golden Zone</p>
+              <h3>Practice risk meter</h3>
+              <div id="sim-risk-meter" class="intel-list">Waiting for your roster.</div>
+            </section>
+          </div>
+
+          <div class="sim-layout">
+            <section class="live-panel">
+              <p class="eyebrow">Decision Engine</p>
+              <h3>Recommended picks</h3>
+              <div id="sim-recommendations" class="pick-list">Start a mock to see recommendations.</div>
+            </section>
+            <section class="live-panel">
+              <p class="eyebrow">Available Board</p>
+              <h3>Click to draft</h3>
+              <div class="sim-tools">
+                <input id="sim-search" type="search" placeholder="Search player" />
+                <select id="sim-position">
+                  <option value="">All</option>
+                  <option value="QB">QB</option>
+                  <option value="RB">RB</option>
+                  <option value="WR">WR</option>
+                  <option value="TE">TE</option>
+                  <option value="FLEX">FLEX</option>
+                  <option value="DST">DST</option>
+                  <option value="K">K</option>
+                </select>
+              </div>
+              <div class="position-toggles sim-position-tabs" aria-label="Mock simulator position tier filters">
+                <button type="button" class="sim-position-toggle active" data-sim-pos="">All</button>
+                <button type="button" class="sim-position-toggle" data-sim-pos="QB">QB</button>
+                <button type="button" class="sim-position-toggle" data-sim-pos="RB">RB</button>
+                <button type="button" class="sim-position-toggle" data-sim-pos="WR">WR</button>
+                <button type="button" class="sim-position-toggle" data-sim-pos="TE">TE</button>
+                <button type="button" class="sim-position-toggle flex-toggle" data-sim-pos="FLEX">FLEX</button>
+                <button type="button" class="sim-position-toggle" data-sim-pos="DST">DST</button>
+                <button type="button" class="sim-position-toggle" data-sim-pos="K">K</button>
+              </div>
+              <div id="sim-available" class="sim-player-list">Start a mock to load players.</div>
+            </section>
+            <section class="live-panel">
+              <p class="eyebrow">My Practice Roster</p>
+              <h3>Build tracker</h3>
+              <div id="sim-roster" class="pick-list">No picks yet.</div>
+            </section>
+            <section class="live-panel">
+              <p class="eyebrow">Draft Log</p>
+              <h3>Recent picks</h3>
+              <div id="sim-log" class="pick-list">No mock picks yet.</div>
+            </section>
+          </div>
+        </section>
+
+        <section class="panel" id="mock">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Mock Grader</p>
+              <h2>Quick roster-shape check</h2>
+            </div>
+          </div>
+
+          <div class="result">
+            ESPN public league data is connected for league settings. ESPN account mock draft history is not exposed through the public API, so this tracker imports mock picks you paste from ESPN, FantasyPros, or Sleeper until authenticated export is available.
+          </div>
+
+          <form class="grader" id="mock-form">
+            <label>QB <input name="QB" type="number" min="0" max="4" value="1" /></label>
+            <label>RB <input name="RB" type="number" min="0" max="10" value="5" /></label>
+            <label>WR <input name="WR" type="number" min="0" max="10" value="6" /></label>
+            <label>TE <input name="TE" type="number" min="0" max="4" value="1" /></label>
+            <label>DST <input name="DST" type="number" min="0" max="3" value="1" /></label>
+            <label>K <input name="K" type="number" min="0" max="3" value="1" /></label>
+            <label>QB round <input name="qbRound" type="number" min="0" max="16" value="6" /></label>
+            <label>TE round <input name="teRound" type="number" min="0" max="16" value="8" /></label>
+            <button type="submit">Grade Shape</button>
+          </form>
+
+          <div class="result" id="mock-result" aria-live="polite">
+            Fill counts, then use the mock pick tracker below for pick-by-pick value checks.
+          </div>
+
+          <h3>Mock Pick Tracker</h3>
+          <textarea id="mock-paste" class="paste-box" placeholder="Paste picks like:&#10;1,2,Ja'Marr Chase&#10;2,23,James Cook&#10;3,26,Trey McBride"></textarea>
+          <button id="grade-mock-picks" type="button" class="primary-action">Grade Mock Picks</button>
+          <div id="mock-pick-output" class="result">Paste round, pick, player. I will grade each as steal, good value, fair, or reach against the board.</div>
+        </section>
+
+        <section class="panel" id="trade">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Trade Gate</p>
+              <h2>Slow down bad trades</h2>
+            </div>
+          </div>
+
+          <div class="split">
+            <div class="box">
+              <h3>Passes If</h3>
+              <ul>
+                <li>Improves starting lineup.</li>
+                <li>Fixes a real weakness.</li>
+                <li>Converts bench surplus into points.</li>
+                <li>Adds rising role or playoff upside.</li>
+              </ul>
+            </div>
+            <div class="box warning">
+              <h3>Reject If</h3>
+              <ul>
+                <li>You give up the best player without structure.</li>
+                <li>You are reacting to one bad week.</li>
+                <li>You pay peak price for yesterday's points.</li>
+                <li>You cannot explain why they want it.</li>
+              </ul>
+            </div>
+          </div>
+
+          <h3>Trade Calculator</h3>
+          <div class="trade-calculator">
+            <label>
+              I give
+              <textarea id="trade-give" placeholder="One player per line"></textarea>
+            </label>
+            <label>
+              I receive
+              <textarea id="trade-get" placeholder="One player per line"></textarea>
+            </label>
+            <label>
+              My roster after draft
+              <textarea id="trade-roster" placeholder="Optional for now. One player per line. After draft, this adds roster-fit logic."></textarea>
+            </label>
+            <button id="calculate-trade" type="button" class="primary-action">Calculate Trade</button>
+          </div>
+          <div id="trade-output" class="result">Enter trade pieces to compare value gained, value lost, net edge, and roster-fit warning.</div>
+        </section>
+
+        <section class="panel" id="workbooks">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Excel Boards</p>
+              <h2>Ranked boards</h2>
+            </div>
+          </div>
+
+          <div class="tabs workbook-tabs" role="tablist" aria-label="Workbook boards">
+            <button class="tab active" data-board="combined">Combined</button>
+            <button class="tab" data-board="elite">Elite</button>
+            <button class="tab" data-board="staples">Staples</button>
+            <button class="tab" data-board="rookies">Rookies</button>
+            <button class="tab" data-board="sleepers">Sleepers</button>
+            <button class="tab" data-board="kdst">K/DST</button>
+            <button class="tab" data-board="trends">Risers/Fallers</button>
+          </div>
+
+          <div class="board-tools">
+            <label>
+              Search
+              <input id="board-search" type="search" placeholder="Player, team, tier, action" />
+            </label>
+            <div class="position-filter">
+              <span>Draft View</span>
+              <input id="position-filter" type="hidden" value="" />
+              <div class="position-toggles" aria-label="Draft board position filters">
+                <button class="position-toggle active" type="button" data-position="">All</button>
+                <button class="position-toggle" type="button" data-position="QB">QB</button>
+                <button class="position-toggle" type="button" data-position="RB">RB</button>
+                <button class="position-toggle" type="button" data-position="WR">WR</button>
+                <button class="position-toggle" type="button" data-position="TE">TE</button>
+                <button class="position-toggle flex-toggle" type="button" data-position="FLEX">FLEX</button>
+                <button class="position-toggle" type="button" data-position="DST">DST</button>
+                <button class="position-toggle" type="button" data-position="K">K</button>
+              </div>
+            </div>
+            <label class="hide-drafted-board">
+              <input id="hide-drafted-board" type="checkbox" checked />
+              Hide drafted
+            </label>
+            <button id="reload-boards" type="button">Reload Boards</button>
+          </div>
+
+          <div class="result" id="board-status">Loading website boards...</div>
+
+          <div class="web-board">
+            <div class="table-wrap">
+              <table id="board-table">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <aside class="analysis-pane" id="analysis-pane">
+              <p class="eyebrow">Player Analysis</p>
+              <h3>Select a player</h3>
+              <p>Click any player name in the table to view the detailed analysis here.</p>
+            </aside>
+          </div>
+
+          <h3 class="download-title">Excel Downloads</h3>
+          <div class="link-grid">
+            <a href="../outputs/fantasy_rankings/Fantasy_Combined_Big_Board.xlsx" target="_blank">Combined Big Board</a>
+            <a href="../outputs/fantasy_rankings/Fantasy_Elite_Players.xlsx" target="_blank">Elite Players</a>
+            <a href="../outputs/fantasy_rankings/Fantasy_Staples.xlsx" target="_blank">Staples</a>
+            <a href="../outputs/fantasy_rankings/Fantasy_Rookies.xlsx" target="_blank">Rookies</a>
+            <a href="../outputs/fantasy_rankings/Fantasy_Sleepers.xlsx" target="_blank">Sleepers</a>
+            <a href="../outputs/fantasy_rankings/Fantasy_Kickers_DST.xlsx" target="_blank">Kickers and DST</a>
+            <a href="../outputs/fantasy_rankings/Fantasy_Risers_Fallers.xlsx" target="_blank">Risers and Fallers</a>
+          </div>
+
+          <div class="result">
+            The website table is interactive. The Excel files remain available for offline sorting and editing.
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="./config.js?v=20260518_product_01"></script>
+    <script src="./data/boards_data.js?v=20260518_product_01"></script>
+    <script src="./app.js?v=20260518_product_01"></script>
+  </body>
+</html>
