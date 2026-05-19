@@ -94,6 +94,7 @@ let liveTimer = null;
 let mockSim = null;
 let selectedBoardPlayerKey = null;
 const LIVE_SYNC_INTERVAL_MS = 8000;
+let activePlayerAutocomplete = null;
 
 function applyAppConfig() {
   const siteName = appConfig.siteName || "FantasyIQ";
@@ -498,6 +499,192 @@ function findPlayer(name) {
   return (boardData.boards.combined.rows || []).find((row) => {
     const rowName = normalizePlayerName(row.Player);
     return rowName.includes(clean) || clean.includes(rowName);
+  });
+}
+
+function playerAutocompleteRows(config = {}) {
+  if (!boardData) return [];
+  if (config.rows === "available") return availableRows();
+  if (config.rows === "sim") return mockSim ? simAvailableRows() : availableRows();
+  return boardData.boards?.combined?.rows || [];
+}
+
+function playerAutocompleteContext(input, mode = "single") {
+  const value = input.value || "";
+  const caret = input.selectionStart ?? value.length;
+  if (mode === "single") {
+    return { start: 0, end: value.length, query: value.trim() };
+  }
+  const lineStart = value.lastIndexOf("\n", Math.max(0, caret - 1)) + 1;
+  const nextBreak = value.indexOf("\n", caret);
+  const lineEnd = nextBreak === -1 ? value.length : nextBreak;
+  let start = lineStart;
+  if (mode === "mock-line") {
+    const lineBeforeCaret = value.slice(lineStart, caret);
+    const commaIndex = lineBeforeCaret.lastIndexOf(",");
+    if (commaIndex !== -1) start = lineStart + commaIndex + 1;
+  }
+  return {
+    start,
+    end: lineEnd,
+    query: value.slice(start, caret).trim(),
+  };
+}
+
+function playerAutocompleteSuggestions(query, config = {}) {
+  const clean = normalizePlayerName(query);
+  if (clean.length < 2) return [];
+  const seen = new Set();
+  return playerAutocompleteRows(config)
+    .map((row) => {
+      const player = row.Player || "";
+      const key = normalizePlayerName(player);
+      if (!key || seen.has(key)) return null;
+      seen.add(key);
+      const words = player.split(/\s+/).map(normalizePlayerName);
+      let score = null;
+      if (key.startsWith(clean)) score = 0;
+      else if (words.some((word) => word.startsWith(clean))) score = 1;
+      else if (key.includes(clean)) score = 2;
+      if (score === null) return null;
+      return { row, score: score + Number(row.Rank || 999) / 1000 };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 7)
+    .map((item) => item.row);
+}
+
+function setPlayerAutocompleteActive(config, index) {
+  const buttons = Array.from(config.box?.querySelectorAll(".player-suggestion") || []);
+  if (!buttons.length) return;
+  config.activeIndex = Math.max(0, Math.min(index, buttons.length - 1));
+  buttons.forEach((button, buttonIndex) => {
+    button.classList.toggle("active", buttonIndex === config.activeIndex);
+  });
+}
+
+function hidePlayerAutocomplete(config = activePlayerAutocomplete) {
+  if (!config?.box) return;
+  config.box.hidden = true;
+  config.suggestions = [];
+  config.activeIndex = 0;
+  if (activePlayerAutocomplete === config) activePlayerAutocomplete = null;
+}
+
+function applyPlayerSuggestion(config, row) {
+  const input = config.input;
+  const context = playerAutocompleteContext(input, config.mode);
+  const value = input.value || "";
+  const before = value.slice(0, context.start);
+  const after = value.slice(context.end);
+  const needsSpace = before.endsWith(",") ? " " : "";
+  const replacement = `${before}${needsSpace}${row.Player}${after}`;
+  input.value = replacement;
+  const cursor = before.length + needsSpace.length + row.Player.length;
+  input.focus();
+  input.setSelectionRange?.(cursor, cursor);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  hidePlayerAutocomplete(config);
+}
+
+function renderPlayerAutocomplete(config) {
+  const input = config.input;
+  const box = config.box;
+  if (!input || !box || document.activeElement !== input) {
+    hidePlayerAutocomplete(config);
+    return;
+  }
+  const context = playerAutocompleteContext(input, config.mode);
+  const clean = normalizePlayerName(context.query);
+  if (clean.length < 2) {
+    hidePlayerAutocomplete(config);
+    return;
+  }
+  activePlayerAutocomplete = config;
+  if (!boardData) {
+    box.innerHTML = `<div class="player-suggestion-empty">Loading player board...</div>`;
+    box.hidden = false;
+    return;
+  }
+  const suggestions = playerAutocompleteSuggestions(context.query, config);
+  config.suggestions = suggestions;
+  config.activeIndex = 0;
+  if (!suggestions.length) {
+    box.innerHTML = `<div class="player-suggestion-empty">No player matches</div>`;
+    box.hidden = false;
+    return;
+  }
+  box.innerHTML = suggestions
+    .map((row, index) => {
+      const meta = `#${row.Rank} / ${row.Pos} / ${row.Team || "FA"} / ${row["Pos Tier"] || row.Category || "Tier"}`;
+      return `<button class="player-suggestion ${index === 0 ? "active" : ""}" type="button" data-index="${index}">
+        <span><strong>${htmlEscape(row.Player)}</strong><small>${htmlEscape(meta)}</small></span>
+        <em>${Number(row["Value Score"] || 0).toFixed(1)}</em>
+      </button>`;
+    })
+    .join("");
+  box.hidden = false;
+  box.querySelectorAll(".player-suggestion").forEach((button) => {
+    button.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      const row = config.suggestions[Number(button.dataset.index)];
+      if (row) applyPlayerSuggestion(config, row);
+    });
+  });
+}
+
+function refreshActivePlayerAutocomplete() {
+  if (activePlayerAutocomplete) renderPlayerAutocomplete(activePlayerAutocomplete);
+}
+
+function setupPlayerAutocomplete() {
+  const configs = [
+    { input: tradeGive, mode: "line" },
+    { input: tradeGet, mode: "line" },
+    { input: tradeRoster, mode: "line" },
+    { input: footballersPlayerCheck, mode: "single" },
+    { input: liveTierSearch, mode: "single", rows: "available" },
+    { input: simSearch, mode: "single", rows: "sim" },
+    { input: boardSearch, mode: "single" },
+    { input: mockPaste, mode: "mock-line" },
+  ].filter((config) => config.input);
+
+  configs.forEach((config) => {
+    if (config.input.dataset.playerAutocomplete === "true") return;
+    config.input.dataset.playerAutocomplete = "true";
+    config.input.autocomplete = "off";
+    config.input.spellcheck = false;
+    const box = document.createElement("div");
+    box.className = "player-suggestions";
+    box.hidden = true;
+    box.setAttribute("role", "listbox");
+    config.box = box;
+    config.suggestions = [];
+    config.activeIndex = 0;
+    config.input.insertAdjacentElement("afterend", box);
+    config.input.addEventListener("input", () => renderPlayerAutocomplete(config));
+    config.input.addEventListener("focus", () => renderPlayerAutocomplete(config));
+    config.input.addEventListener("click", () => renderPlayerAutocomplete(config));
+    config.input.addEventListener("blur", () => {
+      window.setTimeout(() => hidePlayerAutocomplete(config), 120);
+    });
+    config.input.addEventListener("keydown", (event) => {
+      if (config.box.hidden || !config.suggestions.length) return;
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setPlayerAutocompleteActive(config, (config.activeIndex || 0) + 1);
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setPlayerAutocompleteActive(config, (config.activeIndex || 0) - 1);
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        const row = config.suggestions[config.activeIndex || 0];
+        if (row) applyPlayerSuggestion(config, row);
+      } else if (event.key === "Escape") {
+        hidePlayerAutocomplete(config);
+      }
+    });
   });
 }
 
@@ -2270,6 +2457,7 @@ function loadBoards() {
       renderMockSimulator();
       renderFootballersPlayerCheck();
       renderTradeCalc();
+      refreshActivePlayerAutocomplete();
     })
     .catch((error) => {
       if (boardStatus) {
@@ -2289,10 +2477,13 @@ if (boardTable) {
     renderMockSimulator();
     renderFootballersPlayerCheck();
     renderTradeCalc();
+    refreshActivePlayerAutocomplete();
   } else {
     loadBoards();
   }
 }
+
+setupPlayerAutocomplete();
 
 boardSearch?.addEventListener("input", renderBoard);
 positionFilter?.addEventListener("change", renderBoard);
