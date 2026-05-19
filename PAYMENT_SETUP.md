@@ -65,6 +65,36 @@ Required checkout fields: ESPN league ID, ESPN season, League name
 Support email metadata: shayneholladay@gmail.com
 ```
 
+## Configure The Current Link
+
+The live payment link is already:
+
+```text
+https://buy.stripe.com/eVq3cvdN71GX84E917efC00
+```
+
+To update that existing link with required checkout fields and a hosted
+after-payment message, run:
+
+```powershell
+$env:STRIPE_SECRET_KEY="sk_live_your_key_here"
+$env:STRIPE_PAYMENT_LINK_URL="https://buy.stripe.com/eVq3cvdN71GX84E917efC00"
+python .\scripts\configure_stripe_payment_link.py
+Remove-Item Env:\STRIPE_SECRET_KEY
+Remove-Item Env:\STRIPE_PAYMENT_LINK_URL
+```
+
+The script finds the matching Payment Link URL, then configures:
+
+```text
+Required fields: ESPN league ID, ESPN season, League name
+After-payment message: email setup details to shayneholladay@gmail.com
+Metadata: product, support email, website URL, dashboard URL
+```
+
+If Stripe cannot find the link by URL, open the link in Stripe Dashboard, copy
+its `plink_...` id, set `STRIPE_PAYMENT_LINK_ID`, and run the same script.
+
 ## Checkout Fields
 
 Collect these in checkout if your payment provider supports custom fields:

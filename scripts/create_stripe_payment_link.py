@@ -10,11 +10,16 @@ from typing import Any
 
 
 API_BASE = "https://api.stripe.com/v1"
-PRODUCT_NAME = "Fantasy IQ League Dashboard"
+PRODUCT_NAME = "FantasyIQ League Dashboard"
 PRODUCT_DESCRIPTION = "One manually configured dashboard for one public ESPN fantasy football league."
 UNIT_AMOUNT_CENTS = 2500
 CURRENCY = "usd"
 SUPPORT_EMAIL = "shayneholladay@gmail.com"
+CONFIRMATION_MESSAGE = (
+    "Thanks for subscribing to FantasyIQ. Setup is concierge: email your ESPN "
+    f"league ID, season, league name, draft date/time, and logo to {SUPPORT_EMAIL}. "
+    "Your dashboard will be configured manually."
+)
 
 
 def stripe_key() -> str:
@@ -91,6 +96,8 @@ def create_payment_link() -> str:
             "custom_fields[2][label][custom]": "League name",
             "custom_fields[2][type]": "text",
             "custom_fields[2][optional]": "false",
+            "after_completion[type]": "hosted_confirmation",
+            "after_completion[hosted_confirmation][custom_message]": CONFIRMATION_MESSAGE,
             "metadata[product]": "fantasy_iq_concierge",
             "metadata[support_email]": SUPPORT_EMAIL,
         },

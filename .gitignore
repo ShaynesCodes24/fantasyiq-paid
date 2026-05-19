@@ -4,6 +4,8 @@ __pycache__/
 .vercel/
 dist/
 .env
+.env.local
+.env.*.local
 *.log
 stripe_product_image.png
 .DS_Store

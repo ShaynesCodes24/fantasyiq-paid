@@ -1,6 +1,6 @@
 # Customer Onboarding Checklist
 
-Use this for each $25/year Fantasy IQ concierge setup customer.
+Use this for each $25/year FantasyIQ concierge setup customer.
 
 ## Payment
 
@@ -69,7 +69,7 @@ Support contact:
 ## Delivery Message
 
 ```text
-Your Fantasy IQ dashboard is live:
+Your FantasyIQ dashboard is live:
 
 Dashboard:
 Renewal date:

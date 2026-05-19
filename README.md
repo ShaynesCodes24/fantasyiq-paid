@@ -25,19 +25,19 @@ https://<customer-project>.vercel.app/
 Recommended Vercel project name:
 
 ```text
-fantasy-iq-paid
+fantasyiq-paid
 ```
 
 If Vercel accepts that name, the live website URL will be:
 
 ```text
-https://fantasy-iq-paid.vercel.app/
+https://fantasyiq-paid.vercel.app/
 ```
 
 Stripe accepted business website URL:
 
 ```text
-https://fantasy-iq-paid.vercel.app/FantasyIQ/
+https://fantasyiq-paid.vercel.app/FantasyIQ/
 ```
 
 Paid dashboard URL shape:
@@ -83,6 +83,9 @@ Recommended checkout/onboarding flow:
 - `PAYMENT_SETUP.md`: simple payment link setup checklist.
 - `LAUNCH_CHECKLIST.md`: pre-sale and per-customer launch checklist.
 - `scripts/create_stripe_payment_link.py`: optional local Stripe Payment Link creator.
+- `scripts/configure_stripe_payment_link.py`: updates the current Stripe link with intake fields.
+- `scripts/configure_vercel_env.py`: sets customer ESPN league env vars through the Vercel API.
+- `scripts/check_product_readiness.py`: checks the live website, dashboard, Stripe link, and API.
 - `CUSTOMER_INTAKE.md`: customer-facing setup form.
 - `CUSTOMER_ONBOARDING.md`: internal fulfillment checklist.
 - `CUSTOMER_EMAILS.md`: reusable customer messages.
@@ -132,12 +135,32 @@ FANTASY_IQ_LEAGUE_ID=their_espn_league_id
 FANTASY_IQ_SEASON=2026
 ```
 
+With a Vercel token, you can set them from this repo:
+
+```powershell
+$env:VERCEL_TOKEN="your_vercel_token_here"
+$env:FANTASY_IQ_LEAGUE_ID="their_espn_league_id"
+$env:FANTASY_IQ_SEASON="2026"
+python .\scripts\configure_vercel_env.py
+Remove-Item Env:\VERCEL_TOKEN
+Remove-Item Env:\FANTASY_IQ_LEAGUE_ID
+Remove-Item Env:\FANTASY_IQ_SEASON
+```
+
+Redeploy the Vercel project after changing environment variables.
+
 The customer league must be public unless future private ESPN authentication is added.
 
 Live endpoint:
 
 ```text
 /api/live-draft
+```
+
+Live readiness check:
+
+```powershell
+python .\scripts\check_product_readiness.py
 ```
 
 ## Important Product Notes

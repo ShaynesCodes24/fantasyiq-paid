@@ -1,4 +1,4 @@
-# Fantasy IQ Customer Intake
+# FantasyIQ Customer Intake
 
 Send this to each customer after payment.
 
