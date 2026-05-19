@@ -82,6 +82,7 @@ Recommended checkout/onboarding flow:
 - `SALES_COPY.md`: public offer copy for posts, checkout, and DMs.
 - `PAYMENT_SETUP.md`: simple payment link setup checklist.
 - `LAUNCH_CHECKLIST.md`: pre-sale and per-customer launch checklist.
+- `TEST_PURCHASE_CHECKLIST.md`: one real checkout/refund test flow.
 - `scripts/create_stripe_payment_link.py`: optional local Stripe Payment Link creator.
 - `scripts/configure_stripe_payment_link.py`: updates the current Stripe link with intake fields.
 - `scripts/configure_vercel_env.py`: sets customer ESPN league env vars through the Vercel API.
@@ -98,6 +99,28 @@ Current payment link:
 ```text
 https://buy.stripe.com/eVq3cvdN71GX84E917efC00
 ```
+
+## Public Demo
+
+The live `fantasyiq-paid.vercel.app/FantasyIQ/` dashboard is a public demo
+preview. When `FANTASY_IQ_LEAGUE_ID` is not set, `/api/live-draft` connects to
+a known public ESPN demo league so the product does not look broken during a
+first checkout test.
+
+Optional demo override:
+
+```text
+FANTASY_IQ_DEMO_LEAGUE_ID=584856941
+```
+
+For a paid customer deployment, set:
+
+```js
+isDemoPreview: false,
+```
+
+in `public/FantasyIQ/config.js`, then set the customer `FANTASY_IQ_LEAGUE_ID`
+and redeploy.
 
 ## Configure A Customer
 

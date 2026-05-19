@@ -104,6 +104,7 @@ function applyAppConfig() {
   const heroSubtitle = document.querySelector(".command-hero p:not(.eyebrow)");
   const leftEndzone = document.querySelector(".field-endzone-left");
   const rightEndzone = document.querySelector(".field-endzone-right");
+  const demoBanner = document.querySelector("[data-demo-banner]");
 
   if (brandTitle) brandTitle.textContent = siteName;
   if (brandEyebrow) brandEyebrow.textContent = appConfig.leagueName || "League Command Center";
@@ -121,12 +122,24 @@ function applyAppConfig() {
   }
   if (leftEndzone) leftEndzone.textContent = appConfig.fieldLeftLabel || "Fantasy";
   if (rightEndzone) rightEndzone.textContent = appConfig.fieldRightLabel || "IQ";
+  if (demoBanner && appConfig.isDemoPreview === false) {
+    demoBanner.remove();
+  } else if (demoBanner) {
+    const label = demoBanner.querySelector("strong");
+    const message = demoBanner.querySelector("span");
+    if (label) label.textContent = appConfig.demoLabel || "Public demo preview";
+    if (message) {
+      message.textContent =
+        appConfig.demoMessage ||
+        "This dashboard is a working preview. Subscribe to get it configured for your ESPN league.";
+    }
+  }
 }
 
 applyAppConfig();
 
 function applyEspnLeagueBranding() {
-  if (!appConfig.useEspnLeagueBranding || !liveDraft) return;
+  if (!appConfig.useEspnLeagueBranding || !liveDraft || liveDraft.demoMode) return;
   const brandEyebrow = document.querySelector(".brand-lockup .eyebrow");
   const brandSubtitle = document.querySelector(".brand-lockup small");
   const logo = document.querySelector(".brand-lockup img");
@@ -1497,9 +1510,14 @@ function renderLiveDraft() {
   const pct = total ? Math.round((completed / total) * 100) : 0;
   const stale = liveDraft.staleError ? ` Stale fallback shown because ESPN sync errored: ${liveDraft.staleError}` : "";
   const state = liveDraft.inProgress ? "Draft live" : liveDraft.drafted ? "Draft complete" : "Draft board loaded";
+  const syncContext = liveDraft.demoMode
+    ? " Public demo league is connected; subscribers get their ESPN league configured after checkout."
+    : ` Auto sync checks ESPN every ${LIVE_SYNC_INTERVAL_MS / 1000} seconds.`;
 
-  liveStatus.innerHTML = `<strong>${state}</strong>: ${completed}/${total || 192} picks completed. Auto sync checks ESPN every ${LIVE_SYNC_INTERVAL_MS / 1000} seconds.${stale}`;
-  if (liveSyncStatus) liveSyncStatus.textContent = liveDraft.inProgress ? "Draft live" : "ESPN connected";
+  liveStatus.innerHTML = `<strong>${state}</strong>: ${completed}/${total || 192} picks completed.${syncContext}${stale}`;
+  if (liveSyncStatus) {
+    liveSyncStatus.textContent = liveDraft.demoMode ? "Demo league connected" : liveDraft.inProgress ? "Draft live" : "ESPN connected";
+  }
   if (liveCurrentPick) {
     liveCurrentPick.textContent = current ? `Round ${current.round}, Pick ${current.roundPick}` : "Draft complete";
   }
@@ -1512,7 +1530,7 @@ function renderLiveDraft() {
   if (liveTotal) liveTotal.textContent = `of ${total || 192}`;
   if (liveProgressBar) liveProgressBar.style.width = `${pct}%`;
   if (liveLastSync) liveLastSync.textContent = formatSyncTime(liveDraft.syncedAt);
-  if (liveSource) liveSource.textContent = liveDraft.source || "ESPN public league API";
+  if (liveSource) liveSource.textContent = liveDraft.demoMode ? "ESPN public demo league" : liveDraft.source || "ESPN public league API";
 
   renderRecommendations();
   renderMyRoster();

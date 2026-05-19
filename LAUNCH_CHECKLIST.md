@@ -11,7 +11,7 @@
 - Set Vercel Output Directory to `dist`.
 - Decide where customer records will live.
 - Confirm your Vercel account can deploy one project per customer.
-- Test one dashboard using your own public ESPN league.
+- Test the public demo dashboard and one customer dashboard using a real public ESPN league.
 - Use `https://fantasyiq-paid.vercel.app/FantasyIQ/` as Stripe's business website.
 - Run `python .\scripts\check_product_readiness.py` before sharing the offer publicly.
 
@@ -21,6 +21,7 @@
 - Collect intake details.
 - Confirm ESPN league is public.
 - Configure `public/FantasyIQ/config.js`.
+- Set `isDemoPreview: false` in `public/FantasyIQ/config.js`.
 - Upload or set the customer logo.
 - Set `FANTASY_IQ_LEAGUE_ID` and `FANTASY_IQ_SEASON` in Vercel.
 - Or set them with `python .\scripts\configure_vercel_env.py` after setting `VERCEL_TOKEN` locally.

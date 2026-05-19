@@ -8,6 +8,10 @@ window.FANTASY_IQ_CONFIG = {
   draftCardValue: "$25 / year",
   draftCardNote: "Concierge setup for one ESPN league",
   supportEmail: "shayneholladay@gmail.com",
+  isDemoPreview: true,
+  demoLabel: "Public demo preview",
+  demoMessage:
+    "This dashboard is a working preview. Subscribe to get it configured for your ESPN league.",
   fieldLeftLabel: "Fantasy",
   fieldRightLabel: "IQ",
   heroTitle: "Draft smarter. Trade cleaner. Win your league.",

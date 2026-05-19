@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 
 
 DEFAULT_SEASON = 2026
+DEFAULT_DEMO_LEAGUE_ID = 584856941
 
 
 class ConfigError(RuntimeError):
@@ -35,10 +36,13 @@ def int_env(name: str, default: int | None = None) -> int | None:
 
 CONFIG_ERROR: str | None = None
 try:
-    LEAGUE_ID = int_env("FANTASY_IQ_LEAGUE_ID")
+    DEMO_LEAGUE_ID = int_env("FANTASY_IQ_DEMO_LEAGUE_ID", DEFAULT_DEMO_LEAGUE_ID)
+    DEMO_MODE = os.environ.get("FANTASY_IQ_LEAGUE_ID") is None
+    LEAGUE_ID = int_env("FANTASY_IQ_LEAGUE_ID", DEMO_LEAGUE_ID)
     SEASON = int_env("FANTASY_IQ_SEASON", DEFAULT_SEASON)
 except ConfigError as exc:
     CONFIG_ERROR = str(exc)
+    DEMO_MODE = False
     LEAGUE_ID = None
     SEASON = DEFAULT_SEASON
 PLAYERS_FILTER = json.dumps(
@@ -106,10 +110,10 @@ def utc_now() -> str:
 def require_config() -> tuple[int, int]:
     if CONFIG_ERROR:
         raise ConfigError(CONFIG_ERROR)
-    if LEAGUE_ID is None:
-        raise ConfigError("FANTASY_IQ_LEAGUE_ID is not configured for this customer dashboard.")
     if SEASON is None:
         raise ConfigError("FANTASY_IQ_SEASON is not configured for this customer dashboard.")
+    if LEAGUE_ID is None:
+        raise ConfigError("FANTASY_IQ_LEAGUE_ID is not configured for this customer dashboard.")
     return LEAGUE_ID, SEASON
 
 
@@ -251,6 +255,7 @@ def build_live_payload(force: bool = False) -> dict[str, Any]:
         "source": "ESPN public league API",
         "leagueId": league_id,
         "season": season,
+        "demoMode": DEMO_MODE,
         "leagueName": settings.get("name") or league.get("name") or "ESPN Fantasy League",
         "leagueLogo": settings.get("logoUrl") or settings.get("imageUrl") or league.get("logoUrl"),
         "syncedAt": utc_now(),
@@ -278,6 +283,7 @@ def error_payload(message: str) -> dict[str, Any]:
         "source": "ESPN public league API",
         "leagueId": LEAGUE_ID,
         "season": SEASON,
+        "demoMode": DEMO_MODE,
         "syncedAt": utc_now(),
         "error": message,
         "fallback": None,
