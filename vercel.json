@@ -3,6 +3,10 @@
   "buildCommand": "node scripts/build_static.js",
   "installCommand": "",
   "outputDirectory": "dist",
+  "env": {
+    "FANTASY_IQ_LEAGUE_ID": "584856941",
+    "FANTASY_IQ_SEASON": "2026"
+  },
   "redirects": [
     {
       "source": "/FantasyIQ",

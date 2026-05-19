@@ -100,6 +100,7 @@ function applyAppConfig() {
   const draftCardLabel = document.querySelector(".draft-card span");
   const draftCardValue = document.querySelector(".draft-card strong");
   const draftCardNote = document.querySelector(".draft-card small");
+  const subscribeButton = document.querySelector(".draft-card .subscribe-button");
   const heroTitle = document.querySelector(".command-hero h2");
   const heroSubtitle = document.querySelector(".command-hero p:not(.eyebrow)");
   const leftEndzone = document.querySelector(".field-endzone-left");
@@ -114,6 +115,9 @@ function applyAppConfig() {
   if (draftCardLabel) draftCardLabel.textContent = appConfig.draftCardLabel || "Subscription";
   if (draftCardValue) draftCardValue.textContent = appConfig.draftCardValue || "$25 / year";
   if (draftCardNote) draftCardNote.textContent = appConfig.draftCardNote || "Configured for your ESPN league";
+  if (subscribeButton && appConfig.showSubscribeButton === false) {
+    subscribeButton.remove();
+  }
   if (heroTitle) heroTitle.textContent = appConfig.heroTitle || "Draft smarter. Trade cleaner. Win your league.";
   if (heroSubtitle) {
     heroSubtitle.textContent =
