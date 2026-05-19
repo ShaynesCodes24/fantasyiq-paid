@@ -106,10 +106,15 @@ function applyAppConfig() {
   const leftEndzone = document.querySelector(".field-endzone-left");
   const rightEndzone = document.querySelector(".field-endzone-right");
   const demoBanner = document.querySelector("[data-demo-banner]");
+  const firstLeagueMetric = document.querySelector(".metric-grid .metric:first-child");
 
   if (brandTitle) brandTitle.textContent = siteName;
-  if (brandEyebrow) brandEyebrow.textContent = appConfig.leagueName || "League Command Center";
-  if (brandSubtitle) brandSubtitle.textContent = appConfig.leagueSubtitle || "Configurable ESPN Fantasy Platform";
+  if (brandEyebrow) brandEyebrow.textContent = appConfig.customerTeamName || appConfig.leagueName || "League Command Center";
+  if (brandSubtitle) {
+    brandSubtitle.textContent = appConfig.customerName && appConfig.leagueName
+      ? `${appConfig.customerName} / ${appConfig.leagueName}`
+      : appConfig.leagueSubtitle || "Configurable ESPN Fantasy Platform";
+  }
   if (logo && appConfig.logoUrl) logo.src = appConfig.logoUrl;
   if (logo) logo.alt = appConfig.logoAlt || `${siteName} league logo`;
   if (draftCardLabel) draftCardLabel.textContent = appConfig.draftCardLabel || "Subscription";
@@ -126,6 +131,12 @@ function applyAppConfig() {
   }
   if (leftEndzone) leftEndzone.textContent = appConfig.fieldLeftLabel || "Fantasy";
   if (rightEndzone) rightEndzone.textContent = appConfig.fieldRightLabel || "IQ";
+  if (firstLeagueMetric && appConfig.customerTeamName) {
+    const value = firstLeagueMetric.querySelector("strong");
+    const note = firstLeagueMetric.querySelector("small");
+    if (value) value.textContent = appConfig.customerTeamName;
+    if (note) note.textContent = appConfig.leagueName || "ESPN league";
+  }
   if (demoBanner && appConfig.isDemoPreview === false) {
     demoBanner.remove();
   } else if (demoBanner) {
@@ -148,9 +159,11 @@ function applyEspnLeagueBranding() {
   const brandSubtitle = document.querySelector(".brand-lockup small");
   const logo = document.querySelector(".brand-lockup img");
 
-  if (brandEyebrow && liveDraft.leagueName) brandEyebrow.textContent = liveDraft.leagueName;
+  if (brandEyebrow) brandEyebrow.textContent = appConfig.customerTeamName || liveDraft.leagueName || "League Command Center";
   if (brandSubtitle && liveDraft.leagueId) {
-    brandSubtitle.textContent = `ESPN league ${liveDraft.leagueId} / season ${liveDraft.season || ""}`.trim();
+    brandSubtitle.textContent = appConfig.customerName
+      ? `${appConfig.customerName} / ${liveDraft.leagueName || "ESPN league"}`
+      : `ESPN league ${liveDraft.leagueId} / season ${liveDraft.season || ""}`.trim();
   }
   if (logo && liveDraft.leagueLogo) {
     logo.src = liveDraft.leagueLogo;
@@ -880,7 +893,7 @@ function rosterCountsFor(teamId) {
 }
 
 function selectedTeamId() {
-  return myTeamSelect?.value || "";
+  return myTeamSelect?.value || appConfig.customerTeamId || "";
 }
 
 function currentRound() {
@@ -1245,11 +1258,14 @@ function renderLiveTierBoard() {
 
 function renderTeamOptions() {
   if (!myTeamSelect || !liveDraft?.teams) return;
-  const saved = localStorage.getItem("fantasy-dashboard:my-team") || myTeamSelect.value;
+  const saved = localStorage.getItem("fantasy-dashboard:my-team") || myTeamSelect.value || appConfig.customerTeamId || "";
   myTeamSelect.innerHTML = `<option value="">Choose your team</option>${liveDraft.teams
     .map((team) => `<option value="${team.teamId}">${team.teamName}${team.manager ? ` (${team.manager})` : ""}</option>`)
     .join("")}`;
   if (saved) myTeamSelect.value = saved;
+  if (!localStorage.getItem("fantasy-dashboard:my-team") && appConfig.customerTeamId) {
+    localStorage.setItem("fantasy-dashboard:my-team", appConfig.customerTeamId);
+  }
 }
 
 function renderPickCards(container, picks, emptyMessage) {
