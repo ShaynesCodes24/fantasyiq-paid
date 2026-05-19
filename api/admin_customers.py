@@ -68,13 +68,18 @@ def csv_customers() -> list[dict[str, Any]]:
 
 
 def registry_customers() -> list[dict[str, Any]]:
-    return [context.public_dict() for context in all_customer_contexts().values()]
+    return [
+        context.public_dict()
+        for context in all_customer_contexts().values()
+        if not context.demo_mode
+    ]
 
 
 def admin_payload() -> dict[str, Any]:
     csv_rows = csv_customers()
     registry_rows = registry_customers()
     configured_count = len([row for row in csv_rows if row.get("status") == "configured"])
+    configured_count += len([row for row in registry_rows if row.get("status") == "configured"])
     needs_setup = [row for row in csv_rows if row.get("status") != "configured"]
     return {
         "ok": True,

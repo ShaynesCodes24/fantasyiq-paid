@@ -12,3 +12,5 @@ customers.local.csv
 stripe_product_image.png
 .DS_Store
 Thumbs.db
+
+.vercel

@@ -68,6 +68,19 @@
           .join("")}</div>`;
       }
 
+      function renderRegistry(customers) {
+        if (!customers?.length) return "<p>No configured customer registry found yet.</p>";
+        return `<div class="mini-table">${customers
+          .map(
+            (customer) => `<div>
+              <span>${escapeHtml(customer.status || "unknown")}</span>
+              <strong>${escapeHtml(customer.customerName || customer.customerSlug || "Customer")}</strong>
+              <span>${escapeHtml(customer.leagueName || customer.leagueId)} / Team ${escapeHtml(customer.customerTeamId || "")}</span>
+            </div>`,
+          )
+          .join("")}</div>`;
+      }
+
       loadButton.addEventListener("click", async () => {
         result.innerHTML = "<strong>Loading admin data...</strong>";
         try {
@@ -82,6 +95,9 @@
           }
           result.innerHTML = `
             <strong>${escapeHtml(payload.configuredCount)} configured / ${escapeHtml(payload.needsSetupCount)} need setup</strong>
+            <h3>Configured dashboards</h3>
+            ${renderRegistry(payload.registry)}
+            <h3>Setup queue</h3>
             ${renderCustomers(payload.customers)}
             <p>${escapeHtml(payload.nextActions?.[0] || "")}</p>
           `;

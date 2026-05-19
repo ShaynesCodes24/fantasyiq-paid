@@ -110,7 +110,7 @@ def vercel_deploy(apply: bool) -> Step:
     if not apply:
         return Step("Vercel deploy", "WARN", "Ready, but skipped. Re-run with --deploy.")
     token_args = ["--token", env("VERCEL_TOKEN")] if env("VERCEL_TOKEN") else []
-    scope_value = env("VERCEL_TEAM_SLUG") or env("VERCEL_TEAM_ID")
+    scope_value = env("VERCEL_TEAM_ID") or env("VERCEL_TEAM_SLUG")
     if not (ROOT / ".vercel" / "project.json").exists():
         if not scope_value:
             return Step("Vercel deploy", "FAIL", "Set VERCEL_TEAM_SLUG or VERCEL_TEAM_ID before linking the project.")
@@ -119,7 +119,7 @@ def vercel_deploy(apply: bool) -> Step:
                 vercel_bin,
                 "link",
                 "--yes",
-                "--team",
+                "--scope",
                 scope_value,
                 "--project",
                 env("VERCEL_PROJECT_NAME", "fantasyiq-paid"),
@@ -130,8 +130,6 @@ def vercel_deploy(apply: bool) -> Step:
         if link.status != "PASS":
             return Step("Vercel deploy", link.status, link.detail)
     command = [vercel_bin, "--prod", "--yes"]
-    if scope_value:
-        command.extend(["--scope", scope_value])
     command.extend(token_args)
     return run_command(command, "Vercel deploy")
 
