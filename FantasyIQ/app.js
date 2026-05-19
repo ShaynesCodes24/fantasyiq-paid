@@ -389,7 +389,11 @@ function renderBoard() {
   const rows = filteredRows();
   if (boardStatus) {
     const title = boardData.boards[activeBoard]?.title || "Board";
-    const updated = boardData.updated ? ` Updated ${boardData.updated}.` : "";
+    const updated = boardData.live
+      ? ` Live ${boardData.source || "board"} synced ${formatSyncTime(boardData.syncedAt)}.`
+      : boardData.updated
+        ? ` Updated ${boardData.updated}.`
+        : "";
     const drafted = liveDraft?.completedPicks ? ` ESPN live sync has ${liveDraft.completedPicks} drafted players.` : "";
     const tierHint = positionFilter?.value ? " Tier dividers are on for this position view." : "";
     boardStatus.innerHTML = `<strong>${title}</strong>: showing ${rows.length} players. Click any player name for analysis.${tierHint}${updated}${drafted}`;
@@ -2098,10 +2102,24 @@ function startLiveSync() {
 
 function loadBoards() {
   if (boardStatus) {
-    boardStatus.textContent = "Loading website boards...";
+    boardStatus.textContent = "Loading live ESPN board...";
   }
-  fetch(`./data/boards.json?v=${Date.now()}`, { cache: "no-store" })
-    .then((response) => response.json())
+  const liveBoardUrl = appConfig.liveBoardUrl || "/api/live-boards";
+  fetch(`${liveBoardUrl}${liveBoardUrl.includes("?") ? "&" : "?"}v=${Date.now()}`, { cache: "no-store" })
+    .then((response) => {
+      if (!response.ok) throw new Error(`Live board returned HTTP ${response.status}`);
+      return response.json();
+    })
+    .catch((error) => {
+      console.warn("Live board unavailable, using bundled board.", error);
+      if (boardStatus) {
+        boardStatus.textContent = "Live board unavailable. Loading bundled board fallback...";
+      }
+      return fetch(`./data/boards.json?v=${Date.now()}`, { cache: "no-store" }).then((response) => {
+        if (!response.ok) throw new Error(`Bundled board returned HTTP ${response.status}`);
+        return response.json();
+      });
+    })
     .then((data) => {
       boardData = data;
       renderBoard();
@@ -2113,7 +2131,7 @@ function loadBoards() {
     .catch((error) => {
       if (boardStatus) {
         boardStatus.innerHTML =
-          "<strong>Could not load website boards.</strong> Open the deployed dashboard through /FantasyIQ/ or refresh the deploy package.";
+          "<strong>Could not load player boards.</strong> Refresh the dashboard or try again shortly.";
       }
       console.error(error);
     });

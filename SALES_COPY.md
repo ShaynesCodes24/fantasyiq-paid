@@ -6,7 +6,7 @@
 FantasyIQ is a custom ESPN fantasy football dashboard for your league.
 
 For $25/year, I configure a private dashboard link for your public ESPN league
-with live draft sync, ranked draft boards, mock draft practice, trade checks,
+with live draft sync, live ESPN-driven draft boards, mock draft practice, trade checks,
 and your league branding.
 
 Payment:
@@ -50,7 +50,7 @@ added later.
 ```text
 - Custom league-branded dashboard
 - ESPN public league live draft sync
-- Ranked PPR draft boards
+- Live ESPN-driven PPR draft boards
 - Mock draft simulator
 - Mock pick grader
 - Trade value checker

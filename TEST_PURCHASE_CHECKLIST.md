@@ -10,6 +10,7 @@ Use this for one real checkout test before sharing FantasyIQ publicly.
 4. Fill in ESPN league ID, ESPN season, and league name.
 5. Confirm the hosted confirmation message appears.
 6. Forward the Stripe receipt or screenshot the confirmation page.
+7. Open the demo dashboard and confirm the board status says it synced a live ESPN board.
 
 ## Owner Steps
 

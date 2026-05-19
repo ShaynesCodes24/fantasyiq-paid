@@ -8,6 +8,7 @@ window.FANTASY_IQ_CONFIG = {
   draftCardValue: "$25 / year",
   draftCardNote: "Concierge setup for one ESPN league",
   supportEmail: "shayneholladay@gmail.com",
+  liveBoardUrl: "/api/live-boards",
   isDemoPreview: true,
   demoLabel: "Public demo preview",
   demoMessage:

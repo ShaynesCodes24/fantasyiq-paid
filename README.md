@@ -184,6 +184,19 @@ Live endpoint:
 /api/live-draft
 ```
 
+## Live Player Boards
+
+The dashboard now loads player boards from:
+
+```text
+/api/live-boards
+```
+
+That endpoint rebuilds the big board, projected PPR points, tiers, value/risk
+scores, trends, mock simulator board, and trade values from ESPN's public
+fantasy player feed. The bundled `FantasyIQ/data/boards.json` file remains only
+as a fallback if ESPN or the serverless endpoint is temporarily unavailable.
+
 Live readiness check:
 
 ```powershell

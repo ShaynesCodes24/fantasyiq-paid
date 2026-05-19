@@ -17,7 +17,7 @@ STRIPE_URL = os.environ.get(
     "https://buy.stripe.com/eVq3cvdN71GX84E917efC00",
 )
 API_URL = os.environ.get("FANTASYIQ_API_URL", f"{SITE_URL}/api/live-draft")
-BOARDS_URL = os.environ.get("FANTASYIQ_BOARDS_URL", f"{SITE_URL}/FantasyIQ/data/boards.json")
+BOARDS_URL = os.environ.get("FANTASYIQ_BOARDS_URL", f"{SITE_URL}/api/live-boards")
 
 
 @dataclass
@@ -92,11 +92,12 @@ def board_freshness_check() -> CheckResult:
         return CheckResult("Board freshness", "WARN", f"Could not parse board updated date: {raw_updated or 'missing'}")
 
     age_days = (date.today() - updated).days
+    source = "live" if payload.get("live") else "bundled"
     if age_days <= 45:
-        return CheckResult("Board freshness", "PASS", f"rankings updated {raw_updated} ({age_days} day(s) old)")
+        return CheckResult("Board freshness", "PASS", f"{source} rankings updated {raw_updated} ({age_days} day(s) old)")
     if age_days <= 90:
-        return CheckResult("Board freshness", "WARN", f"rankings updated {raw_updated} ({age_days} days old)")
-    return CheckResult("Board freshness", "FAIL", f"rankings updated {raw_updated} ({age_days} days old)")
+        return CheckResult("Board freshness", "WARN", f"{source} rankings updated {raw_updated} ({age_days} days old)")
+    return CheckResult("Board freshness", "FAIL", f"{source} rankings updated {raw_updated} ({age_days} days old)")
 
 
 def main() -> int:

@@ -29,6 +29,7 @@
 - Test `/FantasyIQ/`.
 - Test `/`, `/terms.html`, `/privacy.html`, and `/refund-policy.html`.
 - Test `/api/live-draft`.
+- Test `/api/live-boards`.
 - Send the delivery email.
 - Add renewal date to the customer tracker.
 

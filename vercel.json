@@ -18,6 +18,14 @@
     {
       "source": "/api/live-draft.json",
       "destination": "/api/live_draft"
+    },
+    {
+      "source": "/api/live-boards",
+      "destination": "/api/live_boards"
+    },
+    {
+      "source": "/api/live-boards.json",
+      "destination": "/api/live_boards"
     }
   ],
   "headers": [
