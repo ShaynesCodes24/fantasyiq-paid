@@ -2022,6 +2022,18 @@ function renderMockSimulator() {
 }
 
 function liveServerHelp(error) {
+  const subscribeUrl = "https://buy.stripe.com/eVq3cvdN71GX84E917efC00";
+  if (error?.includes("FANTASY_IQ_LEAGUE_ID is not configured")) {
+    if (liveStatus) {
+      liveStatus.innerHTML = `
+        <strong>Connect your ESPN league after subscribing.</strong>
+        Live draft sync is configured for each paid league dashboard.
+        <a class="inline-subscribe" href="${subscribeUrl}">Subscribe to connect a league</a>
+      `;
+    }
+    if (liveSyncStatus) liveSyncStatus.textContent = "League setup required";
+    return;
+  }
   const support = appConfig.supportEmail
     ? ` If this keeps happening, contact ${htmlEscape(appConfig.supportEmail)}.`
     : " If this keeps happening, contact dashboard support.";
