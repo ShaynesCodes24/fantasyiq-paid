@@ -216,7 +216,7 @@
         const data = new FormData(form);
         const params = new URLSearchParams(data);
         if (customerSlug) params.set("customer", customerSlug);
-        params.set("save", "1");
+        if (customerSlug) params.set("save", "1");
         const accessCode = String(data.get("accessCode") || savedAccessCode(customerSlug) || "").trim();
         const headers = { "Content-Type": "application/x-www-form-urlencoded" };
         if (accessCode) headers["x-fantasyiq-access-code"] = accessCode;

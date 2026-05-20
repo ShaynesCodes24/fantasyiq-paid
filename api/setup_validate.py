@@ -210,7 +210,7 @@ def authorized_setup_customer(raw: dict[str, Any], headers: Any | None) -> Any |
     if not customer_slug:
         if bool_value(env("FANTASYIQ_ALLOW_PUBLIC_SETUP_SAVE")):
             return None
-        raise PermissionError("A customer slug is required before saving setup details.")
+        return None
 
     context = known_customer_context(customer_slug)
     if not context:
@@ -257,6 +257,10 @@ def save_setup_if_requested(raw: dict[str, Any], payload: dict[str, Any], header
 
         context = authorized_setup_customer(raw, headers)
         email = str(raw.get("email") or getattr(context, "email", "") or "").strip().lower()
+        if context is None and not bool_value(env("FANTASYIQ_ALLOW_PUBLIC_SETUP_SAVE")):
+            payload["saved"] = False
+            payload["saveMessage"] = "Validated only. Sign in from a customer dashboard to save this league profile."
+            return payload
         customer_slug = slugify(
             str(
                 raw.get("customer")
