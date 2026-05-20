@@ -694,6 +694,14 @@ function scoringProjectionLabel() {
   return "Proj PPR";
 }
 
+function lastYearScoringLabel() {
+  const settings = activeLeagueSettings();
+  if (settings.scoringType === "half-ppr") return "Last Yr Half";
+  if (settings.scoringType === "standard") return "Last Yr Std";
+  if (settings.scoringType === "custom") return "Last Yr Custom";
+  return "Last Yr PPR";
+}
+
 function estimatedReceptions(row) {
   if (!row) return 0;
   const explicit = Number(row.Receptions || row["Projected Receptions"] || row.Rec || row.REC || 0);
@@ -703,9 +711,14 @@ function estimatedReceptions(row) {
   return match ? Number(match[1]) || 0 : 0;
 }
 
+function rowUsesNativeScoring(row) {
+  return Boolean(row?.["Native Scoring"] || row?.["Native Projection"] || row?.["Scoring Type"]);
+}
+
 function projectionValue(row) {
-  const base = Number(row?.["Proj PPR Pts"] || 0);
+  const base = Number(row?.["Native Projection"] || row?.["Proj PPR Pts"] || 0);
   if (!base) return 0;
+  if (rowUsesNativeScoring(row)) return Math.max(0, base);
   const settings = activeLeagueSettings();
   const currentReceptionPoints =
     settings.receptionPoints === null || settings.receptionPoints === undefined ? 1 : Number(settings.receptionPoints);
@@ -728,8 +741,10 @@ function leagueValueScore(row) {
   const posRank = Number(row["Pos Rank"] || 99);
   let score = base;
 
-  if (settings.scoringType === "half-ppr") score -= Math.min(4, estimatedReceptions(row) / 24);
-  if (settings.scoringType === "standard") score -= Math.min(8, estimatedReceptions(row) / 12);
+  if (!rowUsesNativeScoring(row)) {
+    if (settings.scoringType === "half-ppr") score -= Math.min(4, estimatedReceptions(row) / 24);
+    if (settings.scoringType === "standard") score -= Math.min(8, estimatedReceptions(row) / 12);
+  }
   if (slots.SUPERFLEX && row.Pos === "QB") score += Math.max(8, 30 - posRank * 0.65);
   if (!slots.SUPERFLEX && row.Pos === "QB" && teamCount <= 10) score -= 3;
   if (slots.FLEX >= 2 && ["RB", "WR"].includes(row.Pos)) score += 4;
@@ -762,10 +777,7 @@ function renderLeagueProfile() {
   if (leagueLineupNote) leagueLineupNote.textContent = `${lineupText} / ${benchText}`;
   if (leagueScoring) leagueScoring.textContent = scoringText;
   if (leagueScoringNote) {
-    leagueScoringNote.textContent =
-      settings.scoringType === "ppr"
-        ? "Using source PPR board values"
-        : "Converts PPR board to league format";
+    leagueScoringNote.textContent = "Raw-stat scoring when live board is loaded";
   }
   if (leagueDraftRounds) leagueDraftRounds.textContent = `${rounds} rounds`;
   if (leagueDraftNote) leagueDraftNote.textContent = `${settings.playoffTeams || 0} playoff teams`;
@@ -776,10 +788,9 @@ function renderLeagueProfile() {
     leagueRoomNote.innerHTML = `<strong>${htmlEscape(scoringText)} league profile</strong><span>${htmlEscape(teamText)} with ${htmlEscape(lineupText)}. Recommendations, mocks, and trades are using this profile.</span>`;
   }
   if (boardMethodNote) {
-    boardMethodNote.textContent =
-      settings.scoringType === "ppr" && !slots.SUPERFLEX && slots.FLEX <= 1 && settings.teamCount === 12
-        ? "Source-backed PPR board, no placeholder rows"
-        : "Source-backed PPR board with league-profile adjustments";
+    boardMethodNote.textContent = boardData?.scoringProfile
+      ? "Source-backed raw-stat board with league-native scoring"
+      : "Source-backed board with league-profile adjustments";
   }
   document.querySelectorAll(".superflex-toggle").forEach((button) => {
     button.hidden = Number(slots.SUPERFLEX || 0) === 0;
@@ -944,7 +955,7 @@ function visibleBoardColumns() {
 function columnHeader(column) {
   if (column === "Tier") return "Pos Tier";
   if (column === "Proj PPR Pts") return scoringProjectionLabel();
-  if (column === "Last Year PPR") return "Last Yr PPR";
+  if (column === "Last Year PPR") return lastYearScoringLabel();
   if (column === "Value Score") return "League Value";
   return column;
 }
@@ -1489,7 +1500,11 @@ function showAnalysis(row) {
     ${playerSynopsisBlock(row)}
     <p><strong>${row.Action}</strong></p>
     <p><strong>Projection source:</strong> ${row["Projection Source"]}</p>
-    <p><strong>League profile:</strong> ${htmlEscape(activeLeagueSettings().scoringLabel)} / ${htmlEscape(lineupSummary())}. Values are adjusted from the source board for this format.</p>
+    <p><strong>League profile:</strong> ${htmlEscape(activeLeagueSettings().scoringLabel)} / ${htmlEscape(lineupSummary())}. ${
+      rowUsesNativeScoring(row)
+        ? "Values are scored from raw ESPN stat projections for this format."
+        : "Values are adjusted from the source board for this format."
+    }</p>
     ${row["Prior Year Source"] ? `<p><strong>Prior-year source:</strong> ${htmlEscape(row["Prior Year Source"])}</p>` : ""}
     ${row["Risk Notes"] ? `<p><strong>Risk read:</strong> ${htmlEscape(row["Risk Notes"])}</p>` : ""}
     <p>${row.Analysis}</p>

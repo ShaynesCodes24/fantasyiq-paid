@@ -238,6 +238,17 @@ def scoring_item_points(settings: dict[str, Any], stat_ids: set[int], labels: tu
     return None
 
 
+def scoring_items_from_settings(settings: dict[str, Any]) -> list[dict[str, float | int]]:
+    scoring_settings = settings.get("scoringSettings") or {}
+    items: list[dict[str, float | int]] = []
+    for item in scoring_settings.get("scoringItems") or []:
+        stat_id = int_setting(item.get("statId"), -1)
+        if stat_id < 0:
+            continue
+        items.append({"statId": stat_id, "points": float_setting(item.get("points"), 0.0)})
+    return items
+
+
 def scoring_type_from_settings(settings: dict[str, Any]) -> tuple[str, str, float | None]:
     reception_points = scoring_item_points(settings, {53}, ("reception", "receptions"))
     if reception_points is None:
@@ -304,6 +315,7 @@ def extract_league_settings(
         "scoringType": scoring_type,
         "scoringLabel": scoring_label,
         "receptionPoints": reception_points,
+        "scoringItems": scoring_items_from_settings(settings),
         "lineupSlots": lineup_slots,
         "draftRounds": draft_rounds or 16,
         "playoffTeams": playoff_team_count(settings),

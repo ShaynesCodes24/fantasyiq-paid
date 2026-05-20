@@ -320,18 +320,19 @@ The dashboard now loads player boards from:
 /api/live-boards
 ```
 
-That endpoint rebuilds the big board, projected PPR points, tiers, value/risk
-scores, trends, mock simulator board, and trade values from ESPN's public
-fantasy player feed. The bundled `FantasyIQ/data/boards.json` file remains only
-as a fallback if ESPN or the serverless endpoint is temporarily unavailable.
+That endpoint rebuilds the big board, league-native projected points, tiers,
+value/risk scores, trends, mock simulator board, and trade values from ESPN's
+public fantasy player feed. The bundled `FantasyIQ/data/boards.json` file
+remains only as a fallback if ESPN or the serverless endpoint is temporarily
+unavailable.
 
 ## League Settings Engine
 
 FantasyIQ now keeps a league profile for every dashboard. The profile controls
-team count, scoring format, lineup slots, bench/IR, draft rounds, and playoff
-teams. Draft Room recommendations, Mock Simulator team count/rounds, Big Board
-projection labels, and Trade Calculator values read from that profile instead
-of assuming a 12-team full-PPR league.
+team count, scoring format, lineup slots, bench/IR, draft rounds, playoff
+teams, and raw stat scoring items. Draft Room recommendations, Mock Simulator
+team count/rounds, Big Board projection labels, and Trade Calculator values
+read from that profile instead of assuming a 12-team full-PPR league.
 
 Supported setup examples:
 
@@ -340,10 +341,9 @@ Supported setup examples:
 {"teamCount":12,"scoringType":"ppr","lineupSlots":{"QB":1,"RB":2,"WR":2,"TE":1,"FLEX":1,"SUPERFLEX":1,"DST":1,"K":0,"BE":7,"IR":2},"draftRounds":16,"playoffTeams":6}
 ```
 
-The current live board source is still PPR-based, so half-PPR and standard
-views convert from the available PPR projection and reception estimate. A
-future raw-stat projection builder can make those conversions fully source
-native.
+The live board now scores ESPN raw projected stats against the active league's
+scoring items. Half-PPR, standard, superflex, and custom reception formats get
+native projected points instead of frontend PPR conversions.
 
 Live readiness check:
 

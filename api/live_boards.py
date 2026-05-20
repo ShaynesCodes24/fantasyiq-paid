@@ -23,6 +23,24 @@ except ModuleNotFoundError:
 DEFAULT_SEASON = 2026
 DEFAULT_LIMIT = 320
 CACHE_TTL_SECONDS = 900
+DEFAULT_DEMO_LEAGUE_ID = 584856941
+
+
+DEFAULT_SCORING_WEIGHTS: dict[int, float] = {
+    3: 0.04,   # passing yards
+    4: 4.0,    # passing touchdowns
+    19: 2.0,   # passing two-point conversions
+    20: -2.0,  # passing interceptions
+    24: 0.1,   # rushing yards
+    25: 6.0,   # rushing touchdowns
+    26: 2.0,   # rushing two-point conversions
+    42: 0.1,   # receiving yards
+    43: 6.0,   # receiving touchdowns
+    44: 2.0,   # receiving two-point conversions
+    53: 1.0,   # receptions
+    72: -2.0,  # lost fumbles
+    85: -1.0,  # missed PAT
+}
 
 
 POSITION_BY_ID = {
@@ -184,31 +202,235 @@ def ppr_rank(player: dict[str, Any]) -> int:
     return rank if rank > 0 else 9999
 
 
-def weekly_ppr_points(player: dict[str, Any], season: int, stat_source_id: int) -> dict[int, float]:
+def float_value(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def int_value(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def league_settings_url(league_id: int, season: int) -> str:
+    return (
+        "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/"
+        f"seasons/{season}/segments/0/leagues/{league_id}?view=mSettings"
+    )
+
+
+def merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    merged = {**base, **override}
+    if isinstance(base.get("lineupSlots"), dict) or isinstance(override.get("lineupSlots"), dict):
+        merged["lineupSlots"] = {
+            **(base.get("lineupSlots") or {}),
+            **(override.get("lineupSlots") or {}),
+        }
+    return merged
+
+
+def scoring_items_from_espn(settings: dict[str, Any]) -> list[dict[str, Any]]:
+    scoring_settings = settings.get("scoringSettings") or {}
+    items = []
+    for item in scoring_settings.get("scoringItems") or []:
+        stat_id = int_value(item.get("statId"), -1)
+        if stat_id < 0:
+            continue
+        items.append({"statId": stat_id, "points": float_value(item.get("points"))})
+    return items
+
+
+def scoring_type_from_receptions(reception_points: float | None) -> tuple[str, str]:
+    if reception_points is None:
+        return "ppr", "Full PPR"
+    if reception_points >= 0.95:
+        return "ppr", "Full PPR"
+    if reception_points >= 0.45:
+        return "half-ppr", "Half PPR"
+    if reception_points <= 0.05:
+        return "standard", "Standard"
+    return "custom", f"{reception_points:g} PPR"
+
+
+def extract_scoring_settings(settings: dict[str, Any]) -> dict[str, Any]:
+    scoring_items = scoring_items_from_espn(settings)
+    reception_points = next(
+        (float_value(item.get("points")) for item in scoring_items if int_value(item.get("statId"), -1) == 53),
+        None,
+    )
+    scoring_type, scoring_label = scoring_type_from_receptions(reception_points)
+    extracted: dict[str, Any] = {
+        "scoringType": scoring_type,
+        "scoringLabel": scoring_label,
+        "receptionPoints": reception_points,
+        "source": "ESPN league scoring settings",
+    }
+    if scoring_items:
+        extracted["scoringItems"] = scoring_items
+    return extracted
+
+
+def context_scoring_settings(context: Any, season: int) -> dict[str, Any]:
+    league_id = context.league_id or DEFAULT_DEMO_LEAGUE_ID
+    extracted: dict[str, Any] = {}
+    if league_id:
+        try:
+            league = fetch_json(league_settings_url(int(league_id), season))
+            extracted = extract_scoring_settings(league.get("settings") or {})
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError, ValueError):
+            extracted = {}
+    overrides = context.league_settings or {}
+    merged = merge_dicts(extracted, overrides)
+    if overrides and not overrides.get("source"):
+        merged["source"] = "FantasyIQ league profile + ESPN scoring settings"
+    return merged
+
+
+def reception_points_for(settings: dict[str, Any]) -> float:
+    if settings.get("receptionPoints") not in (None, ""):
+        return float_value(settings.get("receptionPoints"), 1.0)
+    scoring_type = str(settings.get("scoringType") or "ppr").strip().lower()
+    if scoring_type in {"standard", "std", "non-ppr", "nonppr"}:
+        return 0.0
+    if scoring_type in {"half", "half-ppr", "halfppr", "0.5-ppr", "0.5ppr"}:
+        return 0.5
+    return 1.0
+
+
+def scoring_items_for(settings: dict[str, Any]) -> list[dict[str, float | int]]:
+    reception_points = reception_points_for(settings)
+    raw_items = settings.get("scoringItems")
+    if isinstance(raw_items, list) and raw_items:
+        items = []
+        has_receptions = False
+        for item in raw_items:
+            if not isinstance(item, dict):
+                continue
+            stat_id = int_value(item.get("statId"), -1)
+            if stat_id < 0:
+                continue
+            points = reception_points if stat_id == 53 else float_value(item.get("points"))
+            if stat_id == 53:
+                has_receptions = True
+            items.append({"statId": stat_id, "points": points})
+        if items:
+            if not has_receptions:
+                items.append({"statId": 53, "points": reception_points})
+            return items
+
+    weights = {**DEFAULT_SCORING_WEIGHTS, 53: reception_points}
+    custom_weights = settings.get("scoringWeights") or settings.get("scoringWeightsByStatId") or {}
+    if isinstance(custom_weights, dict):
+        for key, value in custom_weights.items():
+            weights[int_value(key, -1)] = float_value(value)
+    return [{"statId": stat_id, "points": points} for stat_id, points in weights.items()]
+
+
+def scoring_profile_for(settings: dict[str, Any]) -> dict[str, Any]:
+    reception_points = reception_points_for(settings)
+    scoring_type = str(settings.get("scoringType") or "").strip().lower()
+    scoring_label = str(settings.get("scoringLabel") or "").strip()
+    inferred_type, inferred_label = scoring_type_from_receptions(reception_points)
+    scoring_type = scoring_type or inferred_type
+    if scoring_type in {"half-ppr", "halfppr", "half"} and scoring_label in {"", "Full PPR"}:
+        scoring_label = "Half PPR"
+    elif scoring_type in {"standard", "std", "non-ppr", "nonppr"} and scoring_label in {"", "Full PPR", "Half PPR"}:
+        scoring_label = "Standard"
+    elif not scoring_label:
+        scoring_label = inferred_label
+    return {
+        "settings": settings,
+        "items": scoring_items_for({**settings, "receptionPoints": reception_points}),
+        "receptionPoints": reception_points,
+        "scoringType": scoring_type,
+        "scoringLabel": scoring_label,
+    }
+
+
+def raw_stat_score(stats: dict[str, Any], scoring_items: list[dict[str, Any]], fallback: float = 0.0) -> tuple[float, bool]:
+    total = 0.0
+    used_raw = False
+    for item in scoring_items:
+        stat_id = str(int_value(item.get("statId"), -1))
+        if stat_id not in stats:
+            continue
+        value = float_value(stats.get(stat_id))
+        if value:
+            used_raw = True
+        total += value * float_value(item.get("points"))
+    if not used_raw and fallback:
+        return fallback, False
+    return total, used_raw
+
+
+def ppr_scoring_items(scoring_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    items = []
+    seen_receptions = False
+    for item in scoring_items:
+        cloned = dict(item)
+        if int_value(cloned.get("statId"), -1) == 53:
+            cloned["points"] = 1.0
+            seen_receptions = True
+        items.append(cloned)
+    if not seen_receptions:
+        items.append({"statId": 53, "points": 1.0})
+    return items
+
+
+def stat_total(player: dict[str, Any], season: int, stat_source_id: int, stat_id: int) -> float:
+    total = 0.0
+    for stat in player.get("stats") or []:
+        if stat.get("seasonId") != season:
+            continue
+        if stat.get("statSourceId") != stat_source_id or stat.get("statSplitTypeId") != 1:
+            continue
+        period = int_value(stat.get("scoringPeriodId"))
+        if not 1 <= period <= 18:
+            continue
+        total += float_value((stat.get("stats") or {}).get(str(stat_id)))
+    return round(total, 2)
+
+
+def weekly_scored_points(
+    player: dict[str, Any],
+    season: int,
+    stat_source_id: int,
+    scoring_items: list[dict[str, Any]],
+) -> dict[int, float]:
     weekly: dict[int, float] = {}
     for stat in player.get("stats") or []:
         if stat.get("seasonId") != season:
             continue
         if stat.get("statSourceId") != stat_source_id or stat.get("statSplitTypeId") != 1:
             continue
-        period = int(stat.get("scoringPeriodId") or 0)
+        period = int_value(stat.get("scoringPeriodId"))
         if not 1 <= period <= 18:
             continue
-        weekly[period] = max(weekly.get(period, 0.0), float(stat.get("appliedTotal") or 0.0))
+        score, _ = raw_stat_score(stat.get("stats") or {}, scoring_items, float_value(stat.get("appliedTotal")))
+        weekly[period] = max(weekly.get(period, 0.0), score)
     return weekly
 
 
-def season_ppr_points(player: dict[str, Any], season: int, stat_source_id: int) -> float:
-    weekly = weekly_ppr_points(player, season, stat_source_id)
+def season_scored_points(
+    player: dict[str, Any],
+    season: int,
+    stat_source_id: int,
+    scoring_items: list[dict[str, Any]],
+) -> float:
+    weekly = weekly_scored_points(player, season, stat_source_id, scoring_items)
     return round(sum(weekly.values()), 1)
 
 
-def projected_ppr_points(player: dict[str, Any], season: int) -> float:
-    return season_ppr_points(player, season, 1)
+def projected_scored_points(player: dict[str, Any], season: int, scoring_items: list[dict[str, Any]]) -> float:
+    return season_scored_points(player, season, 1, scoring_items)
 
 
-def last_year_ppr_profile(player: dict[str, Any], season: int) -> dict[str, Any]:
-    weekly = weekly_ppr_points(player, season - 1, 0)
+def last_year_scored_profile(player: dict[str, Any], season: int, scoring_items: list[dict[str, Any]]) -> dict[str, Any]:
+    weekly = weekly_scored_points(player, season - 1, 0, scoring_items)
     values = list(weekly.values())
     total = round(sum(values), 1)
     scoring_weeks = sum(1 for value in values if value > 0.5)
@@ -399,7 +621,7 @@ def risk_profile_for(
 
 
 def risk_for(player: dict[str, Any], rank: int, projected: float, ownership: dict[str, Any]) -> int:
-    profile = last_year_ppr_profile(player, DEFAULT_SEASON)
+    profile = last_year_scored_profile(player, DEFAULT_SEASON, scoring_items_for({}))
     return risk_profile_for(
         player,
         rank,
@@ -443,12 +665,13 @@ def analysis_for(row: dict[str, Any], ownership: dict[str, Any]) -> str:
     adp_text = f"{float(adp):.1f}" if adp is not None else "unlisted"
     owned = float(ownership.get("percentOwned") or 0.0)
     started = float(ownership.get("percentStarted") or 0.0)
+    scoring_label = row.get("Scoring Label") or "league"
     return (
         f"Live ESPN feed ranks {row['Player']} #{row['Rank']} overall and {row['Pos']}{row['Pos Rank']}. "
-        f"Current ADP is {adp_text}, projected PPR is {row['Proj PPR Pts']}, last-year PPR is "
-        f"{row['Last Year PPR']}, ownership is {owned:.1f}%, "
-        f"and start rate is {started:.1f}%. FantasyIQ value is recalculated from ESPN rank, ADP, projection, "
-        f"prior-year production, volatility, ownership, and injury flags whenever the live board refreshes. "
+        f"Current ADP is {adp_text}, native {scoring_label} projection is {row['Proj PPR Pts']}, "
+        f"last-year {scoring_label} scoring is {row['Last Year PPR']}, ownership is {owned:.1f}%, "
+        f"and start rate is {started:.1f}%. FantasyIQ value is recalculated from ESPN rank, ADP, raw-stat projection, "
+        f"prior-year raw-stat production, volatility, ownership, and injury flags whenever the live board refreshes. "
         f"Risk read: {row['Risk Notes']}."
     )
 
@@ -459,10 +682,15 @@ def daily_synopsis_for(row: dict[str, Any], seed: dict[str, Any], season: int) -
     news_date = date_from_epoch_millis(player.get("lastNewsDate"))
     today = datetime.now(timezone.utc).date().isoformat()
     last_year = row["Last Year PPR"]
-    last_year_text = f"{year_label(season)} PPR: {last_year}" if last_year != "N/A" else f"No {year_label(season)} NFL PPR sample"
+    scoring_label = row.get("Scoring Label") or "league"
+    last_year_text = (
+        f"{year_label(season)} {scoring_label}: {last_year}"
+        if last_year != "N/A"
+        else f"No {year_label(season)} NFL {scoring_label} sample"
+    )
     status_parts = [
         f"{row['Pos']}{row['Pos Rank']} / rank #{row['Rank']}",
-        f"projected {row['Proj PPR Pts']} PPR",
+        f"projected {row['Proj PPR Pts']} {scoring_label}",
         last_year_text,
         f"risk {row['Risk']}/10",
     ]
@@ -487,7 +715,7 @@ def daily_synopsis_for(row: dict[str, Any], seed: dict[str, Any], season: int) -
     }
 
 
-def build_row_seed(player: dict[str, Any], season: int) -> dict[str, Any] | None:
+def build_row_seed(player: dict[str, Any], season: int, scoring_profile: dict[str, Any]) -> dict[str, Any] | None:
     pos = POSITION_BY_ID.get(player.get("defaultPositionId"))
     if not pos:
         return None
@@ -498,8 +726,12 @@ def build_row_seed(player: dict[str, Any], season: int) -> dict[str, Any] | None
     if rank >= 9000:
         return None
     ownership = player.get("ownership") or {}
-    projected = projected_ppr_points(player, season)
-    last_year_profile = last_year_ppr_profile(player, season)
+    scoring_items = scoring_profile["items"]
+    ppr_items = ppr_scoring_items(scoring_items)
+    projected = projected_scored_points(player, season, scoring_items)
+    ppr_projected = projected_scored_points(player, season, ppr_items)
+    last_year_profile = last_year_scored_profile(player, season, scoring_items)
+    last_year_ppr_profile = last_year_scored_profile(player, season, ppr_items)
     last_year = float(last_year_profile["points"])
     adp = float(ownership.get("averageDraftPosition") or rank + 30)
     market_delta = adp - rank
@@ -522,15 +754,26 @@ def build_row_seed(player: dict[str, Any], season: int) -> dict[str, Any] | None
     stability = clamp(96 - risk * 5 + float(ownership.get("percentStarted") or 0.0) * 0.08, 30, 94)
     floor = clamp((overall + stability) / 2 - risk * 0.8, 28, 95)
     ceiling = clamp(max(upside, overall + 4), 45, 99)
-    value_score = clamp((overall * 0.38) + (adp_value * 0.34) + (upside * 0.18) + ((10 - risk) * 1.0), 20, 96)
+    projection_edge = projected - ppr_projected
+    projection_adjustment = clamp(projection_edge / 8, -8, 8)
+    league_sort_rank = rank - projection_edge * 0.18
+    value_score = clamp(
+        (overall * 0.38) + (adp_value * 0.34) + (upside * 0.18) + ((10 - risk) * 1.0) + projection_adjustment,
+        20,
+        96,
+    )
 
     return {
         "player": player,
         "rank": rank,
+        "league_sort_rank": league_sort_rank,
         "pos": pos,
         "projected": projected,
+        "ppr_projected": ppr_projected,
+        "projection_edge": projection_edge,
         "last_year": last_year,
         "last_year_profile": last_year_profile,
+        "last_year_ppr": float(last_year_ppr_profile["points"]),
         "ownership": ownership,
         "outlook": str(player.get("seasonOutlook") or ""),
         "market_delta": market_delta,
@@ -547,12 +790,16 @@ def build_row_seed(player: dict[str, Any], season: int) -> dict[str, Any] | None
         "stability": round(stability),
         "ceiling": round(ceiling),
         "value_score": round(value_score, 1),
+        "projected_receptions": stat_total(player, season, 1, 53),
+        "projected_rush_yards": stat_total(player, season, 1, 24),
+        "projected_receiving_yards": stat_total(player, season, 1, 42),
+        "projected_passing_yards": stat_total(player, season, 1, 3),
     }
 
 
-def build_rows(players: list[dict[str, Any]], season: int, limit: int) -> list[dict[str, Any]]:
-    seeds = [seed for player in players if (seed := build_row_seed(player, season))]
-    seeds.sort(key=lambda item: (item["rank"], -item["projected"], item["player"].get("fullName", "")))
+def build_rows(players: list[dict[str, Any]], season: int, limit: int, scoring_profile: dict[str, Any]) -> list[dict[str, Any]]:
+    seeds = [seed for player in players if (seed := build_row_seed(player, season, scoring_profile))]
+    seeds.sort(key=lambda item: (item["league_sort_rank"], item["rank"], -item["projected"], item["player"].get("fullName", "")))
     rows: list[dict[str, Any]] = []
     pos_counts: dict[str, int] = {}
 
@@ -572,11 +819,24 @@ def build_rows(players: list[dict[str, Any]], season: int, limit: int) -> list[d
             "Bye": "",
             "Category": category,
             "Proj PPR Pts": seed["projected"],
+            "Native Projection": seed["projected"],
+            "PPR Baseline Projection": round(seed["ppr_projected"], 1),
+            "Projection Edge": round(seed["projection_edge"], 1),
+            "Projected Receptions": seed["projected_receptions"],
+            "Projected Rush Yards": seed["projected_rush_yards"],
+            "Projected Receiving Yards": seed["projected_receiving_yards"],
+            "Projected Passing Yards": seed["projected_passing_yards"],
             "Last Year PPR": points_display(seed["last_year"]),
+            "Last Year Native": points_display(seed["last_year"]),
+            "Last Year PPR Baseline": points_display(seed["last_year_ppr"]),
             "Last Year Weeks": seed["last_year_profile"]["scoring_weeks"],
             "Last Year Volatility": seed["last_year_profile"]["volatility"],
-            "Projection Source": "ESPN live PPR projections",
-            "Prior Year Source": f"ESPN {year_label(season)} actual PPR scoring",
+            "Projection Source": f"ESPN raw-stat projections scored natively for {scoring_profile['scoringLabel']}",
+            "Prior Year Source": f"ESPN {year_label(season)} raw stats scored natively for {scoring_profile['scoringLabel']}",
+            "Scoring Type": scoring_profile["scoringType"],
+            "Scoring Label": scoring_profile["scoringLabel"],
+            "Reception Points": scoring_profile["receptionPoints"],
+            "Native Scoring": True,
             "Overall": seed["overall"],
             "Floor": seed["floor"],
             "Volume": seed["volume"],
@@ -653,24 +913,35 @@ def build_live_board_payload(
         return cached["data"]
 
     season = context.season or int_env("FANTASY_IQ_SEASON", DEFAULT_SEASON)
+    league_settings = context_scoring_settings(context, season)
+    scoring_profile = scoring_profile_for(league_settings)
     row_limit = limit or int_env("FANTASY_IQ_BOARD_LIMIT", DEFAULT_LIMIT)
     fetch_limit = max(row_limit + 80, 420)
     data = fetch_json(player_feed_url(season), {"x-fantasy-filter": player_filter(fetch_limit)})
     players = [entry.get("player") or {} for entry in data.get("players", [])]
-    rows = build_rows(players, season, row_limit)
+    rows = build_rows(players, season, row_limit, scoring_profile)
+    customer = context.public_dict()
+    customer["leagueSettings"] = merge_dicts(customer.get("leagueSettings") or {}, league_settings)
 
     payload = {
         "updated": datetime.now(timezone.utc).date().isoformat(),
         "syncedAt": utc_now(),
         "live": True,
         "source": "ESPN public fantasy player feed",
-        "customer": context.public_dict(),
+        "customer": customer,
         "customerSlug": context.slug,
         "season": season,
+        "scoringProfile": {
+            "scoringType": scoring_profile["scoringType"],
+            "scoringLabel": scoring_profile["scoringLabel"],
+            "receptionPoints": scoring_profile["receptionPoints"],
+            "source": league_settings.get("source") or "FantasyIQ default scoring",
+        },
         "method": (
-            "Live FantasyIQ board built from ESPN PPR ranks, ESPN projected fantasy points, "
-            "prior-year actual PPR points, ADP, ownership, start rate, market movement, volatility, "
-            "and injury flags."
+            "Live FantasyIQ board built from ESPN raw projected stats, league-native scoring items, "
+            "prior-year raw stat scoring, ADP, ownership, start rate, market movement, volatility, "
+            "and injury flags. PPR ranks remain as one market signal, but projections and values are "
+            "scored for the active league format."
         ),
         "positionColors": POSITION_COLORS,
         "boards": {

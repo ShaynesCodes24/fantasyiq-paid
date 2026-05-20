@@ -117,6 +117,9 @@ def league_settings_from_entry(entry: dict[str, Any]) -> dict[str, Any]:
         "rounds",
         "playoffTeams",
         "source",
+        "scoringItems",
+        "scoringWeights",
+        "scoringWeightsByStatId",
     )
     for key in direct_keys:
         if entry.get(key) not in (None, ""):
