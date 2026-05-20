@@ -21,6 +21,29 @@ POSTGRES_URL
 POSTGRES_PRISMA_URL
 ```
 
+## Current Production Database
+
+FantasyIQ production is connected to Neon through `DATABASE_URL`.
+
+```text
+Neon project: fantasyiq-db
+Project ID: weathered-dew-82493690
+Branch: main
+Branch ID: br-flat-surf-aksa72p5
+Database: neondb
+Vercel project: fantasyiq-paid
+```
+
+Do not commit or paste the connection string. It is stored as an encrypted Vercel environment variable for Production and Development.
+
+Production currently has these tables:
+
+```text
+fantasyiq_customers
+fantasyiq_leagues
+fantasyiq_payment_events
+```
+
 ## What The Database Stores
 
 - `fantasyiq_customers`: customer slug, name, email, dashboard access code, Stripe customer id, subscription status, included league limit.
