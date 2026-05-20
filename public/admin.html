@@ -81,6 +81,19 @@
           .join("")}</div>`;
       }
 
+      function renderDatabase(customers) {
+        if (!customers?.length) return "<p>No database customer records found yet.</p>";
+        return `<div class="mini-table">${customers
+          .map(
+            (customer) => `<div>
+              <span>${escapeHtml(customer.status || "unknown")}</span>
+              <strong>${escapeHtml(customer.customer_name || customer.email || customer.slug || "Customer")}</strong>
+              <span>${escapeHtml(customer.league_count || 0)} league(s) / access ${customer.access_code_set ? "set" : "missing"}</span>
+            </div>`,
+          )
+          .join("")}</div>`;
+      }
+
       loadButton.addEventListener("click", async () => {
         result.innerHTML = "<strong>Loading admin data...</strong>";
         try {
@@ -95,6 +108,9 @@
           }
           result.innerHTML = `
             <strong>${escapeHtml(payload.configuredCount)} configured / ${escapeHtml(payload.needsSetupCount)} need setup</strong>
+            <h3>Database accounts</h3>
+            <p>Database: ${payload.database?.enabled ? "connected" : "not connected"}</p>
+            ${renderDatabase(payload.databaseCustomers)}
             <h3>Configured dashboards</h3>
             ${renderRegistry(payload.registry)}
             <h3>Setup queue</h3>

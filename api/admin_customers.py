@@ -75,24 +75,42 @@ def registry_customers() -> list[dict[str, Any]]:
     ]
 
 
+def database_customers() -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    try:
+        try:
+            from database import database_status, list_customers
+        except ImportError:
+            from api.database import database_status, list_customers
+        status = database_status()
+        return status, list_customers() if status["enabled"] else []
+    except Exception as exc:
+        return {"configured": False, "driverReady": False, "enabled": False, "error": str(exc)}, []
+
+
 def admin_payload() -> dict[str, Any]:
     csv_rows = csv_customers()
     registry_rows = registry_customers()
+    database_status, database_rows = database_customers()
     configured_count = len([row for row in csv_rows if row.get("status") == "configured"])
     configured_count += len([row for row in registry_rows if row.get("status") == "configured"])
+    configured_count += len([row for row in database_rows if row.get("status") == "configured"])
     needs_setup = [row for row in csv_rows if row.get("status") != "configured"]
+    needs_setup += [row for row in database_rows if row.get("status") != "configured"]
     return {
         "ok": True,
         "syncedAt": utc_now(),
         "csvCustomerCount": len(csv_rows),
+        "databaseCustomerCount": len(database_rows),
+        "database": database_status,
         "configuredCount": configured_count,
         "needsSetupCount": len(needs_setup),
         "customers": csv_rows,
+        "databaseCustomers": database_rows,
         "registry": registry_rows,
         "nextActions": [
-            "Set FANTASY_IQ_CUSTOMERS_JSON when one deployment needs to serve multiple customers or league profiles.",
+            "Connect Neon/Postgres and run database/schema.sql to make checkout and setup records durable.",
             "Set FANTASYIQ_ADMIN_TOKEN in Vercel before using this endpoint in production.",
-            "Add a persistent database before relying on webhooks for fully automatic customer creation.",
+            "Use /setup.html from a signed-in dashboard to save each public ESPN league profile.",
         ],
     }
 

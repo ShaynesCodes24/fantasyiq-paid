@@ -11,9 +11,27 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 try:
-    from customer_context import DEFAULT_SEASON, ConfigError, int_value
+    from customer_context import (
+        DEFAULT_SEASON,
+        ConfigError,
+        all_customer_contexts,
+        database_customer_context,
+        env,
+        int_value,
+        slugify,
+        verify_customer_access,
+    )
 except ModuleNotFoundError:
-    from api.customer_context import DEFAULT_SEASON, ConfigError, int_value
+    from api.customer_context import (
+        DEFAULT_SEASON,
+        ConfigError,
+        all_customer_contexts,
+        database_customer_context,
+        env,
+        int_value,
+        slugify,
+        verify_customer_access,
+    )
 
 
 def utc_now() -> str:
@@ -136,6 +154,159 @@ def validate_setup(raw: dict[str, Any]) -> tuple[dict[str, Any], HTTPStatus]:
     return payload, HTTPStatus.OK
 
 
+def bool_value(value: Any) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def scoring_label(scoring_type: str) -> str:
+    if scoring_type == "half-ppr":
+        return "Half PPR"
+    if scoring_type == "standard":
+        return "Standard"
+    if scoring_type == "custom":
+        return "Custom"
+    return "Full PPR"
+
+
+def setup_league_settings(raw: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    scoring_type = str(raw.get("scoringType") or "ppr").strip().lower() or "ppr"
+    if scoring_type in {"half", "halfppr", "0.5-ppr", "0.5ppr"}:
+        scoring_type = "half-ppr"
+    if scoring_type in {"std", "non-ppr", "nonppr"}:
+        scoring_type = "standard"
+    return {
+        "teamCount": int_value(raw.get("teamCount"), "teamCount", payload.get("teamCount") or 12),
+        "scoringType": scoring_type,
+        "scoringLabel": scoring_label(scoring_type),
+        "lineupSlots": {
+            "QB": int_value(raw.get("qbCount"), "qbCount", 1),
+            "RB": int_value(raw.get("rbCount"), "rbCount", 2),
+            "WR": int_value(raw.get("wrCount"), "wrCount", 2),
+            "TE": int_value(raw.get("teCount"), "teCount", 1),
+            "FLEX": int_value(raw.get("flexCount"), "flexCount", 1),
+            "SUPERFLEX": int_value(raw.get("superflexCount"), "superflexCount", 0),
+            "DST": int_value(raw.get("dstCount"), "dstCount", 1),
+            "K": int_value(raw.get("kCount"), "kCount", 1),
+            "BE": int_value(raw.get("benchCount"), "benchCount", 7),
+            "IR": int_value(raw.get("irCount"), "irCount", 1),
+        },
+        "draftRounds": int_value(raw.get("draftRounds"), "draftRounds", 16),
+        "playoffTeams": int_value(raw.get("playoffTeams"), "playoffTeams", 6),
+        "source": "Customer setup validator",
+    }
+
+
+def known_customer_context(customer_slug: str) -> Any | None:
+    if not customer_slug:
+        return None
+    database_context = database_customer_context(customer_slug)
+    if database_context:
+        return database_context
+    return all_customer_contexts().get(customer_slug)
+
+
+def authorized_setup_customer(raw: dict[str, Any], headers: Any | None) -> Any | None:
+    customer_slug = slugify(str(raw.get("customer") or raw.get("customerSlug") or raw.get("dashboard") or ""))
+    if not customer_slug:
+        if bool_value(env("FANTASYIQ_ALLOW_PUBLIC_SETUP_SAVE")):
+            return None
+        raise PermissionError("A customer slug is required before saving setup details.")
+
+    context = known_customer_context(customer_slug)
+    if not context:
+        if bool_value(env("FANTASYIQ_ALLOW_PUBLIC_SETUP_SAVE")):
+            return None
+        raise PermissionError("Customer account was not found. Complete checkout before saving setup details.")
+
+    verify_customer_access(context, "", headers)
+    return context
+
+
+def save_setup_if_requested(raw: dict[str, Any], payload: dict[str, Any], headers: Any | None) -> dict[str, Any]:
+    if not bool_value(raw.get("save") or raw.get("persist")):
+        return payload
+    payload = dict(payload)
+    try:
+        try:
+            from database import (
+                DatabaseUnavailable,
+                customer_slug_from_email,
+                database_status,
+                upsert_customer,
+                upsert_league,
+            )
+        except ImportError:
+            from api.database import (
+                DatabaseUnavailable,
+                customer_slug_from_email,
+                database_status,
+                upsert_customer,
+                upsert_league,
+            )
+
+        status = database_status()
+        payload["database"] = status
+        if not payload.get("ok"):
+            payload["saved"] = False
+            payload["saveMessage"] = "League was not saved because ESPN validation did not pass."
+            return payload
+        if not status["enabled"]:
+            payload["saved"] = False
+            payload["saveMessage"] = "Database is not connected yet; setup packet is available for manual fulfillment."
+            return payload
+
+        context = authorized_setup_customer(raw, headers)
+        email = str(raw.get("email") or getattr(context, "email", "") or "").strip().lower()
+        customer_slug = slugify(
+            str(
+                raw.get("customer")
+                or raw.get("customerSlug")
+                or raw.get("dashboard")
+                or getattr(context, "slug", "")
+                or customer_slug_from_email(email)
+                or payload.get("manager")
+                or payload.get("teamName")
+            )
+        )
+        customer_name = str(raw.get("customerName") or raw.get("name") or getattr(context, "customer_name", "") or payload.get("manager") or "").strip()
+        existing_access_code = str(raw.get("accessCode") or getattr(context, "access_code", "") or "").strip()
+        saved_customer = upsert_customer(
+            slug=customer_slug,
+            customer_name=customer_name,
+            email=email,
+            access_code=existing_access_code,
+            status="configured",
+            included_league_limit=int_value(raw.get("includedLeagueLimit"), "includedLeagueLimit", 3) or 3,
+        )
+
+        label = str(raw.get("leagueLabel") or payload.get("leagueName") or "ESPN league").strip()
+        league_key = slugify(str(raw.get("leagueKey") or label))
+        saved_league = upsert_league(
+            customer_slug=saved_customer.get("slug") or customer_slug,
+            league_key=league_key,
+            label=label,
+            league_name=str(payload.get("leagueName") or label),
+            league_id=payload.get("leagueId"),
+            team_id=payload.get("teamId"),
+            team_name=str(payload.get("teamName") or ""),
+            season=payload.get("season"),
+            league_settings=setup_league_settings(raw, payload),
+            status="configured",
+            source="setup_validator",
+        )
+        payload["saved"] = True
+        payload["saveMessage"] = "League profile saved to the customer account."
+        payload["customerSlug"] = saved_customer.get("slug") or customer_slug
+        payload["leagueKey"] = saved_league.get("league_key") or league_key
+    except DatabaseUnavailable as exc:
+        payload["saved"] = False
+        payload["saveMessage"] = str(exc)
+    except Exception:
+        payload["saved"] = False
+        payload["saveMessage"] = "Database save failed. Ask support to confirm the database schema is installed."
+    return payload
+
+
 def parse_body(handler: BaseHTTPRequestHandler) -> dict[str, Any]:
     length = int(handler.headers.get("Content-Length") or 0)
     if length <= 0:
@@ -171,10 +342,14 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         try:
-            payload, status = validate_setup(parse_body(self))
+            raw = parse_body(self)
+            payload, status = validate_setup(raw)
+            payload = save_setup_if_requested(raw, payload, self.headers)
             self.send_json(payload, status)
         except (ConfigError, json.JSONDecodeError) as exc:
             self.send_json({"ok": False, "status": "invalid_input", "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.BAD_REQUEST)
+        except PermissionError as exc:
+            self.send_json({"ok": False, "status": "unauthorized", "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.UNAUTHORIZED)
         except Exception as exc:
             self.send_json({"ok": False, "status": "validation_error", "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.BAD_GATEWAY)
 

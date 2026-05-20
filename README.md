@@ -15,8 +15,9 @@ Additional leagues beyond 3: $5/year each.
 Sales model:
 
 ```text
-Concierge setup with a simple per-customer access code. No customer accounts,
-password resets, or self-serve provisioning required for v1.
+Self-serve-ready setup with a per-customer dashboard access code. Postgres can
+store paid customer records, league profiles, and Stripe checkout events while
+the env registry remains available as a fallback.
 ```
 
 Website URL shape:
@@ -94,6 +95,7 @@ Recommended checkout/onboarding flow:
 - `scripts/fulfill_latest_stripe_order.py`: fetches the latest paid Stripe checkout and updates `customers.csv`.
 - `scripts/check_product_readiness.py`: checks the live website, dashboard, Stripe link, and API.
 - `scripts/check_security_setup.py`: checks tracked files, deploy ignores, and public Vercel config for secure setup.
+- `scripts/apply_database_schema.py`: applies the Postgres schema after connecting Neon or another Postgres provider.
 - `scripts/sync_dashboard_mirror.js`: syncs the local `FantasyIQ` dashboard mirror from the deploy source in `public/FantasyIQ`.
 - `scripts/secure_launch_setup.py`: orchestrates secure local checks plus optional Stripe, Vercel env, deploy, and readiness steps.
 - `public/setup.html`: validates ESPN league ID, team ID, and season against ESPN before setup.
@@ -104,6 +106,7 @@ Recommended checkout/onboarding flow:
 - `CUSTOMER_EMAILS.md`: reusable customer messages.
 - `SERVICE_SCOPE.md`: plain-language paid service scope and limits.
 - `SECURITY_SETUP.md`: secure setup checklist for secrets, admin access, and customer records.
+- `DATABASE_SETUP.md`: Neon/Postgres setup steps for durable self-serve customer records.
 - `customers.example.csv`: lightweight customer tracker template.
 - `.env.example`: required environment variables for each deployment.
 
@@ -317,8 +320,8 @@ league Stripe add-on.
 
 Set `FANTASYIQ_ADMIN_TOKEN` before using `/admin.html` in production.
 Set `STRIPE_WEBHOOK_SECRET` before pointing Stripe at `/api/stripe-webhook`.
-The webhook verifies Stripe signatures and can log locally, but durable
-automatic fulfillment still needs a real database or storage service.
+Set `DATABASE_URL` through Neon/Postgres and run `python .\scripts\apply_database_schema.py`
+before relying on fully durable self-serve checkout and setup records.
 
 ## Live Player Boards
 
@@ -364,18 +367,16 @@ python .\scripts\check_product_readiness.py
 This folder is ready for one deployment serving multiple customer dashboards,
 with each customer able to carry one or more league profiles.
 
-For v1, keep setup manual and track subscriptions in Stripe, a spreadsheet, or
-your customer records. Each renewal is another year of access/support for that
-customer dashboard and its included league profiles. The repo now has setup
-validation, admin scaffolding, customer-scoped browser settings, multi-customer
-and multi-league API routing, and a verified Stripe webhook endpoint ready for a
-future database.
+For v1, setup can be manual or database-backed. Each renewal is another year of
+access/support for that customer dashboard and its included league profiles.
+The repo now has setup validation, admin scaffolding, customer-scoped browser
+settings, multi-customer and multi-league API routing, a verified Stripe
+webhook endpoint, and optional Postgres customer records.
 
 For a true SaaS subscription product later, add these next:
 
 - Login/accounts
 - Stripe subscription checkout
-- Customer database
-- Per-user league configuration
-- Admin customer management
+- Transactional setup/access-code email
+- Full account login/password reset
 - Private ESPN auth support

@@ -33,6 +33,10 @@
               League label
               <input id="league-label" name="leagueLabel" autocomplete="off" placeholder="Home league" />
             </label>
+            <label id="setup-access-wrap">
+              Access code
+              <input id="setup-access-code" name="accessCode" type="password" autocomplete="off" placeholder="From setup email" />
+            </label>
             <label>
               ESPN league ID
               <input id="league-id" name="leagueId" inputmode="numeric" autocomplete="off" required />
@@ -89,6 +93,28 @@
       const pageParams = new URLSearchParams(window.location.search);
       const customerSlug = pageParams.get("customer") || pageParams.get("dashboard") || "";
       const setupStorageKey = "fantasyiq:last-validated-league";
+      const setupAccessWrap = document.querySelector("#setup-access-wrap");
+      const setupAccessCode = document.querySelector("#setup-access-code");
+
+      function savedAccessCode(customer) {
+        if (!customer) return "";
+        try {
+          const raw = localStorage.getItem(`fantasy-dashboard:${customer}:access-code`) || "";
+          if (!raw) return "";
+          if (!raw.trim().startsWith("{")) return raw;
+          const session = JSON.parse(raw);
+          if (session.expiresAt && Date.now() > Number(session.expiresAt)) return "";
+          return String(session.code || "");
+        } catch (error) {
+          return "";
+        }
+      }
+
+      if (!customerSlug && setupAccessWrap) {
+        setupAccessWrap.hidden = true;
+      } else if (setupAccessCode) {
+        setupAccessCode.value = savedAccessCode(customerSlug);
+      }
 
       function escapeHtml(value) {
         return String(value || "")
@@ -129,7 +155,7 @@
       function setupPacket(data, payload) {
         const leagueLabel = data.get("leagueLabel") || payload.leagueName || "ESPN league";
         return {
-          customer: customerSlug,
+          customer: payload.customerSlug || customerSlug,
           leagueKey: slugify(leagueLabel),
           label: leagueLabel,
           leagueName: payload.leagueName,
@@ -189,16 +215,29 @@
         result.innerHTML = "<strong>Checking ESPN...</strong>";
         const data = new FormData(form);
         const params = new URLSearchParams(data);
+        if (customerSlug) params.set("customer", customerSlug);
+        params.set("save", "1");
+        const accessCode = String(data.get("accessCode") || savedAccessCode(customerSlug) || "").trim();
+        const headers = { "Content-Type": "application/x-www-form-urlencoded" };
+        if (accessCode) headers["x-fantasyiq-access-code"] = accessCode;
         try {
-          const response = await fetch(`/api/setup-validate?${params.toString()}`, { cache: "no-store" });
+          const response = await fetch("/api/setup-validate", {
+            method: "POST",
+            cache: "no-store",
+            headers,
+            body: params.toString(),
+          });
           const payload = await response.json();
           if (payload.ok) {
             const packet = setupPacket(data, payload);
             localStorage.setItem(setupStorageKey, JSON.stringify(packet));
             const packetJson = escapeHtml(JSON.stringify(packet, null, 2));
+            const saveNote = payload.saved
+              ? "This league profile was saved to the customer account."
+              : payload.saveMessage || "The setup packet is ready for manual fulfillment.";
             result.innerHTML = `
               <strong>Ready: ${escapeHtml(payload.leagueName)} / ${escapeHtml(payload.teamName)}</strong>
-              <p>Team ID ${escapeHtml(payload.teamId)} was found for the ${escapeHtml(payload.season)} season. This setup packet is saved in this browser and ready to attach to the customer dashboard.</p>
+              <p>Team ID ${escapeHtml(payload.teamId)} was found for the ${escapeHtml(payload.season)} season. ${escapeHtml(saveNote)}</p>
               <div class="button-row setup-actions">
                 <a class="primary dark" href="${escapeHtml(previewUrl(packet))}">Preview dashboard settings</a>
                 <button class="primary" id="copy-setup-packet" type="button">Copy setup packet</button>

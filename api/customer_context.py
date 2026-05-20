@@ -28,6 +28,9 @@ class CustomerContext:
     league_settings: dict[str, Any] = field(default_factory=dict)
     available_leagues: list[dict[str, Any]] = field(default_factory=list)
     status: str = "configured"
+    subscription_status: str = ""
+    included_league_limit: int = 3
+    additional_league_count: int = 0
     access_code: str = ""
     demo_mode: bool = False
     source: str = "env"
@@ -49,6 +52,9 @@ class CustomerContext:
             "leagues": self.available_leagues,
             "season": self.season,
             "status": self.status,
+            "subscriptionStatus": self.subscription_status,
+            "includedLeagueLimit": self.included_league_limit,
+            "additionalLeagueCount": self.additional_league_count,
             "accessRequired": bool(self.access_code),
             "demoMode": self.demo_mode,
             "source": self.source,
@@ -232,6 +238,9 @@ def normalize_customer_entry(slug: str, entry: dict[str, Any], selected_league: 
         league_settings=league_settings,
         available_leagues=public_league_list(entry, leagues),
         status=str(entry_value(entry, "status", default="configured")).strip() or "configured",
+        subscription_status=str(entry_value(entry, "subscription_status", "subscriptionStatus", default="")).strip(),
+        included_league_limit=int_value(entry_value(entry, "included_league_limit", "includedLeagueLimit", default=3), "includedLeagueLimit", 3) or 3,
+        additional_league_count=int_value(entry_value(entry, "additional_league_count", "additionalLeagueCount", default=0), "additionalLeagueCount", 0) or 0,
         access_code=str(entry_value(entry, "access_code", "accessCode", "customerAccessCode", "code", default="")).strip(),
         demo_mode=False,
         source=source,
@@ -263,6 +272,24 @@ def customers_from_json(selected_league: str = "") -> dict[str, CustomerContext]
     return customers
 
 
+def database_customer_context(slug: str, selected_league: str = "") -> CustomerContext | None:
+    if not slug:
+        return None
+    try:
+        try:
+            from database import customer_entry
+        except ImportError:
+            from api.database import customer_entry
+        entry = customer_entry(slug, selected_league)
+    except Exception as exc:
+        if env("FANTASYIQ_DATABASE_STRICT") == "1":
+            raise ConfigError(f"Database customer lookup failed: {exc}") from exc
+        return None
+    if not entry:
+        return None
+    return normalize_customer_entry(slug, entry, selected_league, source="database")
+
+
 def fallback_context(slug: str = "default", selected_league: str = "") -> CustomerContext:
     leagues = parsed_mapping(env("FANTASY_IQ_LEAGUES_JSON"))
     configured_league = env("FANTASY_IQ_LEAGUE_ID")
@@ -289,6 +316,9 @@ def fallback_context(slug: str = "default", selected_league: str = "") -> Custom
             league_settings=context.league_settings,
             available_leagues=context.available_leagues,
             status=context.status,
+            subscription_status=context.subscription_status,
+            included_league_limit=context.included_league_limit,
+            additional_league_count=context.additional_league_count,
             access_code=context.access_code,
             demo_mode=not bool(context.league_id),
             source=context.source,
@@ -341,12 +371,21 @@ def all_customer_contexts(selected_league: str = "") -> dict[str, CustomerContex
 
 def resolve_customer_context(path: str = "") -> CustomerContext:
     selected_league = requested_league_slug(path)
-    customers = all_customer_contexts(selected_league)
     requested = requested_customer_slug(path)
+    if requested:
+        database_context = database_customer_context(requested, selected_league)
+        if database_context:
+            return database_context
+
+    default_slug = slugify(env("FANTASY_IQ_DEFAULT_CUSTOMER", "default"))
+    database_default = database_customer_context(default_slug, selected_league)
+    if database_default:
+        return database_default
+
+    customers = all_customer_contexts(selected_league)
     if requested and requested in customers:
         return customers[requested]
 
-    default_slug = slugify(env("FANTASY_IQ_DEFAULT_CUSTOMER", "default"))
     if default_slug in customers:
         context = customers[default_slug]
     else:
@@ -365,6 +404,9 @@ def resolve_customer_context(path: str = "") -> CustomerContext:
             league_settings=context.league_settings,
             available_leagues=context.available_leagues,
             status=context.status,
+            subscription_status=context.subscription_status,
+            included_league_limit=context.included_league_limit,
+            additional_league_count=context.additional_league_count,
             access_code=context.access_code,
             demo_mode=context.demo_mode,
             source=context.source,

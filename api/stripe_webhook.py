@@ -122,6 +122,123 @@ def checkout_row(session: dict[str, Any]) -> dict[str, str]:
     }
 
 
+def metadata_value(session: dict[str, Any], *keys: str) -> str:
+    metadata = session.get("metadata") or {}
+    for key in keys:
+        value = metadata.get(key)
+        if value not in (None, ""):
+            return str(value).strip()
+    return ""
+
+
+def checkout_customer_slug(session: dict[str, Any], row: dict[str, str]) -> str:
+    try:
+        try:
+            from database import customer_slug_from_email, slugify
+        except ImportError:
+            from api.database import customer_slug_from_email, slugify
+    except ImportError:
+        def slugify(value: str) -> str:
+            cleaned = "".join(char.lower() if char.isalnum() else "-" for char in str(value or "").strip())
+            return cleaned.strip("-") or "customer"
+
+        def customer_slug_from_email(email: str) -> str:
+            return slugify(email)
+
+    explicit = (
+        metadata_value(session, "customer_slug", "customer", "dashboard")
+        or custom_field_value(session, "customerslug")
+        or custom_field_value(session, "customer")
+    )
+    return slugify(explicit or customer_slug_from_email(row.get("email", "")) or row.get("customer_name", ""))
+
+
+def persist_checkout_to_database(event: dict[str, Any], session: dict[str, Any], row: dict[str, str]) -> dict[str, Any]:
+    try:
+        try:
+            from database import DatabaseUnavailable, database_status, record_stripe_event, upsert_customer, upsert_league
+        except ImportError:
+            from api.database import DatabaseUnavailable, database_status, record_stripe_event, upsert_customer, upsert_league
+
+        status = database_status()
+        if not status["enabled"]:
+            return {"databaseEnabled": status["enabled"], "persistedDatabase": False, "reason": "database_not_connected"}
+
+        customer_slug = checkout_customer_slug(session, row)
+        saved_customer = upsert_customer(
+            slug=customer_slug,
+            customer_name=row["customer_name"],
+            email=row["email"],
+            status=row["status"],
+            stripe_customer_id=str(session.get("customer") or ""),
+            subscription_status=str(session.get("payment_status") or "paid"),
+            included_league_limit=int(env("FANTASYIQ_INCLUDED_LEAGUE_LIMIT", "3") or 3),
+        )
+
+        if row.get("league_id") and row.get("team_id"):
+            upsert_league(
+                customer_slug=saved_customer.get("slug") or customer_slug,
+                league_key=metadata_value(session, "league_key") or row.get("league_name") or row.get("league_id") or "league",
+                label=row.get("league_name") or "Checkout league",
+                league_name=row.get("league_name") or "",
+                league_id=row.get("league_id"),
+                team_id=row.get("team_id"),
+                season=row.get("season"),
+                league_settings={"source": "Stripe checkout intake"},
+                status="pending_validation",
+                source="stripe_checkout",
+            )
+
+        inserted_event = record_stripe_event(
+            stripe_event_id=str(event.get("id") or ""),
+            event_type=str(event.get("type") or ""),
+            stripe_object_id=str(session.get("id") or ""),
+            customer_slug=saved_customer.get("slug") or customer_slug,
+            email=row["email"],
+            amount_total=session.get("amount_total"),
+            currency=str(session.get("currency") or ""),
+            status=row["status"],
+            payload={"session": session},
+        )
+        return {
+            "databaseEnabled": True,
+            "persistedDatabase": True,
+            "insertedEvent": inserted_event,
+            "customerSlug": saved_customer.get("slug") or customer_slug,
+        }
+    except (DatabaseUnavailable, ValueError) as exc:
+        return {"databaseEnabled": False, "persistedDatabase": False, "reason": str(exc)}
+    except Exception:
+        return {
+            "databaseEnabled": True,
+            "persistedDatabase": False,
+            "reason": "database_save_failed",
+        }
+
+
+def persist_generic_stripe_event(event: dict[str, Any], data_object: dict[str, Any], status: str = "") -> dict[str, Any]:
+    try:
+        try:
+            from database import database_status, record_stripe_event
+        except ImportError:
+            from api.database import database_status, record_stripe_event
+
+        database_state = database_status()
+        if not database_state["enabled"]:
+            return {"databaseEnabled": database_state["enabled"], "persistedDatabase": False}
+        inserted = record_stripe_event(
+            stripe_event_id=str(event.get("id") or ""),
+            event_type=str(event.get("type") or ""),
+            stripe_object_id=str(data_object.get("id") or ""),
+            email=str((data_object.get("customer_details") or {}).get("email") or ""),
+            status=status or str(data_object.get("status") or ""),
+            payload={"object": data_object},
+        )
+        return {"databaseEnabled": True, "persistedDatabase": True, "insertedEvent": inserted}
+    except Exception:
+        return {"databaseEnabled": True, "persistedDatabase": False, "reason": "database_save_failed"}
+
+
 def append_customer_locally(row: dict[str, str]) -> bool:
     path_value = env("FANTASYIQ_CUSTOMER_CSV_PATH")
     if not path_value:
@@ -166,6 +283,7 @@ def process_event(event: dict[str, Any]) -> dict[str, Any]:
     if event_type == "checkout.session.completed":
         row = checkout_row(data_object)
         appended = append_customer_locally(row)
+        database_result = persist_checkout_to_database(event, data_object, row)
         return {
             "action": "customer_paid",
             "status": row["status"],
@@ -178,20 +296,25 @@ def process_event(event: dict[str, Any]) -> dict[str, Any]:
                 "dashboard_url": row["dashboard_url"],
             },
             "persistedLocally": appended,
-            "nextStep": "Run setup validation, then configure Vercel/customer registry.",
+            "database": database_result,
+            "nextStep": "Run setup validation. When DATABASE_URL is connected, this checkout creates the customer account record automatically.",
         }
     if event_type in {"customer.subscription.deleted", "invoice.payment_failed"}:
+        database_result = persist_generic_stripe_event(event, data_object, "needs_review")
         return {
             "action": "subscription_attention_required",
             "status": "needs_review",
             "stripeObjectId": data_object.get("id"),
+            "database": database_result,
             "nextStep": "Review the subscription in Stripe and disable dashboard access if needed.",
         }
     if event_type == "customer.subscription.updated":
+        database_result = persist_generic_stripe_event(event, data_object, str(data_object.get("status") or "updated"))
         return {
             "action": "subscription_updated",
             "status": data_object.get("status") or "updated",
             "stripeObjectId": data_object.get("id"),
+            "database": database_result,
         }
     return {"action": "ignored", "eventType": event_type}
 

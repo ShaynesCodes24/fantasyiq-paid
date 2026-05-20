@@ -908,6 +908,8 @@ function applyServerCustomerContext(customer = {}) {
   if (customer.leagueName) appConfig.leagueName = customer.leagueName;
   if (customer.customerTeamId) appConfig.customerTeamId = String(customer.customerTeamId);
   if (customer.customerTeamName) appConfig.customerTeamName = customer.customerTeamName;
+  if (customer.includedLeagueLimit) appConfig.includedLeagueLimit = Number(customer.includedLeagueLimit);
+  if (customer.additionalLeagueCount !== undefined) appConfig.additionalLeagueCount = Number(customer.additionalLeagueCount || 0);
   if (customer.leagueSettings) appConfig.leagueSettings = mergeLeagueSettings(appConfig.leagueSettings, customer.leagueSettings);
   applyLeagueOption(activeLeagueOption());
 }
