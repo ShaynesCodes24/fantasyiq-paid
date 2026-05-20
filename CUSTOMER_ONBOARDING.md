@@ -31,7 +31,12 @@ ESPN team ID:
 Season:
 League name:
 Scoring format:
-Roster settings:
+Team count:
+Starting lineup slots:
+Bench spots:
+IR spots:
+Draft rounds:
+Playoff teams:
 Draft date/time:
 Logo file or logo URL:
 ```
@@ -56,6 +61,7 @@ public/FantasyIQ/assets/league-logo.jpeg
 ```text
 FANTASY_IQ_LEAGUE_ID
 FANTASY_IQ_SEASON
+FANTASY_IQ_LEAGUE_SETTINGS
 ```
 
 6. Deploy to Vercel.

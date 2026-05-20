@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>FantasyIQ</title>
-    <link rel="stylesheet" href="./styles.css?v=20260520_customer_ops_10" />
+    <link rel="stylesheet" href="./styles.css?v=20260520_customer_ops_11" />
   </head>
   <body>
     <div class="field-overlay" aria-hidden="true">
@@ -89,31 +89,36 @@
           <div class="metric-grid">
             <div class="metric">
               <span>League</span>
-              <strong>12 teams</strong>
-              <small>ESPN / PPR / redraft</small>
+              <strong id="league-team-count">12 teams</strong>
+              <small id="league-type-note">ESPN / Full PPR / redraft</small>
             </div>
             <div class="metric">
-              <span>Roster</span>
-              <strong>9 starters</strong>
-              <small>7 bench / 1 IR</small>
+              <span>Lineup</span>
+              <strong id="league-starters">9 starters</strong>
+              <small id="league-lineup-note">1 FLEX / 7 bench / 1 IR</small>
             </div>
             <div class="metric">
-              <span>Playoffs</span>
-              <strong>6 teams</strong>
-              <small>3 rounds</small>
+              <span>Scoring</span>
+              <strong id="league-scoring">Full PPR</strong>
+              <small id="league-scoring-note">Values adjust by format</small>
             </div>
             <div class="metric">
-              <span>Trade Calculator</span>
-              <strong>Net value</strong>
-              <small>Use the calculator before accepting</small>
+              <span>Draft</span>
+              <strong id="league-draft-rounds">16 rounds</strong>
+              <small id="league-draft-note">6 playoff teams</small>
             </div>
+          </div>
+
+          <div class="league-profile-strip" id="league-profile-strip">
+            <strong>League engine active</strong>
+            <span>Draft Room, Mock Simulator, Big Board values, and Trade Calculator are using this league profile.</span>
           </div>
 
           <div class="command-grid">
             <article class="command-tile">
               <span>Board Universe</span>
               <strong id="board-count">Loading</strong>
-              <small>Source-backed PPR board, no placeholder rows</small>
+              <small id="board-method-note">Source-backed board, adjusted to your league profile</small>
             </article>
             <article class="command-tile">
               <span>Draft Mode</span>
@@ -268,6 +273,10 @@
             Connecting to ESPN public draft sync...
           </div>
 
+          <div class="league-room-note" id="league-room-note">
+            League profile is loading.
+          </div>
+
           <div class="draft-room-cheatcode">
             <div class="live-section-head draft-cheatcode-head">
               <div>
@@ -420,6 +429,7 @@
                 <button type="button" class="live-tier-toggle" data-live-tier-pos="WR">WR</button>
                 <button type="button" class="live-tier-toggle" data-live-tier-pos="TE">TE</button>
                 <button type="button" class="live-tier-toggle flex-toggle" data-live-tier-pos="FLEX">FLEX</button>
+                <button type="button" class="live-tier-toggle superflex-toggle" data-live-tier-pos="SUPERFLEX">SFLEX</button>
                 <button type="button" class="live-tier-toggle" data-live-tier-pos="DST">DST</button>
                 <button type="button" class="live-tier-toggle" data-live-tier-pos="K">K</button>
               </div>
@@ -555,6 +565,7 @@
                   <option value="WR">WR</option>
                   <option value="TE">TE</option>
                   <option value="FLEX">FLEX</option>
+                  <option value="SUPERFLEX">SUPERFLEX</option>
                   <option value="DST">DST</option>
                   <option value="K">K</option>
                 </select>
@@ -566,6 +577,7 @@
                 <button type="button" class="sim-position-toggle" data-sim-pos="WR">WR</button>
                 <button type="button" class="sim-position-toggle" data-sim-pos="TE">TE</button>
                 <button type="button" class="sim-position-toggle flex-toggle" data-sim-pos="FLEX">FLEX</button>
+                <button type="button" class="sim-position-toggle superflex-toggle" data-sim-pos="SUPERFLEX">SFLEX</button>
                 <button type="button" class="sim-position-toggle" data-sim-pos="DST">DST</button>
                 <button type="button" class="sim-position-toggle" data-sim-pos="K">K</button>
               </div>
@@ -713,6 +725,7 @@
                 <button class="position-toggle" type="button" data-position="WR">WR</button>
                 <button class="position-toggle" type="button" data-position="TE">TE</button>
                 <button class="position-toggle flex-toggle" type="button" data-position="FLEX">FLEX</button>
+                <button class="position-toggle superflex-toggle" type="button" data-position="SUPERFLEX">SFLEX</button>
                 <button class="position-toggle" type="button" data-position="DST">DST</button>
                 <button class="position-toggle" type="button" data-position="K">K</button>
               </div>
@@ -771,6 +784,10 @@
               <p>FantasyIQ needs your team to know when your picks are coming, which players are already on your roster, and what positions you can wait on. Without that, the room can still show the board, but the personalized reads are limited.</p>
             </details>
             <details>
+              <summary>What if my league is half PPR, superflex, double flex, or not 12 teams?</summary>
+              <p>The league profile controls team count, scoring, lineup slots, draft rounds, bench, and playoffs. FantasyIQ uses that profile in Draft Room, Mock Simulator, Big Board value labels, and Trade Calculator so a superflex or double-flex league is treated differently from a 12-team full-PPR league.</p>
+            </details>
+            <details>
               <summary>What should I do before draft day?</summary>
               <p>Open Draft Room once, confirm the ESPN sync works, pick your team in the team selector, and run at least one mock from your likely slot. Then use Big Board to flag players you like in each tier.</p>
             </details>
@@ -807,7 +824,7 @@
       </section>
     </main>
 
-    <script src="./config.js?v=20260520_customer_ops_10"></script>
-    <script src="./app.js?v=20260520_customer_ops_10"></script>
+    <script src="./config.js?v=20260520_customer_ops_11"></script>
+    <script src="./app.js?v=20260520_customer_ops_11"></script>
   </body>
 </html>

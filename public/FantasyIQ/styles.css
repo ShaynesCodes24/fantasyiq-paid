@@ -733,6 +733,32 @@ textarea {
   margin-bottom: 18px;
 }
 
+.league-profile-strip,
+.league-room-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 14px;
+  border: 1px solid rgba(18, 63, 52, 0.16);
+  border-radius: 8px;
+  background: #eef7f2;
+  padding: 12px 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.league-profile-strip strong,
+.league-room-note strong {
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+
+.league-profile-strip span,
+.league-room-note span {
+  min-width: 0;
+}
+
 .command-tile {
   position: relative;
   overflow: hidden;
@@ -2511,6 +2537,11 @@ code {
     width: 100%;
     max-width: 100vw;
     padding: 18px;
+  }
+
+  .league-profile-strip,
+  .league-room-note {
+    display: grid;
   }
 
   .content,

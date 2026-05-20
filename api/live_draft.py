@@ -74,6 +74,34 @@ PRO_TEAM_BY_ID = {
     34: "HOU",
 }
 
+ESPN_LINEUP_SLOT_MAP = {
+    0: "QB",
+    2: "RB",
+    3: "FLEX",
+    4: "WR",
+    5: "FLEX",
+    6: "TE",
+    7: "SUPERFLEX",
+    16: "DST",
+    17: "K",
+    20: "BE",
+    21: "IR",
+    23: "FLEX",
+}
+
+DEFAULT_LINEUP_SLOTS = {
+    "QB": 1,
+    "RB": 2,
+    "WR": 2,
+    "TE": 1,
+    "FLEX": 1,
+    "SUPERFLEX": 0,
+    "DST": 1,
+    "K": 1,
+    "BE": 7,
+    "IR": 1,
+}
+
 _live_cache: dict[str, dict[str, Any]] = {}
 _player_cache: dict[int, dict[int, dict[str, Any]]] = {}
 
@@ -184,6 +212,106 @@ def normalize_pick(
     }
 
 
+def int_setting(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def float_setting(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def scoring_item_points(settings: dict[str, Any], stat_ids: set[int], labels: tuple[str, ...]) -> float | None:
+    scoring_settings = settings.get("scoringSettings") or {}
+    for item in scoring_settings.get("scoringItems") or []:
+        stat_id = int_setting(item.get("statId"), -1)
+        item_label = " ".join(
+            str(item.get(name) or "") for name in ("abbr", "label", "displayName", "statName")
+        ).lower()
+        if stat_id in stat_ids or any(label in item_label for label in labels):
+            return float_setting(item.get("points"), 0.0)
+    return None
+
+
+def scoring_type_from_settings(settings: dict[str, Any]) -> tuple[str, str, float | None]:
+    reception_points = scoring_item_points(settings, {53}, ("reception", "receptions"))
+    if reception_points is None:
+        return "ppr", "Full PPR", None
+    if reception_points >= 0.95:
+        return "ppr", "Full PPR", reception_points
+    if reception_points >= 0.45:
+        return "half-ppr", "Half PPR", reception_points
+    if reception_points <= 0.05:
+        return "standard", "Standard", reception_points
+    return "custom", f"{reception_points:g} PPR", reception_points
+
+
+def lineup_slots_from_settings(settings: dict[str, Any]) -> dict[str, int]:
+    raw_counts = (settings.get("rosterSettings") or {}).get("lineupSlotCounts") or {}
+    slots = {key: 0 for key in DEFAULT_LINEUP_SLOTS}
+    if not raw_counts:
+        return DEFAULT_LINEUP_SLOTS.copy()
+
+    for raw_slot, raw_count in raw_counts.items():
+        slot_name = ESPN_LINEUP_SLOT_MAP.get(int_setting(raw_slot, -1))
+        if not slot_name:
+            continue
+        slots[slot_name] = slots.get(slot_name, 0) + int_setting(raw_count)
+    return slots
+
+
+def playoff_team_count(settings: dict[str, Any]) -> int:
+    schedule_settings = settings.get("scheduleSettings") or {}
+    return int_setting(
+        schedule_settings.get("playoffTeamCount")
+        or schedule_settings.get("numPlayoffTeams")
+        or settings.get("playoffTeamCount"),
+        6,
+    )
+
+
+def merge_league_settings(base: dict[str, Any], override: dict[str, Any] | None) -> dict[str, Any]:
+    if not override:
+        return base
+    merged = {**base, **override}
+    if isinstance(base.get("lineupSlots"), dict) or isinstance(override.get("lineupSlots"), dict):
+        merged["lineupSlots"] = {
+            **(base.get("lineupSlots") or {}),
+            **(override.get("lineupSlots") or {}),
+        }
+    return merged
+
+
+def extract_league_settings(
+    settings: dict[str, Any],
+    team_count: int,
+    raw_picks: list[dict[str, Any]],
+    context: CustomerContext,
+) -> dict[str, Any]:
+    scoring_type, scoring_label, reception_points = scoring_type_from_settings(settings)
+    lineup_slots = lineup_slots_from_settings(settings)
+    draft_rounds = max(
+        [int_setting(pick.get("roundId"), 0) for pick in raw_picks] or
+        [sum(count for key, count in lineup_slots.items() if key != "IR")],
+    )
+    extracted = {
+        "teamCount": team_count or int_setting(settings.get("size"), 12) or 12,
+        "scoringType": scoring_type,
+        "scoringLabel": scoring_label,
+        "receptionPoints": reception_points,
+        "lineupSlots": lineup_slots,
+        "draftRounds": draft_rounds or 16,
+        "playoffTeams": playoff_team_count(settings),
+        "source": "ESPN league settings",
+    }
+    return merge_league_settings(extracted, context.league_settings)
+
+
 def build_live_payload(request_path: str = "", headers: Any | None = None, force: bool = False) -> dict[str, Any]:
     context = authorize_customer_context(request_path, headers)
     now = time.time()
@@ -216,6 +344,7 @@ def build_live_payload(request_path: str = "", headers: Any | None = None, force
     completed = [pick for pick in picks if pick["status"] == "drafted"]
     pending = [pick for pick in picks if pick["status"] != "drafted"]
     draft_order = [pick for pick in picks if pick.get("round") == 1]
+    league_settings = extract_league_settings(settings, len(teams), raw_picks, context)
 
     payload = {
         "ok": True,
@@ -228,6 +357,7 @@ def build_live_payload(request_path: str = "", headers: Any | None = None, force
         "demoMode": context.demo_mode,
         "leagueName": settings.get("name") or league.get("name") or context.league_name or "ESPN Fantasy League",
         "leagueLogo": settings.get("logoUrl") or settings.get("imageUrl") or league.get("logoUrl"),
+        "leagueSettings": league_settings,
         "syncedAt": utc_now(),
         "drafted": bool(draft_detail.get("drafted")),
         "inProgress": bool(draft_detail.get("inProgress")),

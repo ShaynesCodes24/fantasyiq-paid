@@ -24,6 +24,26 @@ window.FANTASY_IQ_CONFIG = {
   heroSubtitle:
     "Live draft sync, player values, mock tracking, and trade discipline in one command center.",
   useEspnLeagueBranding: false,
+  leagueSettings: {
+    teamCount: 12,
+    scoringType: "ppr",
+    scoringLabel: "Full PPR",
+    lineupSlots: {
+      QB: 1,
+      RB: 2,
+      WR: 2,
+      TE: 1,
+      FLEX: 1,
+      SUPERFLEX: 0,
+      DST: 1,
+      K: 1,
+      BE: 7,
+      IR: 1,
+    },
+    draftRounds: 16,
+    playoffTeams: 6,
+    source: "FantasyIQ default profile",
+  },
   loadouts: {
     katelyn: {
       customerName: "Katelyn Holladay",
@@ -36,6 +56,15 @@ window.FANTASY_IQ_CONFIG = {
       draftCardNote: "Katelyn Holladay / KatAttack",
       demoLabel: "Customer dashboard",
       demoMessage: "Configured for No Guts, No Glory.",
+      leagueSettings: {
+        teamCount: 12,
+        scoringType: "ppr",
+        scoringLabel: "Full PPR",
+        lineupSlots: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, SUPERFLEX: 0, DST: 1, K: 1, BE: 7, IR: 1 },
+        draftRounds: 16,
+        playoffTeams: 6,
+        source: "Customer setup profile",
+      },
       heroSubtitle:
         "Katelyn's KatAttack command center for live draft sync, player values, mock tracking, and trade discipline.",
     },
@@ -50,6 +79,15 @@ window.FANTASY_IQ_CONFIG = {
       draftCardNote: "Shayne Holladay / Gronk if you like TDs",
       demoLabel: "Owner dashboard",
       demoMessage: "Shayne's owner loadout for No Guts, No Glory.",
+      leagueSettings: {
+        teamCount: 12,
+        scoringType: "ppr",
+        scoringLabel: "Full PPR",
+        lineupSlots: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, SUPERFLEX: 0, DST: 1, K: 1, BE: 7, IR: 1 },
+        draftRounds: 16,
+        playoffTeams: 6,
+        source: "Customer setup profile",
+      },
       heroSubtitle:
         "Shayne's Gronk if you like TDs command center for live draft sync, player values, mock tracking, and trade discipline.",
     },

@@ -664,6 +664,7 @@ def build_live_board_payload(
         "syncedAt": utc_now(),
         "live": True,
         "source": "ESPN public fantasy player feed",
+        "customer": context.public_dict(),
         "customerSlug": context.slug,
         "season": season,
         "method": (

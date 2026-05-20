@@ -149,6 +149,13 @@ leagueSubtitle: "ESPN PPR Redraft",
 logoUrl: "./assets/league-logo.jpeg",
 draftCardValue: "$25 / year",
 supportEmail: "shayneholladay@gmail.com",
+leagueSettings: {
+  teamCount: 12,
+  scoringType: "ppr",
+  lineupSlots: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, SUPERFLEX: 0, DST: 1, K: 1, BE: 7, IR: 1 },
+  draftRounds: 16,
+  playoffTeams: 6,
+},
 ```
 
 For a custom logo, replace:
@@ -166,6 +173,7 @@ Set Vercel environment variables per customer:
 ```text
 FANTASY_IQ_LEAGUE_ID=their_espn_league_id
 FANTASY_IQ_SEASON=2026
+FANTASY_IQ_LEAGUE_SETTINGS={"teamCount":12,"scoringType":"ppr","lineupSlots":{"QB":1,"RB":2,"WR":2,"TE":1,"FLEX":1,"SUPERFLEX":0,"DST":1,"K":1,"BE":7,"IR":1},"draftRounds":16,"playoffTeams":6}
 ```
 
 With a Vercel token, you can set them from this repo:
@@ -230,7 +238,14 @@ to an object keyed by customer slug:
     "leagueId": 584856941,
     "season": 2026,
     "status": "configured",
-    "accessCode": "customer_code_here"
+    "accessCode": "customer_code_here",
+    "leagueSettings": {
+      "teamCount": 12,
+      "scoringType": "ppr",
+      "lineupSlots": { "QB": 1, "RB": 2, "WR": 2, "TE": 1, "FLEX": 1, "SUPERFLEX": 0, "DST": 1, "K": 1, "BE": 7, "IR": 1 },
+      "draftRounds": 16,
+      "playoffTeams": 6
+    }
   }
 }
 ```
@@ -252,6 +267,26 @@ That endpoint rebuilds the big board, projected PPR points, tiers, value/risk
 scores, trends, mock simulator board, and trade values from ESPN's public
 fantasy player feed. The bundled `FantasyIQ/data/boards.json` file remains only
 as a fallback if ESPN or the serverless endpoint is temporarily unavailable.
+
+## League Settings Engine
+
+FantasyIQ now keeps a league profile for every dashboard. The profile controls
+team count, scoring format, lineup slots, bench/IR, draft rounds, and playoff
+teams. Draft Room recommendations, Mock Simulator team count/rounds, Big Board
+projection labels, and Trade Calculator values read from that profile instead
+of assuming a 12-team full-PPR league.
+
+Supported setup examples:
+
+```json
+{"teamCount":10,"scoringType":"half-ppr","lineupSlots":{"QB":1,"RB":2,"WR":2,"TE":1,"FLEX":2,"SUPERFLEX":0,"DST":1,"K":1,"BE":6,"IR":1},"draftRounds":16,"playoffTeams":6}
+{"teamCount":12,"scoringType":"ppr","lineupSlots":{"QB":1,"RB":2,"WR":2,"TE":1,"FLEX":1,"SUPERFLEX":1,"DST":1,"K":0,"BE":7,"IR":2},"draftRounds":16,"playoffTeams":6}
+```
+
+The current live board source is still PPR-based, so half-PPR and standard
+views convert from the available PPR projection and reception estimate. A
+future raw-stat projection builder can make those conversions fully source
+native.
 
 Live readiness check:
 

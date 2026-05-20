@@ -34,7 +34,10 @@ Draft date:
 Draft time and timezone:
 Number of teams:
 Scoring format: PPR / half PPR / standard / custom
-Roster settings:
+Starting lineup slots: QB / RB / WR / TE / FLEX / SUPERFLEX / DST / K
+Bench spots:
+IR spots:
+Draft rounds:
 Playoff format:
 ```
 

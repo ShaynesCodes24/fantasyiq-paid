@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
@@ -24,6 +24,7 @@ class CustomerContext:
     customer_team_id: int | None = None
     customer_team_name: str = ""
     league_name: str = ""
+    league_settings: dict[str, Any] = field(default_factory=dict)
     status: str = "configured"
     access_code: str = ""
     demo_mode: bool = False
@@ -41,6 +42,7 @@ class CustomerContext:
             "customerTeamName": self.customer_team_name,
             "leagueId": self.league_id,
             "leagueName": self.league_name,
+            "leagueSettings": self.league_settings,
             "season": self.season,
             "status": self.status,
             "accessRequired": bool(self.access_code),
@@ -76,6 +78,18 @@ def entry_value(entry: dict[str, Any], *names: str, default: Any = "") -> Any:
     return default
 
 
+def dict_value(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str) and value.strip():
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+    return {}
+
+
 def normalize_customer_entry(slug: str, entry: dict[str, Any]) -> CustomerContext:
     season = int_value(entry_value(entry, "season", "espnSeason", default=DEFAULT_SEASON), "season", DEFAULT_SEASON)
     league_id = int_value(entry_value(entry, "league_id", "leagueId", "espnLeagueId"), "leagueId")
@@ -88,6 +102,7 @@ def normalize_customer_entry(slug: str, entry: dict[str, Any]) -> CustomerContex
         customer_team_id=team_id,
         customer_team_name=str(entry_value(entry, "team_name", "teamName", "customerTeamName", default="")).strip(),
         league_name=str(entry_value(entry, "league_name", "leagueName", default="")).strip(),
+        league_settings=dict_value(entry_value(entry, "league_settings", "leagueSettings", default={})),
         status=str(entry_value(entry, "status", default="configured")).strip() or "configured",
         access_code=str(entry_value(entry, "access_code", "accessCode", "customerAccessCode", "code", default="")).strip(),
         demo_mode=False,
@@ -133,6 +148,7 @@ def fallback_context(slug: str = "default") -> CustomerContext:
         customer_team_id=team_id,
         customer_team_name=env("FANTASY_IQ_CUSTOMER_TEAM_NAME"),
         league_name=env("FANTASY_IQ_LEAGUE_NAME"),
+        league_settings=dict_value(env("FANTASY_IQ_LEAGUE_SETTINGS")),
         status=env("FANTASY_IQ_CUSTOMER_STATUS", "configured"),
         access_code=env("FANTASY_IQ_CUSTOMER_ACCESS_CODE"),
         demo_mode=not bool(configured_league),
@@ -178,6 +194,7 @@ def resolve_customer_context(path: str = "") -> CustomerContext:
             customer_team_id=context.customer_team_id,
             customer_team_name=context.customer_team_name,
             league_name=context.league_name,
+            league_settings=context.league_settings,
             status=context.status,
             access_code=context.access_code,
             demo_mode=context.demo_mode,
