@@ -848,6 +848,8 @@ function renderLeagueSwitcher() {
   if (!leagueSwitcher || !leagueSelect) return;
   const options = currentLeagueOptions();
   if (options.length <= 1) {
+    leagueSelect.innerHTML = "";
+    if (leagueSwitcherLabel) leagueSwitcherLabel.textContent = "League profile";
     leagueSwitcher.hidden = true;
     return;
   }
