@@ -105,12 +105,28 @@ let selectedBoardPlayerKey = null;
 const LIVE_SYNC_INTERVAL_MS = 8000;
 let activePlayerAutocomplete = null;
 
+function rememberedCustomerLoadout(loadouts) {
+  try {
+    const lastLoadout = localStorage.getItem("fantasy-dashboard:last-loadout") || "";
+    if (lastLoadout && loadouts[lastLoadout] && localStorage.getItem(`fantasy-dashboard:${lastLoadout}:access-code`)) {
+      return lastLoadout;
+    }
+    const savedLoadouts = Object.keys(loadouts).filter((key) =>
+      localStorage.getItem(`fantasy-dashboard:${key}:access-code`)
+    );
+    return savedLoadouts.length === 1 ? savedLoadouts[0] : "";
+  } catch (error) {
+    return "";
+  }
+}
+
 function resolveAppConfig(config) {
   const params = new URLSearchParams(window.location.search);
   const loadouts = config.loadouts || {};
   const requestedLoadout = normalizeDashboardSlug(params.get("loadout") || params.get("customer") || params.get("dashboard") || "");
+  const rememberedLoadout = requestedLoadout ? "" : rememberedCustomerLoadout(loadouts);
   const defaultLoadout = config.defaultLoadout && loadouts[config.defaultLoadout] ? config.defaultLoadout : "";
-  const loadoutKey = requestedLoadout || defaultLoadout;
+  const loadoutKey = requestedLoadout || rememberedLoadout || defaultLoadout;
   const loadoutConfig = loadoutKey && loadouts[loadoutKey] ? loadouts[loadoutKey] : {};
   const merged = { ...config, ...loadoutConfig, loadoutKey: loadoutKey || "default" };
   const customerDashboard = Boolean(loadoutKey);
@@ -157,6 +173,7 @@ function savedCustomerAccessCode() {
 
 function setCustomerAccessCode(value) {
   localStorage.setItem(loadoutStorageKey("access-code"), value.trim());
+  localStorage.setItem("fantasy-dashboard:last-loadout", appConfig.loadoutKey || "");
 }
 
 function clearCustomerAccessCode() {
@@ -369,6 +386,7 @@ function applyAppConfig() {
 
 applyAppConfig();
 updateAccountControl();
+ensureCustomerUrlContext();
 
 function applyEspnLeagueBranding() {
   if (!appConfig.useEspnLeagueBranding || !liveDraft || liveDraft.demoMode) return;
@@ -467,6 +485,18 @@ function setActive(items, activeItem) {
   items.forEach((item) => item.classList.toggle("active", item === activeItem));
 }
 
+function dashboardUrlWithHash(hash = "") {
+  return `${window.location.pathname}${window.location.search}${hash}`;
+}
+
+function ensureCustomerUrlContext() {
+  if (!requiresCustomerAccess() || !savedCustomerAccessCode()) return;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("customer") || params.get("loadout") || params.get("dashboard")) return;
+  params.set("customer", appConfig.loadoutKey);
+  history.replaceState(null, "", `${window.location.pathname}?${params.toString()}${window.location.hash}`);
+}
+
 function scrollDashboardTop(behavior = "auto") {
   const snapTop = () => {
     document.documentElement.scrollTop = 0;
@@ -487,7 +517,7 @@ function scrollDashboardTop(behavior = "auto") {
 navItems.forEach((button) => {
   button.addEventListener("click", () => {
     const section = button.dataset.section;
-    history.replaceState(null, "", `#${section}`);
+    history.replaceState(null, "", dashboardUrlWithHash(`#${section}`));
     setActive(navItems, button);
     panels.forEach((panel) => panel.classList.toggle("active", panel.id === section));
     scrollDashboardTop("smooth");
@@ -498,7 +528,7 @@ function activateSection(section) {
   if (section === "mock") section = "simulator";
   const targetButton = Array.from(navItems).find((button) => button.dataset.section === section);
   if (!targetButton) return;
-  history.replaceState(null, "", `#${section}`);
+  history.replaceState(null, "", dashboardUrlWithHash(`#${section}`));
   setActive(navItems, targetButton);
   panels.forEach((panel) => panel.classList.toggle("active", panel.id === section));
   scrollDashboardTop("auto");
@@ -509,7 +539,6 @@ const [initialSection, initialBoard] = hashValue.split("/");
 if (initialSection) {
   activateSection(initialSection);
 } else {
-  history.replaceState(null, "", window.location.pathname);
   scrollDashboardTop("auto");
 }
 
@@ -519,7 +548,7 @@ tabs.forEach((button) => {
   button.addEventListener("click", () => {
     if (button.dataset.board) {
       activeBoard = button.dataset.board;
-      history.replaceState(null, "", `#workbooks/${activeBoard}`);
+      history.replaceState(null, "", dashboardUrlWithHash(`#workbooks/${activeBoard}`));
       document.querySelectorAll(".workbook-tabs .tab").forEach((tab) => {
         tab.classList.toggle("active", tab === button);
       });
