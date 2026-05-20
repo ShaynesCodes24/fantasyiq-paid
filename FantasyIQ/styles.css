@@ -1940,6 +1940,21 @@ code {
   gap: 14px;
 }
 
+.draft-room-cheatcode {
+  margin: 16px 0 18px;
+}
+
+.draft-cheatcode-head {
+  margin-bottom: 12px;
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.draft-cheatcode-head h3 {
+  margin-bottom: 0;
+  font-size: 24px;
+}
+
 .cheatcode-status {
   border-color: rgba(18, 63, 52, 0.22);
   background: #eef7f2;
@@ -2022,6 +2037,44 @@ code {
 
 .cheatcode-player {
   min-height: 100%;
+}
+
+.qa-list {
+  display: grid;
+  gap: 10px;
+}
+
+.qa-list details {
+  overflow: hidden;
+  border: 1px solid rgba(216, 195, 146, 0.74);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 252, 241, 0.98), rgba(255, 248, 232, 0.95)),
+    var(--surface-2);
+  box-shadow: var(--shadow-soft);
+}
+
+.qa-list summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 15px 16px;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.qa-list summary::-webkit-details-marker {
+  display: none;
+}
+
+.qa-list details[open] summary {
+  color: var(--accent);
+}
+
+.qa-list p {
+  margin: 0;
+  padding: 0 16px 16px;
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 .sim-layout .live-panel {

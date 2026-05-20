@@ -526,6 +526,7 @@ navItems.forEach((button) => {
 
 function activateSection(section) {
   if (section === "mock") section = "simulator";
+  if (section === "cheatcode") section = "live";
   const targetButton = Array.from(navItems).find((button) => button.dataset.section === section);
   if (!targetButton) return;
   history.replaceState(null, "", dashboardUrlWithHash(`#${section}`));
