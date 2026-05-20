@@ -19,6 +19,7 @@ Run this after production deploy:
 
 ```powershell
 python scripts\check_product_readiness.py
+python scripts\test_self_serve_flow.py
 ```
 
 ## Manual Browser Checks
@@ -111,4 +112,5 @@ After deploy, confirm:
 - Live draft endpoint works.
 - Live boards endpoint works.
 - Stripe webhook endpoint rejects unsigned POSTs.
+- No-charge self-serve dry run creates, saves, reads, and cleans up a temporary customer.
 - Readiness check has `0 failed`.

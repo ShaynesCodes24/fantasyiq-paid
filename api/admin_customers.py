@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import urllib.parse
 from datetime import date, datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
@@ -32,6 +33,18 @@ SAFE_FIELDS = [
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def public_site_url() -> str:
+    return env("FANTASYIQ_SITE_URL", "https://fantasyiq-paid.vercel.app").rstrip("/")
+
+
+def dashboard_url(customer_slug: str) -> str:
+    return f"{public_site_url()}/FantasyIQ/?customer={urllib.parse.quote(customer_slug)}"
+
+
+def setup_url(customer_slug: str) -> str:
+    return f"{public_site_url()}/setup.html?customer={urllib.parse.quote(customer_slug)}"
 
 
 def auth_token_from(handler: BaseHTTPRequestHandler) -> str:
@@ -115,6 +128,106 @@ def admin_payload() -> dict[str, Any]:
     }
 
 
+def parse_body(handler: BaseHTTPRequestHandler) -> dict[str, Any]:
+    length = int(handler.headers.get("Content-Length") or 0)
+    if length <= 0:
+        return {}
+    raw = handler.rfile.read(length).decode("utf-8")
+    if "application/json" in handler.headers.get("Content-Type", ""):
+        return json.loads(raw or "{}")
+    parsed: dict[str, str] = {}
+    for pair in raw.split("&"):
+        if not pair:
+            continue
+        key, _, value = pair.partition("=")
+        parsed[urllib.parse.unquote_plus(key)] = urllib.parse.unquote_plus(value)
+    return parsed
+
+
+def admin_action(raw: dict[str, Any]) -> dict[str, Any]:
+    action = str(raw.get("action") or "").strip()
+    customer_slug = str(raw.get("customer") or raw.get("slug") or "").strip()
+    try:
+        try:
+            from database import admin_customer_detail, reset_customer_access_code
+        except ImportError:
+            from api.database import admin_customer_detail, reset_customer_access_code
+    except ImportError as exc:
+        raise ConfigError("Database admin tools are unavailable.") from exc
+
+    if action == "customer_detail":
+        detail = admin_customer_detail(customer_slug)
+        if not detail:
+            raise ConfigError("Customer was not found in the database.")
+        return {
+            "ok": True,
+            "action": action,
+            "customer": detail,
+            "dashboardUrl": dashboard_url(detail["slug"]),
+            "setupUrl": setup_url(detail["slug"]),
+            "syncedAt": utc_now(),
+        }
+
+    if action == "reset_access_code":
+        detail = reset_customer_access_code(customer_slug)
+        if not detail:
+            raise ConfigError("Customer was not found in the database.")
+        return {
+            "ok": True,
+            "action": action,
+            "customer": detail,
+            "dashboardUrl": dashboard_url(detail["slug"]),
+            "setupUrl": setup_url(detail["slug"]),
+            "syncedAt": utc_now(),
+        }
+
+    if action == "send_setup_email":
+        detail = admin_customer_detail(customer_slug)
+        if not detail:
+            raise ConfigError("Customer was not found in the database.")
+        try:
+            try:
+                from email_service import send_customer_setup_email
+            except ImportError:
+                from api.email_service import send_customer_setup_email
+            email_result = send_customer_setup_email(
+                detail,
+                league_key=str(detail.get("default_league_key") or ""),
+                idempotency_key=f"fantasyiq-admin-setup-{detail['slug']}-{int(datetime.now(timezone.utc).timestamp())}",
+            )
+        except Exception as exc:
+            email_result = {"sent": False, "reason": str(exc)}
+        return {
+            "ok": True,
+            "action": action,
+            "customer": {
+                "slug": detail.get("slug"),
+                "customer_name": detail.get("customer_name"),
+                "email": detail.get("email"),
+            },
+            "email": email_result,
+            "syncedAt": utc_now(),
+        }
+
+    if action == "delete_smoke_customer":
+        try:
+            try:
+                from database import delete_smoke_customer
+            except ImportError:
+                from api.database import delete_smoke_customer
+            deleted = delete_smoke_customer(customer_slug)
+        except Exception:
+            deleted = False
+        return {
+            "ok": True,
+            "action": action,
+            "deleted": deleted,
+            "syncedAt": utc_now(),
+        }
+
+    raise ConfigError("Unsupported admin action.")
+
+
 class handler(BaseHTTPRequestHandler):
     def send_json(self, payload: dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> None:
         body = json.dumps(payload).encode("utf-8")
@@ -132,6 +245,15 @@ class handler(BaseHTTPRequestHandler):
         except PermissionError as exc:
             self.send_json({"ok": False, "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.UNAUTHORIZED)
         except ConfigError as exc:
+            self.send_json({"ok": False, "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.BAD_REQUEST)
+
+    def do_POST(self) -> None:
+        try:
+            require_admin(self)
+            self.send_json(admin_action(parse_body(self)))
+        except PermissionError as exc:
+            self.send_json({"ok": False, "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.UNAUTHORIZED)
+        except (ConfigError, json.JSONDecodeError) as exc:
             self.send_json({"ok": False, "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.BAD_REQUEST)
 
     def do_HEAD(self) -> None:

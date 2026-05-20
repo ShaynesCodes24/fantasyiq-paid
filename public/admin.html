@@ -14,6 +14,7 @@
       </a>
       <nav aria-label="Admin navigation">
         <a href="./setup.html">Setup validator</a>
+        <a href="./help.html">Help</a>
         <a href="./FantasyIQ/" class="dashboard-link">Dashboard</a>
       </nav>
     </header>
@@ -59,7 +60,7 @@
         if (!customers?.length) return "<p>No customer rows found yet.</p>";
         return `<div class="mini-table">${customers
           .map(
-            (customer) => `<div>
+            (customer) => `<div class="has-actions">
               <span>${escapeHtml(customer.status || "unknown")}</span>
               <strong>${escapeHtml(customer.customer_name || customer.email || "Customer")}</strong>
               <span>${escapeHtml(customer.league_name || customer.league_id)} / Team ${escapeHtml(customer.team_id)}</span>
@@ -89,9 +90,54 @@
               <span>${escapeHtml(customer.status || "unknown")}</span>
               <strong>${escapeHtml(customer.customer_name || customer.email || customer.slug || "Customer")}</strong>
               <span>${escapeHtml(customer.league_count || 0)} league(s) / access ${customer.access_code_set ? "set" : "missing"}</span>
+              <span class="admin-actions">
+                <button type="button" data-admin-action="customer_detail" data-customer="${escapeHtml(customer.slug)}">Details</button>
+                <button type="button" data-admin-action="send_setup_email" data-customer="${escapeHtml(customer.slug)}">Send setup</button>
+                <button type="button" data-admin-action="reset_access_code" data-customer="${escapeHtml(customer.slug)}">Reset code</button>
+              </span>
             </div>`,
           )
           .join("")}</div>`;
+      }
+
+      async function runAdminAction(action, customer) {
+        result.insertAdjacentHTML("afterbegin", "<p><strong>Running admin action...</strong></p>");
+        const response = await fetch("/api/admin-customers", {
+          method: "POST",
+          cache: "no-store",
+          headers: {
+            "Content-Type": "application/json",
+            "x-fantasyiq-admin-token": tokenInput.value.trim(),
+          },
+          body: JSON.stringify({ action, customer }),
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.message || response.statusText);
+        }
+        if (action === "customer_detail" || action === "reset_access_code") {
+          const customerData = payload.customer || {};
+          const accessCode = customerData.access_code || "";
+          const setupUrl = payload.setupUrl || "";
+          const dashboardUrl = payload.dashboardUrl || "";
+          result.insertAdjacentHTML(
+            "afterbegin",
+            `<div class="result-panel">
+              <strong>${escapeHtml(customerData.customer_name || customerData.slug || "Customer")}</strong>
+              <p>Dashboard: ${escapeHtml(dashboardUrl)}</p>
+              <p>Setup: ${escapeHtml(setupUrl)}</p>
+              <p>Access code: <code>${escapeHtml(accessCode || "not set")}</code></p>
+            </div>`,
+          );
+          return;
+        }
+        if (action === "send_setup_email") {
+          const email = payload.email || {};
+          result.insertAdjacentHTML(
+            "afterbegin",
+            `<div class="result-panel"><strong>Setup email ${email.sent ? "sent" : "not sent"}.</strong><p>${escapeHtml(email.reason || email.id || email.subject || "")}</p></div>`,
+          );
+        }
       }
 
       loadButton.addEventListener("click", async () => {
@@ -117,6 +163,15 @@
             ${renderCustomers(payload.customers)}
             <p>${escapeHtml(payload.nextActions?.[0] || "")}</p>
           `;
+          result.querySelectorAll("[data-admin-action]").forEach((button) => {
+            button.addEventListener("click", async () => {
+              try {
+                await runAdminAction(button.dataset.adminAction, button.dataset.customer);
+              } catch (error) {
+                result.insertAdjacentHTML("afterbegin", `<div class="result-panel"><strong>Admin action failed.</strong><p>${escapeHtml(error.message)}</p></div>`);
+              }
+            });
+          });
         } catch (error) {
           result.innerHTML = `<strong>Admin request failed.</strong><p>${escapeHtml(error.message)}</p>`;
         }

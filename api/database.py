@@ -424,6 +424,85 @@ def list_customers() -> list[dict[str, Any]]:
     return output
 
 
+def admin_customer_detail(slug: str) -> dict[str, Any] | None:
+    if not database_enabled():
+        return None
+    lookup = slugify(slug)
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT slug, customer_name, email, access_code, status, subscription_status,
+                       included_league_limit, additional_league_count, default_league_key,
+                       created_at, updated_at
+                  FROM fantasyiq_customers
+                 WHERE slug = %s
+                 LIMIT 1
+                """,
+                (lookup,),
+            )
+            customer = fetch_one_dict(cursor)
+            if not customer:
+                return None
+            cursor.execute(
+                """
+                SELECT league_key, label, league_name, league_id, team_id, team_name, season, status
+                  FROM fantasyiq_leagues
+                 WHERE customer_slug = %s
+                   AND COALESCE(status, '') <> 'archived'
+                 ORDER BY created_at ASC, league_key ASC
+                """,
+                (lookup,),
+            )
+            leagues = fetch_all_dicts(cursor)
+    for key in ("created_at", "updated_at"):
+        value = customer.get(key)
+        if isinstance(value, (datetime, date)):
+            customer[key] = value.isoformat()
+    customer["leagues"] = leagues
+    return customer
+
+
+def reset_customer_access_code(slug: str) -> dict[str, Any] | None:
+    if not database_enabled():
+        return None
+    lookup = slugify(slug)
+    code = generate_access_code()
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE fantasyiq_customers
+                   SET access_code = %s,
+                       updated_at = now()
+                 WHERE slug = %s
+             RETURNING slug, customer_name, email, access_code, status,
+                       default_league_key, included_league_limit, additional_league_count
+                """,
+                (code, lookup),
+            )
+            return fetch_one_dict(cursor)
+
+
+def delete_smoke_customer(slug: str) -> bool:
+    if not database_enabled():
+        return False
+    lookup = slugify(slug)
+    if not lookup.startswith("self-serve-smoke-"):
+        return False
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM fantasyiq_payment_events WHERE customer_slug = %s",
+                (lookup,),
+            )
+            cursor.execute(
+                "DELETE FROM fantasyiq_customers WHERE slug = %s RETURNING slug",
+                (lookup,),
+            )
+            return cursor.fetchone() is not None
+
+
 def apply_schema(schema_sql: str) -> None:
     if not database_enabled():
         raise DatabaseUnavailable("Database is not enabled.")

@@ -14,6 +14,7 @@
       </a>
       <nav aria-label="Setup navigation">
         <a href="./FantasyIQ/" class="dashboard-link">Dashboard</a>
+        <a href="./help.html">Help</a>
         <a href="mailto:shayneholladay@gmail.com">Support</a>
       </nav>
     </header>
@@ -189,6 +190,7 @@
       function previewUrl(packet) {
         const preview = new URL("./FantasyIQ/", window.location.href);
         if (packet.customer) preview.searchParams.set("customer", packet.customer);
+        if (packet.leagueKey && packet.customer) preview.searchParams.set("league", packet.leagueKey);
         preview.searchParams.set("leagueLabel", packet.label);
         preview.searchParams.set("teamName", packet.teamName);
         preview.searchParams.set("teamId", packet.teamId);
@@ -199,6 +201,20 @@
         preview.searchParams.set("bench", packet.leagueSettings.lineupSlots.BE);
         preview.searchParams.set("rounds", packet.leagueSettings.draftRounds);
         return preview.pathname + preview.search;
+      }
+
+      function rememberAccessCode(customer, code) {
+        if (!customer || !code) return;
+        const now = Date.now();
+        localStorage.setItem(
+          `fantasy-dashboard:${customer}:access-code`,
+          JSON.stringify({
+            code,
+            signedAt: now,
+            expiresAt: now + 30 * 24 * 60 * 60 * 1000,
+          }),
+        );
+        localStorage.setItem("fantasy-dashboard:last-loadout", customer);
       }
 
       async function copyPacket(button, packet) {
@@ -230,6 +246,10 @@
           const payload = await response.json();
           if (payload.ok) {
             const packet = setupPacket(data, payload);
+            if (payload.saved) {
+              packet.leagueKey = payload.leagueKey || packet.leagueKey;
+              rememberAccessCode(packet.customer, accessCode);
+            }
             localStorage.setItem(setupStorageKey, JSON.stringify(packet));
             const packetJson = escapeHtml(JSON.stringify(packet, null, 2));
             const saveNote = payload.saved
@@ -239,7 +259,7 @@
               <strong>Ready: ${escapeHtml(payload.leagueName)} / ${escapeHtml(payload.teamName)}</strong>
               <p>Team ID ${escapeHtml(payload.teamId)} was found for the ${escapeHtml(payload.season)} season. ${escapeHtml(saveNote)}</p>
               <div class="button-row setup-actions">
-                <a class="primary dark" href="${escapeHtml(previewUrl(packet))}">Preview dashboard settings</a>
+                <a class="primary dark" href="${escapeHtml(previewUrl(packet))}">${payload.saved ? "Open saved dashboard" : "Preview dashboard settings"}</a>
                 <button class="primary" id="copy-setup-packet" type="button">Copy setup packet</button>
               </div>
               <pre class="setup-packet">${packetJson}</pre>

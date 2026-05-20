@@ -2,15 +2,26 @@
 
 Replace bracketed placeholders before sending.
 
-## After Payment
+## After Payment / Setup Email
 
 ```text
-Subject: FantasyIQ setup details
+Subject: Your FantasyIQ dashboard is ready
 
 Thanks for grabbing FantasyIQ.
 
-I will configure your ESPN league dashboard manually. Your Season Pass includes
-up to three ESPN leagues. Please reply with the details below:
+Your dashboard is ready:
+[dashboard link]
+
+Access code:
+[access code]
+
+Next step:
+Open the setup page and validate each public ESPN league you want connected:
+[setup link]
+
+Your Season Pass includes up to three public ESPN leagues. If you have more
+than three leagues, use the add-league button in the dashboard for the $5/year
+league add-on.
 
 How to find the ESPN IDs:
 1. Open your ESPN fantasy league in a web browser, not just the mobile app.
@@ -19,25 +30,10 @@ How to find the ESPN IDs:
 4. The team ID is the number after teamId= in the URL.
 5. If you cannot find teamId=, send the full ESPN league URL and your team name.
 
-Name:
-Email:
-How many leagues should I configure? 1 / 2 / 3
+Need help?
+[help link]
 
-Send this block for each league:
-League label/nickname:
-ESPN league ID:
-ESPN team ID:
-Season:
-League name:
-Is the league public?
-Draft date/time and timezone:
-Number of teams:
-Scoring format:
-Roster settings:
-Logo file or logo URL:
-
-Live draft sync currently requires a public ESPN league. Once I have this, I
-will configure your dashboard and send the link.
+Live draft sync currently requires a public ESPN league.
 
 Support email:
 shayneholladay@gmail.com

@@ -200,11 +200,25 @@ def persist_checkout_to_database(event: dict[str, Any], session: dict[str, Any],
             status=row["status"],
             payload={"session": session},
         )
+        try:
+            try:
+                from email_service import send_customer_setup_email
+            except ImportError:
+                from api.email_service import send_customer_setup_email
+            email_result = send_customer_setup_email(
+                saved_customer,
+                league_key=saved_customer.get("default_league_key") or metadata_value(session, "league_key") or "",
+                renewal_date=row.get("renewal_date", ""),
+                idempotency_key=f"fantasyiq-setup-{event.get('id') or session.get('id')}",
+            )
+        except Exception:
+            email_result = {"sent": False, "reason": "email_send_failed"}
         return {
             "databaseEnabled": True,
             "persistedDatabase": True,
             "insertedEvent": inserted_event,
             "customerSlug": saved_customer.get("slug") or customer_slug,
+            "setupEmail": email_result,
         }
     except (DatabaseUnavailable, ValueError) as exc:
         return {"databaseEnabled": False, "persistedDatabase": False, "reason": str(exc)}

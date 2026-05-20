@@ -226,6 +226,7 @@ def main() -> int:
         page_check("Terms", f"{SITE_URL}/terms.html", ["Terms"]),
         page_check("Privacy", f"{SITE_URL}/privacy.html", ["Privacy"]),
         page_check("Refund policy", f"{SITE_URL}/refund-policy.html", ["Refund"]),
+        page_check("Help", f"{SITE_URL}/help.html", ["FantasyIQ Q&A"]),
         stripe_check(),
         api_check(),
         board_freshness_check(),

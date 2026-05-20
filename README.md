@@ -1,8 +1,9 @@
 # FantasyIQ Paid Customer Deploy
 
-White-label deploy package for a paid FantasyIQ league dashboard. The first
-release is a concierge setup product: customers pay, send their ESPN league
-details, and you configure/deploy their dashboard manually.
+White-label deploy package for a paid FantasyIQ league dashboard. The platform
+now supports a self-serve-ready flow: Stripe checkout creates a durable customer
+record, the customer validates public ESPN leagues, and the dashboard reads the
+active league profile from Postgres with env/customer registry fallback.
 
 Price model:
 
@@ -76,11 +77,11 @@ trade discipline, and league branding.
 Recommended checkout/onboarding flow:
 
 1. Customer buys the $30/year Season Pass.
-2. Customer sends one to three ESPN league IDs, ESPN team IDs, seasons, and settings.
-3. Customer or owner validates each league at `/setup.html`.
-4. You confirm each ESPN league is public.
-5. You configure the Vercel env/customer registry for that customer.
-6. You email the customer their dashboard link, access code, and renewal date.
+2. Stripe webhook creates or updates the customer record and access code.
+3. FantasyIQ sends the dashboard/setup email when `RESEND_API_KEY` is configured.
+4. Customer validates each public ESPN league at `/setup.html`.
+5. Customer switches active leagues from the dashboard.
+6. Owner uses `/admin.html` for customer detail, setup email resend, and access-code reset.
 
 ## FantasyIQ OS
 
@@ -116,9 +117,11 @@ python .\scripts\check_os_readiness.py
 - `scripts/check_security_setup.py`: checks tracked files, deploy ignores, and public Vercel config for secure setup.
 - `scripts/check_os_readiness.py`: checks that the FantasyIQ OS docs and operating scripts are present.
 - `scripts/apply_database_schema.py`: applies the Postgres schema after connecting Neon or another Postgres provider.
+- `scripts/test_self_serve_flow.py`: runs a no-charge production dry run with a signed synthetic Stripe event, setup save, dashboard API checks, and cleanup.
 - `scripts/sync_dashboard_mirror.js`: syncs the local `FantasyIQ` dashboard mirror from the deploy source in `public/FantasyIQ`.
 - `scripts/secure_launch_setup.py`: orchestrates secure local checks plus optional Stripe, Vercel env, deploy, and readiness steps.
 - `public/setup.html`: validates ESPN league ID, team ID, and season against ESPN before setup.
+- `public/help.html`: customer-facing Q&A for setup, access, league switching, and ESPN public-league limits.
 - `public/admin.html`: token-protected owner view that reads `/api/admin-customers`.
 - `api/stripe_webhook.py`: verifies Stripe webhook signatures and prepares checkout fulfillment records.
 - `CUSTOMER_INTAKE.md`: customer-facing setup form.

@@ -21,6 +21,20 @@ STRIPE_WEBHOOK_SECRET
 FANTASY_IQ_CUSTOMERS_JSON
 ```
 
+For durable self-serve records and transactional setup email, also set:
+
+```text
+DATABASE_URL
+RESEND_API_KEY
+FANTASYIQ_EMAIL_FROM
+FANTASYIQ_SITE_URL
+FANTASYIQ_SUPPORT_EMAIL
+```
+
+`RESEND_API_KEY` is optional during dry runs. If it is missing, Stripe checkout
+still creates the customer record and the admin page can resend setup email
+after the key is configured.
+
 For a single customer deployment, also set:
 
 ```text
@@ -59,6 +73,12 @@ FANTASY_IQ_CUSTOMER_ACCESS_CODE
 ```powershell
 .\.venv\Scripts\Activate.ps1
 python .\scripts\check_product_readiness.py
+```
+
+After deploying database/webhook changes, run the no-charge self-serve dry run:
+
+```powershell
+python .\scripts\test_self_serve_flow.py
 ```
 
 ## Automated Launch Setup
