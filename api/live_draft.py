@@ -405,6 +405,32 @@ def error_payload(message: str, request_path: str = "") -> dict[str, Any]:
     }
 
 
+def log_live_sync_error(event_type: str, message: str, request_path: str = "") -> None:
+    try:
+        context = resolve_customer_context(request_path)
+        customer_slug = context.slug
+        league_key = getattr(context, "league_key", "") or ""
+    except Exception:
+        customer_slug = ""
+        league_key = ""
+    try:
+        try:
+            from database import record_ops_event
+        except ImportError:
+            from api.database import record_ops_event
+        record_ops_event(
+            event_type=event_type,
+            severity="warning",
+            source="live_draft",
+            customer_slug=customer_slug,
+            league_key=league_key,
+            message=message[:500],
+            payload={},
+        )
+    except Exception:
+        return
+
+
 class handler(BaseHTTPRequestHandler):
     def send_json(self, payload: dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> None:
         body = json.dumps(payload).encode("utf-8")
@@ -421,12 +447,16 @@ class handler(BaseHTTPRequestHandler):
         try:
             self.send_json(build_live_payload(self.path, self.headers, force=force))
         except PermissionError as exc:
+            log_live_sync_error("live_draft.unauthorized", str(exc), self.path)
             self.send_json(error_payload(str(exc), self.path), HTTPStatus.UNAUTHORIZED)
         except ConfigError as exc:
+            log_live_sync_error("live_draft.config_error", str(exc), self.path)
             self.send_json(error_payload(str(exc), self.path), HTTPStatus.SERVICE_UNAVAILABLE)
         except EspnSyncError as exc:
+            log_live_sync_error("live_draft.espn_error", str(exc), self.path)
             self.send_json(error_payload(str(exc), self.path), HTTPStatus.BAD_GATEWAY)
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
+            log_live_sync_error("live_draft.sync_error", str(exc), self.path)
             self.send_json(error_payload(str(exc), self.path), HTTPStatus.BAD_GATEWAY)
 
     def do_HEAD(self) -> None:

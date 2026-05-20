@@ -81,6 +81,12 @@ After deploying database/webhook changes, run the no-charge self-serve dry run:
 python .\scripts\test_self_serve_flow.py
 ```
 
+After `RESEND_API_KEY` is set in Vercel, confirm transactional email readiness:
+
+```powershell
+python .\scripts\check_email_delivery.py
+```
+
 ## Automated Launch Setup
 
 Run the safe local setup first. This compiles Python, runs security checks,

@@ -302,12 +302,27 @@ def save_setup_if_requested(raw: dict[str, Any], payload: dict[str, Any], header
         payload["saveMessage"] = "League profile saved to the customer account."
         payload["customerSlug"] = saved_customer.get("slug") or customer_slug
         payload["leagueKey"] = saved_league.get("league_key") or league_key
+        try:
+            from database import record_ops_event
+        except ImportError:
+            from api.database import record_ops_event
+        record_ops_event(
+            event_type="setup.saved",
+            severity="info",
+            source="setup_validate",
+            customer_slug=payload["customerSlug"],
+            league_key=payload["leagueKey"],
+            message="Customer league profile saved.",
+            payload={"leagueId": payload.get("leagueId"), "teamId": payload.get("teamId"), "season": payload.get("season")},
+        )
     except DatabaseUnavailable as exc:
         payload["saved"] = False
         payload["saveMessage"] = str(exc)
+        log_setup_error("setup.save_unavailable", str(exc), "")
     except Exception:
         payload["saved"] = False
         payload["saveMessage"] = "Database save failed. Ask support to confirm the database schema is installed."
+        log_setup_error("setup.save_failed", "Database save failed.", "")
     return payload
 
 
@@ -321,6 +336,26 @@ def parse_body(handler: BaseHTTPRequestHandler) -> dict[str, Any]:
         return json.loads(raw.decode("utf-8") or "{}")
     parsed = urllib.parse.parse_qs(raw.decode("utf-8"))
     return {key: values[0] if values else "" for key, values in parsed.items()}
+
+
+def log_setup_error(event_type: str, message: str, request_path: str = "") -> None:
+    try:
+        params = parse_qs(urlparse(request_path).query)
+        customer = slugify(str((params.get("customer") or params.get("dashboard") or [""])[0] or ""))
+        try:
+            from database import record_ops_event
+        except ImportError:
+            from api.database import record_ops_event
+        record_ops_event(
+            event_type=event_type,
+            severity="warning",
+            source="setup_validate",
+            customer_slug=customer,
+            message=message[:500],
+            payload={},
+        )
+    except Exception:
+        return
 
 
 class handler(BaseHTTPRequestHandler):
@@ -351,10 +386,13 @@ class handler(BaseHTTPRequestHandler):
             payload = save_setup_if_requested(raw, payload, self.headers)
             self.send_json(payload, status)
         except (ConfigError, json.JSONDecodeError) as exc:
+            log_setup_error("setup.invalid_input", str(exc), self.path)
             self.send_json({"ok": False, "status": "invalid_input", "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.BAD_REQUEST)
         except PermissionError as exc:
+            log_setup_error("setup.unauthorized", str(exc), self.path)
             self.send_json({"ok": False, "status": "unauthorized", "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.UNAUTHORIZED)
         except Exception as exc:
+            log_setup_error("setup.validation_error", str(exc), self.path)
             self.send_json({"ok": False, "status": "validation_error", "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.BAD_GATEWAY)
 
     def do_HEAD(self) -> None:

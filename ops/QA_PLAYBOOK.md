@@ -22,6 +22,12 @@ python scripts\check_product_readiness.py
 python scripts\test_self_serve_flow.py
 ```
 
+After `RESEND_API_KEY` is configured, also run:
+
+```powershell
+python scripts\check_email_delivery.py
+```
+
 ## Manual Browser Checks
 
 Dashboard:

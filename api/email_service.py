@@ -44,6 +44,42 @@ def email_from() -> str:
     return env("FANTASYIQ_EMAIL_FROM", "FantasyIQ <onboarding@resend.dev>")
 
 
+def email_status() -> dict[str, Any]:
+    return {
+        "provider": "resend",
+        "configured": bool(env("RESEND_API_KEY")),
+        "from": email_from(),
+        "supportEmail": support_email(),
+        "dryRun": env("FANTASYIQ_EMAIL_DRY_RUN") == "1",
+    }
+
+
+def record_email_event(customer: dict[str, Any], result: dict[str, Any], event_type: str = "email.setup") -> None:
+    try:
+        try:
+            from database import record_ops_event
+        except ImportError:
+            from api.database import record_ops_event
+        record_ops_event(
+            event_type=event_type,
+            severity="info" if result.get("sent") else "warning",
+            source="email_service",
+            customer_slug=str(customer.get("slug") or customer.get("customerSlug") or ""),
+            league_key=str(customer.get("default_league_key") or customer.get("leagueKey") or ""),
+            message="Setup email sent." if result.get("sent") else str(result.get("reason") or "Setup email was not sent."),
+            payload={
+                "provider": result.get("provider") or "resend",
+                "sent": bool(result.get("sent")),
+                "subject": result.get("subject") or "",
+                "to": result.get("to") or "",
+                "id": result.get("id") or "",
+                "status": result.get("status") or "",
+            },
+        )
+    except Exception:
+        return
+
+
 def customer_setup_email(
     *,
     customer_name: str,
@@ -157,10 +193,12 @@ def send_customer_setup_email(customer: dict[str, Any], league_key: str = "", re
         league_key=league_key,
         renewal_date=renewal_date,
     )
-    return send_email(
+    result = send_email(
         to=message["to"],
         subject=message["subject"],
         html=message["html"],
         text=message["text"],
         idempotency_key=idempotency_key,
     )
+    record_email_event({**customer, "leagueKey": league_key}, result)
+    return result

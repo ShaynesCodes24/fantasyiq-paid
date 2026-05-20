@@ -424,6 +424,100 @@ def list_customers() -> list[dict[str, Any]]:
     return output
 
 
+def record_ops_event(
+    *,
+    event_type: str,
+    severity: str = "info",
+    source: str = "",
+    customer_slug: str = "",
+    league_key: str = "",
+    message: str = "",
+    payload: dict[str, Any] | None = None,
+) -> bool:
+    if not database_enabled():
+        return False
+
+    from psycopg.types.json import Jsonb  # type: ignore
+
+    try:
+        with connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO fantasyiq_ops_events (
+                        event_type, severity, source, customer_slug, league_key, message, payload, created_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, now())
+                    RETURNING id
+                    """,
+                    (
+                        event_type.strip(),
+                        severity.strip() or "info",
+                        source.strip(),
+                        slugify(customer_slug) if customer_slug else "",
+                        slugify(league_key) if league_key else "",
+                        message.strip(),
+                        Jsonb(payload or {}),
+                    ),
+                )
+                return cursor.fetchone() is not None
+    except Exception:
+        return False
+
+
+def list_ops_events(limit: int = 50) -> list[dict[str, Any]]:
+    if not database_enabled():
+        return []
+    safe_limit = max(1, min(int_value(limit, 50) or 50, 200))
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, event_type, severity, source, customer_slug, league_key,
+                       message, payload, created_at
+                  FROM fantasyiq_ops_events
+                 ORDER BY created_at DESC
+                 LIMIT %s
+                """,
+                (safe_limit,),
+            )
+            rows = fetch_all_dicts(cursor)
+    output = []
+    for row in rows:
+        clean = dict(row)
+        value = clean.get("created_at")
+        if isinstance(value, (datetime, date)):
+            clean["created_at"] = value.isoformat()
+        clean["payload"] = json_object(json_value(clean.get("payload")))
+        output.append(clean)
+    return output
+
+
+def ops_summary() -> dict[str, Any]:
+    if not database_enabled():
+        return {"total": 0, "warnings": 0, "errors": 0, "lastEventAt": ""}
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    COUNT(*) AS total,
+                    COUNT(*) FILTER (WHERE severity = 'warning') AS warnings,
+                    COUNT(*) FILTER (WHERE severity IN ('error', 'critical')) AS errors,
+                    MAX(created_at) AS last_event_at
+                  FROM fantasyiq_ops_events
+                """
+            )
+            row = fetch_one_dict(cursor) or {}
+    last_event = row.get("last_event_at")
+    return {
+        "total": row.get("total") or 0,
+        "warnings": row.get("warnings") or 0,
+        "errors": row.get("errors") or 0,
+        "lastEventAt": last_event.isoformat() if isinstance(last_event, (datetime, date)) else "",
+    }
+
+
 def admin_customer_detail(slug: str) -> dict[str, Any] | None:
     if not database_enabled():
         return None

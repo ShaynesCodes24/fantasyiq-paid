@@ -33,6 +33,21 @@
             Admin token
             <input id="admin-token" type="password" autocomplete="off" />
           </label>
+          <div class="admin-filter-row">
+            <label>
+              Search
+              <input id="admin-search" type="search" placeholder="Name, email, or slug" />
+            </label>
+            <label>
+              Status
+              <select id="admin-status-filter">
+                <option value="">All statuses</option>
+                <option value="configured">Configured</option>
+                <option value="paid_needs_setup">Needs setup</option>
+                <option value="warning">Needs attention</option>
+              </select>
+            </label>
+          </div>
           <div class="button-row">
             <button class="primary" id="load-admin" type="button">Load customers</button>
             <a class="primary dark" href="./setup.html">Validate a setup</a>
@@ -46,6 +61,9 @@
       const tokenInput = document.querySelector("#admin-token");
       const loadButton = document.querySelector("#load-admin");
       const result = document.querySelector("#admin-result");
+      const searchInput = document.querySelector("#admin-search");
+      const statusFilter = document.querySelector("#admin-status-filter");
+      let adminPayload = null;
 
       function escapeHtml(value) {
         return String(value || "")
@@ -86,10 +104,10 @@
         if (!customers?.length) return "<p>No database customer records found yet.</p>";
         return `<div class="mini-table">${customers
           .map(
-            (customer) => `<div>
+            (customer) => `<div class="has-actions">
               <span>${escapeHtml(customer.status || "unknown")}</span>
               <strong>${escapeHtml(customer.customer_name || customer.email || customer.slug || "Customer")}</strong>
-              <span>${escapeHtml(customer.league_count || 0)} league(s) / access ${customer.access_code_set ? "set" : "missing"}</span>
+              <span>${escapeHtml(customer.league_count || 0)} league(s) / ${escapeHtml(customer.email || "no email")} / updated ${escapeHtml(customer.updated_at || "unknown")}</span>
               <span class="admin-actions">
                 <button type="button" data-admin-action="customer_detail" data-customer="${escapeHtml(customer.slug)}">Details</button>
                 <button type="button" data-admin-action="send_setup_email" data-customer="${escapeHtml(customer.slug)}">Send setup</button>
@@ -98,6 +116,67 @@
             </div>`,
           )
           .join("")}</div>`;
+      }
+
+      function filteredDatabaseCustomers(customers) {
+        const query = searchInput.value.trim().toLowerCase();
+        const status = statusFilter.value;
+        return (customers || []).filter((customer) => {
+          const text = `${customer.customer_name || ""} ${customer.email || ""} ${customer.slug || ""} ${customer.status || ""}`.toLowerCase();
+          const matchesQuery = !query || text.includes(query);
+          const matchesStatus = !status || customer.status === status || (status === "warning" && !customer.access_code_set);
+          return matchesQuery && matchesStatus;
+        });
+      }
+
+      function renderOpsEvents(events) {
+        if (!events?.length) return "<p>No ops events have been recorded yet.</p>";
+        return `<div class="mini-table ops-table">${events
+          .slice(0, 12)
+          .map(
+            (event) => `<div>
+              <span>${escapeHtml(event.severity || "info")}</span>
+              <strong>${escapeHtml(event.event_type || "event")}</strong>
+              <span>${escapeHtml(event.customer_slug || event.source || "platform")} / ${escapeHtml(event.message || "")}</span>
+            </div>`,
+          )
+          .join("")}</div>`;
+      }
+
+      function bindAdminActionButtons() {
+        result.querySelectorAll("[data-admin-action]").forEach((button) => {
+          button.addEventListener("click", async () => {
+            try {
+              await runAdminAction(button.dataset.adminAction, button.dataset.customer);
+            } catch (error) {
+              result.insertAdjacentHTML("afterbegin", `<div class="result-panel"><strong>Admin action failed.</strong><p>${escapeHtml(error.message)}</p></div>`);
+            }
+          });
+        });
+      }
+
+      function renderAdminPayload(payload) {
+        const databaseCustomers = filteredDatabaseCustomers(payload.databaseCustomers);
+        const email = payload.email || {};
+        const ops = payload.opsSummary || {};
+        result.innerHTML = `
+          <strong>${escapeHtml(payload.configuredCount)} configured / ${escapeHtml(payload.needsSetupCount)} need setup</strong>
+          <div class="admin-status-grid">
+            <article><span>Database</span><strong>${payload.database?.enabled ? "Connected" : "Not connected"}</strong></article>
+            <article><span>Email</span><strong>${email.configured ? "Ready" : "Needs key"}</strong><small>${escapeHtml(email.from || email.provider || "Resend")}</small></article>
+            <article><span>Ops events</span><strong>${escapeHtml(ops.total || 0)}</strong><small>${escapeHtml(ops.errors || 0)} errors / ${escapeHtml(ops.warnings || 0)} warnings</small></article>
+          </div>
+          <h3>Database accounts</h3>
+          ${renderDatabase(databaseCustomers)}
+          <h3>Recent platform events</h3>
+          ${renderOpsEvents(payload.opsEvents)}
+          <h3>Configured dashboards</h3>
+          ${renderRegistry(payload.registry)}
+          <h3>Setup queue</h3>
+          ${renderCustomers(payload.customers)}
+          <p>${escapeHtml(payload.nextActions?.[0] || "")}</p>
+        `;
+        bindAdminActionButtons();
       }
 
       async function runAdminAction(action, customer) {
@@ -152,29 +231,20 @@
             result.innerHTML = `<strong>Admin check failed.</strong><p>${escapeHtml(payload.message || response.statusText)}</p>`;
             return;
           }
-          result.innerHTML = `
-            <strong>${escapeHtml(payload.configuredCount)} configured / ${escapeHtml(payload.needsSetupCount)} need setup</strong>
-            <h3>Database accounts</h3>
-            <p>Database: ${payload.database?.enabled ? "connected" : "not connected"}</p>
-            ${renderDatabase(payload.databaseCustomers)}
-            <h3>Configured dashboards</h3>
-            ${renderRegistry(payload.registry)}
-            <h3>Setup queue</h3>
-            ${renderCustomers(payload.customers)}
-            <p>${escapeHtml(payload.nextActions?.[0] || "")}</p>
-          `;
-          result.querySelectorAll("[data-admin-action]").forEach((button) => {
-            button.addEventListener("click", async () => {
-              try {
-                await runAdminAction(button.dataset.adminAction, button.dataset.customer);
-              } catch (error) {
-                result.insertAdjacentHTML("afterbegin", `<div class="result-panel"><strong>Admin action failed.</strong><p>${escapeHtml(error.message)}</p></div>`);
-              }
-            });
-          });
+          adminPayload = payload;
+          renderAdminPayload(payload);
         } catch (error) {
           result.innerHTML = `<strong>Admin request failed.</strong><p>${escapeHtml(error.message)}</p>`;
         }
+      });
+
+      [searchInput, statusFilter].forEach((control) => {
+        control.addEventListener("input", () => {
+          if (adminPayload) renderAdminPayload(adminPayload);
+        });
+        control.addEventListener("change", () => {
+          if (adminPayload) renderAdminPayload(adminPayload);
+        });
       });
     </script>
   </body>

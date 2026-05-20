@@ -59,3 +59,25 @@ CREATE INDEX IF NOT EXISTS fantasyiq_payment_events_customer_idx
 CREATE INDEX IF NOT EXISTS fantasyiq_payment_events_email_idx
     ON fantasyiq_payment_events (lower(email))
     WHERE email <> '';
+
+CREATE TABLE IF NOT EXISTS fantasyiq_ops_events (
+    id BIGSERIAL PRIMARY KEY,
+    event_type TEXT NOT NULL DEFAULT '',
+    severity TEXT NOT NULL DEFAULT 'info',
+    source TEXT NOT NULL DEFAULT '',
+    customer_slug TEXT NOT NULL DEFAULT '',
+    league_key TEXT NOT NULL DEFAULT '',
+    message TEXT NOT NULL DEFAULT '',
+    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS fantasyiq_ops_events_created_idx
+    ON fantasyiq_ops_events (created_at DESC);
+
+CREATE INDEX IF NOT EXISTS fantasyiq_ops_events_customer_idx
+    ON fantasyiq_ops_events (customer_slug, created_at DESC)
+    WHERE customer_slug <> '';
+
+CREATE INDEX IF NOT EXISTS fantasyiq_ops_events_severity_idx
+    ON fantasyiq_ops_events (severity, created_at DESC);

@@ -202,6 +202,27 @@ def persist_checkout_to_database(event: dict[str, Any], session: dict[str, Any],
         )
         try:
             try:
+                from database import record_ops_event
+            except ImportError:
+                from api.database import record_ops_event
+            record_ops_event(
+                event_type="checkout.completed",
+                severity="info",
+                source="stripe_webhook",
+                customer_slug=saved_customer.get("slug") or customer_slug,
+                message="Stripe checkout created or updated a customer account.",
+                payload={
+                    "stripeEventId": event.get("id") or "",
+                    "stripeObjectId": row.get("stripe_object_id") or "",
+                    "amountTotal": row.get("amount_total"),
+                    "currency": row.get("currency") or "",
+                    "insertedEvent": inserted_event,
+                },
+            )
+        except Exception:
+            pass
+        try:
+            try:
                 from email_service import send_customer_setup_email
             except ImportError:
                 from api.email_service import send_customer_setup_email

@@ -3040,6 +3040,88 @@ body.access-locked .topbar {
   color: #5d6b64;
 }
 
+.account-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.account-grid article,
+.account-league-list article {
+  min-width: 0;
+  border: 1px solid rgba(18, 63, 52, 0.16);
+  border-radius: 8px;
+  background: #fffdf7;
+  padding: 16px;
+  box-shadow: 0 10px 24px rgba(6, 18, 15, 0.08);
+}
+
+.account-grid span,
+.account-league-list span {
+  color: #7d734f;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.account-grid strong,
+.account-league-list strong {
+  display: block;
+  margin: 4px 0;
+  color: #071d18;
+  font-size: 20px;
+}
+
+.account-grid p,
+.account-league-list p {
+  margin: 0;
+  color: #5d6b64;
+  line-height: 1.45;
+}
+
+.account-league-list {
+  display: grid;
+  gap: 10px;
+}
+
+.account-league-list article {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}
+
+.account-league-list article.active {
+  border-color: rgba(199, 154, 59, 0.55);
+  box-shadow: inset 4px 0 0 var(--logo-gold), 0 10px 24px rgba(6, 18, 15, 0.08);
+}
+
+.account-league-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.account-league-actions button,
+.account-league-actions a {
+  min-height: 36px;
+  border: 1px solid rgba(18, 63, 52, 0.2);
+  border-radius: 8px;
+  background: #f8f3e7;
+  color: #123f34;
+  padding: 8px 12px;
+  font: inherit;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.account-league-actions button:disabled {
+  opacity: 0.65;
+}
+
 /* Premium command-center polish */
 :root {
   --surface: rgba(255, 253, 247, 0.97);
@@ -3641,11 +3723,25 @@ textarea,
   .panel,
   .command-hero,
   .live-panel,
+  .account-grid,
+  .account-league-list article,
   .trade-card,
   .trade-verdict {
     width: 100%;
     max-width: 100%;
     min-width: 0;
+  }
+
+  .account-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .account-league-list article {
+    display: grid;
+  }
+
+  .account-league-actions {
+    justify-content: flex-start;
   }
 
   .panel {

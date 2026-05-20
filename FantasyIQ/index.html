@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>FantasyIQ</title>
-    <link rel="stylesheet" href="./styles.css?v=20260520_customer_ops_20" />
+    <link rel="stylesheet" href="./styles.css?v=20260520_self_serve_os_21" />
   </head>
   <body>
     <div class="field-overlay" aria-hidden="true">
@@ -74,6 +74,7 @@
         <button class="nav-item" data-section="simulator">Mock Simulator</button>
         <button class="nav-item" data-section="trade">Trade Calculator</button>
         <button class="nav-item" data-section="workbooks">Big Board</button>
+        <button class="nav-item" data-section="account">Account</button>
         <button class="nav-item" data-section="qa">Q&A</button>
       </nav>
 
@@ -90,6 +91,7 @@
                 <button class="secondary-action nav-jump" type="button" data-jump="draft">Draft Plan</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="simulator">Mock Simulator</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="trade">Trade Calculator</button>
+                <button class="secondary-action nav-jump" type="button" data-jump="account">Account</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="qa">Q&A</button>
               </div>
             </div>
@@ -793,6 +795,41 @@
           </div>
         </section>
 
+        <section class="panel" id="account">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Account</p>
+              <h2>Leagues and access</h2>
+            </div>
+            <button class="secondary-action" id="account-add-league" type="button">Add League</button>
+          </div>
+
+          <div class="account-grid">
+            <article>
+              <span>Dashboard</span>
+              <strong id="account-dashboard-name">FantasyIQ</strong>
+              <p id="account-dashboard-status">Checking account status...</p>
+            </article>
+            <article>
+              <span>League slots</span>
+              <strong id="account-league-slots">0/3 included</strong>
+              <p id="account-league-slot-detail">Add up to three public ESPN leagues with the Season Pass.</p>
+            </article>
+            <article>
+              <span>Support</span>
+              <strong id="account-support-email">shayneholladay@gmail.com</strong>
+              <p>Use support when ESPN public sync fails or a league profile looks wrong.</p>
+            </article>
+          </div>
+
+          <div class="account-league-list" id="account-league-list">
+            <article>
+              <strong>Loading leagues...</strong>
+              <p>FantasyIQ will show active league profiles here after sign in.</p>
+            </article>
+          </div>
+        </section>
+
         <section class="panel" id="qa">
           <div class="panel-head">
             <div>
@@ -860,6 +897,6 @@
     </main>
 
     <script src="./config.js?v=20260520_customer_ops_19"></script>
-    <script src="./app.js?v=20260520_customer_ops_20"></script>
+    <script src="./app.js?v=20260520_self_serve_os_21"></script>
   </body>
 </html>

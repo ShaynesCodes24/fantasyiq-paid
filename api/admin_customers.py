@@ -100,10 +100,33 @@ def database_customers() -> tuple[dict[str, Any], list[dict[str, Any]]]:
         return {"configured": False, "driverReady": False, "enabled": False, "error": str(exc)}, []
 
 
+def database_ops() -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    try:
+        try:
+            from database import list_ops_events, ops_summary
+        except ImportError:
+            from api.database import list_ops_events, ops_summary
+        return ops_summary(), list_ops_events(50)
+    except Exception as exc:
+        return {"total": 0, "warnings": 0, "errors": 0, "lastEventAt": "", "error": str(exc)}, []
+
+
+def email_readiness() -> dict[str, Any]:
+    try:
+        try:
+            from email_service import email_status
+        except ImportError:
+            from api.email_service import email_status
+        return email_status()
+    except Exception as exc:
+        return {"provider": "resend", "configured": False, "error": str(exc)}
+
+
 def admin_payload() -> dict[str, Any]:
     csv_rows = csv_customers()
     registry_rows = registry_customers()
     database_status, database_rows = database_customers()
+    ops_status, ops_events = database_ops()
     configured_count = len([row for row in csv_rows if row.get("status") == "configured"])
     configured_count += len([row for row in registry_rows if row.get("status") == "configured"])
     configured_count += len([row for row in database_rows if row.get("status") == "configured"])
@@ -115,6 +138,9 @@ def admin_payload() -> dict[str, Any]:
         "csvCustomerCount": len(csv_rows),
         "databaseCustomerCount": len(database_rows),
         "database": database_status,
+        "email": email_readiness(),
+        "opsSummary": ops_status,
+        "opsEvents": ops_events,
         "configuredCount": configured_count,
         "needsSetupCount": len(needs_setup),
         "customers": csv_rows,

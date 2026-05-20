@@ -116,6 +116,7 @@ python .\scripts\check_os_readiness.py
 - `scripts/check_product_readiness.py`: checks the live website, dashboard, Stripe link, and API.
 - `scripts/check_security_setup.py`: checks tracked files, deploy ignores, and public Vercel config for secure setup.
 - `scripts/check_os_readiness.py`: checks that the FantasyIQ OS docs and operating scripts are present.
+- `scripts/check_email_delivery.py`: confirms Resend email readiness and can send an admin setup-email test.
 - `scripts/apply_database_schema.py`: applies the Postgres schema after connecting Neon or another Postgres provider.
 - `scripts/test_self_serve_flow.py`: runs a no-charge production dry run with a signed synthetic Stripe event, setup save, dashboard API checks, and cleanup.
 - `scripts/sync_dashboard_mirror.js`: syncs the local `FantasyIQ` dashboard mirror from the deploy source in `public/FantasyIQ`.

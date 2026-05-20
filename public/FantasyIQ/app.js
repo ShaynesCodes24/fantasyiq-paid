@@ -110,6 +110,13 @@ const leagueDraftNote = document.querySelector("#league-draft-note");
 const leagueProfileStrip = document.querySelector("#league-profile-strip");
 const leagueRoomNote = document.querySelector("#league-room-note");
 const boardMethodNote = document.querySelector("#board-method-note");
+const accountAddLeague = document.querySelector("#account-add-league");
+const accountDashboardName = document.querySelector("#account-dashboard-name");
+const accountDashboardStatus = document.querySelector("#account-dashboard-status");
+const accountLeagueSlots = document.querySelector("#account-league-slots");
+const accountLeagueSlotDetail = document.querySelector("#account-league-slot-detail");
+const accountSupportEmail = document.querySelector("#account-support-email");
+const accountLeagueList = document.querySelector("#account-league-list");
 
 const DEFAULT_LINEUP_SLOTS = {
   QB: 1,
@@ -554,6 +561,7 @@ function updateAccountControl() {
   }
   accountCard.classList.toggle("signed-in", requiresCustomerAccess() && Boolean(savedCustomerAccessCode()));
   accountCard.classList.toggle("signed-out", requiresCustomerAccess() && !savedCustomerAccessCode());
+  renderAccountPanel();
 }
 
 function signOutCustomer() {
@@ -760,6 +768,12 @@ function projectionDisplay(row) {
   return value ? value.toFixed(1) : "TBD";
 }
 
+function projectionEdgeDisplay(row) {
+  const edge = Number(row?.["Projection Edge"] || 0);
+  if (!Number.isFinite(edge) || Math.abs(edge) < 0.1) return "Even";
+  return `${edge > 0 ? "+" : ""}${edge.toFixed(1)}`;
+}
+
 function leagueValueScore(row) {
   if (!row) return 0;
   const settings = activeLeagueSettings();
@@ -825,6 +839,7 @@ function renderLeagueProfile() {
   });
   populateSimSlotOptions();
   renderLeagueSwitcher();
+  renderAccountPanel();
 }
 
 function populateSimSlotOptions() {
@@ -870,6 +885,77 @@ function leagueSlotText(count = configuredLeagueCount()) {
   if (count < limit) return `${count || 1}/${limit} included leagues`;
   if (count === limit) return `${limit}/${limit} included / + extra ${price}`;
   return `${count} leagues / extras ${price} each`;
+}
+
+function accountStatusText() {
+  if (!requiresCustomerAccess()) return "Public demo preview. Subscribe to create a customer account.";
+  if (savedCustomerAccessCode()) return "Signed in. Refresh will keep this dashboard unlocked on this device.";
+  return "Signed out. Enter your dashboard access code to unlock saved leagues.";
+}
+
+function leagueSetupUrl(league = null) {
+  const setupUrl = new URL("../setup.html", window.location.href);
+  if (appConfig.loadoutKey && appConfig.loadoutKey !== "default") setupUrl.searchParams.set("customer", appConfig.loadoutKey);
+  if (league?.key) setupUrl.searchParams.set("league", league.key);
+  return `${setupUrl.pathname}${setupUrl.search}`;
+}
+
+function renderAccountPanel() {
+  if (!accountLeagueList) return;
+  const options = currentLeagueOptions();
+  const count = configuredLeagueCount(options);
+  const limit = includedLeagueLimit();
+  const active = activeLeagueOption();
+  const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
+  const support = appConfig.supportEmail || "shayneholladay@gmail.com";
+
+  if (accountDashboardName) accountDashboardName.textContent = appConfig.customerName || appConfig.loadoutKey || "FantasyIQ";
+  if (accountDashboardStatus) accountDashboardStatus.textContent = accountStatusText();
+  if (accountLeagueSlots) accountLeagueSlots.textContent = leagueSlotText(count);
+  if (accountLeagueSlotDetail) {
+    accountLeagueSlotDetail.textContent =
+      count < limit
+        ? `${Math.max(0, limit - count)} included ${limit - count === 1 ? "slot" : "slots"} available before an add-on is needed.`
+        : `Additional league profiles are ${price} each after the included ${limit}.`;
+  }
+  if (accountSupportEmail) accountSupportEmail.textContent = support;
+  if (accountAddLeague) accountAddLeague.textContent = addLeagueActionTitle(count);
+
+  const leagues = options.length
+    ? options
+    : [
+        {
+          key: appConfig.leagueKey || "current",
+          label: currentLeagueDisplayLabel(),
+          leagueName: appConfig.leagueName,
+          leagueId: appConfig.leagueId,
+          teamId: appConfig.customerTeamId,
+          teamName: appConfig.customerTeamName,
+          leagueSettings: appConfig.leagueSettings,
+        },
+      ];
+
+  accountLeagueList.innerHTML = leagues
+    .map((league) => {
+      const settings = mergeLeagueSettings(appConfig.baseLeagueSettings || DEFAULT_LEAGUE_SETTINGS, league.leagueSettings || {});
+      const isActive = active?.key === league.key || (!active && league.key === appConfig.leagueKey);
+      return `<article class="${isActive ? "active" : ""}">
+        <div>
+          <span>${isActive ? "Active league" : "League profile"}</span>
+          <strong>${htmlEscape(league.label || league.leagueName || league.key)}</strong>
+          <p>${htmlEscape(league.leagueName || "ESPN league")} / Team ${htmlEscape(league.teamId || league.customerTeamId || "TBD")} / ${htmlEscape(settings.scoringLabel || "Scoring")}</p>
+        </div>
+        <div class="account-league-actions">
+          <button type="button" data-account-switch="${htmlEscape(league.key)}" ${isActive ? "disabled" : ""}>${isActive ? "Active" : "Switch"}</button>
+          <a href="${htmlEscape(leagueSetupUrl(league))}">Revalidate</a>
+        </div>
+      </article>`;
+    })
+    .join("");
+
+  accountLeagueList.querySelectorAll("[data-account-switch]").forEach((button) => {
+    button.addEventListener("click", () => setActiveLeague(button.dataset.accountSwitch));
+  });
 }
 
 function addLeagueActionTitle(count = configuredLeagueCount()) {
@@ -1045,6 +1131,7 @@ const boardColumns = [
   "Pos",
   "Team",
   "Proj PPR Pts",
+  "Projection Edge",
   "Last Year PPR",
   "Value Score",
   "Risk",
@@ -1059,6 +1146,7 @@ const trendColumns = [
   "Pos",
   "Team",
   "Proj PPR Pts",
+  "Projection Edge",
   "Last Year PPR",
   "Board Rank",
   "Trend Score",
@@ -1110,6 +1198,7 @@ function visibleBoardColumns() {
 function columnHeader(column) {
   if (column === "Tier") return "Pos Tier";
   if (column === "Proj PPR Pts") return scoringProjectionLabel();
+  if (column === "Projection Edge") return "League Edge";
   if (column === "Last Year PPR") return lastYearScoringLabel();
   if (column === "Value Score") return "League Value";
   return column;
@@ -1285,6 +1374,7 @@ mockForm.addEventListener("submit", (event) => {
 
 function cellValue(row, key) {
   if (key === "Proj PPR Pts") return projectionDisplay(row);
+  if (key === "Projection Edge") return projectionEdgeDisplay(row);
   if (key === "Value Score") return valueDisplay(row);
   return row[key] ?? "";
 }
@@ -1335,7 +1425,7 @@ function filteredRows() {
   const drafted = liveDraftedKeys();
   return boardData.boards[activeBoard].rows.filter((row) => {
     const matchesPosition = !pos || (pos === "FLEX" ? ["RB", "WR", "TE"].includes(row.Pos) : row.Pos === pos);
-    const searchable = `${row.Player} ${row.Pos} ${row.Team} ${row.Category} ${row.Tier} ${row["Pos Tier"]} ${row.Action} ${row.Analysis} ${row["Daily Synopsis"]} ${row["Player Outlook"]} ${row["Risk Notes"]} ${row.Trend} ${row["Source Signal"]} ${row.Catalyst} ${row["Why Rising/Falling"]} ${row["Draft Action"]}`.toLowerCase();
+    const searchable = `${row.Player} ${row.Pos} ${row.Team} ${row.Category} ${row.Tier} ${row["Pos Tier"]} ${row.Action} ${row.Analysis} ${row["Projection Edge"]} ${row["Daily Synopsis"]} ${row["Player Outlook"]} ${row["Risk Notes"]} ${row.Trend} ${row["Source Signal"]} ${row.Catalyst} ${row["Why Rising/Falling"]} ${row["Draft Action"]}`.toLowerCase();
     const matchesDraftStatus = !hideDraftedEnabled() || !drafted.has(normalizePlayerName(row.Player));
     return matchesPosition && matchesDraftStatus && (!query || searchable.includes(query));
   });
@@ -1645,6 +1735,7 @@ function showAnalysis(row) {
       <div class="analysis-chip"><span>Position Tier</span><strong>${row["Pos Tier"]}</strong></div>
       <div class="analysis-chip"><span>Pos Rank</span><strong>${row.Pos}${row["Pos Rank"]}</strong></div>
       <div class="analysis-chip"><span>${scoringProjectionLabel()}</span><strong>${projectionDisplay(row)}</strong></div>
+      <div class="analysis-chip"><span>League Edge</span><strong>${projectionEdgeDisplay(row)}</strong></div>
       <div class="analysis-chip"><span>Last Year</span><strong>${lastYearValue(row)}</strong></div>
       <div class="analysis-chip"><span>League Value</span><strong>${valueDisplay(row)}</strong></div>
       <div class="analysis-chip"><span>Risk</span><strong>${row.Risk}/10</strong></div>
@@ -1679,6 +1770,7 @@ function showTrendAnalysis(row) {
       <div class="analysis-chip"><span>Board Rank</span><strong>${row["Board Rank"] || "Watch"}</strong></div>
       <div class="analysis-chip"><span>Position Tier</span><strong>${row["Pos Tier"] || "Watch"}</strong></div>
       <div class="analysis-chip"><span>${scoringProjectionLabel()}</span><strong>${projectionDisplay(row)}</strong></div>
+      <div class="analysis-chip"><span>League Edge</span><strong>${projectionEdgeDisplay(row)}</strong></div>
       <div class="analysis-chip"><span>Last Year</span><strong>${lastYearValue(row)}</strong></div>
     </div>
     ${playerSynopsisBlock(row)}
@@ -3764,6 +3856,7 @@ accountAction?.addEventListener("click", () => {
 });
 leagueSelect?.addEventListener("change", () => setActiveLeague(leagueSelect.value));
 addLeagueAction?.addEventListener("click", openAddLeagueDialog);
+accountAddLeague?.addEventListener("click", openAddLeagueDialog);
 
 const savedAutoSync = localStorage.getItem(loadoutStorageKey("auto-sync"));
 if (liveSyncToggle && savedAutoSync !== null) {
