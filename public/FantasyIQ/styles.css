@@ -351,6 +351,90 @@ h3 {
   filter: brightness(1.05);
 }
 
+.add-league-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(4, 17, 14, 0.72);
+}
+
+.add-league-panel {
+  position: relative;
+  width: min(520px, 100%);
+  border: 1px solid rgba(243, 208, 113, 0.36);
+  border-radius: 8px;
+  background: #fffaf0;
+  color: var(--ink);
+  padding: 24px;
+  box-shadow: 0 24px 70px rgba(4, 17, 14, 0.42);
+}
+
+.add-league-panel h3 {
+  margin: 4px 0 10px;
+  color: var(--accent);
+  font-size: 22px;
+}
+
+.add-league-panel p:not(.eyebrow) {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.add-league-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(18, 63, 52, 0.18);
+  border-radius: 8px;
+  background: rgba(18, 63, 52, 0.08);
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.add-league-summary {
+  display: grid;
+  gap: 4px;
+  margin: 14px 0 18px;
+  padding: 12px;
+  border: 1px solid rgba(18, 63, 52, 0.14);
+  border-radius: 8px;
+  background: rgba(18, 63, 52, 0.06);
+}
+
+.add-league-summary span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.add-league-summary strong {
+  color: var(--accent);
+  font-size: 15px;
+}
+
+.add-league-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.add-league-actions button {
+  min-height: 40px;
+}
+
 .account-card span {
   display: block;
   min-width: 0;

@@ -98,6 +98,7 @@ const leagueSwitcherLabel = document.querySelector("#league-switcher-label");
 const leagueSelect = document.querySelector("#league-select");
 const addLeagueAction = document.querySelector("#add-league-action");
 const leagueSlotNote = document.querySelector("#league-slot-note");
+let addLeagueDialog = null;
 const leagueTeamCount = document.querySelector("#league-team-count");
 const leagueTypeNote = document.querySelector("#league-type-note");
 const leagueStarters = document.querySelector("#league-starters");
@@ -846,6 +847,23 @@ function leagueSlotText(count = configuredLeagueCount()) {
   return `${count} leagues / extras ${price} each`;
 }
 
+function addLeagueActionTitle(count = configuredLeagueCount()) {
+  const limit = includedLeagueLimit();
+  const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
+  return count < limit ? "Add included league" : `Add extra league (${price})`;
+}
+
+function currentLeagueDisplayLabel() {
+  const active = activeLeagueOption();
+  if (active) return active.label || active.leagueName || active.key;
+  if (requiresCustomerAccess()) {
+    if (appConfig.customerTeamName) return appConfig.customerTeamName;
+    if (appConfig.leagueName && appConfig.leagueName !== "Public Demo League") return appConfig.leagueName;
+    return "Current league";
+  }
+  return appConfig.leagueName || "Public demo";
+}
+
 function applyLeagueOption(option) {
   if (!option) return;
   appConfig.leagueKey = option.key || appConfig.leagueKey || "";
@@ -879,13 +897,12 @@ function renderLeagueSwitcher() {
   const count = configuredLeagueCount(options);
   if (leagueSlotNote) leagueSlotNote.textContent = leagueSlotText(count);
   if (addLeagueAction) {
-    const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
-    addLeagueAction.title = `Add additional league (${price})`;
+    addLeagueAction.title = addLeagueActionTitle(count);
   }
   if (options.length <= 1) {
     leagueSelect.innerHTML = "";
     leagueSelect.hidden = true;
-    if (leagueSwitcherLabel) leagueSwitcherLabel.textContent = appConfig.leagueName || appConfig.customerTeamName || "Current profile";
+    if (leagueSwitcherLabel) leagueSwitcherLabel.textContent = currentLeagueDisplayLabel();
     leagueSwitcher.hidden = false;
     return;
   }
@@ -895,7 +912,7 @@ function renderLeagueSwitcher() {
     .map((league) => `<option value="${htmlEscape(league.key)}">${htmlEscape(league.label || league.leagueName || league.key)}</option>`)
     .join("");
   if (active?.key) leagueSelect.value = active.key;
-  if (leagueSwitcherLabel) leagueSwitcherLabel.textContent = active?.label || active?.leagueName || "League profile";
+  if (leagueSwitcherLabel) leagueSwitcherLabel.textContent = currentLeagueDisplayLabel();
   leagueSwitcher.hidden = false;
 }
 
@@ -923,13 +940,91 @@ function setActiveLeague(leagueKey) {
   startLiveSync();
 }
 
-function openAdditionalLeaguePayment() {
-  const url = additionalLeaguePaymentUrl();
-  const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
+function addLeagueMailto() {
+  const support = appConfig.supportEmail || "shayneholladay@gmail.com";
+  const customer = appConfig.customerName || appConfig.loadoutKey || "FantasyIQ customer";
+  const subject = encodeURIComponent("Add a FantasyIQ league");
+  const body = encodeURIComponent(
+    `Customer: ${customer}\nDashboard: ${window.location.href}\n\nLeague label:\nESPN league ID:\nESPN team ID:\nSeason:\nScoring format:\nTeam count:\nLineup settings:\nDraft date/time:\n`,
+  );
+  return `mailto:${support}?subject=${subject}&body=${body}`;
+}
+
+function closeAddLeagueDialog() {
+  if (addLeagueDialog) addLeagueDialog.hidden = true;
+}
+
+function ensureAddLeagueDialog() {
+  if (addLeagueDialog) return addLeagueDialog;
+  const dialog = document.createElement("div");
+  dialog.className = "add-league-dialog";
+  dialog.hidden = true;
+  dialog.innerHTML = `
+    <div class="add-league-panel" role="dialog" aria-modal="true" aria-labelledby="add-league-title">
+      <button class="add-league-close" type="button" aria-label="Close add league panel">x</button>
+      <p class="eyebrow">League Manager</p>
+      <h3 id="add-league-title">Add league</h3>
+      <p id="add-league-message"></p>
+      <div class="add-league-summary" id="add-league-summary"></div>
+      <div class="add-league-actions">
+        <button class="primary-action" id="add-league-primary" type="button"></button>
+        <button class="secondary-action" id="add-league-secondary" type="button"></button>
+      </div>
+    </div>
+  `;
+  document.body.append(dialog);
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) closeAddLeagueDialog();
+  });
+  dialog.querySelector(".add-league-close")?.addEventListener("click", closeAddLeagueDialog);
+  addLeagueDialog = dialog;
+  return dialog;
+}
+
+function openAddLeagueDialog() {
+  const dialog = ensureAddLeagueDialog();
+  const count = configuredLeagueCount();
   const limit = includedLeagueLimit();
-  const message = `FantasyIQ Season Pass includes up to ${limit} ESPN leagues. Additional leagues are ${price} each. Continue to Stripe?`;
-  if (!window.confirm(message)) return;
-  window.open(url, "_blank", "noopener");
+  const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
+  const includedRemaining = Math.max(0, limit - count);
+  const needsPayment = count >= limit;
+  const title = dialog.querySelector("#add-league-title");
+  const message = dialog.querySelector("#add-league-message");
+  const summary = dialog.querySelector("#add-league-summary");
+  const primary = dialog.querySelector("#add-league-primary");
+  const secondary = dialog.querySelector("#add-league-secondary");
+
+  if (title) title.textContent = needsPayment ? "Add Extra League" : "Add Included League";
+  if (message) {
+    message.textContent = needsPayment
+      ? `Your Season Pass includes ${limit} leagues. Extra league profiles are ${price} each and can be added after checkout.`
+      : `You have ${includedRemaining} included league ${includedRemaining === 1 ? "slot" : "slots"} left in your Season Pass. Send the public ESPN league ID and team ID, then FantasyIQ can attach it to this dashboard.`;
+  }
+  if (summary) {
+    summary.innerHTML = `
+      <span>${count}/${limit} included leagues configured</span>
+      <strong>${needsPayment ? `Extra league add-on: ${htmlEscape(price)}` : "No extra payment needed yet"}</strong>
+    `;
+  }
+  if (primary) {
+    primary.textContent = needsPayment ? "Continue to Stripe" : "Validate ESPN IDs";
+    primary.onclick = () => {
+      if (needsPayment) {
+        window.open(additionalLeaguePaymentUrl(), "_blank", "noopener");
+      } else {
+        window.location.href = "../setup.html";
+      }
+      closeAddLeagueDialog();
+    };
+  }
+  if (secondary) {
+    secondary.textContent = "Email League Details";
+    secondary.onclick = () => {
+      window.location.href = addLeagueMailto();
+      closeAddLeagueDialog();
+    };
+  }
+  dialog.hidden = false;
 }
 
 const boardColumns = [
@@ -3615,7 +3710,7 @@ accountAction?.addEventListener("click", () => {
   }
 });
 leagueSelect?.addEventListener("change", () => setActiveLeague(leagueSelect.value));
-addLeagueAction?.addEventListener("click", openAdditionalLeaguePayment);
+addLeagueAction?.addEventListener("click", openAddLeagueDialog);
 
 const savedAutoSync = localStorage.getItem(loadoutStorageKey("auto-sync"));
 if (liveSyncToggle && savedAutoSync !== null) {
