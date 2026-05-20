@@ -2377,6 +2377,21 @@ code {
   min-height: 260px;
 }
 
+.mock-import-panel {
+  margin-top: 14px;
+}
+
+.compact-head {
+  margin-bottom: 12px;
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.compact-head h3 {
+  margin-bottom: 0;
+  font-size: 20px;
+}
+
 .sim-tools {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

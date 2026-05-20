@@ -65,9 +65,8 @@
         <button class="nav-item" data-section="draft">Draft Prep</button>
         <button class="nav-item" data-section="live">Draft Room</button>
         <button class="nav-item" data-section="simulator">Mock Simulator</button>
-        <button class="nav-item" data-section="mock">Mock Grader</button>
         <button class="nav-item" data-section="trade">Trade Calculator</button>
-        <button class="nav-item" data-section="workbooks">Workbooks</button>
+        <button class="nav-item" data-section="workbooks">Big Board</button>
       </nav>
 
       <section class="content">
@@ -650,40 +649,35 @@
               <div id="sim-log" class="pick-list">No mock picks yet.</div>
             </section>
           </div>
-        </section>
 
-        <section class="panel" id="mock">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Mock Grader</p>
-              <h2>Quick roster-shape check</h2>
+          <section class="live-panel mock-import-panel">
+            <div class="panel-head compact-head">
+              <div>
+                <p class="eyebrow">External Mock Import</p>
+                <h3>Grade pasted mock picks</h3>
+              </div>
             </div>
-          </div>
-
-          <div class="result">
-            ESPN public league data is connected for league settings. ESPN account mock draft history is not exposed through the public API, so this tracker imports mock picks you paste from ESPN, FantasyPros, or Sleeper until authenticated export is available.
-          </div>
-
-          <form class="grader" id="mock-form">
-            <label>QB <input name="QB" type="number" min="0" max="4" value="1" /></label>
-            <label>RB <input name="RB" type="number" min="0" max="10" value="5" /></label>
-            <label>WR <input name="WR" type="number" min="0" max="10" value="6" /></label>
-            <label>TE <input name="TE" type="number" min="0" max="4" value="1" /></label>
-            <label>DST <input name="DST" type="number" min="0" max="3" value="1" /></label>
-            <label>K <input name="K" type="number" min="0" max="3" value="1" /></label>
-            <label>QB round <input name="qbRound" type="number" min="0" max="16" value="6" /></label>
-            <label>TE round <input name="teRound" type="number" min="0" max="16" value="8" /></label>
-            <button type="submit">Grade Shape</button>
-          </form>
-
-          <div class="result" id="mock-result" aria-live="polite">
-            Fill counts, then use the mock pick tracker below for pick-by-pick value checks.
-          </div>
-
-          <h3>Mock Pick Tracker</h3>
-          <textarea id="mock-paste" class="paste-box" placeholder="Paste picks like:&#10;1,2,Ja'Marr Chase&#10;2,23,James Cook&#10;3,26,Trey McBride"></textarea>
-          <button id="grade-mock-picks" type="button" class="primary-action">Grade Mock Picks</button>
-          <div id="mock-pick-output" class="result">Paste round, pick, player. I will grade each as steal, good value, fair, or reach against the board.</div>
+            <div class="result">
+              Paste picks from ESPN, FantasyPros, or Sleeper when you want a quick pick-by-pick value check outside the live simulator.
+            </div>
+            <form class="grader" id="mock-form">
+              <label>QB <input name="QB" type="number" min="0" max="4" value="1" /></label>
+              <label>RB <input name="RB" type="number" min="0" max="10" value="5" /></label>
+              <label>WR <input name="WR" type="number" min="0" max="10" value="6" /></label>
+              <label>TE <input name="TE" type="number" min="0" max="4" value="1" /></label>
+              <label>DST <input name="DST" type="number" min="0" max="3" value="1" /></label>
+              <label>K <input name="K" type="number" min="0" max="3" value="1" /></label>
+              <label>QB round <input name="qbRound" type="number" min="0" max="16" value="6" /></label>
+              <label>TE round <input name="teRound" type="number" min="0" max="16" value="8" /></label>
+              <button type="submit">Grade Shape</button>
+            </form>
+            <div class="result" id="mock-result" aria-live="polite">
+              Fill counts, then paste picks for pick-by-pick value checks.
+            </div>
+            <textarea id="mock-paste" class="paste-box" placeholder="Paste picks like:&#10;1,2,Ja'Marr Chase&#10;2,23,James Cook&#10;3,26,Trey McBride"></textarea>
+            <button id="grade-mock-picks" type="button" class="primary-action">Grade Mock Picks</button>
+            <div id="mock-pick-output" class="result">Paste round, pick, player. I will grade each as steal, good value, fair, or reach against the board.</div>
+          </section>
         </section>
 
         <section class="panel" id="trade">
@@ -784,8 +778,8 @@
         <section class="panel" id="workbooks">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Excel Boards</p>
-              <h2>Ranked boards</h2>
+              <p class="eyebrow">Big Board</p>
+              <h2>Ranked player board</h2>
             </div>
           </div>
 
