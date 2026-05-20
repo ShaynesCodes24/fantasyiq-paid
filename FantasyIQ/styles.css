@@ -897,6 +897,45 @@ textarea {
   padding: 14px;
 }
 
+.first-run-guide {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.first-run-guide article {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 4px 10px;
+  align-items: start;
+  border: 1px solid rgba(216, 202, 168, 0.78);
+  border-radius: 8px;
+  background: #fffdf7;
+  padding: 12px;
+}
+
+.first-run-guide span {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: #e5f2ee;
+  color: var(--accent);
+  font-weight: 950;
+  grid-row: span 2;
+}
+
+.first-run-guide strong {
+  color: var(--ink);
+}
+
+.first-run-guide small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
 .command-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -2262,6 +2301,26 @@ code {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.cheatcode-more {
+  margin-top: 12px;
+}
+
+.cheatcode-more summary {
+  display: grid;
+  min-height: 42px;
+  cursor: pointer;
+  border: 1px solid rgba(243, 208, 113, 0.3);
+  border-radius: 8px;
+  background: rgba(18, 63, 52, 0.08);
+  color: var(--accent);
+  padding: 11px 14px;
+  font-weight: 950;
+}
+
+.cheatcode-more[open] summary {
+  margin-bottom: 12px;
+}
+
 .cheatcode-panel {
   display: grid;
   align-content: start;
@@ -2656,6 +2715,7 @@ code {
   .board-tools,
   .web-board,
   .command-hero,
+  .first-run-guide,
   .command-grid,
   .strategy-grid,
   .round-guide,
@@ -3420,6 +3480,7 @@ body {
 
 .metric-grid,
 .command-grid,
+.first-run-guide,
 .cheatcode-grid,
 .cheatcode-grid.secondary,
 .live-grid,

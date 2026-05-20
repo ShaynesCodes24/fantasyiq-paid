@@ -94,6 +94,7 @@ Recommended checkout/onboarding flow:
 - `scripts/fulfill_latest_stripe_order.py`: fetches the latest paid Stripe checkout and updates `customers.csv`.
 - `scripts/check_product_readiness.py`: checks the live website, dashboard, Stripe link, and API.
 - `scripts/check_security_setup.py`: checks tracked files, deploy ignores, and public Vercel config for secure setup.
+- `scripts/sync_dashboard_mirror.js`: syncs the local `FantasyIQ` dashboard mirror from the deploy source in `public/FantasyIQ`.
 - `scripts/secure_launch_setup.py`: orchestrates secure local checks plus optional Stripe, Vercel env, deploy, and readiness steps.
 - `public/setup.html`: validates ESPN league ID, team ID, and season against ESPN before setup.
 - `public/admin.html`: token-protected owner view that reads `/api/admin-customers`.

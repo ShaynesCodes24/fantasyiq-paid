@@ -289,7 +289,10 @@ let liveTimer = null;
 let mockSim = null;
 let selectedBoardPlayerKey = null;
 const LIVE_SYNC_INTERVAL_MS = 8000;
+const INITIAL_BOARD_LIMIT = 180;
+const CUSTOMER_SESSION_DAYS = 30;
 let activePlayerAutocomplete = null;
+let fullBoardLoadStarted = false;
 
 function rememberedCustomerLoadout(loadouts) {
   try {
@@ -400,11 +403,33 @@ function requiresCustomerAccess() {
 }
 
 function savedCustomerAccessCode() {
-  return localStorage.getItem(loadoutStorageKey("access-code")) || "";
+  const key = loadoutStorageKey("access-code");
+  const raw = localStorage.getItem(key) || "";
+  if (!raw) return "";
+  if (!raw.trim().startsWith("{")) return raw;
+  try {
+    const session = JSON.parse(raw);
+    if (!session.code) return "";
+    if (session.expiresAt && Date.now() > Number(session.expiresAt)) {
+      localStorage.removeItem(key);
+      return "";
+    }
+    return String(session.code || "");
+  } catch (error) {
+    return raw;
+  }
 }
 
 function setCustomerAccessCode(value) {
-  localStorage.setItem(loadoutStorageKey("access-code"), value.trim());
+  const now = Date.now();
+  localStorage.setItem(
+    loadoutStorageKey("access-code"),
+    JSON.stringify({
+      code: value.trim(),
+      signedAt: now,
+      expiresAt: now + CUSTOMER_SESSION_DAYS * 24 * 60 * 60 * 1000,
+    }),
+  );
   localStorage.setItem("fantasy-dashboard:last-loadout", appConfig.loadoutKey || "");
   if (appConfig.leagueKey) {
     localStorage.setItem(`fantasy-dashboard:${appConfig.loadoutKey || "default"}:last-league`, appConfig.leagueKey);
@@ -1000,7 +1025,11 @@ function openAddLeagueDialog() {
       if (needsPayment) {
         window.open(additionalLeaguePaymentUrl(), "_blank", "noopener");
       } else {
-        window.location.href = "../setup.html";
+        const setupUrl = new URL("../setup.html", window.location.href);
+        if (appConfig.loadoutKey && appConfig.loadoutKey !== "default") {
+          setupUrl.searchParams.set("customer", appConfig.loadoutKey);
+        }
+        window.location.href = `${setupUrl.pathname}${setupUrl.search}`;
       }
       closeAddLeagueDialog();
     };
@@ -3525,16 +3554,60 @@ function startLiveSync() {
   liveTimer = window.setInterval(() => loadLiveDraft(), LIVE_SYNC_INTERVAL_MS);
 }
 
+function liveBoardRequestUrl(limit = "") {
+  const liveBoardUrl = appConfig.liveBoardUrl || "/api/live-boards";
+  if (liveBoardUrl.startsWith("/api/")) {
+    return apiUrl(liveBoardUrl, { v: Date.now(), limit });
+  }
+  const params = new URLSearchParams({ v: String(Date.now()) });
+  if (limit) params.set("limit", String(limit));
+  return `${liveBoardUrl}${liveBoardUrl.includes("?") ? "&" : "?"}${params.toString()}`;
+}
+
+function applyBoardPayload(data) {
+  boardData = data;
+  applyServerCustomerContext(data.customer);
+  renderLeagueProfile();
+  renderBoard();
+  renderCheatcodeMode();
+  renderLiveDraft();
+  renderLiveTierBoard();
+  renderMockSimulator();
+  renderTradeCalc();
+  refreshActivePlayerAutocomplete();
+}
+
+function combinedBoardCount(data = boardData) {
+  return data?.boards?.combined?.rows?.length || 0;
+}
+
+function loadFullBoardInBackground() {
+  if (fullBoardLoadStarted || !(appConfig.liveBoardUrl || "/api/live-boards").startsWith("/api/")) return;
+  fullBoardLoadStarted = true;
+  fetch(liveBoardRequestUrl(), { cache: "no-store", headers: apiHeaders() })
+    .then((response) => {
+      if (!response.ok) throw new Error(`Full board returned HTTP ${response.status}`);
+      return response.json();
+    })
+    .then((data) => {
+      if (combinedBoardCount(data) <= combinedBoardCount()) return;
+      applyBoardPayload(data);
+      if (boardStatus) {
+        boardStatus.textContent = `Full board loaded: ${combinedBoardCount(data)} players with live league scoring.`;
+      }
+    })
+    .catch((error) => {
+      console.warn("Full board background load failed.", error);
+    });
+}
+
 function loadBoards() {
   if (!ensureCustomerAccess()) return;
+  fullBoardLoadStarted = false;
   if (boardStatus) {
-    boardStatus.textContent = "Loading live ESPN board...";
+    boardStatus.textContent = "Loading starter ESPN board...";
   }
-  const liveBoardUrl = appConfig.liveBoardUrl || "/api/live-boards";
-  const boardRequestUrl = liveBoardUrl.startsWith("/api/")
-    ? apiUrl(liveBoardUrl, { v: Date.now() })
-    : `${liveBoardUrl}${liveBoardUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
-  fetch(boardRequestUrl, { cache: "no-store", headers: apiHeaders() })
+  fetch(liveBoardRequestUrl(INITIAL_BOARD_LIMIT), { cache: "no-store", headers: apiHeaders() })
     .then((response) => {
       if (!response.ok) throw new Error(`Live board returned HTTP ${response.status}`);
       return response.json();
@@ -3553,16 +3626,13 @@ function loadBoards() {
       });
     })
     .then((data) => {
-      boardData = data;
-      applyServerCustomerContext(data.customer);
-      renderLeagueProfile();
-      renderBoard();
-      renderCheatcodeMode();
-      renderLiveDraft();
-      renderLiveTierBoard();
-      renderMockSimulator();
-      renderTradeCalc();
-      refreshActivePlayerAutocomplete();
+      applyBoardPayload(data);
+      if (combinedBoardCount(data) >= INITIAL_BOARD_LIMIT) {
+        if (boardStatus) {
+          boardStatus.textContent = `Starter board loaded: ${combinedBoardCount(data)} players. Loading full board quietly...`;
+        }
+        loadFullBoardInBackground();
+      }
     })
     .catch((error) => {
       if (boardStatus) {

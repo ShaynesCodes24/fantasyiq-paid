@@ -23,12 +23,16 @@
         <p class="eyebrow">Customer Setup</p>
         <h1>Validate ESPN league details</h1>
         <p>
-          Use the same ESPN league ID, team ID, and season from checkout. The validator confirms the public ESPN league can be reached
-          and that the team ID belongs to that league.
+          Use the same ESPN league ID, team ID, and season from checkout. The validator confirms the public ESPN league can be reached,
+          checks that the team ID belongs to that league, and builds the setup packet FantasyIQ needs.
         </p>
 
         <form class="tool-card" id="setup-form">
           <div class="field-grid">
+            <label>
+              League label
+              <input id="league-label" name="leagueLabel" autocomplete="off" placeholder="Home league" />
+            </label>
             <label>
               ESPN league ID
               <input id="league-id" name="leagueId" inputmode="numeric" autocomplete="off" required />
@@ -40,6 +44,34 @@
             <label>
               Season
               <input id="season" name="season" inputmode="numeric" value="2026" required />
+            </label>
+            <label>
+              Scoring
+              <select id="scoring-type" name="scoringType">
+                <option value="ppr">Full PPR</option>
+                <option value="half-ppr">Half PPR</option>
+                <option value="standard">Standard</option>
+              </select>
+            </label>
+            <label>
+              Teams
+              <input id="team-count" name="teamCount" inputmode="numeric" value="12" required />
+            </label>
+            <label>
+              Flex
+              <input id="flex-count" name="flexCount" inputmode="numeric" value="1" required />
+            </label>
+            <label>
+              Superflex
+              <input id="superflex-count" name="superflexCount" inputmode="numeric" value="0" required />
+            </label>
+            <label>
+              Bench
+              <input id="bench-count" name="benchCount" inputmode="numeric" value="7" required />
+            </label>
+            <label>
+              Draft rounds
+              <input id="draft-rounds" name="draftRounds" inputmode="numeric" value="16" required />
             </label>
           </div>
           <div class="button-row">
@@ -54,6 +86,9 @@
     <script>
       const form = document.querySelector("#setup-form");
       const result = document.querySelector("#setup-result");
+      const pageParams = new URLSearchParams(window.location.search);
+      const customerSlug = pageParams.get("customer") || pageParams.get("dashboard") || "";
+      const setupStorageKey = "fantasyiq:last-validated-league";
 
       function escapeHtml(value) {
         return String(value || "")
@@ -77,6 +112,78 @@
           .join("")}</div>`;
       }
 
+      function slugify(value) {
+        return String(value || "")
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "") || "league";
+      }
+
+      function scoringLabel(type) {
+        if (type === "half-ppr") return "Half PPR";
+        if (type === "standard") return "Standard";
+        return "Full PPR";
+      }
+
+      function setupPacket(data, payload) {
+        const leagueLabel = data.get("leagueLabel") || payload.leagueName || "ESPN league";
+        return {
+          customer: customerSlug,
+          leagueKey: slugify(leagueLabel),
+          label: leagueLabel,
+          leagueName: payload.leagueName,
+          leagueId: payload.leagueId,
+          teamId: payload.teamId,
+          teamName: payload.teamName,
+          season: payload.season,
+          leagueSettings: {
+            teamCount: Number(data.get("teamCount") || payload.teamCount || 12),
+            scoringType: data.get("scoringType") || "ppr",
+            scoringLabel: scoringLabel(data.get("scoringType") || "ppr"),
+            lineupSlots: {
+              QB: 1,
+              RB: 2,
+              WR: 2,
+              TE: 1,
+              FLEX: Number(data.get("flexCount") || 1),
+              SUPERFLEX: Number(data.get("superflexCount") || 0),
+              DST: 1,
+              K: 1,
+              BE: Number(data.get("benchCount") || 7),
+              IR: 1,
+            },
+            draftRounds: Number(data.get("draftRounds") || 16),
+            playoffTeams: 6,
+            source: "Customer setup validator",
+          },
+        };
+      }
+
+      function previewUrl(packet) {
+        const preview = new URL("./FantasyIQ/", window.location.href);
+        if (packet.customer) preview.searchParams.set("customer", packet.customer);
+        preview.searchParams.set("leagueLabel", packet.label);
+        preview.searchParams.set("teamName", packet.teamName);
+        preview.searchParams.set("teamId", packet.teamId);
+        preview.searchParams.set("teamCount", packet.leagueSettings.teamCount);
+        preview.searchParams.set("scoring", packet.leagueSettings.scoringType);
+        preview.searchParams.set("flex", packet.leagueSettings.lineupSlots.FLEX);
+        preview.searchParams.set("superflex", packet.leagueSettings.lineupSlots.SUPERFLEX);
+        preview.searchParams.set("bench", packet.leagueSettings.lineupSlots.BE);
+        preview.searchParams.set("rounds", packet.leagueSettings.draftRounds);
+        return preview.pathname + preview.search;
+      }
+
+      async function copyPacket(button, packet) {
+        try {
+          await navigator.clipboard.writeText(JSON.stringify(packet, null, 2));
+          button.textContent = "Copied setup packet";
+        } catch (error) {
+          button.textContent = "Copy failed";
+        }
+      }
+
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         result.innerHTML = "<strong>Checking ESPN...</strong>";
@@ -86,11 +193,22 @@
           const response = await fetch(`/api/setup-validate?${params.toString()}`, { cache: "no-store" });
           const payload = await response.json();
           if (payload.ok) {
+            const packet = setupPacket(data, payload);
+            localStorage.setItem(setupStorageKey, JSON.stringify(packet));
+            const packetJson = escapeHtml(JSON.stringify(packet, null, 2));
             result.innerHTML = `
               <strong>Ready: ${escapeHtml(payload.leagueName)} / ${escapeHtml(payload.teamName)}</strong>
-              <p>Team ID ${escapeHtml(payload.teamId)} was found for the ${escapeHtml(payload.season)} season. Send this setup to support if your dashboard is not configured yet.</p>
+              <p>Team ID ${escapeHtml(payload.teamId)} was found for the ${escapeHtml(payload.season)} season. This setup packet is saved in this browser and ready to attach to the customer dashboard.</p>
+              <div class="button-row setup-actions">
+                <a class="primary dark" href="${escapeHtml(previewUrl(packet))}">Preview dashboard settings</a>
+                <button class="primary" id="copy-setup-packet" type="button">Copy setup packet</button>
+              </div>
+              <pre class="setup-packet">${packetJson}</pre>
               ${renderTeams(payload.teams)}
             `;
+            result.querySelector("#copy-setup-packet")?.addEventListener("click", (copyEvent) => {
+              copyPacket(copyEvent.currentTarget, packet);
+            });
             return;
           }
           result.innerHTML = `

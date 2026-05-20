@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>FantasyIQ</title>
-    <link rel="stylesheet" href="./styles.css?v=20260520_customer_ops_18" />
+    <link rel="stylesheet" href="./styles.css?v=20260520_customer_ops_19" />
   </head>
   <body>
     <div class="field-overlay" aria-hidden="true">
@@ -121,6 +121,29 @@
           <div class="league-profile-strip" id="league-profile-strip">
             <strong>League engine active</strong>
             <span>Draft Room, Mock Simulator, Big Board values, and Trade Calculator are using this league profile.</span>
+          </div>
+
+          <div class="first-run-guide" aria-label="First run checklist">
+            <article>
+              <span>1</span>
+              <strong>Confirm league</strong>
+              <small>Use Active League at the top before draft prep.</small>
+            </article>
+            <article>
+              <span>2</span>
+              <strong>Select your team</strong>
+              <small>Draft Room personalizes timing after team selection.</small>
+            </article>
+            <article>
+              <span>3</span>
+              <strong>Sync once</strong>
+              <small>Run Sync Now before draft day to verify ESPN access.</small>
+            </article>
+            <article>
+              <span>4</span>
+              <strong>Mock from slot</strong>
+              <small>Practice the build before the room is live.</small>
+            </article>
           </div>
 
           <div class="command-grid">
@@ -326,28 +349,31 @@
               </section>
             </div>
 
-            <div class="cheatcode-grid secondary">
-              <section class="live-panel cheatcode-panel">
-                <p class="eyebrow">Tier Cliff</p>
-                <h3>Do not miss</h3>
-                <div id="cheatcode-tier" class="intel-list">Waiting for tiers.</div>
-              </section>
-              <section class="live-panel cheatcode-panel">
-                <p class="eyebrow">Wait</p>
-                <h3>Likely returns</h3>
-                <div id="cheatcode-wait" class="pick-list">Waiting for team context.</div>
-              </section>
-              <section class="live-panel cheatcode-panel">
-                <p class="eyebrow">Avoid</p>
-                <h3>Under clock</h3>
-                <div id="cheatcode-avoid" class="pick-list">Waiting for team context.</div>
-              </section>
-              <section class="live-panel cheatcode-panel">
-                <p class="eyebrow">Room</p>
-                <h3>Draft pulse</h3>
-                <div id="cheatcode-room" class="intel-list">Waiting for live picks.</div>
-              </section>
-            </div>
+            <details class="cheatcode-more">
+              <summary>More draft intelligence</summary>
+              <div class="cheatcode-grid secondary">
+                <section class="live-panel cheatcode-panel">
+                  <p class="eyebrow">Tier Cliff</p>
+                  <h3>Do not miss</h3>
+                  <div id="cheatcode-tier" class="intel-list">Waiting for tiers.</div>
+                </section>
+                <section class="live-panel cheatcode-panel">
+                  <p class="eyebrow">Wait</p>
+                  <h3>Likely returns</h3>
+                  <div id="cheatcode-wait" class="pick-list">Waiting for team context.</div>
+                </section>
+                <section class="live-panel cheatcode-panel">
+                  <p class="eyebrow">Avoid</p>
+                  <h3>Under clock</h3>
+                  <div id="cheatcode-avoid" class="pick-list">Waiting for team context.</div>
+                </section>
+                <section class="live-panel cheatcode-panel">
+                  <p class="eyebrow">Room</p>
+                  <h3>Draft pulse</h3>
+                  <div id="cheatcode-room" class="intel-list">Waiting for live picks.</div>
+                </section>
+              </div>
+            </details>
           </div>
 
           <div class="live-hero-grid">
@@ -833,7 +859,7 @@
       </section>
     </main>
 
-    <script src="./config.js?v=20260520_customer_ops_18"></script>
-    <script src="./app.js?v=20260520_customer_ops_18"></script>
+    <script src="./config.js?v=20260520_customer_ops_19"></script>
+    <script src="./app.js?v=20260520_customer_ops_19"></script>
   </body>
 </html>
