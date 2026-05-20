@@ -7,7 +7,9 @@ details, and you configure/deploy their dashboard manually.
 Price model:
 
 ```text
-$25 per league / year
+$30/year FantasyIQ Season Pass
+Includes up to 3 public ESPN fantasy football leagues on one account dashboard.
+Additional leagues beyond 3: $5/year each.
 ```
 
 Sales model:
@@ -72,12 +74,12 @@ trade discipline, and league branding.
 
 Recommended checkout/onboarding flow:
 
-1. Customer pays $25/year.
-2. Checkout collects ESPN league ID, ESPN team ID, and season.
-3. Customer or owner validates the IDs at `/setup.html`.
-4. You confirm the ESPN league is public.
+1. Customer buys the $30/year Season Pass.
+2. Customer sends one to three ESPN league IDs, ESPN team IDs, seasons, and settings.
+3. Customer or owner validates each league at `/setup.html`.
+4. You confirm each ESPN league is public.
 5. You configure the Vercel env/customer registry for that customer.
-6. You email the customer their dashboard link and renewal date.
+6. You email the customer their dashboard link, access code, and renewal date.
 
 ## Launch Files
 
@@ -107,7 +109,13 @@ Recommended checkout/onboarding flow:
 Current payment link:
 
 ```text
-https://buy.stripe.com/eVq3cvdN71GX84E917efC00
+https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01
+```
+
+Additional league add-on link for customers with more than three leagues:
+
+```text
+https://buy.stripe.com/dRmcN5aAV1GX0Cc7X3efC02
 ```
 
 ## Public Demo
@@ -147,7 +155,8 @@ siteName: "FantasyIQ",
 leagueName: "Customer League Name",
 leagueSubtitle: "ESPN PPR Redraft",
 logoUrl: "./assets/league-logo.jpeg",
-draftCardValue: "$25 / year",
+draftCardValue: "$30 / year",
+draftCardNote: "Season Pass for up to 3 ESPN leagues",
 supportEmail: "shayneholladay@gmail.com",
 leagueSettings: {
   teamCount: 12,
@@ -202,10 +211,12 @@ Live endpoint:
 /api/live-draft
 ```
 
-Multi-customer API calls can include a customer slug:
+Multi-customer and multi-league API calls can include a customer slug and a
+league key:
 
 ```text
 /api/live-draft?customer=katelyn
+/api/live-draft?customer=shayne&league=home
 /api/trade-history?customer=katelyn
 ```
 
@@ -216,6 +227,7 @@ dashboards automatically, even when the slug is only defined in
 ```text
 /FantasyIQ/?customer=katelyn
 /FantasyIQ/?customer=new-customer-slug
+/FantasyIQ/?customer=shayne&league=home
 ```
 
 Any requested customer slug enables customer access handling, removes demo
@@ -245,6 +257,51 @@ to an object keyed by customer slug:
       "lineupSlots": { "QB": 1, "RB": 2, "WR": 2, "TE": 1, "FLEX": 1, "SUPERFLEX": 0, "DST": 1, "K": 1, "BE": 7, "IR": 1 },
       "draftRounds": 16,
       "playoffTeams": 6
+    }
+  }
+}
+```
+
+For one customer with multiple leagues, nest league profiles under `leagues`.
+Each profile can carry its own ESPN league ID, team ID, team name, scoring,
+team count, lineup slots, draft rounds, and playoff count. The dashboard shows
+a top league switcher and all API calls include the active `league` key.
+
+```json
+{
+  "shayne": {
+    "customerName": "Shayne Holladay",
+    "status": "configured",
+    "accessCode": "customer_code_here",
+    "defaultLeague": "home",
+    "leagues": {
+      "home": {
+        "label": "Home League",
+        "leagueId": 123456789,
+        "teamId": 1,
+        "teamName": "Gronk if you like TDs",
+        "season": 2026,
+        "leagueSettings": {
+          "teamCount": 12,
+          "scoringType": "ppr",
+          "lineupSlots": { "QB": 1, "RB": 2, "WR": 2, "TE": 1, "FLEX": 1, "SUPERFLEX": 0, "DST": 1, "K": 1, "BE": 7, "IR": 1 },
+          "draftRounds": 16,
+          "playoffTeams": 6
+        }
+      },
+      "work": {
+        "label": "Work League",
+        "leagueId": 234567890,
+        "teamId": 4,
+        "season": 2026,
+        "leagueSettings": {
+          "teamCount": 10,
+          "scoringType": "half-ppr",
+          "lineupSlots": { "QB": 1, "RB": 2, "WR": 2, "TE": 1, "FLEX": 2, "SUPERFLEX": 0, "DST": 1, "K": 1, "BE": 6, "IR": 1 },
+          "draftRounds": 16,
+          "playoffTeams": 4
+        }
+      }
     }
   }
 }
@@ -296,13 +353,15 @@ python .\scripts\check_product_readiness.py
 
 ## Important Product Notes
 
-This folder is ready for one-customer-per-deployment white-label sales.
+This folder is ready for one deployment serving multiple customer dashboards,
+with each customer able to carry one or more league profiles.
 
 For v1, keep setup manual and track subscriptions in Stripe, a spreadsheet, or
-your customer records. Each renewal is simply another year of access/support for
-that league dashboard. The repo now has setup validation, admin scaffolding,
-customer-scoped browser settings, multi-customer API routing, and a verified
-Stripe webhook endpoint ready for a future database.
+your customer records. Each renewal is another year of access/support for that
+customer dashboard and its included league profiles. The repo now has setup
+validation, admin scaffolding, customer-scoped browser settings, multi-customer
+and multi-league API routing, and a verified Stripe webhook endpoint ready for a
+future database.
 
 For a true SaaS subscription product later, add these next:
 

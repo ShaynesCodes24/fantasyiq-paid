@@ -90,7 +90,7 @@ def admin_payload() -> dict[str, Any]:
         "customers": csv_rows,
         "registry": registry_rows,
         "nextActions": [
-            "Set FANTASY_IQ_CUSTOMERS_JSON when one deployment needs to serve more than one league.",
+            "Set FANTASY_IQ_CUSTOMERS_JSON when one deployment needs to serve multiple customers or league profiles.",
             "Set FANTASYIQ_ADMIN_TOKEN in Vercel before using this endpoint in production.",
             "Add a persistent database before relying on webhooks for fully automatic customer creation.",
         ],

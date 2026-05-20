@@ -9,8 +9,8 @@ Subject: FantasyIQ setup details
 
 Thanks for grabbing FantasyIQ.
 
-I will configure your ESPN league dashboard manually. Please reply with the
-details below:
+I will configure your ESPN league dashboard manually. Your Season Pass includes
+up to three ESPN leagues. Please reply with the details below:
 
 How to find the ESPN IDs:
 1. Open your ESPN fantasy league in a web browser, not just the mobile app.
@@ -21,6 +21,10 @@ How to find the ESPN IDs:
 
 Name:
 Email:
+How many leagues should I configure? 1 / 2 / 3
+
+Send this block for each league:
+League label/nickname:
 ESPN league ID:
 ESPN team ID:
 Season:
@@ -68,9 +72,9 @@ Access code:
 Renewal date:
 [renewal date]
 
-Before draft day, please open the Draft Room tab and confirm that your league
-name and teams load correctly. If anything looks off, reply here and I will
-check the setup.
+Before draft day, please open the Draft Room tab, use the league switcher if
+you have more than one league, and confirm that each league name and team list
+loads correctly. If anything looks off, reply here and I will check the setup.
 
 Support email:
 shayneholladay@gmail.com
@@ -83,8 +87,9 @@ Subject: FantasyIQ renewal reminder
 
 Your FantasyIQ dashboard renews on [renewal date].
 
-The renewal is $25/year for your ESPN league dashboard. Reply here if you want
-to renew, update your league details, or cancel before renewal.
+The renewal is $30/year for your FantasyIQ Season Pass and includes up to three
+ESPN leagues. Reply here if you want to renew, update your league details, add
+another league, or cancel before renewal.
 ```
 
 ## Support Reply

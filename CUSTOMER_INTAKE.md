@@ -25,6 +25,13 @@ How to find the ESPN IDs:
 ```
 
 ```text
+How many ESPN leagues should be configured? 1 / 2 / 3
+```
+
+Send this block for each league:
+
+```text
+League label/nickname:
 ESPN league ID:
 ESPN team ID:
 Season:
@@ -54,6 +61,7 @@ Preferred colors, if any:
 
 ```text
 I understand live sync currently requires a public ESPN league.
-I understand this is a $25/year dashboard for one ESPN league.
+I understand the $30/year Season Pass includes up to three ESPN leagues.
+I understand leagues beyond the included three are $5/year each.
 I understand setup is completed manually after I submit my league details.
 ```

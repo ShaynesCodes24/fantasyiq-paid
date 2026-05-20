@@ -15,7 +15,7 @@ from local_env import load_local_env
 
 
 API_BASE = "https://api.stripe.com/v1"
-DEFAULT_PAYMENT_LINK_URL = "https://buy.stripe.com/eVq3cvdN71GX84E917efC00"
+DEFAULT_PAYMENT_LINK_URL = "https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01"
 DEFAULT_DASHBOARD_URL = "https://fantasyiq-paid.vercel.app/FantasyIQ/"
 ESPN_BASE = "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl"
 CUSTOMER_CSV = Path("customers.csv")

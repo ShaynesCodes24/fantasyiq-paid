@@ -21,10 +21,12 @@ class CustomerContext:
     league_id: int | None
     season: int
     customer_name: str = ""
+    league_key: str = ""
     customer_team_id: int | None = None
     customer_team_name: str = ""
     league_name: str = ""
     league_settings: dict[str, Any] = field(default_factory=dict)
+    available_leagues: list[dict[str, Any]] = field(default_factory=list)
     status: str = "configured"
     access_code: str = ""
     demo_mode: bool = False
@@ -32,17 +34,19 @@ class CustomerContext:
 
     @property
     def cache_key(self) -> str:
-        return f"{self.slug}:{self.league_id or 'demo'}:{self.season}"
+        return f"{self.slug}:{self.league_key or 'primary'}:{self.league_id or 'demo'}:{self.season}"
 
     def public_dict(self) -> dict[str, Any]:
         return {
             "customerSlug": self.slug,
             "customerName": self.customer_name,
+            "leagueKey": self.league_key,
             "customerTeamId": self.customer_team_id,
             "customerTeamName": self.customer_team_name,
             "leagueId": self.league_id,
             "leagueName": self.league_name,
             "leagueSettings": self.league_settings,
+            "leagues": self.available_leagues,
             "season": self.season,
             "status": self.status,
             "accessRequired": bool(self.access_code),
@@ -90,27 +94,148 @@ def dict_value(value: Any) -> dict[str, Any]:
     return {}
 
 
-def normalize_customer_entry(slug: str, entry: dict[str, Any]) -> CustomerContext:
-    season = int_value(entry_value(entry, "season", "espnSeason", default=DEFAULT_SEASON), "season", DEFAULT_SEASON)
-    league_id = int_value(entry_value(entry, "league_id", "leagueId", "espnLeagueId"), "leagueId")
-    team_id = int_value(entry_value(entry, "team_id", "teamId", "customerTeamId"), "teamId")
+def merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    merged = {**base, **override}
+    if isinstance(base.get("lineupSlots"), dict) or isinstance(override.get("lineupSlots"), dict):
+        merged["lineupSlots"] = {
+            **(base.get("lineupSlots") or {}),
+            **(override.get("lineupSlots") or {}),
+        }
+    return merged
+
+
+def league_settings_from_entry(entry: dict[str, Any]) -> dict[str, Any]:
+    settings = dict_value(entry_value(entry, "league_settings", "leagueSettings", default={}))
+    direct_keys = (
+        "teamCount",
+        "teams",
+        "scoringType",
+        "scoring",
+        "scoringLabel",
+        "receptionPoints",
+        "draftRounds",
+        "rounds",
+        "playoffTeams",
+        "source",
+    )
+    for key in direct_keys:
+        if entry.get(key) not in (None, ""):
+            settings[key] = entry[key]
+    lineup_slots = merge_dicts(
+        dict_value(entry_value(entry, "roster", default={})),
+        dict_value(entry_value(entry, "lineupSlots", default={})),
+    )
+    if lineup_slots:
+        existing_slots = settings.get("lineupSlots") if isinstance(settings.get("lineupSlots"), dict) else {}
+        settings["lineupSlots"] = merge_dicts(existing_slots, lineup_slots)
+    return settings
+
+
+def parsed_mapping(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, list):
+        mapped: dict[str, Any] = {}
+        for index, item in enumerate(value):
+            if not isinstance(item, dict):
+                continue
+            key = item.get("key") or item.get("slug") or item.get("leagueKey") or item.get("leagueName") or index
+            mapped[slugify(str(key))] = item
+        return mapped
+    if isinstance(value, str) and value.strip():
+        try:
+            return parsed_mapping(json.loads(value))
+        except json.JSONDecodeError:
+            return {}
+    return {}
+
+
+def league_entries(entry: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    raw = entry_value(entry, "leagues", "leagueProfiles", "league_profiles", default={})
+    return {
+        slugify(str(key)): value
+        for key, value in parsed_mapping(raw).items()
+        if isinstance(value, dict)
+    }
+
+
+def active_league_key(entry: dict[str, Any], leagues: dict[str, dict[str, Any]], requested: str = "") -> str:
+    if not leagues:
+        return ""
+    requested = slugify(requested) if requested else ""
+    default_key = slugify(str(entry_value(entry, "defaultLeague", "defaultLeagueKey", "leagueKey", default="")))
+    if requested and requested in leagues:
+        return requested
+    if default_key and default_key in leagues:
+        return default_key
+    return next(iter(leagues.keys()))
+
+
+def league_display_name(key: str, entry: dict[str, Any]) -> str:
+    return str(entry_value(entry, "label", "displayName", "league_name", "leagueName", default=key.replace("-", " ").title())).strip()
+
+
+def public_league_list(parent: dict[str, Any], leagues: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for key, entry in leagues.items():
+        settings = merge_dicts(
+            league_settings_from_entry(parent),
+            league_settings_from_entry(entry),
+        )
+        team_id = int_value(entry_value(entry, "team_id", "teamId", "customerTeamId"), "teamId")
+        team_name = str(entry_value(entry, "team_name", "teamName", "customerTeamName", default="")).strip()
+        league_name = str(entry_value(entry, "league_name", "leagueName", default=league_display_name(key, entry))).strip()
+        items.append(
+            {
+                "key": key,
+                "label": league_display_name(key, entry),
+                "leagueId": int_value(entry_value(entry, "league_id", "leagueId", "espnLeagueId"), "leagueId"),
+                "leagueName": league_name,
+                "teamId": team_id,
+                "teamName": team_name,
+                "customerTeamId": team_id,
+                "customerTeamName": team_name,
+                "season": int_value(entry_value(entry, "season", "espnSeason", default=entry_value(parent, "season", "espnSeason", default=DEFAULT_SEASON)), "season", DEFAULT_SEASON),
+                "leagueSettings": settings,
+            }
+        )
+    return items
+
+
+def normalize_customer_entry(slug: str, entry: dict[str, Any], selected_league: str = "", source: str = "FANTASY_IQ_CUSTOMERS_JSON") -> CustomerContext:
+    leagues = league_entries(entry)
+    league_key = active_league_key(entry, leagues, selected_league)
+    active_league = leagues.get(league_key, {})
+
+    def active_value(*names: str, default: Any = "") -> Any:
+        return entry_value(active_league, *names, default=entry_value(entry, *names, default=default))
+
+    season = int_value(active_value("season", "espnSeason", default=DEFAULT_SEASON), "season", DEFAULT_SEASON)
+    league_id = int_value(active_value("league_id", "leagueId", "espnLeagueId"), "leagueId")
+    team_id = int_value(active_value("team_id", "teamId", "customerTeamId"), "teamId")
+    league_settings = merge_dicts(
+        league_settings_from_entry(entry),
+        league_settings_from_entry(active_league),
+    )
     return CustomerContext(
         slug=slugify(str(entry_value(entry, "slug", default=slug))),
         league_id=league_id,
         season=season or DEFAULT_SEASON,
         customer_name=str(entry_value(entry, "customer_name", "customerName", "name", default="")).strip(),
+        league_key=league_key,
         customer_team_id=team_id,
-        customer_team_name=str(entry_value(entry, "team_name", "teamName", "customerTeamName", default="")).strip(),
-        league_name=str(entry_value(entry, "league_name", "leagueName", default="")).strip(),
-        league_settings=dict_value(entry_value(entry, "league_settings", "leagueSettings", default={})),
+        customer_team_name=str(active_value("team_name", "teamName", "customerTeamName", default="")).strip(),
+        league_name=str(active_value("league_name", "leagueName", default=league_display_name(league_key, active_league) if active_league else "")).strip(),
+        league_settings=league_settings,
+        available_leagues=public_league_list(entry, leagues),
         status=str(entry_value(entry, "status", default="configured")).strip() or "configured",
         access_code=str(entry_value(entry, "access_code", "accessCode", "customerAccessCode", "code", default="")).strip(),
         demo_mode=False,
-        source="FANTASY_IQ_CUSTOMERS_JSON",
+        source=source,
     )
 
 
-def customers_from_json() -> dict[str, CustomerContext]:
+def customers_from_json(selected_league: str = "") -> dict[str, CustomerContext]:
     raw = env("FANTASY_IQ_CUSTOMERS_JSON")
     if not raw:
         return {}
@@ -130,13 +255,42 @@ def customers_from_json() -> dict[str, CustomerContext]:
     for slug, entry in iterable:
         if not isinstance(entry, dict):
             continue
-        context = normalize_customer_entry(slug, entry)
+        context = normalize_customer_entry(slug, entry, selected_league)
         customers[context.slug] = context
     return customers
 
 
-def fallback_context(slug: str = "default") -> CustomerContext:
+def fallback_context(slug: str = "default", selected_league: str = "") -> CustomerContext:
+    leagues = parsed_mapping(env("FANTASY_IQ_LEAGUES_JSON"))
     configured_league = env("FANTASY_IQ_LEAGUE_ID")
+    if leagues:
+        entry = {
+            "slug": env("FANTASY_IQ_CUSTOMER_SLUG", slug),
+            "customerName": env("FANTASY_IQ_CUSTOMER_NAME"),
+            "status": env("FANTASY_IQ_CUSTOMER_STATUS", "configured"),
+            "accessCode": env("FANTASY_IQ_CUSTOMER_ACCESS_CODE"),
+            "defaultLeague": env("FANTASY_IQ_DEFAULT_LEAGUE"),
+            "leagueSettings": dict_value(env("FANTASY_IQ_LEAGUE_SETTINGS")),
+            "leagues": leagues,
+        }
+        context = normalize_customer_entry(slug, entry, selected_league, source="env")
+        return CustomerContext(
+            slug=context.slug,
+            league_id=context.league_id,
+            season=context.season,
+            customer_name=context.customer_name,
+            league_key=context.league_key,
+            customer_team_id=context.customer_team_id,
+            customer_team_name=context.customer_team_name,
+            league_name=context.league_name,
+            league_settings=context.league_settings,
+            available_leagues=context.available_leagues,
+            status=context.status,
+            access_code=context.access_code,
+            demo_mode=not bool(context.league_id),
+            source=context.source,
+        )
+
     league_id = int_value(configured_league, "FANTASY_IQ_LEAGUE_ID", DEFAULT_DEMO_LEAGUE_ID)
     season = int_value(env("FANTASY_IQ_SEASON"), "FANTASY_IQ_SEASON", DEFAULT_SEASON) or DEFAULT_SEASON
     team_id = int_value(env("FANTASY_IQ_CUSTOMER_TEAM_ID"), "FANTASY_IQ_CUSTOMER_TEAM_ID")
@@ -145,10 +299,12 @@ def fallback_context(slug: str = "default") -> CustomerContext:
         league_id=league_id,
         season=season,
         customer_name=env("FANTASY_IQ_CUSTOMER_NAME"),
+        league_key=slugify(env("FANTASY_IQ_DEFAULT_LEAGUE")) if env("FANTASY_IQ_DEFAULT_LEAGUE") else "",
         customer_team_id=team_id,
         customer_team_name=env("FANTASY_IQ_CUSTOMER_TEAM_NAME"),
         league_name=env("FANTASY_IQ_LEAGUE_NAME"),
         league_settings=dict_value(env("FANTASY_IQ_LEAGUE_SETTINGS")),
+        available_leagues=[],
         status=env("FANTASY_IQ_CUSTOMER_STATUS", "configured"),
         access_code=env("FANTASY_IQ_CUSTOMER_ACCESS_CODE"),
         demo_mode=not bool(configured_league),
@@ -163,9 +319,16 @@ def requested_customer_slug(path: str) -> str:
     return slugify(requested) if requested else ""
 
 
-def all_customer_contexts() -> dict[str, CustomerContext]:
-    customers = customers_from_json()
-    fallback = fallback_context(env("FANTASY_IQ_DEFAULT_CUSTOMER", "default"))
+def requested_league_slug(path: str) -> str:
+    parsed = urlparse(path)
+    params = parse_qs(parsed.query)
+    requested = params.get("league", [""])[0] or params.get("leagueKey", [""])[0]
+    return slugify(requested) if requested else ""
+
+
+def all_customer_contexts(selected_league: str = "") -> dict[str, CustomerContext]:
+    customers = customers_from_json(selected_league)
+    fallback = fallback_context(env("FANTASY_IQ_DEFAULT_CUSTOMER", "default"), selected_league)
     if fallback.slug not in customers:
         customers[fallback.slug] = fallback
     if "default" not in customers:
@@ -174,7 +337,8 @@ def all_customer_contexts() -> dict[str, CustomerContext]:
 
 
 def resolve_customer_context(path: str = "") -> CustomerContext:
-    customers = all_customer_contexts()
+    selected_league = requested_league_slug(path)
+    customers = all_customer_contexts(selected_league)
     requested = requested_customer_slug(path)
     if requested and requested in customers:
         return customers[requested]
@@ -191,10 +355,12 @@ def resolve_customer_context(path: str = "") -> CustomerContext:
             league_id=context.league_id,
             season=context.season,
             customer_name=context.customer_name,
+            league_key=context.league_key,
             customer_team_id=context.customer_team_id,
             customer_team_name=context.customer_team_name,
             league_name=context.league_name,
             league_settings=context.league_settings,
+            available_leagues=context.available_leagues,
             status=context.status,
             access_code=context.access_code,
             demo_mode=context.demo_mode,

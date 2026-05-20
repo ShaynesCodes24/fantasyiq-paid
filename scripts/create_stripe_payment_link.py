@@ -12,16 +12,16 @@ from local_env import load_local_env
 
 
 API_BASE = "https://api.stripe.com/v1"
-PRODUCT_NAME = "FantasyIQ League Dashboard"
-PRODUCT_DESCRIPTION = "One manually configured dashboard for one public ESPN fantasy football league."
-UNIT_AMOUNT_CENTS = 2500
+PRODUCT_NAME = "FantasyIQ Season Pass"
+PRODUCT_DESCRIPTION = "One manually configured dashboard account for up to three public ESPN fantasy football leagues."
+UNIT_AMOUNT_CENTS = 3000
 CURRENCY = "usd"
 SUPPORT_EMAIL = "shayneholladay@gmail.com"
 CONFIRMATION_MESSAGE = (
     "Thanks for subscribing to FantasyIQ. If any checkout field was missed, "
-    f"email {SUPPORT_EMAIL}. To find IDs in ESPN, open your league in a browser: "
+    f"email {SUPPORT_EMAIL}. To find IDs in ESPN, open each league in a browser: "
     "leagueId is in the URL after leagueId=, and teamId appears after teamId= "
-    "when viewing your team page."
+    "when viewing your team page. Your Season Pass includes up to three leagues."
 )
 
 
@@ -86,12 +86,12 @@ def create_payment_link() -> str:
             "line_items[0][quantity]": "1",
             "custom_fields[0][key]": "leagueid",
             "custom_fields[0][label][type]": "custom",
-            "custom_fields[0][label][custom]": "ESPN league ID",
+            "custom_fields[0][label][custom]": "Primary ESPN league ID",
             "custom_fields[0][type]": "text",
             "custom_fields[0][optional]": "false",
             "custom_fields[1][key]": "teamid",
             "custom_fields[1][label][type]": "custom",
-            "custom_fields[1][label][custom]": "ESPN team ID",
+            "custom_fields[1][label][custom]": "Primary ESPN team ID",
             "custom_fields[1][type]": "numeric",
             "custom_fields[1][optional]": "false",
             "custom_fields[2][key]": "season",

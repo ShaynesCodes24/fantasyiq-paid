@@ -52,8 +52,8 @@ def security_check() -> Step:
 
 def local_content_check() -> Step:
     checks = {
-        "public/index.html": ["Start setup", "Validate ESPN IDs", "Subscribe now"],
-        "public/FantasyIQ/config.js": ["Public demo preview", "showSubscribeButton: true", "$25 / year"],
+        "public/index.html": ["Start setup", "Validate ESPN IDs", "Start Season Pass"],
+        "public/FantasyIQ/config.js": ["Public demo preview", "showSubscribeButton: true", "$30 / year"],
         "SECURITY_SETUP.md": ["Do not put admin tokens in URLs", "customers.csv", "excluded from Vercel deploys"],
     }
     missing: list[str] = []
@@ -92,11 +92,11 @@ def stripe_webhook_setup(apply: bool) -> Step:
 def vercel_env_setup(apply: bool) -> Step:
     if not env("VERCEL_TOKEN"):
         return Step("Vercel env setup", "WARN", "Set VERCEL_TOKEN to write production env vars.")
-    if not (env("FANTASY_IQ_CUSTOMERS_JSON") or env("FANTASY_IQ_LEAGUE_ID")):
+    if not (env("FANTASY_IQ_CUSTOMERS_JSON") or env("FANTASY_IQ_LEAGUES_JSON") or env("FANTASY_IQ_LEAGUE_ID")):
         return Step(
             "Vercel env setup",
             "WARN",
-            "Set FANTASY_IQ_CUSTOMERS_JSON for multi-customer or FANTASY_IQ_LEAGUE_ID for one customer.",
+            "Set FANTASY_IQ_CUSTOMERS_JSON for customer/league profiles, FANTASY_IQ_LEAGUES_JSON for one customer with multiple leagues, or FANTASY_IQ_LEAGUE_ID for one customer.",
         )
     if not apply:
         return Step("Vercel env setup", "WARN", "Ready, but skipped. Re-run with --apply-vercel-env.")

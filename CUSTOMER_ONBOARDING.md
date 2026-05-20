@@ -1,6 +1,6 @@
 # Customer Onboarding Checklist
 
-Use this for each $25/year FantasyIQ concierge setup customer.
+Use this for each $30/year FantasyIQ Season Pass customer.
 
 ## Payment
 
@@ -26,6 +26,13 @@ If teamId is missing, use the customer's team name and verify it against the ESP
 ```text
 Name:
 Email:
+Number of leagues included:
+```
+
+Repeat this block for each league:
+
+```text
+League label/key:
 ESPN league ID:
 ESPN team ID:
 Season:
@@ -46,7 +53,7 @@ Use `CUSTOMER_INTAKE.md` as the customer-facing version of this form.
 3. Confirm league access:
 
 ```text
-The ESPN league must be public for live draft sync.
+Each ESPN league must be public for live draft sync.
 ```
 
 4. Configure branding:
@@ -62,6 +69,8 @@ public/FantasyIQ/assets/league-logo.jpeg
 FANTASY_IQ_LEAGUE_ID
 FANTASY_IQ_SEASON
 FANTASY_IQ_LEAGUE_SETTINGS
+FANTASY_IQ_CUSTOMERS_JSON
+FANTASY_IQ_LEAGUES_JSON
 ```
 
 6. Deploy to Vercel.
@@ -70,7 +79,9 @@ FANTASY_IQ_LEAGUE_SETTINGS
 
 ```text
 /FantasyIQ/
+/FantasyIQ/?customer=customer-slug&league=league-key
 /api/live-draft
+/api/live-draft?customer=customer-slug&league=league-key
 ```
 
 8. Send customer:
@@ -90,7 +101,9 @@ Your FantasyIQ dashboard is live:
 Dashboard:
 Access code:
 Renewal date:
+Included leagues:
 
-Live draft sync is connected to your public ESPN league. Before draft day,
-please open the Draft Room tab and confirm that your league name and teams load.
+Live draft sync is connected to your public ESPN leagues. Before draft day,
+please open the Draft Room tab, switch through each league, and confirm that
+league names and teams load.
 ```

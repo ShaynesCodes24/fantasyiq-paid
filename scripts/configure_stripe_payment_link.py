@@ -12,7 +12,7 @@ from local_env import load_local_env
 
 
 API_BASE = "https://api.stripe.com/v1"
-DEFAULT_PAYMENT_LINK_URL = "https://buy.stripe.com/eVq3cvdN71GX84E917efC00"
+DEFAULT_PAYMENT_LINK_URL = "https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01"
 SUPPORT_EMAIL = "shayneholladay@gmail.com"
 WEBSITE_URL = "https://fantasyiq-paid.vercel.app/"
 DASHBOARD_URL = "https://fantasyiq-paid.vercel.app/FantasyIQ/"
@@ -20,9 +20,9 @@ SETUP_URL = "https://fantasyiq-paid.vercel.app/setup.html"
 
 CONFIRMATION_MESSAGE = (
     "Thanks for subscribing to FantasyIQ. If any checkout field was missed, "
-    f"visit {SETUP_URL} or email {SUPPORT_EMAIL}. To find IDs in ESPN, open your league in a browser: "
+    f"visit {SETUP_URL} or email {SUPPORT_EMAIL}. To find IDs in ESPN, open each league in a browser: "
     "leagueId is in the URL after leagueId=, and teamId appears after teamId= "
-    "when viewing your team page."
+    "when viewing your team page. Your Season Pass includes up to three leagues."
 )
 
 
@@ -115,12 +115,12 @@ def update_payment_link(key: str, link_id: str) -> dict[str, Any]:
         {
             "custom_fields[0][key]": "leagueid",
             "custom_fields[0][label][type]": "custom",
-            "custom_fields[0][label][custom]": "ESPN league ID",
+            "custom_fields[0][label][custom]": "Primary ESPN league ID",
             "custom_fields[0][type]": "text",
             "custom_fields[0][optional]": "false",
             "custom_fields[1][key]": "teamid",
             "custom_fields[1][label][type]": "custom",
-            "custom_fields[1][label][custom]": "ESPN team ID",
+            "custom_fields[1][label][custom]": "Primary ESPN team ID",
             "custom_fields[1][type]": "numeric",
             "custom_fields[1][optional]": "false",
             "custom_fields[2][key]": "season",
@@ -147,7 +147,7 @@ def main() -> int:
 
     print(f"Updated Stripe Payment Link: {updated['url']}")
     print(f"Payment Link ID: {updated['id']}")
-    print("Required checkout fields: ESPN league ID, ESPN team ID, ESPN season")
+    print("Required checkout fields: primary ESPN league ID, primary ESPN team ID, ESPN season")
     print("After-payment confirmation message is configured.")
     return 0
 

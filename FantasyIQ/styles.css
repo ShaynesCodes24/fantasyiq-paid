@@ -264,6 +264,50 @@ h3 {
   box-shadow: 0 18px 42px rgba(5, 17, 14, 0.22);
 }
 
+.league-switcher {
+  display: grid;
+  align-content: center;
+  min-width: 230px;
+  padding: 14px 16px;
+  border: 1px solid rgba(243, 208, 113, 0.38);
+  border-radius: 8px;
+  background: rgba(7, 29, 24, 0.5);
+  color: var(--logo-cream);
+  box-shadow: 0 18px 42px rgba(5, 17, 14, 0.22);
+}
+
+.league-switcher span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 241, 189, 0.74);
+  font-size: 12px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.league-switcher strong {
+  display: block;
+  margin: 4px 0 8px;
+  color: var(--logo-gold);
+  font-size: 15px;
+}
+
+.league-switcher select {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid rgba(255, 241, 189, 0.5);
+  border-radius: 8px;
+  background: #fffdf7;
+  color: var(--accent);
+  padding: 0 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+}
+
 .account-card span {
   display: block;
   min-width: 0;
@@ -2557,7 +2601,8 @@ code {
     min-width: 0;
   }
 
-  .account-card {
+  .account-card,
+  .league-switcher {
     width: 100%;
     min-width: 0;
   }
@@ -3174,7 +3219,7 @@ body {
 
 .topbar {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) minmax(220px, 280px) minmax(180px, 220px);
+  grid-template-columns: minmax(280px, 1fr) minmax(190px, 260px) minmax(200px, 240px) minmax(170px, 210px);
   align-items: center;
   gap: 14px;
   padding: 18px 28px;
@@ -3194,7 +3239,8 @@ body {
 }
 
 .draft-card,
-.account-card {
+.account-card,
+.league-switcher {
   min-height: 116px;
   padding: 14px 16px;
   box-shadow: 0 10px 26px rgba(4, 17, 14, 0.18);

@@ -14,7 +14,7 @@ ROOT_URL = f"{SITE_URL}/"
 DASHBOARD_URL = f"{SITE_URL}/FantasyIQ/"
 STRIPE_URL = os.environ.get(
     "FANTASYIQ_STRIPE_URL",
-    "https://buy.stripe.com/eVq3cvdN71GX84E917efC00",
+    "https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01",
 )
 API_URL = os.environ.get("FANTASYIQ_API_URL", f"{SITE_URL}/api/live-draft")
 BOARDS_URL = os.environ.get("FANTASYIQ_BOARDS_URL", f"{SITE_URL}/api/live-boards")

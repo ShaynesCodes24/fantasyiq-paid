@@ -21,6 +21,8 @@ OPTIONAL_ENV_KEYS = [
     "FANTASY_IQ_CUSTOMER_STATUS",
     "FANTASY_IQ_CUSTOMER_ACCESS_CODE",
     "FANTASY_IQ_LEAGUE_NAME",
+    "FANTASY_IQ_LEAGUES_JSON",
+    "FANTASY_IQ_DEFAULT_LEAGUE",
     "FANTASY_IQ_DEFAULT_CUSTOMER",
     "FANTASY_IQ_CUSTOMERS_JSON",
     "FANTASYIQ_ADMIN_TOKEN",
@@ -92,10 +94,11 @@ def main() -> int:
     token = require_env("VERCEL_TOKEN")
     project = env("VERCEL_PROJECT_NAME", DEFAULT_PROJECT_NAME)
     customers_json = env("FANTASY_IQ_CUSTOMERS_JSON")
+    leagues_json = env("FANTASY_IQ_LEAGUES_JSON")
     league_id = env("FANTASY_IQ_LEAGUE_ID")
     season = env("FANTASY_IQ_SEASON", DEFAULT_SEASON)
-    if not customers_json and not league_id:
-        raise SystemExit("Set FANTASY_IQ_CUSTOMERS_JSON for multi-customer mode or FANTASY_IQ_LEAGUE_ID for one customer.")
+    if not customers_json and not leagues_json and not league_id:
+        raise SystemExit("Set FANTASY_IQ_CUSTOMERS_JSON for customer/league profiles, FANTASY_IQ_LEAGUES_JSON for one customer with multiple leagues, or FANTASY_IQ_LEAGUE_ID for one customer.")
 
     results = []
     if league_id:
@@ -125,8 +128,10 @@ def main() -> int:
         print(f"FANTASY_IQ_SEASON={season}")
     if customers_json:
         print("FANTASY_IQ_CUSTOMERS_JSON=set")
+    if leagues_json:
+        print("FANTASY_IQ_LEAGUES_JSON=set")
     for key in OPTIONAL_ENV_KEYS:
-        if env(key) and key != "FANTASY_IQ_CUSTOMERS_JSON":
+        if env(key) and key not in ("FANTASY_IQ_CUSTOMERS_JSON", "FANTASY_IQ_LEAGUES_JSON"):
             print(f"{key}=set")
     print("Redeploy the Vercel project after changing env vars.")
     return 0

@@ -93,6 +93,9 @@ const accountCard = document.querySelector("#account-card");
 const accountLabel = document.querySelector("#account-label");
 const accountState = document.querySelector("#account-state");
 const accountAction = document.querySelector("#account-action");
+const leagueSwitcher = document.querySelector("#league-switcher");
+const leagueSwitcherLabel = document.querySelector("#league-switcher-label");
+const leagueSelect = document.querySelector("#league-select");
 const leagueTeamCount = document.querySelector("#league-team-count");
 const leagueTypeNote = document.querySelector("#league-type-note");
 const leagueStarters = document.querySelector("#league-starters");
@@ -207,6 +210,72 @@ function leagueSettingsFromParams(params) {
   return overrides;
 }
 
+function leagueSettingsFromProfile(profile = {}) {
+  const rawSettings = profile.leagueSettings || profile.league_settings || {};
+  const explicitSettings = rawSettings && typeof rawSettings === "object" && !Array.isArray(rawSettings) ? rawSettings : {};
+  const directSettings = {};
+  ["teamCount", "teams", "scoringType", "scoring", "scoringLabel", "receptionPoints", "draftRounds", "rounds", "playoffTeams", "source"].forEach(
+    (key) => {
+      if (profile[key] !== undefined && profile[key] !== null && profile[key] !== "") directSettings[key] = profile[key];
+    },
+  );
+  const rawLineupSlots = profile.lineupSlots || profile.roster || {};
+  const directLineupSlots = rawLineupSlots && typeof rawLineupSlots === "object" && !Array.isArray(rawLineupSlots) ? rawLineupSlots : {};
+  const rawExplicitLineupSlots = explicitSettings.lineupSlots || {};
+  const explicitLineupSlots =
+    rawExplicitLineupSlots && typeof rawExplicitLineupSlots === "object" && !Array.isArray(rawExplicitLineupSlots)
+      ? rawExplicitLineupSlots
+      : {};
+  const lineupSlots = {
+    ...directLineupSlots,
+    ...explicitLineupSlots,
+  };
+  const payload = {
+    ...(explicitSettings || {}),
+    ...directSettings,
+    ...(Object.keys(lineupSlots).length ? { lineupSlots } : {}),
+  };
+  return Object.keys(payload).length ? normalizeLeagueSettings(payload) : {};
+}
+
+function normalizeLeagueProfiles(profiles = {}) {
+  const source = Array.isArray(profiles)
+    ? Object.fromEntries(
+        profiles
+          .filter((profile) => profile && typeof profile === "object")
+          .map((profile, index) => [profile.key || profile.slug || profile.leagueKey || profile.leagueName || index, profile]),
+      )
+    : profiles || {};
+  return Object.entries(source)
+    .filter(([, profile]) => profile && typeof profile === "object")
+    .map(([key, profile]) => {
+      const leagueKey = normalizeDashboardSlug(profile.key || profile.slug || profile.leagueKey || key);
+      return {
+        ...profile,
+        key: leagueKey,
+        label: profile.label || profile.displayName || profile.leagueName || profile.league_name || leagueKey.replace(/-/g, " "),
+        leagueName: profile.leagueName || profile.league_name || profile.label || "",
+        customerTeamId: profile.customerTeamId || profile.teamId || profile.team_id || "",
+        customerTeamName: profile.customerTeamName || profile.teamName || profile.team_name || "",
+        leagueSettings: leagueSettingsFromProfile(profile),
+      };
+    })
+    .filter((profile) => profile.key);
+}
+
+function rememberedLeagueKey(loadoutKey, leagues) {
+  try {
+    const saved = localStorage.getItem(`fantasy-dashboard:${loadoutKey || "default"}:last-league`) || "";
+    return leagues.some((league) => league.key === saved) ? saved : "";
+  } catch (error) {
+    return "";
+  }
+}
+
+function leagueStorageSegment() {
+  return appConfig.leagueKey ? `:league:${appConfig.leagueKey}` : "";
+}
+
 const appConfig = resolveAppConfig(window.FANTASY_IQ_CONFIG || {});
 window.FANTASY_IQ_ACTIVE_CONFIG = appConfig;
 
@@ -242,15 +311,48 @@ function resolveAppConfig(config) {
   const defaultLoadout = config.defaultLoadout && loadouts[config.defaultLoadout] ? config.defaultLoadout : "";
   const loadoutKey = requestedLoadout || rememberedLoadout || defaultLoadout;
   const loadoutConfig = loadoutKey && loadouts[loadoutKey] ? loadouts[loadoutKey] : {};
+  const requestedLeague = normalizeDashboardSlug(params.get("league") || params.get("leagueKey") || "");
+  const leagueProfiles = normalizeLeagueProfiles(loadoutConfig.leagues || config.leagues || {});
+  const rememberedLeague = requestedLeague ? "" : rememberedLeagueKey(loadoutKey || "default", leagueProfiles);
+  const defaultLeague = normalizeDashboardSlug(loadoutConfig.defaultLeague || config.defaultLeague || "");
+  const activeLeagueKey =
+    requestedLeague ||
+    rememberedLeague ||
+    (leagueProfiles.some((league) => league.key === defaultLeague) ? defaultLeague : "") ||
+    leagueProfiles[0]?.key ||
+    "";
+  const activeLeague = leagueProfiles.find((league) => league.key === activeLeagueKey) || null;
   const merged = { ...config, ...loadoutConfig, loadoutKey: loadoutKey || "default" };
   const paramLeagueSettings = leagueSettingsFromParams(params);
-  merged.leagueSettings = normalizeLeagueSettings({
+  if (activeLeague) {
+    merged.leagueKey = activeLeague.key;
+    merged.leagueName = activeLeague.leagueName || activeLeague.label || merged.leagueName;
+    merged.customerTeamId = activeLeague.customerTeamId || merged.customerTeamId;
+    merged.customerTeamName = activeLeague.customerTeamName || merged.customerTeamName;
+    merged.draftCardNote = activeLeague.label || merged.draftCardNote;
+  } else {
+    merged.leagueKey = activeLeagueKey;
+  }
+  merged.leagues = leagueProfiles;
+  merged.baseLeagueSettings = normalizeLeagueSettings({
     ...(config.leagueSettings || {}),
     ...(loadoutConfig.leagueSettings || {}),
     ...paramLeagueSettings,
     lineupSlots: {
       ...((config.leagueSettings || {}).lineupSlots || {}),
       ...((loadoutConfig.leagueSettings || {}).lineupSlots || {}),
+      ...(paramLeagueSettings.lineupSlots || {}),
+    },
+  });
+  merged.leagueSettings = normalizeLeagueSettings({
+    ...(config.leagueSettings || {}),
+    ...(loadoutConfig.leagueSettings || {}),
+    ...((activeLeague || {}).leagueSettings || {}),
+    ...paramLeagueSettings,
+    lineupSlots: {
+      ...((config.leagueSettings || {}).lineupSlots || {}),
+      ...((loadoutConfig.leagueSettings || {}).lineupSlots || {}),
+      ...(((activeLeague || {}).leagueSettings || {}).lineupSlots || {}),
       ...(paramLeagueSettings.lineupSlots || {}),
     },
   });
@@ -285,7 +387,9 @@ function normalizeDashboardSlug(value) {
 }
 
 function loadoutStorageKey(key) {
-  return `fantasy-dashboard:${appConfig.loadoutKey || "default"}:${key}`;
+  const base = `fantasy-dashboard:${appConfig.loadoutKey || "default"}`;
+  if (key === "access-code") return `${base}:${key}`;
+  return `${base}${leagueStorageSegment()}:${key}`;
 }
 
 function requiresCustomerAccess() {
@@ -299,6 +403,9 @@ function savedCustomerAccessCode() {
 function setCustomerAccessCode(value) {
   localStorage.setItem(loadoutStorageKey("access-code"), value.trim());
   localStorage.setItem("fantasy-dashboard:last-loadout", appConfig.loadoutKey || "");
+  if (appConfig.leagueKey) {
+    localStorage.setItem(`fantasy-dashboard:${appConfig.loadoutKey || "default"}:last-league`, appConfig.leagueKey);
+  }
 }
 
 function clearCustomerAccessCode() {
@@ -309,6 +416,9 @@ function apiUrl(path, params = {}) {
   const url = new URL(path, window.location.origin);
   if (appConfig.loadoutKey) {
     url.searchParams.set("customer", appConfig.loadoutKey);
+  }
+  if (appConfig.leagueKey) {
+    url.searchParams.set("league", appConfig.leagueKey);
   }
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== false && value !== "") {
@@ -475,7 +585,7 @@ function applyAppConfig() {
   if (logo && appConfig.logoUrl) logo.src = appConfig.logoUrl;
   if (logo) logo.alt = appConfig.logoAlt || `${siteName} league logo`;
   if (draftCardLabel) draftCardLabel.textContent = appConfig.draftCardLabel || "Subscription";
-  if (draftCardValue) draftCardValue.textContent = appConfig.draftCardValue || "$25 / year";
+  if (draftCardValue) draftCardValue.textContent = appConfig.draftCardValue || "$30 / year";
   if (draftCardNote) draftCardNote.textContent = appConfig.draftCardNote || "Configured for your ESPN league";
   if (subscribeButton && appConfig.showSubscribeButton === false) {
     subscribeButton.remove();
@@ -675,6 +785,7 @@ function renderLeagueProfile() {
     button.hidden = Number(slots.SUPERFLEX || 0) === 0;
   });
   populateSimSlotOptions();
+  renderLeagueSwitcher();
 }
 
 function populateSimSlotOptions() {
@@ -688,6 +799,78 @@ function populateSimSlotOptions() {
     return `<option value="${slot}">${slot}</option>`;
   }).join("")}`;
   simSlot.value = currentValue;
+}
+
+function currentLeagueOptions() {
+  const serverLeagues = liveDraft?.customer?.leagues || boardData?.customer?.leagues || [];
+  const options = normalizeLeagueProfiles(serverLeagues);
+  return options.length ? options : appConfig.leagues || [];
+}
+
+function activeLeagueOption() {
+  const options = currentLeagueOptions();
+  return options.find((league) => league.key === appConfig.leagueKey) || options[0] || null;
+}
+
+function applyLeagueOption(option) {
+  if (!option) return;
+  appConfig.leagueKey = option.key || appConfig.leagueKey || "";
+  appConfig.leagueName = option.leagueName || option.label || appConfig.leagueName;
+  appConfig.customerTeamId = option.customerTeamId || appConfig.customerTeamId;
+  appConfig.customerTeamName = option.customerTeamName || appConfig.customerTeamName;
+  appConfig.leagueSettings = mergeLeagueSettings(appConfig.baseLeagueSettings || DEFAULT_LEAGUE_SETTINGS, option.leagueSettings || {});
+}
+
+function applyServerCustomerContext(customer = {}) {
+  if (!customer || typeof customer !== "object") return;
+  const serverLeagues = normalizeLeagueProfiles(customer.leagues || []);
+  if (serverLeagues.length) appConfig.leagues = serverLeagues;
+  if (customer.leagueKey) appConfig.leagueKey = normalizeDashboardSlug(customer.leagueKey);
+  if (customer.leagueName) appConfig.leagueName = customer.leagueName;
+  if (customer.customerTeamId) appConfig.customerTeamId = String(customer.customerTeamId);
+  if (customer.customerTeamName) appConfig.customerTeamName = customer.customerTeamName;
+  if (customer.leagueSettings) appConfig.leagueSettings = mergeLeagueSettings(appConfig.leagueSettings, customer.leagueSettings);
+  applyLeagueOption(activeLeagueOption());
+}
+
+function renderLeagueSwitcher() {
+  if (!leagueSwitcher || !leagueSelect) return;
+  const options = currentLeagueOptions();
+  if (options.length <= 1) {
+    leagueSwitcher.hidden = true;
+    return;
+  }
+  const active = activeLeagueOption();
+  leagueSelect.innerHTML = options
+    .map((league) => `<option value="${htmlEscape(league.key)}">${htmlEscape(league.label || league.leagueName || league.key)}</option>`)
+    .join("");
+  if (active?.key) leagueSelect.value = active.key;
+  if (leagueSwitcherLabel) leagueSwitcherLabel.textContent = active?.label || active?.leagueName || "League profile";
+  leagueSwitcher.hidden = false;
+}
+
+function setActiveLeague(leagueKey) {
+  const next = currentLeagueOptions().find((league) => league.key === leagueKey);
+  if (!next || next.key === appConfig.leagueKey) return;
+  applyLeagueOption(next);
+  localStorage.setItem(`fantasy-dashboard:${appConfig.loadoutKey || "default"}:last-league`, next.key);
+  const params = new URLSearchParams(window.location.search);
+  if (appConfig.loadoutKey && appConfig.loadoutKey !== "default" && !params.get("customer") && !params.get("loadout") && !params.get("dashboard")) {
+    params.set("customer", appConfig.loadoutKey);
+  }
+  params.set("league", next.key);
+  history.replaceState(null, "", `${window.location.pathname}?${params.toString()}${window.location.hash}`);
+  liveDraft = null;
+  boardData = null;
+  mockSim = null;
+  selectedBoardPlayerKey = null;
+  if (boardStatus) boardStatus.textContent = "Switching league profile...";
+  if (liveStatus) liveStatus.textContent = "Connecting to selected ESPN league...";
+  applyAppConfig();
+  renderLeagueSwitcher();
+  renderLeagueProfile();
+  loadBoards();
+  startLiveSync();
 }
 
 const boardColumns = [
@@ -777,9 +960,16 @@ function dashboardUrlWithHash(hash = "") {
 function ensureCustomerUrlContext() {
   if (!requiresCustomerAccess() || !savedCustomerAccessCode()) return;
   const params = new URLSearchParams(window.location.search);
-  if (params.get("customer") || params.get("loadout") || params.get("dashboard")) return;
-  params.set("customer", appConfig.loadoutKey);
-  history.replaceState(null, "", `${window.location.pathname}?${params.toString()}${window.location.hash}`);
+  let changed = false;
+  if (!params.get("customer") && !params.get("loadout") && !params.get("dashboard")) {
+    params.set("customer", appConfig.loadoutKey);
+    changed = true;
+  }
+  if (appConfig.leagueKey && !params.get("league")) {
+    params.set("league", appConfig.leagueKey);
+    changed = true;
+  }
+  if (changed) history.replaceState(null, "", `${window.location.pathname}?${params.toString()}${window.location.hash}`);
 }
 
 function scrollDashboardTop(behavior = "auto") {
@@ -2622,6 +2812,7 @@ function renderLiveDraft() {
     return;
   }
 
+  applyServerCustomerContext(liveDraft.customer);
   renderTeamOptions();
   applyEspnLeagueBranding();
   renderLeagueProfile();
@@ -3141,7 +3332,7 @@ function renderMockSimulator() {
 }
 
 function liveServerHelp(error) {
-  const subscribeUrl = "https://buy.stripe.com/eVq3cvdN71GX84E917efC00";
+  const subscribeUrl = appConfig.paymentLinkUrl || "https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01";
   if (error?.includes("FANTASY_IQ_LEAGUE_ID is not configured")) {
     if (liveStatus) {
       liveStatus.innerHTML = `
@@ -3224,6 +3415,7 @@ function loadBoards() {
     })
     .then((data) => {
       boardData = data;
+      applyServerCustomerContext(data.customer);
       renderLeagueProfile();
       renderBoard();
       renderCheatcodeMode();
@@ -3359,6 +3551,7 @@ accountAction?.addEventListener("click", () => {
     showCustomerAccessGate();
   }
 });
+leagueSelect?.addEventListener("change", () => setActiveLeague(leagueSelect.value));
 
 const savedAutoSync = localStorage.getItem(loadoutStorageKey("auto-sync"));
 if (liveSyncToggle && savedAutoSync !== null) {
