@@ -61,7 +61,6 @@
       <nav class="sidebar" aria-label="Dashboard sections">
         <button class="nav-item active" data-section="command">Command</button>
         <button class="nav-item" data-section="cheatcode">Cheatcode</button>
-        <button class="nav-item" data-section="footballers">Footballers</button>
         <button class="nav-item" data-section="draft">Draft Prep</button>
         <button class="nav-item" data-section="live">Draft Room</button>
         <button class="nav-item" data-section="simulator">Mock Simulator</button>
@@ -78,7 +77,6 @@
               <p>Draft prep, player values, mock tracking, live room sync, and trade discipline in one command center.</p>
               <div class="hero-actions">
                 <button class="primary-action nav-jump" type="button" data-jump="workbooks">Open Big Board</button>
-                <button class="secondary-action nav-jump" type="button" data-jump="footballers">Footballers Layer</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="draft">Draft Plan</button>
                 <button class="primary-action nav-jump" type="button" data-jump="cheatcode">Cheatcode Mode</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="live">Draft Room</button>
@@ -138,9 +136,9 @@
               <small>FantasyPros backbone, ESPN/RotoWire checks, PFF/DraftSharks signals</small>
             </article>
             <article class="command-tile">
-              <span>Opinion Layer</span>
-              <strong>Footballers</strong>
-              <small>Podcast, rankings, and UDK context kept separate from projections</small>
+              <span>Cheatcode</span>
+              <strong>Best move</strong>
+              <small>Clear next-pick reads from board value, tiers, risk, and roster context</small>
             </article>
           </div>
 
@@ -229,68 +227,6 @@
               <div id="cheatcode-room" class="intel-list">Waiting for live picks.</div>
             </section>
           </div>
-        </section>
-
-        <section class="panel" id="footballers">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Player Cross-Check</p>
-              <h2>Footballers vs FantasyIQ</h2>
-            </div>
-            <div class="live-switches">
-              <a class="source-button" href="https://www.thefantasyfootballers.com/" target="_blank" rel="noopener">Official Site</a>
-              <a class="source-button" href="https://www.thefantasyfootballers.com/fantasy-football-rankings/" target="_blank" rel="noopener">Rankings</a>
-            </div>
-          </div>
-
-          <div class="result footballers-rule">
-            <strong>Simple rule:</strong> enter what they said, then compare it directly against FantasyIQ. If both agree, trust it more. If they disagree, use price and risk as the tiebreaker.
-          </div>
-
-          <div class="footballers-crosscheck">
-            <section class="box footballers-player-check">
-              <p class="eyebrow">Their Side</p>
-              <h3>What did the Footballers say?</h3>
-              <div class="footballers-input-grid">
-                <label>
-                  Player
-                  <input id="footballers-player-check" type="search" placeholder="Example: Nico Collins" />
-                </label>
-                <label>
-                  Their Take
-                  <select id="footballers-take-type">
-                    <option value="neutral">Neutral / context only</option>
-                    <option value="higher">They like him more</option>
-                    <option value="lower">They like him less</option>
-                    <option value="sleeper">Sleeper / underpriced</option>
-                    <option value="breakout">Breakout call</option>
-                    <option value="value">Good value</option>
-                    <option value="bust">Bust / fade</option>
-                    <option value="news">News or role change</option>
-                    <option value="research">Their research supports him</option>
-                  </select>
-                </label>
-                <label>
-                  Their Rank / Pick
-                  <input id="footballers-rank" type="number" min="1" max="400" placeholder="Optional" />
-                </label>
-                <label>
-                  Draft Cost
-                  <input id="footballers-market-pick" type="number" min="1" max="250" placeholder="Optional ADP/pick" />
-                </label>
-              </div>
-              <label class="footballers-context-box">
-                What they said
-                <textarea id="footballers-take-context" class="paste-box" placeholder="Short version: targets up, injury concern, role change, ADP value, fade, etc."></textarea>
-              </label>
-            </section>
-            <section class="box">
-              <p class="eyebrow">Head-to-Head</p>
-              <h3>Straight comparison</h3>
-              <div id="footballers-player-output" class="result">Type a player to see what they say next to what FantasyIQ says.</div>
-            </section>
-          </div>
-
         </section>
 
         <section class="panel" id="draft">

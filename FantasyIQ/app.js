@@ -89,12 +89,6 @@ const simPositionButtons = document.querySelectorAll(".sim-position-toggle");
 const simAvailable = document.querySelector("#sim-available");
 const simRoster = document.querySelector("#sim-roster");
 const simLog = document.querySelector("#sim-log");
-const footballersPlayerCheck = document.querySelector("#footballers-player-check");
-const footballersPlayerOutput = document.querySelector("#footballers-player-output");
-const footballersTakeType = document.querySelector("#footballers-take-type");
-const footballersRank = document.querySelector("#footballers-rank");
-const footballersMarketPick = document.querySelector("#footballers-market-pick");
-const footballersTakeContext = document.querySelector("#footballers-take-context");
 const accountCard = document.querySelector("#account-card");
 const accountLabel = document.querySelector("#account-label");
 const accountState = document.querySelector("#account-state");
@@ -911,7 +905,6 @@ function setupPlayerAutocomplete() {
     { input: tradeGive, mode: "line" },
     { input: tradeGet, mode: "line" },
     { input: tradeRoster, mode: "line" },
-    { input: footballersPlayerCheck, mode: "single" },
     { input: liveTierSearch, mode: "single", rows: "available" },
     { input: simSearch, mode: "single", rows: "sim" },
     { input: boardSearch, mode: "single" },
@@ -1035,212 +1028,6 @@ document.addEventListener("click", (event) => {
   event.preventDefault();
   openPlayerAnalysis(button.dataset.playerFocus);
 });
-
-function renderFootballersPlayerCheck() {
-  if (!footballersPlayerOutput) return;
-  const query = (footballersPlayerCheck?.value || "").trim();
-  if (!query) {
-    footballersPlayerOutput.textContent = "Type a player to see what they say next to what FantasyIQ says.";
-    return;
-  }
-  const row = findPlayer(query);
-  const take = footballersTakeType?.value || "neutral";
-  const takeText = footballersTakeType?.selectedOptions?.[0]?.textContent || "Neutral / context only";
-  const theirRank = Number(footballersRank?.value || 0);
-  const marketPick = Number(footballersMarketPick?.value || 0);
-  const context = (footballersTakeContext?.value || "").trim();
-
-  if (!row) {
-    footballersPlayerOutput.innerHTML = `
-      <div class="footballers-verdict watch">
-        <span>No FantasyIQ Match</span>
-        <strong>${htmlEscape(query)} is not on the board yet.</strong>
-        <small>Use the take as a watchlist note until the player enters FantasyIQ rankings.</small>
-      </div>
-      <div class="comparison-grid">
-        <article>
-          <span>Footballers Say</span>
-          <strong>${htmlEscape(takeText)}</strong>
-          <p>${context ? htmlEscape(context) : "No take summary entered."}</p>
-        </article>
-        <article>
-          <span>FantasyIQ Says</span>
-          <strong>No current board grade</strong>
-          <p>No rank, tier, projection, or risk score available yet.</p>
-        </article>
-      </div>
-    `;
-    return;
-  }
-
-  const decision = footballersDecision(row, take, theirRank, marketPick, context);
-  const rankGap = theirRank ? theirRank - Number(row.Rank || 999) : null;
-  const costGap = marketPick ? marketPick - Number(row.Rank || 999) : null;
-  const rankText = rankGap === null
-    ? "No rank entered"
-    : rankGap < 0
-      ? `${Math.abs(rankGap)} spots higher than FantasyIQ`
-      : rankGap > 0
-        ? `${rankGap} spots lower than FantasyIQ`
-        : "Same as FantasyIQ";
-  const costText = costGap === null
-    ? "No draft cost entered"
-    : costGap < -8
-      ? `${Math.abs(costGap)} picks more expensive than FantasyIQ`
-      : costGap > 12
-        ? `${costGap} picks cheaper than FantasyIQ`
-        : "Near FantasyIQ price";
-  const fantasyIqSummary = footballersFantasyIqSummary(row);
-  const theirSummary = footballersTheirSummary(takeText, rankText, costText, context);
-
-  footballersPlayerOutput.innerHTML = `
-    <div class="footballers-verdict ${decision.className}">
-      <span>${htmlEscape(decision.label)}</span>
-      <strong>${htmlEscape(decision.headline)}</strong>
-      <small>${htmlEscape(decision.detail)}</small>
-    </div>
-    <strong>${htmlEscape(row.Player)}</strong>
-    ${playerSynopsisBlock(row, { compact: true })}
-    <div class="comparison-grid">
-      <article>
-        <span>Footballers Say</span>
-        <strong>${htmlEscape(takeText)}</strong>
-        <p>${htmlEscape(theirSummary)}</p>
-      </article>
-      <article>
-        <span>FantasyIQ Says</span>
-        <strong>${htmlEscape(fantasyIqSummary.label)}</strong>
-        <p>${htmlEscape(fantasyIqSummary.detail)}</p>
-      </article>
-    </div>
-    <div class="comparison-bottom-line">
-      <strong>Bottom line:</strong>
-      <span>${htmlEscape(decision.rule)}</span>
-    </div>
-  `;
-}
-
-function footballersDecision(row, take, theirRank, marketPick, context) {
-  const rank = Number(row.Rank || 999);
-  const risk = Number(row.Risk || 0);
-  const value = Number(row["Value Score"] || 0);
-  const rankGap = theirRank ? theirRank - rank : 0;
-  const costGap = marketPick ? marketPick - rank : 0;
-  const positiveTake = ["higher", "sleeper", "breakout", "value", "research"].includes(take);
-  const negativeTake = ["lower", "bust"].includes(take);
-  const isDiscount = marketPick && costGap >= 12;
-  const isExpensive = marketPick && costGap <= -8;
-  const contextText = context.toLowerCase();
-  const roleSignal = /role|target|touch|snap|route|red zone|market share|workload|starter|volume/.test(contextText);
-  const healthSignal = /injury|health|ankle|knee|hamstring|suspension|contract|holdout/.test(contextText);
-  const fantasyLikes = value >= 76 || (rank <= 60 && risk <= 4);
-  const fantasyCautious = risk >= 5 || /discount|risk|avoid|slide/i.test(row.Action || "");
-
-  if (take === "news") {
-    return {
-      label: "Check The News",
-      className: "watch",
-      headline: healthSignal || roleSignal ? "This could matter." : "This is context, not a board change yet.",
-      detail: `FantasyIQ has him #${rank}, ${row.Pos}${row["Pos Rank"]}, ${row["Pos Tier"] || row.Category}.`,
-      rule: "Move him only if the news changes role, health, target share, or cost.",
-    };
-  }
-
-  if (positiveTake && fantasyLikes && !isExpensive) {
-    return {
-      label: "They Agree",
-      className: "good",
-      headline: "Footballers are positive and FantasyIQ already likes him.",
-      detail: `FantasyIQ rank #${rank}, value ${value}, risk ${risk}/10.`,
-      rule: "Target him at normal FantasyIQ price. Do not jump into a higher tier just because of the take.",
-    };
-  }
-
-  if (positiveTake && isExpensive) {
-    return {
-      label: "They Like Him More",
-      className: "danger",
-      headline: "The take is positive, but the price is ahead of FantasyIQ.",
-      detail: `Expected cost is ${Math.abs(costGap)} picks earlier than FantasyIQ rank #${rank}.`,
-      rule: "Do not chase. Draft him only if he falls back near FantasyIQ rank.",
-    };
-  }
-
-  if (positiveTake) {
-    return {
-      label: fantasyCautious ? "Mixed Signal" : "Small Bump",
-      className: fantasyCautious ? "watch" : "good",
-      headline: fantasyCautious ? "They like him more than FantasyIQ does." : "The take supports the FantasyIQ profile.",
-      detail: `FantasyIQ rank #${rank}, value ${value}, risk ${risk}/10.`,
-      rule: fantasyCautious
-        ? "Use the take as a tiebreaker only. Keep the FantasyIQ risk discount."
-        : "You can prefer him over close players in the same tier.",
-    };
-  }
-
-  if (negativeTake && fantasyCautious && !isDiscount) {
-    return {
-      label: "They Agree",
-      className: "watch",
-      headline: "Footballers are cautious and FantasyIQ also has some caution.",
-      detail: `FantasyIQ rank #${rank}, value ${value}, risk ${risk}/10.`,
-      rule: `Draft only if he falls beyond FantasyIQ rank. A fair target is pick ${rank + 10} or later.`,
-    };
-  }
-
-  if (negativeTake) {
-    return {
-      label: fantasyLikes && !isDiscount ? "They Disagree" : "Discount Only",
-      className: fantasyLikes && !isDiscount ? "watch" : "danger",
-      headline: fantasyLikes ? "Footballers are lower, but FantasyIQ still likes the player." : "Footballers are lower and FantasyIQ does not give enough cushion.",
-      detail: `FantasyIQ rank #${rank}, value ${value}, risk ${risk}/10.`,
-      rule: fantasyLikes
-        ? "Do not erase him. Lower confidence slightly and take him only at fair value or a discount."
-        : "Fade at cost. Only consider if the room gives you a clear discount.",
-    };
-  }
-
-  if (theirRank && Math.abs(rankGap) >= 18) {
-    return {
-      label: "Rank Gap",
-      className: "watch",
-      headline: rankGap < 0 ? "They rank him much higher than FantasyIQ." : "They rank him much lower than FantasyIQ.",
-      detail: `Their rank differs by ${Math.abs(rankGap)} spots from FantasyIQ rank #${rank}.`,
-      rule: "Treat this as a research flag, not an automatic board move.",
-    };
-  }
-
-  if (isDiscount) {
-    return {
-      label: "FantasyIQ Value",
-      className: "good",
-      headline: "The cost is cheaper than FantasyIQ rank.",
-      detail: `Expected cost is ${costGap} picks after FantasyIQ rank #${rank}.`,
-      rule: "Draft at the discount if your roster build needs the position.",
-    };
-  }
-
-  return {
-    label: "No Edge",
-    className: "neutral",
-    headline: "The take does not clearly change the FantasyIQ view.",
-    detail: `FantasyIQ rank #${rank}, value ${value}, risk ${risk}/10.`,
-    rule: "Use FantasyIQ rank, projected PPR points, and draft cost as the guide.",
-  };
-}
-
-function footballersTheirSummary(takeText, rankText, costText, context) {
-  const parts = [takeText, rankText, costText];
-  if (context) parts.push(context);
-  return parts.filter(Boolean).join(". ");
-}
-
-function footballersFantasyIqSummary(row) {
-  return {
-    label: `#${row.Rank} overall, ${row.Pos}${row["Pos Rank"]}, ${row["Pos Tier"] || row.Category}`,
-    detail: `Projected ${row["Proj PPR Pts"]} PPR points. Value ${row["Value Score"]}. Risk ${row.Risk}/10. Action: ${row.Action}`,
-  };
-}
 
 function expectedPickFor(row) {
   return Number(row?.Rank || 999);
@@ -3058,7 +2845,6 @@ function loadBoards() {
       renderLiveDraft();
       renderLiveTierBoard();
       renderMockSimulator();
-      renderFootballersPlayerCheck();
       renderTradeCalc();
       refreshActivePlayerAutocomplete();
     })
@@ -3102,15 +2888,6 @@ liveTierButtons.forEach((button) => {
   });
 });
 
-function renderFootballersLayer() {
-  renderFootballersPlayerCheck();
-}
-
-footballersPlayerCheck?.addEventListener("input", renderFootballersPlayerCheck);
-footballersTakeType?.addEventListener("change", renderFootballersLayer);
-footballersRank?.addEventListener("input", renderFootballersLayer);
-footballersMarketPick?.addEventListener("input", renderFootballersLayer);
-footballersTakeContext?.addEventListener("input", renderFootballersLayer);
 const savedSimSlot = localStorage.getItem(loadoutStorageKey("sim-slot"));
 if (simSlot && savedSimSlot) {
   simSlot.value = savedSimSlot;
@@ -3202,6 +2979,5 @@ const savedAutoSync = localStorage.getItem(loadoutStorageKey("auto-sync"));
 if (liveSyncToggle && savedAutoSync !== null) {
   liveSyncToggle.checked = savedAutoSync === "true";
 }
-renderFootballersLayer();
 startLiveSync();
 
