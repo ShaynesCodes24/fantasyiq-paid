@@ -1,0 +1,80 @@
+# FantasyIQ Roadmap
+
+This roadmap keeps the platform focused on becoming easier to buy, easier to set up, easier to navigate, and harder to misuse.
+
+## Current Product Position
+
+FantasyIQ is a paid season-pass dashboard for ESPN fantasy football managers. It supports public ESPN league sync, customer access codes, multi-league profiles, league-aware draft values, mock practice, trade discipline, and a database-ready self-serve path.
+
+## Success Metrics
+
+- A new customer can buy and understand next steps in under 2 minutes.
+- A customer can validate and connect a public ESPN league without owner help.
+- A customer can refresh the dashboard and remain signed in.
+- A customer with multiple leagues can switch leagues without losing context.
+- Production readiness remains green after every release.
+- Repeated support questions decrease over time because the platform explains itself at the right moment.
+
+## Now
+
+These are the highest-leverage upgrades for the next build cycle.
+
+- Connect Neon/Postgres and run `database/schema.sql`.
+- Verify Stripe webhook creates durable customer records in production.
+- Add transactional access-code/setup emails after checkout.
+- Make setup success route customers directly into the correct dashboard and active league.
+- Add database-backed additional league fulfillment after Stripe add-on checkout.
+- Create a customer-visible Q&A/help page linked from dashboard and setup.
+- Add admin controls for customer status, access-code reset, and league archive.
+
+## Next
+
+These make the platform feel more premium after self-serve is stable.
+
+- Add richer dashboard onboarding for first-time customers.
+- Add better empty states for leagues before draft day.
+- Add league health checks: public/private, draft status, team match, scoring match.
+- Add visual polish pass for dashboard spacing, forms, account card, and mobile drawer.
+- Add event logging for setup attempts, login failures, and live sync failures.
+- Add production monitoring notes or Vercel Observability plan.
+- Add customer renewal workflow and renewal status display.
+
+## Later
+
+These are bigger bets once the core business loop is proven.
+
+- Full account login with passwordless email or OAuth.
+- Private ESPN league support if a stable auth path becomes available.
+- AI setup assistant that reads customer league details and explains missing fields.
+- Draft-room AI Q&A trained on live league state, board data, and customer settings.
+- League comparison view for customers with 2 or more leagues.
+- Commissioner/team import tooling if ESPN data allows it.
+- More sports or platforms only after fantasy football is clean and profitable.
+
+## Backlog Triage Rules
+
+Priority 0:
+- Payment broken, customer access broken, production deploy broken, or private data exposure.
+
+Priority 1:
+- Setup, league switching, live draft sync, or board scoring broken for paying customers.
+
+Priority 2:
+- Confusing UI, repeated customer questions, weak mobile experience, slow flow, missing admin visibility.
+
+Priority 3:
+- Nice-to-have polish, marketing assets, future AI features, experiments.
+
+## Release Themes
+
+Self-Serve Foundation:
+- Database records, Stripe webhook fulfillment, setup saving, admin visibility.
+
+Customer Confidence:
+- Better Q&A, clearer setup, better empty states, less demo/customer confusion.
+
+Draft-Day Excellence:
+- Faster boards, clearer Draft Room hierarchy, better live sync states, stronger league-specific intelligence.
+
+Premium Polish:
+- Cleaner layout, consistent controls, crisp mobile behavior, product preview assets.

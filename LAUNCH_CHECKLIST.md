@@ -17,6 +17,7 @@
 - Use `https://fantasyiq-paid.vercel.app/FantasyIQ/` as Stripe's business website.
 - Done: Run `python .\scripts\check_product_readiness.py` before sharing the offer publicly.
 - Done: Run `python .\scripts\check_security_setup.py` before sharing the offer publicly.
+- Run `python .\scripts\check_os_readiness.py` before major product releases.
 - Done: Run `python .\scripts\secure_launch_setup.py` for the automated launch setup status.
 
 ## For Each Customer

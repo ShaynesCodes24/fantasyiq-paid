@@ -82,6 +82,25 @@ Recommended checkout/onboarding flow:
 5. You configure the Vercel env/customer registry for that customer.
 6. You email the customer their dashboard link, access code, and renewal date.
 
+## FantasyIQ OS
+
+Use the operating system docs when planning, building, testing, supporting, or
+selling the platform:
+
+- `ops/FANTASYIQ_OS.md`: internal command center, cadence, plugin roles, and definition of done.
+- `ops/ROADMAP.md`: now/next/later roadmap and backlog priority rules.
+- `ops/QA_PLAYBOOK.md`: pre-deploy checks, manual browser QA, release gates, and production smoke tests.
+- `ops/DESIGN_SYSTEM.md`: dashboard design principles, navigation rules, layout rules, and quality bar.
+- `ops/SUPPORT_PLAYBOOK.md`: support triage, repeated customer issues, and escalation rules.
+- `ops/REVENUE_OPERATIONS.md`: pricing, Stripe, database fulfillment, add-on leagues, renewals, and refunds.
+- `ops/PLUGIN_WORKFLOWS.md`: how Codex should use GitHub, Vercel, Stripe, Browser/Chrome, Linear, Gmail, Drive/Notion, Figma, Canva, and OpenAI Developers.
+
+Run this to confirm the operating docs and core scripts are in place:
+
+```powershell
+python .\scripts\check_os_readiness.py
+```
+
 ## Launch Files
 
 - `SALES_COPY.md`: public offer copy for posts, checkout, and DMs.
@@ -95,6 +114,7 @@ Recommended checkout/onboarding flow:
 - `scripts/fulfill_latest_stripe_order.py`: fetches the latest paid Stripe checkout and updates `customers.csv`.
 - `scripts/check_product_readiness.py`: checks the live website, dashboard, Stripe link, and API.
 - `scripts/check_security_setup.py`: checks tracked files, deploy ignores, and public Vercel config for secure setup.
+- `scripts/check_os_readiness.py`: checks that the FantasyIQ OS docs and operating scripts are present.
 - `scripts/apply_database_schema.py`: applies the Postgres schema after connecting Neon or another Postgres provider.
 - `scripts/sync_dashboard_mirror.js`: syncs the local `FantasyIQ` dashboard mirror from the deploy source in `public/FantasyIQ`.
 - `scripts/secure_launch_setup.py`: orchestrates secure local checks plus optional Stripe, Vercel env, deploy, and readiness steps.
