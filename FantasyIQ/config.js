@@ -13,6 +13,8 @@ window.FANTASY_IQ_CONFIG = {
   draftCardNote: "Season Pass for up to 3 ESPN leagues",
   paymentLinkUrl: "https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01",
   additionalLeaguePaymentLinkUrl: "https://buy.stripe.com/dRmcN5aAV1GX0Cc7X3efC02",
+  includedLeagueLimit: 3,
+  additionalLeaguePriceLabel: "$5 / year",
   showSubscribeButton: true,
   supportEmail: "shayneholladay@gmail.com",
   liveBoardUrl: "/api/live-boards",

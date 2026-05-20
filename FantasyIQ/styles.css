@@ -312,6 +312,45 @@ h3 {
   font-weight: 900;
 }
 
+.league-switcher-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.league-switcher-actions small {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 241, 189, 0.72);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.league-switcher-actions button {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 32px;
+  border: 1px solid rgba(255, 241, 189, 0.58);
+  border-radius: 8px;
+  background: var(--logo-gold);
+  color: var(--field-dark);
+  cursor: pointer;
+  font: inherit;
+  font-size: 20px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.league-switcher-actions button:hover {
+  filter: brightness(1.05);
+}
+
 .account-card span {
   display: block;
   min-width: 0;

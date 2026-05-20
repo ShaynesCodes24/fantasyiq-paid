@@ -307,6 +307,13 @@ a top league switcher and all API calls include the active `league` key.
 }
 ```
 
+ESPN does not currently provide a stable customer OAuth flow for FantasyIQ to
+sign into a customer's ESPN account and automatically list every league. The v1
+supported flow is account-level league linking by public ESPN league ID/team ID:
+up to three league profiles are included in the Season Pass, and the dashboard
+shows a `+` add-league button that points customers to the $5/year additional
+league Stripe add-on.
+
 Set `FANTASYIQ_ADMIN_TOKEN` before using `/admin.html` in production.
 Set `STRIPE_WEBHOOK_SECRET` before pointing Stripe at `/api/stripe-webhook`.
 The webhook verifies Stripe signatures and can log locally, but durable

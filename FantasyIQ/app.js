@@ -96,6 +96,8 @@ const accountAction = document.querySelector("#account-action");
 const leagueSwitcher = document.querySelector("#league-switcher");
 const leagueSwitcherLabel = document.querySelector("#league-switcher-label");
 const leagueSelect = document.querySelector("#league-select");
+const addLeagueAction = document.querySelector("#add-league-action");
+const leagueSlotNote = document.querySelector("#league-slot-note");
 const leagueTeamCount = document.querySelector("#league-team-count");
 const leagueTypeNote = document.querySelector("#league-type-note");
 const leagueStarters = document.querySelector("#league-starters");
@@ -823,9 +825,31 @@ function activeLeagueOption() {
   return options.find((league) => league.key === appConfig.leagueKey) || options[0] || null;
 }
 
+function configuredLeagueCount(options = currentLeagueOptions()) {
+  const hasPrimaryLeague = Boolean(appConfig.leagueId || appConfig.customerTeamName || requiresCustomerAccess());
+  return Math.max(options.length, hasPrimaryLeague ? 1 : 0);
+}
+
+function includedLeagueLimit() {
+  return Number(appConfig.includedLeagueLimit || 3);
+}
+
+function additionalLeaguePaymentUrl() {
+  return appConfig.additionalLeaguePaymentLinkUrl || "https://buy.stripe.com/dRmcN5aAV1GX0Cc7X3efC02";
+}
+
+function leagueSlotText(count = configuredLeagueCount()) {
+  const limit = includedLeagueLimit();
+  const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
+  if (count < limit) return `${count || 1}/${limit} included leagues`;
+  if (count === limit) return `${limit}/${limit} included / + extra ${price}`;
+  return `${count} leagues / extras ${price} each`;
+}
+
 function applyLeagueOption(option) {
   if (!option) return;
   appConfig.leagueKey = option.key || appConfig.leagueKey || "";
+  appConfig.leagueId = option.leagueId || option.espnLeagueId || appConfig.leagueId;
   appConfig.leagueName = option.leagueName || option.label || appConfig.leagueName;
   appConfig.customerTeamId = option.customerTeamId || appConfig.customerTeamId;
   appConfig.customerTeamName = option.customerTeamName || appConfig.customerTeamName;
@@ -837,6 +861,7 @@ function applyServerCustomerContext(customer = {}) {
   const serverLeagues = normalizeLeagueProfiles(customer.leagues || []);
   if (serverLeagues.length) appConfig.leagues = serverLeagues;
   if (customer.leagueKey) appConfig.leagueKey = normalizeDashboardSlug(customer.leagueKey);
+  if (customer.leagueId) appConfig.leagueId = String(customer.leagueId);
   if (customer.leagueName) appConfig.leagueName = customer.leagueName;
   if (customer.customerTeamId) appConfig.customerTeamId = String(customer.customerTeamId);
   if (customer.customerTeamName) appConfig.customerTeamName = customer.customerTeamName;
@@ -846,14 +871,26 @@ function applyServerCustomerContext(customer = {}) {
 
 function renderLeagueSwitcher() {
   if (!leagueSwitcher || !leagueSelect) return;
-  const options = currentLeagueOptions();
-  if (options.length <= 1) {
-    leagueSelect.innerHTML = "";
-    if (leagueSwitcherLabel) leagueSwitcherLabel.textContent = "League profile";
+  if (!requiresCustomerAccess()) {
     leagueSwitcher.hidden = true;
     return;
   }
+  const options = currentLeagueOptions();
+  const count = configuredLeagueCount(options);
+  if (leagueSlotNote) leagueSlotNote.textContent = leagueSlotText(count);
+  if (addLeagueAction) {
+    const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
+    addLeagueAction.title = `Add additional league (${price})`;
+  }
+  if (options.length <= 1) {
+    leagueSelect.innerHTML = "";
+    leagueSelect.hidden = true;
+    if (leagueSwitcherLabel) leagueSwitcherLabel.textContent = appConfig.leagueName || appConfig.customerTeamName || "Current profile";
+    leagueSwitcher.hidden = false;
+    return;
+  }
   const active = activeLeagueOption();
+  leagueSelect.hidden = false;
   leagueSelect.innerHTML = options
     .map((league) => `<option value="${htmlEscape(league.key)}">${htmlEscape(league.label || league.leagueName || league.key)}</option>`)
     .join("");
@@ -884,6 +921,15 @@ function setActiveLeague(leagueKey) {
   renderLeagueProfile();
   loadBoards();
   startLiveSync();
+}
+
+function openAdditionalLeaguePayment() {
+  const url = additionalLeaguePaymentUrl();
+  const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
+  const limit = includedLeagueLimit();
+  const message = `FantasyIQ Season Pass includes up to ${limit} ESPN leagues. Additional leagues are ${price} each. Continue to Stripe?`;
+  if (!window.confirm(message)) return;
+  window.open(url, "_blank", "noopener");
 }
 
 const boardColumns = [
@@ -3569,6 +3615,7 @@ accountAction?.addEventListener("click", () => {
   }
 });
 leagueSelect?.addEventListener("change", () => setActiveLeague(leagueSelect.value));
+addLeagueAction?.addEventListener("click", openAdditionalLeaguePayment);
 
 const savedAutoSync = localStorage.getItem(loadoutStorageKey("auto-sync"));
 if (liveSyncToggle && savedAutoSync !== null) {
