@@ -3355,3 +3355,224 @@ a:focus-visible {
     top: 73%;
   }
 }
+
+/* Final UI quality pass */
+:root {
+  --radius: 8px;
+  --hairline: rgba(19, 43, 36, 0.12);
+  --panel-bg: #fffdf8;
+  --panel-bg-soft: #f7f3e9;
+  --control-bg: #fffefa;
+  --shadow: 0 16px 40px rgba(4, 17, 14, 0.16);
+  --shadow-soft: 0 6px 18px rgba(4, 17, 14, 0.08);
+}
+
+body {
+  line-height: 1.45;
+}
+
+.field-overlay {
+  opacity: 0.24;
+}
+
+.topbar {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(220px, 280px) minmax(180px, 220px);
+  align-items: center;
+  gap: 14px;
+  padding: 18px 28px;
+}
+
+.brand-lockup {
+  gap: 14px;
+}
+
+.brand-lockup img {
+  width: 68px;
+  height: 68px;
+}
+
+.brand-lockup small {
+  margin-top: 4px;
+}
+
+.draft-card,
+.account-card {
+  min-height: 116px;
+  padding: 14px 16px;
+  box-shadow: 0 10px 26px rgba(4, 17, 14, 0.18);
+}
+
+.subscribe-button,
+.account-card button,
+.primary-action,
+.secondary-action,
+.source-button,
+.live-switches button,
+.board-tools button,
+.trade-history-head button,
+.grader button {
+  border-radius: var(--radius);
+  box-shadow: none;
+}
+
+.layout {
+  gap: 16px;
+  padding: 20px 28px 32px;
+}
+
+.sidebar {
+  top: 14px;
+  box-shadow: 0 12px 28px rgba(4, 17, 14, 0.16);
+}
+
+.nav-item {
+  min-height: 42px;
+  padding-block: 10px;
+  font-size: 14px;
+}
+
+.panel {
+  padding: 22px;
+  background: linear-gradient(180deg, var(--panel-bg), var(--panel-bg-soft));
+  box-shadow: var(--shadow);
+}
+
+.panel-head {
+  margin-bottom: 18px;
+}
+
+.command-hero {
+  padding: 22px;
+}
+
+.command-hero h2 {
+  font-size: clamp(32px, 4vw, 52px);
+}
+
+.metric-grid,
+.command-grid,
+.cheatcode-grid,
+.cheatcode-grid.secondary,
+.live-grid,
+.cheat-grid,
+.sim-layout,
+.trade-shell,
+.trade-rules,
+.trade-history-grid,
+.strategy-grid,
+.split {
+  gap: 10px;
+}
+
+.metric,
+.box,
+.result,
+.command-tile,
+.strategy-card,
+.plan,
+.live-panel,
+.trade-card,
+.trade-verdict,
+.trade-rules article,
+.trade-history-card,
+.trade-history-row,
+.analysis-pane,
+.table-wrap,
+.pick-card,
+.intel-card,
+.trade-player-chip,
+.player-synopsis,
+.comparison-grid article,
+.footballers-verdict {
+  border-color: var(--hairline);
+  background: var(--panel-bg);
+  box-shadow: var(--shadow-soft);
+}
+
+.result {
+  margin-bottom: 12px;
+}
+
+.live-panel,
+.box,
+.trade-card,
+.trade-verdict,
+.trade-rules article,
+.trade-history-card {
+  padding: 14px;
+}
+
+.cheatcode-panel {
+  min-height: 240px;
+}
+
+.cheatcode-hero {
+  box-shadow: var(--shadow-soft);
+}
+
+.pick-card,
+.intel-card {
+  padding: 10px;
+}
+
+.pick-card span,
+.pick-card small,
+.intel-card small,
+.intel-card p {
+  line-height: 1.35;
+}
+
+input,
+select,
+textarea,
+.board-tools input,
+.board-tools select,
+.trade-card textarea,
+.paste-box,
+.sim-tools input,
+.tier-board-tools input {
+  border-color: rgba(19, 43, 36, 0.16);
+  background: var(--control-bg);
+}
+
+.board-tools {
+  gap: 10px;
+}
+
+.position-toggles {
+  gap: 5px;
+}
+
+.position-toggles button,
+.tab {
+  min-height: 38px;
+  padding-block: 7px;
+}
+
+.table-wrap {
+  max-height: 660px;
+}
+
+#board-table {
+  font-size: 12px;
+}
+
+#board-table th,
+#board-table td {
+  padding: 7px 8px;
+}
+
+.analysis-pane {
+  padding: 14px;
+}
+
+.access-card {
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+}
+
+@media (max-width: 980px) {
+  .topbar {
+    grid-template-columns: 1fr;
+  }
+}
