@@ -940,16 +940,6 @@ function setActiveLeague(leagueKey) {
   startLiveSync();
 }
 
-function addLeagueMailto() {
-  const support = appConfig.supportEmail || "shayneholladay@gmail.com";
-  const customer = appConfig.customerName || appConfig.loadoutKey || "FantasyIQ customer";
-  const subject = encodeURIComponent("Add a FantasyIQ league");
-  const body = encodeURIComponent(
-    `Customer: ${customer}\nDashboard: ${window.location.href}\n\nLeague label:\nESPN league ID:\nESPN team ID:\nSeason:\nScoring format:\nTeam count:\nLineup settings:\nDraft date/time:\n`,
-  );
-  return `mailto:${support}?subject=${subject}&body=${body}`;
-}
-
 function closeAddLeagueDialog() {
   if (addLeagueDialog) addLeagueDialog.hidden = true;
 }
@@ -968,7 +958,6 @@ function ensureAddLeagueDialog() {
       <div class="add-league-summary" id="add-league-summary"></div>
       <div class="add-league-actions">
         <button class="primary-action" id="add-league-primary" type="button"></button>
-        <button class="secondary-action" id="add-league-secondary" type="button"></button>
       </div>
     </div>
   `;
@@ -992,13 +981,12 @@ function openAddLeagueDialog() {
   const message = dialog.querySelector("#add-league-message");
   const summary = dialog.querySelector("#add-league-summary");
   const primary = dialog.querySelector("#add-league-primary");
-  const secondary = dialog.querySelector("#add-league-secondary");
 
   if (title) title.textContent = needsPayment ? "Add Extra League" : "Add Included League";
   if (message) {
     message.textContent = needsPayment
       ? `Your Season Pass includes ${limit} leagues. Extra league profiles are ${price} each and can be added after checkout.`
-      : `You have ${includedRemaining} included league ${includedRemaining === 1 ? "slot" : "slots"} left in your Season Pass. Send the public ESPN league ID and team ID, then FantasyIQ can attach it to this dashboard.`;
+      : `You have ${includedRemaining} included league ${includedRemaining === 1 ? "slot" : "slots"} left in your Season Pass. Open the setup validator to confirm the public ESPN league ID and team ID.`;
   }
   if (summary) {
     summary.innerHTML = `
@@ -1007,20 +995,13 @@ function openAddLeagueDialog() {
     `;
   }
   if (primary) {
-    primary.textContent = needsPayment ? "Continue to Stripe" : "Validate ESPN IDs";
+    primary.textContent = needsPayment ? "Buy Extra League" : "Open Setup Page";
     primary.onclick = () => {
       if (needsPayment) {
         window.open(additionalLeaguePaymentUrl(), "_blank", "noopener");
       } else {
         window.location.href = "../setup.html";
       }
-      closeAddLeagueDialog();
-    };
-  }
-  if (secondary) {
-    secondary.textContent = "Email League Details";
-    secondary.onclick = () => {
-      window.location.href = addLeagueMailto();
       closeAddLeagueDialog();
     };
   }
