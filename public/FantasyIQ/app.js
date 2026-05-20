@@ -101,6 +101,10 @@ const footballersTakeType = document.querySelector("#footballers-take-type");
 const footballersRank = document.querySelector("#footballers-rank");
 const footballersMarketPick = document.querySelector("#footballers-market-pick");
 const footballersTakeContext = document.querySelector("#footballers-take-context");
+const accountCard = document.querySelector("#account-card");
+const accountLabel = document.querySelector("#account-label");
+const accountState = document.querySelector("#account-state");
+const accountAction = document.querySelector("#account-action");
 const appConfig = resolveAppConfig(window.FANTASY_IQ_CONFIG || {});
 window.FANTASY_IQ_ACTIVE_CONFIG = appConfig;
 
@@ -201,6 +205,7 @@ function customerAccessGate() {
 function removeCustomerAccessGate() {
   document.body.classList.remove("access-locked");
   customerAccessGate()?.remove();
+  updateAccountControl();
 }
 
 function showCustomerAccessGate(message = "") {
@@ -245,6 +250,7 @@ function showCustomerAccessGate(message = "") {
       }
       setCustomerAccessCode(code);
       removeCustomerAccessGate();
+      updateAccountControl();
       loadBoards();
       loadTradeHistory(true);
       startLiveSync();
@@ -265,10 +271,36 @@ function handleCustomerAccessFailure(message = "Enter the current customer acces
   if (!requiresCustomerAccess()) return false;
   clearCustomerAccessCode();
   window.clearInterval(liveTimer);
+  updateAccountControl();
   showCustomerAccessGate(message);
   if (liveStatus) liveStatus.innerHTML = "<strong>Customer login required.</strong>";
   if (tradeHistoryStatus) tradeHistoryStatus.textContent = "Customer login required.";
   return true;
+}
+
+function updateAccountControl() {
+  if (!accountCard) return;
+  const customerLabel = appConfig.customerName || appConfig.customerTeamName || appConfig.loadoutKey || "Dashboard";
+  if (accountLabel) accountLabel.textContent = requiresCustomerAccess() ? customerLabel : "Public Demo";
+  if (accountState) accountState.textContent = requiresCustomerAccess() ? (savedCustomerAccessCode() ? "Signed In" : "Signed Out") : "Preview";
+  if (accountAction) {
+    accountAction.textContent = requiresCustomerAccess() ? (savedCustomerAccessCode() ? "Sign Out" : "Sign In") : "Demo";
+    accountAction.disabled = !requiresCustomerAccess();
+  }
+  accountCard.classList.toggle("signed-in", requiresCustomerAccess() && Boolean(savedCustomerAccessCode()));
+  accountCard.classList.toggle("signed-out", requiresCustomerAccess() && !savedCustomerAccessCode());
+}
+
+function signOutCustomer() {
+  clearCustomerAccessCode();
+  window.clearInterval(liveTimer);
+  liveTimer = null;
+  updateAccountControl();
+  if (requiresCustomerAccess()) {
+    if (liveStatus) liveStatus.innerHTML = "<strong>Signed out.</strong> Sign in to reconnect live draft sync.";
+    if (tradeHistoryStatus) tradeHistoryStatus.textContent = "Signed out.";
+    showCustomerAccessGate("Signed out. Enter your access code to unlock the dashboard.");
+  }
 }
 
 async function jsonOrAccessError(response, fallbackMessage) {
@@ -352,6 +384,7 @@ function applyAppConfig() {
 }
 
 applyAppConfig();
+updateAccountControl();
 
 function applyEspnLeagueBranding() {
   if (!appConfig.useEspnLeagueBranding || !liveDraft || liveDraft.demoMode) return;
@@ -3301,6 +3334,15 @@ liveSyncToggle?.addEventListener("change", () => {
   } else {
     window.clearInterval(liveTimer);
     if (liveStatus) liveStatus.innerHTML = "<strong>Auto sync paused.</strong> Use Sync Now for a one-time ESPN refresh.";
+  }
+});
+
+accountAction?.addEventListener("click", () => {
+  if (!requiresCustomerAccess()) return;
+  if (savedCustomerAccessCode()) {
+    signOutCustomer();
+  } else {
+    showCustomerAccessGate();
   }
 });
 

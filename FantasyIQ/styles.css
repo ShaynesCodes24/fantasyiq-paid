@@ -252,6 +252,60 @@ h3 {
   box-shadow: 0 18px 42px rgba(5, 17, 14, 0.32);
 }
 
+.account-card {
+  display: grid;
+  align-content: center;
+  min-width: 190px;
+  padding: 16px 18px;
+  border: 1px solid rgba(243, 208, 113, 0.34);
+  border-radius: 8px;
+  background: rgba(7, 29, 24, 0.56);
+  color: var(--logo-cream);
+  box-shadow: 0 18px 42px rgba(5, 17, 14, 0.22);
+}
+
+.account-card span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 241, 189, 0.74);
+  font-size: 12px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.account-card strong {
+  display: block;
+  margin: 4px 0 10px;
+  color: var(--logo-gold);
+}
+
+.account-card button {
+  min-height: 34px;
+  border-color: rgba(255, 241, 189, 0.5);
+  background: rgba(255, 241, 189, 0.1);
+  color: var(--logo-gold);
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.account-card.signed-in button {
+  border-color: rgba(255, 241, 189, 0.28);
+  color: rgba(255, 241, 189, 0.88);
+}
+
+.account-card.signed-out {
+  border-color: rgba(243, 208, 113, 0.58);
+}
+
+.account-card button:disabled {
+  cursor: default;
+  opacity: 0.64;
+}
+
 .draft-card span,
 .draft-card small,
 .metric span,
@@ -2687,6 +2741,11 @@ code {
   }
 
   .draft-card {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .account-card {
     width: 100%;
     min-width: 0;
   }
