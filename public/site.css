@@ -632,3 +632,46 @@ footer {
     gap: 10px;
   }
 }
+
+/* Final responsive guardrails for public pages. */
+@media (max-width: 820px) {
+  .site-header,
+  .price-band,
+  .split,
+  footer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .split {
+    align-items: stretch;
+  }
+
+  .support-panel {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .section,
+  .price-band,
+  .proof-strip {
+    width: min(100% - 36px, 1180px);
+  }
+
+  .split {
+    gap: 18px;
+  }
+
+  .split h2 {
+    max-width: 100%;
+    font-size: clamp(29px, 8vw, 36px);
+    line-height: 1.08;
+  }
+
+  .split p,
+  .support-panel p,
+  .support-panel a {
+    overflow-wrap: anywhere;
+  }
+}
