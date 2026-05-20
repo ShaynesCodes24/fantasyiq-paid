@@ -169,6 +169,11 @@ h3 {
   color: var(--cream);
 }
 
+.dark-outline {
+  border-color: rgba(15, 58, 48, 0.26);
+  color: var(--field-dark);
+}
+
 .price-band,
 .section {
   width: min(1180px, calc(100% - 36px));
@@ -182,6 +187,38 @@ h3 {
   gap: 18px;
   padding: 28px 0;
   border-bottom: 1px solid var(--line);
+}
+
+.proof-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  width: min(1180px, calc(100% - 36px));
+  margin: 20px auto 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--line);
+}
+
+.proof-strip div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  background: #fff;
+  padding: 16px;
+}
+
+.proof-strip span,
+.workflow span {
+  color: var(--leather);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.proof-strip strong {
+  overflow-wrap: break-word;
 }
 
 .price-band p,
@@ -217,6 +254,70 @@ h3 {
 
 .feature-grid article {
   border-top: 5px solid var(--field);
+}
+
+.workflow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.workflow article {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border-left: 5px solid var(--gold);
+  background: #fbf6e8;
+  padding: 18px;
+}
+
+.workflow h3,
+.workflow p {
+  margin-bottom: 0;
+}
+
+.product-preview {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.78fr) minmax(0, 1.22fr);
+  gap: 26px;
+  align-items: center;
+  border-block: 1px solid var(--line);
+}
+
+.preview-copy {
+  min-width: 0;
+}
+
+.preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.product-preview img {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgba(15, 58, 48, 0.2);
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(7, 29, 24, 0.18);
+}
+
+.faq-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.faq-grid article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 18px;
+}
+
+.faq-grid p {
+  margin-bottom: 0;
 }
 
 .split {
@@ -273,6 +374,13 @@ footer {
 
   .feature-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .proof-strip,
+  .workflow,
+  .product-preview,
+  .faq-grid {
+    grid-template-columns: 1fr;
   }
 
   .hero {

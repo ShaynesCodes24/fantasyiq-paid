@@ -15,9 +15,9 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 try:
-    from customer_context import resolve_customer_context
+    from customer_context import authorize_customer_context, resolve_customer_context
 except ModuleNotFoundError:
-    from api.customer_context import resolve_customer_context
+    from api.customer_context import authorize_customer_context, resolve_customer_context
 
 
 DEFAULT_SEASON = 2026
@@ -639,8 +639,13 @@ def trend_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return trends[:80]
 
 
-def build_live_board_payload(request_path: str = "", force: bool = False, limit: int | None = None) -> dict[str, Any]:
-    context = resolve_customer_context(request_path)
+def build_live_board_payload(
+    request_path: str = "",
+    headers: Any | None = None,
+    force: bool = False,
+    limit: int | None = None,
+) -> dict[str, Any]:
+    context = authorize_customer_context(request_path, headers)
     now = time.time()
     cache_key = f"{context.cache_key}:boards:{limit or 'default'}"
     cached = _board_cache.get(cache_key)
@@ -724,7 +729,9 @@ class handler(BaseHTTPRequestHandler):
             except ValueError:
                 limit = None
         try:
-            self.send_json(build_live_board_payload(self.path, force=force, limit=limit))
+            self.send_json(build_live_board_payload(self.path, self.headers, force=force, limit=limit))
+        except PermissionError as exc:
+            self.send_json(error_payload(str(exc)), HTTPStatus.UNAUTHORIZED)
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError, ValueError) as exc:
             self.send_json(error_payload(str(exc)), HTTPStatus.BAD_GATEWAY)
 

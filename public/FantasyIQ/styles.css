@@ -2235,6 +2235,90 @@ code {
   gap: 14px;
 }
 
+.cheatcode-status {
+  border-color: rgba(18, 63, 52, 0.22);
+  background: #eef7f2;
+}
+
+.cheatcode-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(180px, 0.75fr) minmax(190px, 0.75fr);
+  gap: 1px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  border: 1px solid rgba(243, 208, 113, 0.34);
+  border-radius: 8px;
+  background: rgba(243, 208, 113, 0.34);
+  box-shadow: var(--shadow-soft);
+}
+
+.cheatcode-hero div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  background:
+    linear-gradient(135deg, rgba(7, 29, 24, 0.98), rgba(18, 63, 52, 0.94)),
+    var(--field-dark);
+  padding: 18px;
+  color: var(--logo-cream);
+}
+
+.cheatcode-hero span,
+.cheatcode-panel > .eyebrow {
+  color: var(--logo-gold);
+}
+
+.cheatcode-hero strong {
+  overflow-wrap: anywhere;
+  color: var(--logo-gold);
+  font-size: clamp(22px, 3vw, 38px);
+  line-height: 1;
+}
+
+.cheatcode-hero small {
+  color: rgba(255, 241, 189, 0.78);
+  font-weight: 800;
+}
+
+.cheatcode-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.cheatcode-grid.secondary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.cheatcode-panel {
+  display: grid;
+  align-content: start;
+  min-height: 270px;
+  background:
+    linear-gradient(180deg, #fffdf7, #f6f0e2),
+    var(--surface);
+}
+
+.cheatcode-panel h3 {
+  margin-bottom: 10px;
+  font-size: 20px;
+}
+
+.cheatcode-panel .pick-card,
+.cheatcode-panel .intel-card {
+  border-color: rgba(18, 63, 52, 0.18);
+}
+
+.cheatcode-panel .recommendation.priority {
+  border-color: rgba(199, 154, 59, 0.42);
+  box-shadow: inset 4px 0 0 var(--logo-gold), 0 8px 18px rgba(6, 18, 15, 0.08);
+}
+
+.cheatcode-player {
+  min-height: 100%;
+}
+
 .sim-layout .live-panel {
   min-height: 260px;
 }
@@ -2552,6 +2636,9 @@ code {
   .live-grid,
   .cheat-grid,
   .sim-layout,
+  .cheatcode-hero,
+  .cheatcode-grid,
+  .cheatcode-grid.secondary,
   .sim-tools,
   .tier-board-tools,
   .sim-player-row,
@@ -2852,4 +2939,360 @@ body.access-locked .topbar {
   display: block;
   margin-top: 14px;
   color: #5d6b64;
+}
+
+/* Premium command-center polish */
+:root {
+  --surface: rgba(255, 253, 247, 0.97);
+  --surface-2: #f8f3e7;
+  --ink: #141814;
+  --muted: #596257;
+  --line: #d7caa8;
+  --accent: #123f34;
+  --accent-2: #c79a3b;
+  --shadow: 0 24px 60px rgba(6, 18, 15, 0.2);
+  --shadow-soft: 0 10px 26px rgba(6, 18, 15, 0.1);
+}
+
+body {
+  background:
+    linear-gradient(180deg, rgba(5, 17, 14, 0.5), rgba(5, 17, 14, 0.14) 42%, rgba(5, 17, 14, 0.46)),
+    radial-gradient(circle at 50% 0%, rgba(243, 208, 113, 0.11), transparent 34%),
+    linear-gradient(135deg, #071d18, #103b32 50%, #0b211d);
+}
+
+.field-overlay {
+  opacity: 0.38;
+}
+
+.field-overlay::before {
+  opacity: 0.7;
+}
+
+.field-overlay::after,
+.yard-number,
+.field-endzone {
+  opacity: 0.42;
+}
+
+.topbar {
+  align-items: stretch;
+  padding: 22px 32px;
+  border-bottom-color: rgba(243, 208, 113, 0.22);
+  background:
+    linear-gradient(90deg, rgba(7, 29, 24, 0.98), rgba(16, 54, 46, 0.97)),
+    var(--field-dark);
+}
+
+.brand-lockup img {
+  width: 78px;
+  height: 78px;
+  box-shadow: 0 12px 26px rgba(5, 17, 14, 0.24), 0 0 0 5px rgba(255, 241, 189, 0.08);
+}
+
+h1 {
+  font-size: clamp(32px, 4vw, 40px);
+}
+
+.draft-card {
+  display: grid;
+  align-content: center;
+  min-width: 250px;
+  background:
+    linear-gradient(180deg, rgba(255, 241, 189, 0.12), rgba(5, 17, 14, 0.42)),
+    rgba(7, 29, 24, 0.72);
+}
+
+.demo-banner {
+  justify-content: space-between;
+  padding-inline: 36px;
+  background: #fffdf7;
+}
+
+.layout {
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 18px;
+  padding: 22px 32px 34px;
+}
+
+.sidebar {
+  gap: 6px;
+  border: 1px solid rgba(243, 208, 113, 0.2);
+  border-radius: 8px;
+  background: rgba(6, 24, 20, 0.62);
+  padding: 8px;
+  box-shadow: 0 18px 42px rgba(5, 17, 14, 0.22);
+}
+
+.nav-item {
+  position: relative;
+  min-height: 44px;
+  border-color: transparent;
+  background: transparent;
+  color: rgba(255, 241, 189, 0.72);
+  padding: 11px 12px 11px 16px;
+  text-shadow: none;
+  box-shadow: none;
+}
+
+.nav-item:hover {
+  border-color: rgba(243, 208, 113, 0.18);
+  background: rgba(255, 241, 189, 0.08);
+  color: var(--logo-cream);
+}
+
+.nav-item.active {
+  border-color: rgba(243, 208, 113, 0.34);
+  background: rgba(255, 241, 189, 0.13);
+  color: var(--logo-gold);
+  box-shadow: inset 4px 0 0 var(--logo-gold);
+}
+
+.panel {
+  padding: 24px;
+  border-color: rgba(216, 202, 168, 0.86);
+  background:
+    linear-gradient(180deg, rgba(255, 253, 247, 0.99), rgba(248, 243, 231, 0.97)),
+    var(--surface);
+  box-shadow: 0 18px 48px rgba(5, 17, 14, 0.16);
+}
+
+.panel::before {
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--logo-gold), #2a6f79);
+}
+
+.panel-head {
+  align-items: center;
+  border-bottom: 1px solid rgba(216, 202, 168, 0.62);
+  padding-bottom: 16px;
+}
+
+.panel-head h2 {
+  font-size: clamp(24px, 2.4vw, 34px);
+}
+
+.command-hero {
+  border-color: rgba(243, 208, 113, 0.28);
+  background:
+    linear-gradient(135deg, rgba(7, 29, 24, 0.98), rgba(18, 63, 52, 0.94) 54%, rgba(38, 73, 80, 0.92)),
+    var(--field);
+  box-shadow: 0 22px 60px rgba(5, 17, 14, 0.22);
+}
+
+.command-hero::before {
+  opacity: 0.38;
+}
+
+.command-hero::after {
+  left: 75%;
+  color: rgba(255, 241, 189, 0.08);
+}
+
+.command-hero h2 {
+  max-width: 760px;
+  font-size: clamp(34px, 4.4vw, 56px);
+  letter-spacing: 0;
+}
+
+.command-hero p {
+  max-width: 680px;
+  color: rgba(255, 241, 189, 0.86);
+}
+
+.hero-actions {
+  gap: 8px;
+}
+
+.primary-action,
+.grader button,
+.board-tools button,
+.trade-history-head button,
+.subscribe-button,
+.demo-banner a {
+  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+
+.primary-action:hover,
+.grader button:hover,
+.board-tools button:hover,
+.trade-history-head button:hover,
+.subscribe-button:hover,
+.demo-banner a:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 13px 28px rgba(59, 33, 21, 0.22);
+}
+
+.secondary-action,
+.source-button,
+.tab,
+.position-toggles button {
+  background: #123f34;
+  color: var(--logo-gold);
+  text-shadow: none;
+}
+
+.metric,
+.box,
+.result,
+.command,
+.plan,
+.strategy-card,
+.command-tile,
+.trade-card,
+.trade-verdict,
+.trade-rules article,
+.trade-history-card,
+.trade-history-row,
+.live-clock,
+.live-stat,
+.live-select,
+.live-panel,
+.analysis-pane,
+.table-wrap {
+  border-color: rgba(216, 202, 168, 0.82);
+  background: #fffdf7;
+  box-shadow: var(--shadow-soft);
+}
+
+.metric,
+.command-tile,
+.live-stat,
+.trade-score-grid div,
+.analysis-chip {
+  background:
+    linear-gradient(180deg, #fffdf7, #f8f3e7);
+}
+
+.metric strong,
+.command-tile strong,
+.live-stat strong,
+.trade-card-head strong {
+  color: #123f34;
+}
+
+.command-grid,
+.metric-grid,
+.trade-rules,
+.cheat-grid,
+.live-grid,
+.trade-history-grid {
+  gap: 10px;
+}
+
+input,
+select,
+textarea,
+.board-tools input,
+.board-tools select,
+.trade-card textarea,
+.paste-box,
+.sim-tools input,
+.sim-tools select,
+.tier-board-tools input,
+.footballers-input-grid input,
+.footballers-input-grid select,
+.footballers-player-check input {
+  background: #fffefb;
+  border-color: rgba(130, 117, 82, 0.36);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid rgba(199, 154, 59, 0.34);
+  outline-offset: 2px;
+}
+
+.table-wrap {
+  border-color: rgba(123, 107, 72, 0.28);
+  background: #fff;
+}
+
+#board-table {
+  font-size: 12.5px;
+}
+
+#board-table th {
+  background: linear-gradient(180deg, #17352d, #071d18);
+  color: #f8dc8c;
+}
+
+#board-table td {
+  border-bottom-color: rgba(216, 202, 168, 0.58);
+}
+
+#board-table tbody tr:nth-child(even):not(.board-tier-divider-row) {
+  background: rgba(248, 243, 231, 0.46);
+}
+
+#board-table tbody tr:hover:not(.board-tier-divider-row) {
+  background: #eef7f2;
+}
+
+#board-table button.player-link {
+  color: #0b6b60;
+  text-decoration: none;
+  font-weight: 850;
+}
+
+#board-table button.player-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tier-pill,
+.status,
+.trade-roster-pills span,
+.trade-warning-list span,
+.drafted-badge {
+  border-radius: 999px;
+}
+
+.analysis-pane {
+  top: 18px;
+  background: linear-gradient(180deg, #ffffff, #f5faf7);
+}
+
+.live-clock {
+  background: linear-gradient(135deg, #071d18, #123f34 58%, #2a5961);
+}
+
+.intel-card,
+.pick-card,
+.trade-player-chip,
+.comparison-grid article,
+.footballers-verdict,
+.player-synopsis {
+  box-shadow: 0 4px 12px rgba(6, 18, 15, 0.06);
+}
+
+@media (max-width: 860px) {
+  .layout {
+    padding: 18px;
+  }
+
+  .sidebar {
+    position: static;
+    background: rgba(6, 24, 20, 0.78);
+  }
+
+  .demo-banner {
+    justify-content: start;
+    padding-inline: 18px;
+  }
+}
+
+@media (max-width: 520px) {
+  .command-hero h2 {
+    max-width: 100%;
+  }
+
+  .command-hero::after {
+    left: 78%;
+    top: 73%;
+  }
 }

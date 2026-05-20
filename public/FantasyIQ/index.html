@@ -42,12 +42,20 @@
         <span>Subscription</span>
         <strong>Active</strong>
         <small>Configured for No Guts, No Glory</small>
+        <a class="subscribe-button" href="https://buy.stripe.com/eVq3cvdN71GX84E917efC00">Subscribe for your league</a>
       </div>
     </header>
+
+    <div class="demo-banner" data-demo-banner>
+      <strong>Public demo preview</strong>
+      <span>This dashboard is a working preview. Subscribe to get it configured for your ESPN league.</span>
+      <a href="https://buy.stripe.com/eVq3cvdN71GX84E917efC00">Start setup</a>
+    </div>
 
     <main class="layout">
       <nav class="sidebar" aria-label="Dashboard sections">
         <button class="nav-item active" data-section="command">Command</button>
+        <button class="nav-item" data-section="cheatcode">Cheatcode</button>
         <button class="nav-item" data-section="footballers">Footballers</button>
         <button class="nav-item" data-section="draft">Draft Prep</button>
         <button class="nav-item" data-section="live">Draft Room</button>
@@ -68,6 +76,7 @@
                 <button class="primary-action nav-jump" type="button" data-jump="workbooks">Open Big Board</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="footballers">Footballers Layer</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="draft">Draft Plan</button>
+                <button class="primary-action nav-jump" type="button" data-jump="cheatcode">Cheatcode Mode</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="live">Draft Room</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="simulator">Mock Simulator</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="trade">Trade Calculator</button>
@@ -148,6 +157,73 @@
                 <div><strong>4</strong><span>Load roster for trade engine</span><em>Post-draft</em></div>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section class="panel" id="cheatcode">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Cheatcode Mode</p>
+              <h2>Your draft decision cockpit</h2>
+            </div>
+            <div class="live-switches">
+              <button class="nav-jump" type="button" data-jump="live">Full Draft Room</button>
+              <button class="nav-jump" type="button" data-jump="workbooks">Big Board</button>
+            </div>
+          </div>
+
+          <div class="result cheatcode-status" id="cheatcode-status">
+            Loading the board, live draft state, and roster context.
+          </div>
+
+          <div class="cheatcode-hero" id="cheatcode-hero">
+            Cheatcode Mode will light up once FantasyIQ has board data.
+          </div>
+
+          <div class="cheatcode-grid">
+            <section class="live-panel cheatcode-panel">
+              <p class="eyebrow">Now</p>
+              <h3>Best move</h3>
+              <div id="cheatcode-now" class="pick-list">Waiting for board data.</div>
+            </section>
+            <section class="live-panel cheatcode-panel">
+              <p class="eyebrow">Value</p>
+              <h3>Board edge</h3>
+              <div id="cheatcode-value" class="pick-list">Waiting for board data.</div>
+            </section>
+            <section class="live-panel cheatcode-panel">
+              <p class="eyebrow">Safety</p>
+              <h3>Low-regret pick</h3>
+              <div id="cheatcode-safe" class="pick-list">Waiting for board data.</div>
+            </section>
+            <section class="live-panel cheatcode-panel">
+              <p class="eyebrow">Upside</p>
+              <h3>Swing pick</h3>
+              <div id="cheatcode-upside" class="pick-list">Waiting for board data.</div>
+            </section>
+          </div>
+
+          <div class="cheatcode-grid secondary">
+            <section class="live-panel cheatcode-panel">
+              <p class="eyebrow">Tier Cliff</p>
+              <h3>Do not miss</h3>
+              <div id="cheatcode-tier" class="intel-list">Waiting for tiers.</div>
+            </section>
+            <section class="live-panel cheatcode-panel">
+              <p class="eyebrow">Wait</p>
+              <h3>Likely returns</h3>
+              <div id="cheatcode-wait" class="pick-list">Waiting for team context.</div>
+            </section>
+            <section class="live-panel cheatcode-panel">
+              <p class="eyebrow">Avoid</p>
+              <h3>Under clock</h3>
+              <div id="cheatcode-avoid" class="pick-list">Waiting for team context.</div>
+            </section>
+            <section class="live-panel cheatcode-panel">
+              <p class="eyebrow">Room</p>
+              <h3>Draft pulse</h3>
+              <div id="cheatcode-room" class="intel-list">Waiting for live picks.</div>
+            </section>
           </div>
         </section>
 

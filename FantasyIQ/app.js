@@ -33,6 +33,16 @@ const tradeHistoryStatus = document.querySelector("#trade-history-status");
 const tradeHistoryAnalysis = document.querySelector("#trade-history-analysis");
 const tradeHistorySummary = document.querySelector("#trade-history-summary");
 const tradeHistoryList = document.querySelector("#trade-history-list");
+const cheatcodeStatus = document.querySelector("#cheatcode-status");
+const cheatcodeHero = document.querySelector("#cheatcode-hero");
+const cheatcodeNow = document.querySelector("#cheatcode-now");
+const cheatcodeValue = document.querySelector("#cheatcode-value");
+const cheatcodeSafe = document.querySelector("#cheatcode-safe");
+const cheatcodeUpside = document.querySelector("#cheatcode-upside");
+const cheatcodeTier = document.querySelector("#cheatcode-tier");
+const cheatcodeWait = document.querySelector("#cheatcode-wait");
+const cheatcodeAvoid = document.querySelector("#cheatcode-avoid");
+const cheatcodeRoom = document.querySelector("#cheatcode-room");
 const boardCount = document.querySelector("#board-count");
 const liveSyncStatus = document.querySelector("#live-sync-status");
 const liveStatus = document.querySelector("#live-status");
@@ -107,17 +117,39 @@ let activePlayerAutocomplete = null;
 function resolveAppConfig(config) {
   const params = new URLSearchParams(window.location.search);
   const loadouts = config.loadouts || {};
-  const requestedLoadout = (params.get("loadout") || params.get("customer") || params.get("dashboard") || "").toLowerCase();
+  const requestedLoadout = normalizeDashboardSlug(params.get("loadout") || params.get("customer") || params.get("dashboard") || "");
   const defaultLoadout = config.defaultLoadout && loadouts[config.defaultLoadout] ? config.defaultLoadout : "";
-  const loadoutKey = requestedLoadout && loadouts[requestedLoadout] ? requestedLoadout : defaultLoadout;
-  const loadoutConfig = loadoutKey ? loadouts[loadoutKey] : {};
+  const loadoutKey = requestedLoadout || defaultLoadout;
+  const loadoutConfig = loadoutKey && loadouts[loadoutKey] ? loadouts[loadoutKey] : {};
   const merged = { ...config, ...loadoutConfig, loadoutKey: loadoutKey || "default" };
+  const customerDashboard = Boolean(loadoutKey);
+
+  if (customerDashboard) {
+    merged.isDemoPreview = loadoutConfig.isDemoPreview ?? false;
+    merged.showSubscribeButton = loadoutConfig.showSubscribeButton ?? false;
+    merged.draftCardLabel = loadoutConfig.draftCardLabel || "Customer Dashboard";
+    merged.draftCardValue = loadoutConfig.draftCardValue || "Active";
+    merged.draftCardNote = loadoutConfig.draftCardNote || "Configured for this ESPN league";
+    merged.demoLabel = loadoutConfig.demoLabel || "Customer dashboard";
+    merged.demoMessage = loadoutConfig.demoMessage || "Configured FantasyIQ command center.";
+    merged.heroSubtitle =
+      loadoutConfig.heroSubtitle ||
+      "Your official FantasyIQ command center for live draft sync, player values, mock tracking, and trade discipline.";
+  }
 
   if (params.get("name")) merged.customerName = params.get("name");
   if (params.get("teamName")) merged.customerTeamName = params.get("teamName");
   if (params.get("teamId")) merged.customerTeamId = params.get("teamId");
 
   return merged;
+}
+
+function normalizeDashboardSlug(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function loadoutStorageKey(key) {
@@ -145,15 +177,21 @@ function apiUrl(path, params = {}) {
   if (appConfig.loadoutKey) {
     url.searchParams.set("customer", appConfig.loadoutKey);
   }
-  if (requiresCustomerAccess() && savedCustomerAccessCode()) {
-    url.searchParams.set("accessCode", savedCustomerAccessCode());
-  }
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== false && value !== "") {
       url.searchParams.set(key, String(value));
     }
   });
   return `${url.pathname}${url.search}`;
+}
+
+function apiHeaders(extra = {}) {
+  const headers = { ...extra };
+  const accessCode = savedCustomerAccessCode();
+  if (requiresCustomerAccess() && accessCode) {
+    headers["x-fantasyiq-access-code"] = accessCode;
+  }
+  return headers;
 }
 
 function customerAccessGate() {
@@ -196,8 +234,10 @@ function showCustomerAccessGate(message = "") {
     if (!code) return;
     output.textContent = "Checking access...";
     try {
-      const url = apiUrl("/api/customer-status", { accessCode: code, v: Date.now() });
-      const response = await fetch(url, { cache: "no-store" });
+      const response = await fetch(apiUrl("/api/customer-status", { v: Date.now() }), {
+        cache: "no-store",
+        headers: { "x-fantasyiq-access-code": code },
+      });
       const payload = await response.json();
       if (!response.ok || !payload.ok || payload.authenticated === false) {
         output.textContent = payload.message || "That access code did not work.";
@@ -659,7 +699,7 @@ function renderBoard() {
               return `<td><button class="player-link" data-index="${index}">${htmlEscape(row.Player)}</button>${draftedBadge}</td>`;
             }
             if (column === "Tier") {
-              return `<td><span class="tier-pill">${row["Pos Tier"] || cellValue(row, column)}</span></td>`;
+              return `<td><span class="tier-pill">${htmlEscape(row["Pos Tier"] || cellValue(row, column))}</span></td>`;
             }
             if (column === "Last Year PPR") {
               return `<td class="number">${lastYearValue(row)}</td>`;
@@ -1654,7 +1694,7 @@ function loadTradeHistory(force = false) {
   if (!tradeHistoryStatus) return;
   if (!ensureCustomerAccess()) return;
   tradeHistoryStatus.textContent = force ? "Refreshing ESPN trade history..." : "Loading ESPN trade history and team tendencies.";
-  fetch(apiUrl("/api/trade-history", { lookback: 6, force: force ? 1 : "" }), { cache: "no-store" })
+  fetch(apiUrl("/api/trade-history", { lookback: 6, force: force ? 1 : "" }), { cache: "no-store", headers: apiHeaders() })
     .then((response) => jsonOrAccessError(response, `Trade history returned HTTP ${response.status}`))
     .then((data) => {
       tradeHistoryData = data;
@@ -2065,7 +2105,7 @@ function renderTeamOptions() {
   const teamStorageKey = loadoutStorageKey("my-team");
   const saved = localStorage.getItem(teamStorageKey) || myTeamSelect.value || appConfig.customerTeamId || "";
   myTeamSelect.innerHTML = `<option value="">Choose your team</option>${liveDraft.teams
-    .map((team) => `<option value="${team.teamId}">${team.teamName}${team.manager ? ` (${team.manager})` : ""}</option>`)
+    .map((team) => `<option value="${htmlEscape(team.teamId)}">${htmlEscape(team.teamName)}${team.manager ? ` (${htmlEscape(team.manager)})` : ""}</option>`)
     .join("")}`;
   if (saved) myTeamSelect.value = saved;
   if (!localStorage.getItem(teamStorageKey) && appConfig.customerTeamId) {
@@ -2093,7 +2133,7 @@ function renderPickCards(container, picks, emptyMessage) {
         <span>R${pick.round} P${pick.roundPick} / Overall ${pick.overall}</span>
         ${value?.row ? playerFocusButton(value.row) : `<strong>${htmlEscape(playerText)}</strong>`}
         ${valueLabel}
-        <small>${pick.fantasyTeam}${pick.manager ? ` / ${pick.manager}` : ""}. ${detail}</small>
+        <small>${htmlEscape(pick.fantasyTeam)}${pick.manager ? ` / ${htmlEscape(pick.manager)}` : ""}. ${htmlEscape(detail)}</small>
         ${value?.row ? playerSynopsisBlock(value.row, { compact: true }) : ""}
       </div>`;
     })
@@ -2308,6 +2348,172 @@ function renderRiskMeter() {
   `;
 }
 
+function cheatcodePlayerCard(row, label, detail = "") {
+  if (!row) return `<div class="pick-card"><strong>Waiting</strong><small>No matching player yet.</small></div>`;
+  return `<div class="pick-card cheatcode-player">
+    <span>${htmlEscape(label)} / #${row.Rank} / ${row.Pos} / ${row.Team}</span>
+    ${playerFocusButton(row)}
+    <em>${htmlEscape(row["Pos Tier"] || row.Category || "Board value")}</em>
+    <small>${htmlEscape(detail || row.Action || "Use as a tiebreaker.")}</small>
+    ${playerSynopsisBlock(row, { compact: true })}
+  </div>`;
+}
+
+function bestCheatcodeRows(counts) {
+  const rows = availableRows();
+  const ranked = rows
+    .map((row) => ({ row, score: adjustedRecommendationScore(row, counts), decision: recommendationDecision(row, counts) }))
+    .sort((a, b) => b.score - a.score);
+  const usable = ranked.filter((item) => item.decision.label !== "Avoid");
+  const bestNow = usable.find((item) => ["Pick now", "Target", "Controlled risk", "Board value"].includes(item.decision.label)) || usable[0];
+  const bestValue = usable
+    .filter((item) => !positionClosed(item.row, counts))
+    .sort((a, b) => Number(b.row["Value Score"] || 0) - Number(a.row["Value Score"] || 0) || Number(a.row.Rank) - Number(b.row.Rank))[0];
+  const safe = usable
+    .filter((item) => Number(item.row.Risk || 0) <= 4 && !["DST", "K"].includes(item.row.Pos))
+    .sort((a, b) => Number(a.row.Rank) - Number(b.row.Rank))[0];
+  const upside = usable
+    .filter((item) => ["RB", "WR", "TE"].includes(item.row.Pos) && Number(item.row.Upside || item.row.Ceiling || 0) >= 65)
+    .sort((a, b) => Number(b.row.Upside || b.row.Ceiling || 0) - Number(a.row.Upside || a.row.Ceiling || 0))[0];
+  return { ranked, usable, bestNow, bestValue, safe, upside };
+}
+
+function cheatcodeTierCliffs() {
+  return ["RB", "WR", "TE", "QB"]
+    .map((pos) => topTierInfo(pos))
+    .filter((info) => info.rows.length)
+    .sort((a, b) => a.count - b.count)
+    .slice(0, 4);
+}
+
+function renderCheatcodeMode() {
+  if (!cheatcodeStatus) return;
+  if (!boardData) {
+    cheatcodeStatus.textContent = "Loading player board and draft intelligence.";
+    [cheatcodeHero, cheatcodeNow, cheatcodeValue, cheatcodeSafe, cheatcodeUpside, cheatcodeTier, cheatcodeWait, cheatcodeAvoid, cheatcodeRoom]
+      .filter(Boolean)
+      .forEach((node) => {
+        node.textContent = "Waiting for board data.";
+      });
+    return;
+  }
+
+  const teamId = selectedTeamId();
+  const hasLive = Boolean(liveDraft);
+  const { counts } = teamId ? rosterCountsFor(teamId) : { counts: emptyPositionCounts() };
+  const nextPick = teamId ? nextMyPick(teamId) : null;
+  const until = nextPick ? picksUntil(nextPick) : null;
+  const { bestNow, bestValue, safe, upside, ranked } = bestCheatcodeRows(counts);
+  const nowDecision = bestNow ? recommendationDecision(bestNow.row, counts) : null;
+  const bestPlayer = bestNow?.row || bestValue?.row || safe?.row || availableRows()[0];
+  const heroState = !teamId
+    ? "Choose your ESPN team to unlock the full cheatcode read."
+    : !hasLive
+      ? "Board intelligence is ready. Live draft sync is still connecting."
+      : until === 0
+        ? "You are on the clock. Take the highest-confidence edge."
+        : `${until} picks until you. ${nowDecision?.label || "Target"}: ${bestPlayer?.Player || "best available"}.`;
+
+  cheatcodeStatus.innerHTML = `<strong>${hasLive ? "Live intelligence ready" : "Board intelligence ready"}</strong>: ${htmlEscape(heroState)}`;
+  if (cheatcodeHero) {
+    cheatcodeHero.innerHTML = `
+      <div>
+        <span>Cheatcode read</span>
+        <strong>${htmlEscape(bestPlayer?.Player || "Waiting for board")}</strong>
+        <small>${bestPlayer ? htmlEscape(`${nowDecision?.label || "Best value"} / ${bestPlayer.Pos} / ${bestPlayer.Team} / ${bestPlayer["Pos Tier"] || bestPlayer.Category}`) : "No player selected yet."}</small>
+      </div>
+      <div>
+        <span>Next pick</span>
+        <strong>${nextPick ? `R${nextPick.round} P${nextPick.roundPick}` : teamId ? "Complete" : "Select team"}</strong>
+        <small>${nextPick ? `Overall ${nextPick.overall}, ${until} picks away` : teamId ? "No remaining ESPN picks found" : "Use the team selector in Draft Room"}</small>
+      </div>
+      <div>
+        <span>Roster shape</span>
+        <strong>RB ${counts.RB} / WR ${counts.WR}</strong>
+        <small>QB ${counts.QB}, TE ${counts.TE}, DST ${counts.DST}, K ${counts.K}</small>
+      </div>
+    `;
+  }
+
+  if (cheatcodeNow) {
+    cheatcodeNow.innerHTML = bestNow
+      ? renderRecommendationCard(bestNow.row, counts, 0)
+      : "<p>No urgent pick yet. Let the room make the first mistake.</p>";
+  }
+  if (cheatcodeValue) {
+    cheatcodeValue.innerHTML = cheatcodePlayerCard(
+      bestValue?.row,
+      "Best value",
+      bestValue ? `Value score ${bestValue.row["Value Score"]}. ${bestValue.row.Action}` : "",
+    );
+  }
+  if (cheatcodeSafe) {
+    cheatcodeSafe.innerHTML = cheatcodePlayerCard(
+      safe?.row,
+      "Low-regret",
+      safe ? `Risk ${safe.row.Risk}/10 with strong board rank for the current room.` : "",
+    );
+  }
+  if (cheatcodeUpside) {
+    cheatcodeUpside.innerHTML = cheatcodePlayerCard(
+      upside?.row,
+      "Upside swing",
+      upside ? `Upside ${upside.row.Upside || upside.row.Ceiling}/100. Best used after the foundation is protected.` : "",
+    );
+  }
+
+  if (cheatcodeTier) {
+    const cliffs = cheatcodeTierCliffs();
+    cheatcodeTier.innerHTML = cliffs.length
+      ? cliffs
+          .map((info) => {
+            const severity = info.count <= 2 ? "danger" : info.count <= 4 ? "watch" : "good";
+            const names = info.rows.slice(0, 3).map((row) => row.Player).join(", ");
+            return `<div class="intel-card ${severity}">
+              <strong>${info.pos}: ${info.count} left in ${htmlEscape(info.tier)}</strong>
+              <small>${htmlEscape(names)}</small>
+            </div>`;
+          })
+          .join("")
+      : "<p>No tier cliff data yet.</p>";
+  }
+
+  if (cheatcodeWait) {
+    const waitList = teamId
+      ? ranked
+          .filter((item) => recommendationDecision(item.row, counts).label === "Can wait")
+          .slice(0, 3)
+      : [];
+    cheatcodeWait.innerHTML = waitList.length
+      ? waitList.map((item) => renderRecommendationCard(item.row, counts)).join("")
+      : "<p>Select your team during a live draft to see who can wait.</p>";
+  }
+
+  if (cheatcodeAvoid) {
+    const avoids = teamId ? avoidRows(counts) : [];
+    cheatcodeAvoid.innerHTML = avoids.length
+      ? avoids.map((row) => renderRecommendationCard(row, counts)).join("")
+      : "<p>No major avoid flags from roster and round logic.</p>";
+  }
+
+  if (cheatcodeRoom) {
+    const recent = recentDraftedPicks(12);
+    const countsByPos = recentPositionCounts(12);
+    const leaders = Object.entries(countsByPos).sort((a, b) => b[1] - a[1]);
+    const [runPos, runCount] = leaders[0] || ["None", 0];
+    const severity = runCount >= 5 ? "danger" : runCount >= 3 ? "watch" : "good";
+    cheatcodeRoom.innerHTML = recent.length
+      ? `<div class="intel-card ${severity}">
+          <strong>${runCount >= 3 ? `${runPos} pressure: ${runCount} of last ${recent.length}` : "Room is balanced"}</strong>
+          <small>${runCount >= 3 ? "Check the tier cliff before reacting." : "Keep taking value. No panic adjustment needed."}</small>
+        </div>
+        <div class="intel-subgrid">
+          <div><h4>Last 12</h4>${leaders.map(([pos, count]) => `<span>${pos} <b>${count}</b></span>`).join("")}</div>
+        </div>`
+      : "<p>Live picks have not started yet.</p>";
+  }
+}
+
 function renderDraftOrder() {
   if (!draftOrderGrid) return;
   const order = liveDraft?.draftOrder || [];
@@ -2319,8 +2525,8 @@ function renderDraftOrder() {
     .map(
       (pick) => `<div>
         <strong>${pick.roundPick}</strong>
-        <span>${pick.fantasyTeam}</span>
-        <small>${pick.manager || "Manager TBD"}</small>
+        <span>${htmlEscape(pick.fantasyTeam)}</span>
+        <small>${htmlEscape(pick.manager || "Manager TBD")}</small>
       </div>`,
     )
     .join("");
@@ -2369,6 +2575,7 @@ function renderLiveDraft() {
   renderTierAlerts();
   renderRoomDetector();
   renderRiskMeter();
+  renderCheatcodeMode();
   renderPickCards(liveRecentPicks, liveDraft.recentPicks, "No picks have been made yet.");
   renderPickCards(liveNextPicks, liveDraft.nextPicks, "No upcoming picks found.");
   renderLiveTierBoard();
@@ -2900,7 +3107,7 @@ function liveServerHelp(error) {
 function loadLiveDraft(force = false) {
   if (!liveStatus) return;
   if (!ensureCustomerAccess()) return;
-  fetch(apiUrl("/api/live-draft", { force: force ? 1 : "" }), { cache: "no-store" })
+  fetch(apiUrl("/api/live-draft", { force: force ? 1 : "" }), { cache: "no-store", headers: apiHeaders() })
     .then((response) => jsonOrAccessError(response, `HTTP ${response.status}`))
     .then((data) => {
       if (!data) throw new Error("Live sync returned an empty response");
@@ -2935,7 +3142,7 @@ function loadBoards() {
   const boardRequestUrl = liveBoardUrl.startsWith("/api/")
     ? apiUrl(liveBoardUrl, { v: Date.now() })
     : `${liveBoardUrl}${liveBoardUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
-  fetch(boardRequestUrl, { cache: "no-store" })
+  fetch(boardRequestUrl, { cache: "no-store", headers: apiHeaders() })
     .then((response) => {
       if (!response.ok) throw new Error(`Live board returned HTTP ${response.status}`);
       return response.json();
@@ -2956,6 +3163,7 @@ function loadBoards() {
     .then((data) => {
       boardData = data;
       renderBoard();
+      renderCheatcodeMode();
       renderLiveDraft();
       renderLiveTierBoard();
       renderMockSimulator();
@@ -3070,6 +3278,7 @@ function setHideDrafted(value) {
   localStorage.setItem(loadoutStorageKey("hide-drafted"), String(value));
   renderBoard();
   renderRecommendations();
+  renderCheatcodeMode();
   renderLiveTierBoard();
   renderNextPickRadar();
   renderTierAlerts();
@@ -3082,6 +3291,7 @@ hideDraftedBoard?.addEventListener("change", () => setHideDrafted(hideDraftedBoa
 myTeamSelect?.addEventListener("change", () => {
   localStorage.setItem(loadoutStorageKey("my-team"), myTeamSelect.value);
   renderLiveDraft();
+  renderCheatcodeMode();
 });
 manualSync?.addEventListener("click", () => loadLiveDraft(true));
 liveSyncToggle?.addEventListener("change", () => {

@@ -201,6 +201,19 @@ Multi-customer API calls can include a customer slug:
 /api/trade-history?customer=katelyn
 ```
 
+Customer dashboard URLs use the same slug and are treated as official customer
+dashboards automatically, even when the slug is only defined in
+`FANTASY_IQ_CUSTOMERS_JSON` and not prelisted in `public/FantasyIQ/config.js`:
+
+```text
+/FantasyIQ/?customer=katelyn
+/FantasyIQ/?customer=new-customer-slug
+```
+
+Any requested customer slug enables customer access handling, removes demo
+checkout banners by default, and sends the slug to live board, live draft, trade
+history, and customer status API calls.
+
 Paid customer API calls require the customer's access code once `accessCode` is
 set in the registry. The dashboard login stores that code in the browser and
 sends it with live draft/trade requests.

@@ -187,15 +187,6 @@ def resolve_customer_context(path: str = "") -> CustomerContext:
 
 
 def access_code_from(path: str, headers: Any | None = None) -> str:
-    parsed = urlparse(path)
-    params = parse_qs(parsed.query)
-    value = (
-        params.get("accessCode", [""])[0]
-        or params.get("access", [""])[0]
-        or params.get("code", [""])[0]
-    )
-    if value:
-        return value.strip()
     if headers is not None:
         return (
             headers.get("x-fantasyiq-access-code", "")
