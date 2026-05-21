@@ -195,6 +195,31 @@ def admin_action(raw: dict[str, Any]) -> dict[str, Any]:
             "syncedAt": utc_now(),
         }
 
+    if action == "ops_events":
+        try:
+            try:
+                from database import list_ops_events, ops_summary
+            except ImportError:
+                from api.database import list_ops_events, ops_summary
+            events = list_ops_events(
+                int(raw.get("limit") or 100),
+                severity=str(raw.get("severity") or "").strip(),
+                source=str(raw.get("source") or "").strip(),
+                customer_slug=customer_slug,
+                event_type=str(raw.get("eventType") or raw.get("event_type") or "").strip(),
+                query=str(raw.get("query") or "").strip(),
+            )
+            summary = ops_summary()
+        except Exception as exc:
+            raise ConfigError(f"Could not load ops events: {exc}") from exc
+        return {
+            "ok": True,
+            "action": action,
+            "opsSummary": summary,
+            "opsEvents": events,
+            "syncedAt": utc_now(),
+        }
+
     if action == "reset_access_code":
         detail = reset_customer_access_code(customer_slug)
         if not detail:

@@ -126,6 +126,8 @@ practice loop:
   risk, thin RB/WR depth, starter gaps, and early DST/K picks.
 - Player cards use plain-English Daily Player Synopsis and FantasyIQ Read
   sections instead of dense source-data paragraphs.
+- Admin operations include an ops event console for setup, login, live sync,
+  email, Stripe, and admin triage events.
 
 ## FantasyIQ OS
 

@@ -77,6 +77,8 @@ Admin:
 - `/admin.html` requires admin token by header.
 - Admin endpoint does not expose access codes.
 - Database status displays when database is connected.
+- Ops event console filters setup, login, live sync, email, Stripe, and admin events by severity, type, customer, source, and search text.
+- Ops event payload details are hidden behind expandable details, not shown by default.
 
 ## Mobile Checks
 

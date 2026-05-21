@@ -548,6 +548,23 @@ footer {
   font: inherit;
 }
 
+.ops-filter-panel {
+  border: 1px solid rgba(15, 58, 48, 0.16);
+  border-radius: 8px;
+  background: #fffdf8;
+  padding: 12px;
+}
+
+.ops-filter-panel summary {
+  color: var(--field-dark);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.ops-filter-panel .admin-filter-row {
+  margin-top: 10px;
+}
+
 .admin-status-grid article {
   border: 1px solid rgba(15, 58, 48, 0.16);
   border-radius: 8px;
@@ -613,6 +630,94 @@ button.secondary {
   color: var(--muted);
   font-size: 13px;
   font-weight: 750;
+}
+
+.ops-table {
+  display: grid;
+  gap: 10px;
+}
+
+.ops-event {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(15, 58, 48, 0.14);
+  border-left: 4px solid rgba(15, 58, 48, 0.35);
+  border-radius: 8px;
+  background: #fffdf8;
+  padding: 12px;
+}
+
+.ops-event.warning {
+  border-left-color: #b88735;
+  background: #fff8e8;
+}
+
+.ops-event.error,
+.ops-event.critical {
+  border-left-color: #a13f2f;
+  background: #fff0eb;
+}
+
+.ops-event-head {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.ops-event-head span {
+  display: inline-grid;
+  place-items: center;
+  min-height: 26px;
+  border-radius: 999px;
+  background: rgba(15, 58, 48, 0.1);
+  color: var(--field-dark);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.ops-event-head strong {
+  min-width: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.ops-event-head small,
+.ops-event-meta span,
+.ops-event p,
+.ops-event details {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.ops-event-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ops-event-meta span {
+  border-radius: 999px;
+  background: rgba(15, 58, 48, 0.08);
+  padding: 3px 8px;
+}
+
+.ops-event p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.ops-event pre {
+  max-height: 220px;
+  overflow: auto;
+  border-radius: 8px;
+  background: #10241f;
+  color: #fff8e8;
+  padding: 10px;
+  font-size: 11px;
+  white-space: pre-wrap;
 }
 
 .admin-actions {

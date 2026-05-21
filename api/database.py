@@ -696,21 +696,49 @@ def should_send_ops_alert(event_type: str, severity: str) -> bool:
     return False
 
 
-def list_ops_events(limit: int = 50) -> list[dict[str, Any]]:
+def list_ops_events(
+    limit: int = 50,
+    *,
+    severity: str = "",
+    source: str = "",
+    customer_slug: str = "",
+    event_type: str = "",
+    query: str = "",
+) -> list[dict[str, Any]]:
     if not database_enabled():
         return []
     safe_limit = max(1, min(int_value(limit, 50) or 50, 200))
+    filters = []
+    values: list[Any] = []
+    if severity:
+        filters.append("severity = %s")
+        values.append(severity.strip())
+    if source:
+        filters.append("source = %s")
+        values.append(source.strip())
+    if customer_slug:
+        filters.append("customer_slug = %s")
+        values.append(slugify(customer_slug))
+    if event_type:
+        filters.append("event_type ILIKE %s")
+        values.append(f"%{event_type.strip()}%")
+    if query:
+        filters.append("(event_type ILIKE %s OR source ILIKE %s OR customer_slug ILIKE %s OR message ILIKE %s)")
+        search = f"%{query.strip()}%"
+        values.extend([search, search, search, search])
+    where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
     with connect() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
-                """
+                f"""
                 SELECT id, event_type, severity, source, customer_slug, league_key,
                        message, payload, created_at
                   FROM fantasyiq_ops_events
+                 {where_clause}
                  ORDER BY created_at DESC
                  LIMIT %s
                 """,
-                (safe_limit,),
+                (*values, safe_limit),
             )
             rows = fetch_all_dicts(cursor)
     output = []

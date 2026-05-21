@@ -24,7 +24,6 @@ These are the highest-leverage upgrades for the next build cycle.
 - Add transactional access-code/setup emails after checkout.
 - Add database-backed additional league fulfillment after Stripe add-on checkout.
 - Add admin controls for customer status, access-code reset, and league archive.
-- Add admin ops visibility for setup failures, login failures, live sync failures, email events, and Stripe events.
 
 ## Next
 
@@ -42,6 +41,7 @@ These make the platform feel more premium after self-serve is stable.
 - League Health checks account access, ESPN sync, team match, scoring, and draft state.
 - Draft recommendations include compact proof lines for league settings, roster context, and draft state.
 - Login success/failure events are recorded through the ops event system when the database is connected.
+- Admin ops visibility shows setup, login, live sync, email, Stripe, and admin events with filters and payload details.
 - Mock Simulator opponents use competitive manager profiles and stricter grading.
 - Player cards use plain-English Daily Player Synopsis and FantasyIQ Read sections.
 
