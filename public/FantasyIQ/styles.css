@@ -2102,20 +2102,28 @@ code {
   order: 2;
 }
 
-#live > .live-hero-grid {
+#live > .league-room-note {
   order: 3;
 }
 
-#live > .draft-primary-grid {
+#live > .live-hero-grid {
   order: 4;
 }
 
-#live > .draft-room-cheatcode {
+#live > .alpha-strip {
   order: 5;
 }
 
-#live > .cheat-grid {
+#live > .draft-primary-grid {
   order: 6;
+}
+
+#live > .draft-room-cheatcode {
+  order: 8;
+}
+
+#live > .cheat-grid {
+  order: 8;
 }
 
 #live > .live-tier-panel {
@@ -2123,11 +2131,15 @@ code {
 }
 
 #live > .draft-feed-grid {
-  order: 8;
+  order: 9;
 }
 
 #live > .draft-order-panel {
-  order: 9;
+  order: 10;
+}
+
+#live > .draft-room-advanced {
+  order: 8;
 }
 
 .live-grid {
@@ -2139,6 +2151,20 @@ code {
 
 .draft-primary-grid {
   grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.7fr);
+}
+
+.draft-core-grid {
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.65fr);
+}
+
+.draft-core-grid > .live-panel {
+  min-height: 0;
+}
+
+.draft-core-grid .pick-list {
+  max-height: 520px;
+  overflow: auto;
+  padding-right: 3px;
 }
 
 .cheat-grid {
@@ -2564,6 +2590,63 @@ code {
 
 .tiered-player-list {
   gap: 7px;
+}
+
+.compact-live-board {
+  max-height: 470px;
+}
+
+.compact-tier-panel {
+  margin-bottom: 14px;
+}
+
+.draft-room-advanced {
+  margin-top: 2px;
+}
+
+.draft-room-advanced summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  cursor: pointer;
+  border: 1px solid rgba(18, 63, 52, 0.16);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, #fffefb, #f6f1e7),
+    var(--surface);
+  color: var(--accent);
+  padding: 0 16px;
+  font-weight: 950;
+  box-shadow: var(--shadow-soft);
+}
+
+.draft-room-advanced summary::after {
+  content: "+";
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--field-dark);
+  color: var(--logo-gold);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.draft-room-advanced[open] summary {
+  margin-bottom: 12px;
+}
+
+.draft-room-advanced[open] summary::after {
+  content: "-";
+}
+
+.compact-draft-context,
+.compact-diagnostics,
+.compact-feed-grid,
+.compact-order-panel {
+  margin-bottom: 12px;
 }
 
 .tier-divider {

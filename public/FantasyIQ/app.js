@@ -2661,12 +2661,12 @@ function renderRecommendations() {
     .sort((a, b) => b.score - a.score)
     .map((item) => item.row);
   const pickNow = teamId
-    ? ranked.filter((row) => !["Wait", "Can wait", "Avoid"].includes(recommendationDecision(row, counts).label)).slice(0, 5)
-    : ranked.slice(0, 5);
+    ? ranked.filter((row) => !["Wait", "Can wait", "Avoid"].includes(recommendationDecision(row, counts).label)).slice(0, 3)
+    : ranked.slice(0, 3);
   const waitList = teamId
-    ? ranked.filter((row) => recommendationDecision(row, counts).label === "Can wait").slice(0, 3)
+    ? ranked.filter((row) => recommendationDecision(row, counts).label === "Can wait").slice(0, 2)
     : [];
-  const avoids = teamId ? avoidRows(counts) : [];
+  const avoids = teamId ? avoidRows(counts).slice(0, 2) : [];
 
   liveRecommendations.innerHTML = `
     <div class="recommendation-block">
