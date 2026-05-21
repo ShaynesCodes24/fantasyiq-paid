@@ -98,6 +98,7 @@ def main() -> int:
 
     timestamp = int(time.time())
     slug = f"self-serve-smoke-{timestamp}"
+    test_email = f"delivered+{slug}@resend.dev"
     event_id = f"evt_{slug.replace('-', '_')}"
     event = {
         "id": event_id,
@@ -111,7 +112,7 @@ def main() -> int:
                 "amount_total": 3000,
                 "currency": "usd",
                 "metadata": {"customer_slug": slug},
-                "customer_details": {"name": "FantasyIQ Smoke Customer", "email": f"{slug}@example.com"},
+                "customer_details": {"name": "FantasyIQ Smoke Customer", "email": test_email},
                 "custom_fields": [
                     {"key": "leagueid", "type": "text", "text": {"value": TEST_LEAGUE_ID}},
                     {"key": "teamid", "type": "text", "text": {"value": TEST_TEAM_ID}},
@@ -137,8 +138,12 @@ def main() -> int:
         database = result.get("database") or {}
         if status != 200 or not database.get("persistedDatabase"):
             raise RuntimeError(f"Webhook did not persist database customer: {webhook}")
+        setup_email = database.get("setupEmail") or {}
+        if os.environ.get("FANTASYIQ_ASSERT_EMAIL_DELIVERY", "1") != "0" and not setup_email.get("sent"):
+            raise RuntimeError(f"Webhook did not send setup email: {setup_email}")
         created_customer = True
         print(f"PASS webhook persisted customer {database.get('customerSlug')}")
+        print("PASS webhook sent setup email")
 
         reset = admin_action("reset_access_code", slug)
         access_code = (reset.get("customer") or {}).get("access_code")
@@ -181,7 +186,7 @@ def main() -> int:
         login_status, login_payload = request_json(
             f"{SITE_URL}/api/customer-login",
             method="POST",
-            payload={"customer": f"{slug}@example.com", "accessCode": access_code, "league": league_key},
+            payload={"customer": test_email, "accessCode": access_code, "league": league_key},
         )
         if login_status != 200 or not login_payload.get("authenticated") or (login_payload.get("customer") or {}).get("customerSlug") != slug:
             raise RuntimeError(f"Customer login failed: {login_payload}")
@@ -217,7 +222,7 @@ def main() -> int:
                     "amount_total": 500,
                     "currency": "usd",
                     "metadata": {"product": "additional_league"},
-                    "customer_details": {"name": "FantasyIQ Smoke Customer", "email": f"{slug}@example.com"},
+                    "customer_details": {"name": "FantasyIQ Smoke Customer", "email": test_email},
                     "custom_fields": [],
                 }
             },

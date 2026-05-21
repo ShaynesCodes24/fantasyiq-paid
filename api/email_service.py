@@ -44,6 +44,10 @@ def email_from() -> str:
     return env("FANTASYIQ_EMAIL_FROM", "FantasyIQ <onboarding@resend.dev>")
 
 
+def email_user_agent() -> str:
+    return env("FANTASYIQ_EMAIL_USER_AGENT", "FantasyIQ/1.0 (+https://myfantasyiq.com)")
+
+
 def email_status() -> dict[str, Any]:
     return {
         "provider": "resend",
@@ -74,6 +78,7 @@ def record_email_event(customer: dict[str, Any], result: dict[str, Any], event_t
                 "to": result.get("to") or "",
                 "id": result.get("id") or "",
                 "status": result.get("status") or "",
+                "reason": result.get("reason") or "",
             },
         )
     except Exception:
@@ -157,6 +162,8 @@ def send_email(*, to: str, subject: str, html: str, text: str = "", idempotency_
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": email_user_agent(),
     }
     if idempotency_key:
         headers["Idempotency-Key"] = idempotency_key
