@@ -7,6 +7,7 @@ import urllib.request
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
+from types import SimpleNamespace
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
@@ -77,13 +78,11 @@ def team_name(team: dict[str, Any], members: dict[str, str]) -> str:
 
 def validate_setup(raw: dict[str, Any]) -> tuple[dict[str, Any], HTTPStatus]:
     league_id = int_value(clean_digits(raw.get("leagueId") or raw.get("league_id")), "leagueId")
-    team_id = int_value(clean_digits(raw.get("teamId") or raw.get("team_id")), "teamId")
+    team_id = int_value(clean_digits(raw.get("teamId") or raw.get("team_id")), "teamId", 0) or 0
     season = int_value(clean_digits(raw.get("season")), "season", DEFAULT_SEASON) or DEFAULT_SEASON
 
     if not league_id:
         raise ConfigError("Enter the ESPN league ID.")
-    if not team_id:
-        raise ConfigError("Enter the ESPN team ID.")
     if season < 2018 or season > 2035:
         raise ConfigError("Enter a valid ESPN season.")
 
@@ -133,19 +132,27 @@ def validate_setup(raw: dict[str, Any]) -> tuple[dict[str, Any], HTTPStatus]:
             }
         )
 
-    match = next((team for team in teams if int(team["teamId"]) == int(team_id)), None)
+    match = next((team for team in teams if team_id and int(team["teamId"]) == int(team_id)), None)
     draft_detail = league.get("draftDetail") or {}
+    league_settings = detected_league_settings(settings, len(teams), draft_detail)
+    if team_id:
+        status = "ready" if match else "team_not_found"
+        message = "League and team are ready for FantasyIQ." if match else "League found, but that team ID was not in this league."
+    else:
+        status = "league_settings_ready"
+        message = "League settings were found. Enter the ESPN team ID to finish validation."
     payload = {
         "ok": bool(match),
-        "status": "ready" if match else "team_not_found",
-        "message": "League and team are ready for FantasyIQ." if match else "League found, but that team ID was not in this league.",
+        "status": status,
+        "message": message,
         "leagueId": league_id,
-        "teamId": team_id,
+        "teamId": team_id or "",
         "season": season,
         "leagueName": settings.get("name") or league.get("name") or "ESPN Fantasy League",
         "teamName": match.get("teamName") if match else "",
         "manager": match.get("manager") if match else "",
-        "teamCount": len(teams),
+        "teamCount": league_settings.get("teamCount") or len(teams),
+        "leagueSettings": league_settings,
         "teams": teams,
         "drafted": bool(draft_detail.get("drafted")),
         "inProgress": bool(draft_detail.get("inProgress")),
@@ -168,31 +175,87 @@ def scoring_label(scoring_type: str) -> str:
     return "Full PPR"
 
 
+def detected_league_settings(settings: dict[str, Any], team_count: int, draft_detail: dict[str, Any]) -> dict[str, Any]:
+    try:
+        try:
+            from live_draft import extract_league_settings
+        except ImportError:
+            from api.live_draft import extract_league_settings
+
+        context = SimpleNamespace(league_settings={})
+        raw_picks = draft_detail.get("picks") or []
+        extracted = extract_league_settings(settings, team_count, raw_picks, context)
+        return extracted if isinstance(extracted, dict) else {}
+    except Exception:
+        return {
+            "teamCount": team_count or int_value(settings.get("size"), "teamCount", 12) or 12,
+            "scoringType": "ppr",
+            "scoringLabel": "Full PPR",
+            "lineupSlots": {
+                "QB": 1,
+                "RB": 2,
+                "WR": 2,
+                "TE": 1,
+                "FLEX": 1,
+                "SUPERFLEX": 0,
+                "DST": 1,
+                "K": 1,
+                "BE": 7,
+                "IR": 1,
+            },
+            "draftRounds": 16,
+            "playoffTeams": 6,
+            "source": "Customer setup validator fallback",
+        }
+
+
 def setup_league_settings(raw: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
-    scoring_type = str(raw.get("scoringType") or "ppr").strip().lower() or "ppr"
+    detected = payload.get("leagueSettings") if isinstance(payload.get("leagueSettings"), dict) else {}
+    detected_slots = detected.get("lineupSlots") if isinstance(detected.get("lineupSlots"), dict) else {}
+    use_form_settings = bool_value(raw.get("settingsOverride"))
+
+    def parsed_int(value: Any, name: str, default: int) -> int:
+        parsed = int_value(value, name, default)
+        return default if parsed is None else parsed
+
+    def raw_or_detected(raw_key: str, detected_key: str, default: int) -> int:
+        if use_form_settings and raw.get(raw_key) not in (None, ""):
+            return parsed_int(raw.get(raw_key), raw_key, default)
+        return parsed_int(detected.get(detected_key), detected_key, default)
+
+    def raw_or_detected_slot(raw_key: str, slot_key: str, default: int) -> int:
+        if use_form_settings and raw.get(raw_key) not in (None, ""):
+            return parsed_int(raw.get(raw_key), raw_key, default)
+        return parsed_int(detected_slots.get(slot_key), slot_key, default)
+
+    scoring_type = str(
+        raw.get("scoringType") if use_form_settings else detected.get("scoringType") or raw.get("scoringType") or "ppr"
+    ).strip().lower() or "ppr"
     if scoring_type in {"half", "halfppr", "0.5-ppr", "0.5ppr"}:
         scoring_type = "half-ppr"
     if scoring_type in {"std", "non-ppr", "nonppr"}:
         scoring_type = "standard"
     return {
-        "teamCount": int_value(raw.get("teamCount"), "teamCount", payload.get("teamCount") or 12),
+        "teamCount": raw_or_detected("teamCount", "teamCount", payload.get("teamCount") or 12),
         "scoringType": scoring_type,
-        "scoringLabel": scoring_label(scoring_type),
+        "scoringLabel": detected.get("scoringLabel") if not use_form_settings and detected.get("scoringLabel") else scoring_label(scoring_type),
+        "receptionPoints": detected.get("receptionPoints"),
+        "scoringItems": detected.get("scoringItems") or [],
         "lineupSlots": {
-            "QB": int_value(raw.get("qbCount"), "qbCount", 1),
-            "RB": int_value(raw.get("rbCount"), "rbCount", 2),
-            "WR": int_value(raw.get("wrCount"), "wrCount", 2),
-            "TE": int_value(raw.get("teCount"), "teCount", 1),
-            "FLEX": int_value(raw.get("flexCount"), "flexCount", 1),
-            "SUPERFLEX": int_value(raw.get("superflexCount"), "superflexCount", 0),
-            "DST": int_value(raw.get("dstCount"), "dstCount", 1),
-            "K": int_value(raw.get("kCount"), "kCount", 1),
-            "BE": int_value(raw.get("benchCount"), "benchCount", 7),
-            "IR": int_value(raw.get("irCount"), "irCount", 1),
+            "QB": raw_or_detected_slot("qbCount", "QB", 1),
+            "RB": raw_or_detected_slot("rbCount", "RB", 2),
+            "WR": raw_or_detected_slot("wrCount", "WR", 2),
+            "TE": raw_or_detected_slot("teCount", "TE", 1),
+            "FLEX": raw_or_detected_slot("flexCount", "FLEX", 1),
+            "SUPERFLEX": raw_or_detected_slot("superflexCount", "SUPERFLEX", 0),
+            "DST": raw_or_detected_slot("dstCount", "DST", 1),
+            "K": raw_or_detected_slot("kCount", "K", 1),
+            "BE": raw_or_detected_slot("benchCount", "BE", 7),
+            "IR": raw_or_detected_slot("irCount", "IR", 1),
         },
-        "draftRounds": int_value(raw.get("draftRounds"), "draftRounds", 16),
-        "playoffTeams": int_value(raw.get("playoffTeams"), "playoffTeams", 6),
-        "source": "Customer setup validator",
+        "draftRounds": raw_or_detected("draftRounds", "draftRounds", 16),
+        "playoffTeams": raw_or_detected("playoffTeams", "playoffTeams", 6),
+        "source": "Customer setup override" if use_form_settings else detected.get("source") or "ESPN league settings",
     }
 
 

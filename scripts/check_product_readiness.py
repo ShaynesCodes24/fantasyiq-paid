@@ -177,7 +177,25 @@ def setup_validate_check() -> CheckResult:
     except json.JSONDecodeError:
         return CheckResult("Setup validator", "FAIL", f"{SETUP_VALIDATE_URL} returned non-JSON HTTP {status}")
     if status == 200 and payload.get("ok") is True:
-        return CheckResult("Setup validator", "PASS", f"{payload.get('leagueName')} / {payload.get('teamName')} validated")
+        settings = payload.get("leagueSettings") or {}
+        slots = settings.get("lineupSlots") if isinstance(settings.get("lineupSlots"), dict) else {}
+        missing = [
+            label
+            for label, value in {
+                "scoringType": settings.get("scoringType"),
+                "teamCount": settings.get("teamCount"),
+                "draftRounds": settings.get("draftRounds"),
+                "lineupSlots": slots,
+            }.items()
+            if not value
+        ]
+        if missing:
+            return CheckResult("Setup validator", "FAIL", f"validated but missing detected setting(s): {', '.join(missing)}")
+        return CheckResult(
+            "Setup validator",
+            "PASS",
+            f"{payload.get('leagueName')} / {payload.get('teamName')} validated with {settings.get('scoringLabel') or settings.get('scoringType')}, {settings.get('teamCount')} teams, {settings.get('draftRounds')} rounds",
+        )
     return CheckResult("Setup validator", "FAIL", f"{SETUP_VALIDATE_URL} returned HTTP {status}: {payload.get('message', 'unknown error')}")
 
 
@@ -233,7 +251,7 @@ def main() -> int:
         api_check(),
         board_freshness_check(),
         trade_history_check(),
-        page_check("Setup page", f"{SITE_URL}/setup.html", ["Validate ESPN league details"]),
+        page_check("Setup page", f"{SITE_URL}/setup.html", ["Validate ESPN league details", "Create your password", "auto-detect"]),
         page_check("Admin page", f"{SITE_URL}/admin.html", ["Customer operations"]),
         setup_validate_check(),
         customer_status_check(),

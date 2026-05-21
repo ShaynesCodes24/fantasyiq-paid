@@ -97,9 +97,10 @@ def customer_setup_email(
     name = customer_name or "FantasyIQ customer"
     dashboard = dashboard_url(customer_slug, league_key)
     setup = setup_url(customer_slug)
+    create_password = f"{setup}#create-password"
     help_page = help_url()
     support = support_email()
-    subject = "Your FantasyIQ dashboard is ready"
+    subject = "Create your FantasyIQ password"
     text = f"""Thanks for grabbing FantasyIQ.
 
 Your dashboard is ready:
@@ -108,8 +109,11 @@ Your dashboard is ready:
 Access code:
 {access_code}
 
+Create your password:
+{create_password}
+
 Next step:
-Open the setup page and validate each public ESPN league you want connected:
+Open the setup page and validate each public ESPN league you want connected. FantasyIQ auto-detects scoring, team count, flex, superflex, bench, and draft rounds from ESPN:
 {setup}
 
 Need help finding your ESPN league ID or team ID?
@@ -124,11 +128,12 @@ Support:
     html = f"""
     <div style="font-family: Arial, sans-serif; color: #151813; line-height: 1.55; max-width: 620px;">
       <p style="color:#8a4f24; font-weight:700; text-transform:uppercase; font-size:12px;">FantasyIQ Season Pass</p>
-      <h1 style="color:#0f3a30;">Your FantasyIQ dashboard is ready</h1>
+      <h1 style="color:#0f3a30;">Create your FantasyIQ password</h1>
       <p>Thanks for grabbing FantasyIQ, {escape(name)}.</p>
-      <p><a href="{escape(dashboard)}" style="color:#0f3a30; font-weight:700;">Open your dashboard</a></p>
       <p><strong>Access code:</strong><br />{escape(access_code)}</p>
-      <p><strong>Next step:</strong><br />Validate each public ESPN league you want connected.</p>
+      <p><a href="{escape(create_password)}" style="display:inline-block; background:#0f3a30; color:#fff8e8; font-weight:700; padding:12px 16px; border-radius:8px; text-decoration:none;">Create password</a></p>
+      <p><a href="{escape(dashboard)}" style="color:#0f3a30; font-weight:700;">Open your dashboard</a></p>
+      <p><strong>Next step:</strong><br />Validate each public ESPN league you want connected. FantasyIQ auto-detects scoring, team count, flex, superflex, bench, and draft rounds from ESPN.</p>
       <p><a href="{escape(setup)}" style="color:#0f3a30; font-weight:700;">Open setup page</a></p>
       <p><a href="{escape(help_page)}" style="color:#0f3a30; font-weight:700;">Setup help and Q&amp;A</a></p>
       <p>Support: <a href="mailto:{escape(support)}">{escape(support)}</a></p>
