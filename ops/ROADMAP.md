@@ -44,6 +44,7 @@ These make the platform feel more premium after self-serve is stable.
 - Player cards use plain-English Daily Player Synopsis and FantasyIQ Read sections.
 - Production monitoring runbook and script cover public pages, core APIs, webhook boundaries, admin auth boundaries, and ops event review.
 - Pre-draft live room states show readiness, draft order, team-slot guidance, smarter empty queues, and an armed post-draft plan before pick 1.
+- Private UDK+ CSV import adds expert alignment, board disagreement, and mock-manager signal support without committing premium data.
 
 ## Later
 

@@ -143,6 +143,7 @@ selling the platform:
 - `ops/DESIGN_SYSTEM.md`: dashboard design principles, navigation rules, layout rules, and quality bar.
 - `ops/SUPPORT_PLAYBOOK.md`: support triage, repeated customer issues, and escalation rules.
 - `ops/REVENUE_OPERATIONS.md`: pricing, Stripe, database fulfillment, add-on leagues, renewals, and refunds.
+- `ops/UDK_PLUS_INTEGRATION.md`: private UDK+ CSV import workflow, licensing guardrails, and FantasyIQ signal behavior.
 - `ops/PLUGIN_WORKFLOWS.md`: how Codex should use GitHub, Vercel, Stripe, Browser/Chrome, Linear, Gmail, Drive/Notion, Figma, Canva, and OpenAI Developers.
 
 Run this to confirm the operating docs and core scripts are in place:
@@ -166,6 +167,8 @@ python .\scripts\check_os_readiness.py
 - `scripts/check_production_monitoring.py`: checks production pages, core APIs, webhook boundaries, admin auth boundaries, and protected ops events when an admin token is available.
 - `scripts/check_security_setup.py`: checks tracked files, deploy ignores, and public Vercel config for secure setup.
 - `scripts/check_os_readiness.py`: checks that the FantasyIQ OS docs and operating scripts are present.
+- `scripts/import_udk_csv.py`: normalizes private Fantasy Footballers UDK+ CSV exports into an ignored local signal file.
+- `scripts/check_udk_import.py`: verifies the UDK+ CSV importer against a synthetic fixture.
 - `scripts/check_email_delivery.py`: confirms Resend email readiness and can send an admin setup-email test.
 - `scripts/apply_database_schema.py`: applies the Postgres schema after connecting Neon or another Postgres provider.
 - `scripts/test_self_serve_flow.py`: runs a no-charge production dry run with a signed synthetic Stripe event, setup save, dashboard API checks, and cleanup.

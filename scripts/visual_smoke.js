@@ -156,6 +156,20 @@ async function checkPreDraftState(page, viewport) {
   }
 }
 
+async function checkOptionalUdkView(page, viewport) {
+  const udkTab = page.locator('.workbook-tabs .tab[data-board="udk"]');
+  if ((await udkTab.count()) !== 1) {
+    throw new Error(`${viewport.name} UDK tab control is missing`);
+  }
+  if (!(await udkTab.isVisible())) return;
+  await udkTab.click();
+  await page.locator(".panel#workbooks.active").waitFor({ state: "visible", timeout: 15000 });
+  const statusText = await page.locator("#board-status").innerText({ timeout: 10000 });
+  if (!statusText.includes("UDK Alignment")) {
+    throw new Error(`${viewport.name} UDK View did not activate correctly`);
+  }
+}
+
 async function checkDashboard(browser, viewport) {
   const page = await newPage(browser, viewport);
   const response = await page.goto(urlFor("/FantasyIQ/"), { waitUntil: "domcontentloaded", timeout: 45000 });
@@ -174,6 +188,7 @@ async function checkDashboard(browser, viewport) {
   for (const section of ["draft", "live", "simulator", "trade", "workbooks", "account"]) {
     await activateDashboardSection(page, section);
     if (section === "live") await checkPreDraftState(page, viewport);
+    if (section === "workbooks") await checkOptionalUdkView(page, viewport);
     await screenshot(page, `${viewport.name}-dashboard-${section}`);
   }
 

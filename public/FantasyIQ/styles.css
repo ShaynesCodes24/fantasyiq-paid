@@ -2186,6 +2186,21 @@ code {
   background: #e8f5ed;
 }
 
+.analysis-chip.good {
+  border-color: rgba(28, 122, 72, 0.32);
+  background: #eff8f2;
+}
+
+.analysis-chip.watch {
+  border-color: rgba(184, 135, 53, 0.28);
+  background: #fff8e9;
+}
+
+.analysis-chip.danger {
+  border-color: rgba(161, 63, 47, 0.28);
+  background: #fff0eb;
+}
+
 .analysis-chip.trend-faller {
   border-color: rgba(161, 63, 47, 0.28);
   background: #fbe9e7;

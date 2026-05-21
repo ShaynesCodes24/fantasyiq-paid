@@ -57,6 +57,12 @@ REQUIRED_DOCS = {
         "Database Fulfillment",
         "Add-On League Rules",
     ],
+    "ops/UDK_PLUS_INTEGRATION.md": [
+        "Guardrails",
+        "Local Import",
+        "What FantasyIQ Uses",
+        "Product Behavior",
+    ],
     "ops/PLUGIN_WORKFLOWS.md": [
         "Build And Release",
         "Payments And Customers",
@@ -77,6 +83,8 @@ REQUIRED_SCRIPTS = [
     "scripts/check_security_setup.py",
     "scripts/apply_database_schema.py",
     "scripts/check_os_readiness.py",
+    "scripts/import_udk_csv.py",
+    "scripts/check_udk_import.py",
 ]
 
 REQUIRED_STANDARD_COMMANDS = [
@@ -84,6 +92,7 @@ REQUIRED_STANDARD_COMMANDS = [
     "scripts/check_production_monitoring.py",
     "scripts/check_security_setup.py",
     "scripts/check_os_readiness.py",
+    "scripts/check_udk_import.py",
 ]
 
 

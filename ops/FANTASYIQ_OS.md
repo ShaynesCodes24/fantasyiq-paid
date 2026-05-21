@@ -83,6 +83,7 @@ OpenAI Developers:
 - Design system: `ops/DESIGN_SYSTEM.md`
 - Customer support: `ops/SUPPORT_PLAYBOOK.md`
 - Revenue and self-serve: `ops/REVENUE_OPERATIONS.md`
+- UDK+ signal import: `ops/UDK_PLUS_INTEGRATION.md`
 - Plugin usage: `ops/PLUGIN_WORKFLOWS.md`
 - Database setup: `DATABASE_SETUP.md`
 - Security: `SECURITY_SETUP.md`
@@ -110,6 +111,7 @@ python scripts\check_security_setup.py
 python scripts\check_product_readiness.py
 python scripts\check_production_monitoring.py
 python scripts\check_os_readiness.py
+python scripts\check_udk_import.py
 ```
 
 ## Upgrade Principles

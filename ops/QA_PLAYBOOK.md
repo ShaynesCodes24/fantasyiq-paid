@@ -54,6 +54,7 @@ Setup:
 Draft Room:
 - League profile strip matches active league settings.
 - Draft recommendations use current league scoring, team count, and superflex/flex settings.
+- UDK+ expert alignment appears only when a private UDK signal file is configured.
 - Cheatcode/intelligence is helpful but does not overpower the draft room.
 - Live draft sync state is clear when draft has not started.
 - Pre-draft states show readiness, draft order, team-slot guidance, useful empty pick queues, and an armed post-draft plan before pick 1.
@@ -108,6 +109,13 @@ Database:
 - Stripe checkout creates/updates `fantasyiq_customers`.
 - Setup validator creates/updates `fantasyiq_leagues`.
 - Duplicate Stripe webhook events are idempotent.
+
+UDK+:
+- Raw UDK+ CSV exports are not committed.
+- Generated UDK signal JSON is not committed.
+- `python scripts\check_udk_import.py` passes.
+- UDK View remains hidden when no private signal file is configured.
+- When configured, UDK appears as expert alignment, not as a raw copied premium table.
 
 ## Release Gate
 

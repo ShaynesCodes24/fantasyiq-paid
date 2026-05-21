@@ -1081,6 +1081,7 @@ function leagueValueScore(row) {
   if (teamCount >= 14 && ["RB", "WR"].includes(row.Pos)) score += 3;
   if (teamCount <= 10 && Number(row.Upside || row.Ceiling || 0) >= 65) score += 2;
   score += clampNumber(externalTrendScore(row) * 0.25, -5, 5);
+  score += clampNumber(udkSignalScore(row), -4, 5);
   if ((row.Category === "Rookie" || row["Rookie Signal"]) && externalTrendScore(row) >= 7 && Number(row.Rank || 999) > 55) score += 2;
   if (!slots.K && row.Pos === "K") score -= 25;
   if (!slots.DST && row.Pos === "DST") score -= 25;
@@ -1100,6 +1101,50 @@ function formatMarketCount(value) {
 function externalTrendScore(row) {
   const score = Number(row?.["External Trend Score"] || 0);
   return Number.isFinite(score) ? score : 0;
+}
+
+function hasUdkSignal(row) {
+  return Boolean(row?.["UDK Matched"] || row?.["UDK Alignment"]);
+}
+
+function udkDeltaValue(row) {
+  const delta = Number(row?.["UDK Delta"]);
+  return Number.isFinite(delta) ? delta : null;
+}
+
+function udkDeltaDisplay(row) {
+  const delta = udkDeltaValue(row);
+  if (delta === null) return "";
+  if (delta === 0) return "Even";
+  return `${delta > 0 ? "+" : ""}${Math.round(delta)}`;
+}
+
+function udkAlignmentSignal(row) {
+  if (!hasUdkSignal(row)) {
+    return {
+      label: "No UDK match",
+      detail: "Private UDK+ CSV signal is not available for this player.",
+      className: "neutral",
+      score: 0,
+    };
+  }
+  const alignment = row["UDK Alignment"] || "UDK matched";
+  const delta = udkDeltaValue(row);
+  const detail = row["UDK Signal"] || "Private UDK+ CSV matched this player.";
+  if (alignment === "Consensus") {
+    return { label: "UDK agrees", detail, className: "good", score: 3.5 };
+  }
+  if (alignment === "UDK higher") {
+    return { label: "UDK higher", detail, className: "good", score: delta !== null ? clampNumber(Math.abs(delta) / 6, 1, 5) : 2 };
+  }
+  if (alignment === "FantasyIQ higher") {
+    return { label: "UDK lower", detail, className: "watch", score: delta !== null ? -clampNumber(delta / 8, 1, 4) : -1.5 };
+  }
+  return { label: alignment, detail, className: "watch", score: 1 };
+}
+
+function udkSignalScore(row) {
+  return udkAlignmentSignal(row).score || 0;
 }
 
 function sleeperMarketCounts(row) {
@@ -1677,6 +1722,21 @@ const trendColumns = [
   "Market Signal",
 ];
 
+const udkColumns = [
+  "UDK View",
+  "Player",
+  "Pos",
+  "Team",
+  "Rank",
+  "UDK Rank",
+  "UDK Delta",
+  "UDK Tier",
+  "UDK Signal",
+  "Value Score",
+  "Risk",
+  "Action",
+];
+
 function normalizePlayerName(name) {
   return String(name || "")
     .toLowerCase()
@@ -1709,8 +1769,12 @@ function isTrendBoard() {
   return activeBoard === "trends";
 }
 
+function isUdkBoard() {
+  return activeBoard === "udk";
+}
+
 function visibleBoardColumns() {
-  const columns = isTrendBoard() ? [...trendColumns] : [...boardColumns];
+  const columns = isTrendBoard() ? [...trendColumns] : isUdkBoard() ? [...udkColumns] : [...boardColumns];
   if (positionFilter?.value) {
     const insertAt = isTrendBoard() ? 5 : 6;
     columns.splice(insertAt, 0, "Tier");
@@ -1847,6 +1911,8 @@ function cellValue(row, key) {
   if (key === "Value Score") return valueDisplay(row);
   if (key === "Sleeper Net Adds") return formatMarketCount(row[key]);
   if (key === "Market Signal") return compactText(row[key], 90);
+  if (key === "UDK Delta") return udkDeltaDisplay(row);
+  if (key === "UDK Signal") return compactText(row[key], 96);
   return row[key] ?? "";
 }
 
@@ -2037,9 +2103,10 @@ function filteredRows() {
   const query = boardSearch.value.trim().toLowerCase();
   const pos = positionFilter.value;
   const drafted = liveDraftedKeys();
-  return boardData.boards[activeBoard].rows.filter((row) => {
+  const board = boardData.boards[activeBoard] || boardData.boards.combined || { rows: [] };
+  return (board.rows || []).filter((row) => {
     const matchesPosition = !pos || (pos === "FLEX" ? ["RB", "WR", "TE"].includes(row.Pos) : row.Pos === pos);
-    const searchable = `${row.Player} ${row.Pos} ${row.Team} ${row.Category} ${row.Tier} ${row["Pos Tier"]} ${row.Action} ${row.Analysis} ${row["Projection Edge"]} ${row["Daily Synopsis"]} ${row["Player Outlook"]} ${row["Risk Notes"]} ${row.Trend} ${row["Source Signal"]} ${row["External Signal"]} ${row.Catalyst} ${row["Why Rising/Falling"]} ${row["Draft Action"]}`.toLowerCase();
+    const searchable = `${row.Player} ${row.Pos} ${row.Team} ${row.Category} ${row.Tier} ${row["Pos Tier"]} ${row.Action} ${row.Analysis} ${row["Projection Edge"]} ${row["Daily Synopsis"]} ${row["Player Outlook"]} ${row["Risk Notes"]} ${row.Trend} ${row["Source Signal"]} ${row["External Signal"]} ${row.Catalyst} ${row["Why Rising/Falling"]} ${row["Draft Action"]} ${row["UDK Alignment"]} ${row["UDK Signal"]} ${row["UDK Tier"]}`.toLowerCase();
     const matchesDraftStatus = !hideDraftedEnabled() || !drafted.has(normalizePlayerName(row.Player));
     return matchesPosition && matchesDraftStatus && (!query || searchable.includes(query));
   });
@@ -2047,6 +2114,7 @@ function filteredRows() {
 
 function renderBoard() {
   if (!boardData || !boardTable) return;
+  syncUdkTabVisibility();
   if (boardCount) {
     const total = boardData.boards?.combined?.rows?.length || 0;
     boardCount.textContent = `${total} players`;
@@ -2125,6 +2193,20 @@ function renderBoard() {
     showAnalysis(selectedRow || rows[0]);
   } else {
     analysisPane.innerHTML = `<p class="eyebrow">Player Analysis</p><h3>No results</h3><p>Try clearing the search or position filter.</p>`;
+  }
+}
+
+function syncUdkTabVisibility() {
+  const udkTab = document.querySelector('.workbook-tabs .tab[data-board="udk"]');
+  if (!udkTab || !boardData) return;
+  const available = Boolean(boardData.externalSignals?.udk?.available || boardData.boards?.udk?.rows?.length);
+  udkTab.hidden = !available;
+  if (!available && activeBoard === "udk") {
+    activeBoard = "combined";
+    const combinedTab = document.querySelector('.workbook-tabs .tab[data-board="combined"]');
+    document.querySelectorAll(".workbook-tabs .tab").forEach((tab) => {
+      tab.classList.toggle("active", tab === combinedTab);
+    });
   }
 }
 
@@ -2340,6 +2422,10 @@ function showAnalysis(row) {
   const draftedChip = isDrafted(row)
     ? `<div class="analysis-chip drafted-chip"><span>Live Status</span><strong>Drafted</strong></div>`
     : `<div class="analysis-chip"><span>Live Status</span><strong>Available</strong></div>`;
+  const udk = udkAlignmentSignal(row);
+  const udkChip = hasUdkSignal(row)
+    ? `<div class="analysis-chip ${udk.className}"><span>UDK View</span><strong>${htmlEscape(udk.label)}</strong></div>`
+    : "";
   analysisPane.innerHTML = `
     <p class="eyebrow">${row.Pos} / ${row.Team} / Bye ${row.Bye}</p>
     <h3>${row.Player}</h3>
@@ -2355,6 +2441,7 @@ function showAnalysis(row) {
       <div class="analysis-chip"><span>Volume</span><strong>${row.Volume}</strong></div>
       <div class="analysis-chip"><span>Upside</span><strong>${row.Upside}</strong></div>
       ${draftedChip}
+      ${udkChip}
     </div>
     ${playerSynopsisBlock(row)}
     <p><strong>${row.Action}</strong></p>
@@ -2366,6 +2453,7 @@ function showAnalysis(row) {
     }</p>
     ${row["Prior Year Source"] ? `<p><strong>Prior-year source:</strong> ${htmlEscape(row["Prior Year Source"])}</p>` : ""}
     ${row["Risk Notes"] ? `<p><strong>Risk read:</strong> ${htmlEscape(row["Risk Notes"])}</p>` : ""}
+    ${hasUdkSignal(row) ? `<p><strong>UDK+ second opinion:</strong> ${htmlEscape(udk.detail)}</p>` : ""}
     <h3>FantasyIQ Read</h3>
     ${fantasyIqReadHtml(row)}
   `;
@@ -2429,6 +2517,7 @@ function openPlayerDrawer(playerName) {
   const row = typeof playerName === "string" ? findPlayer(playerName) : playerName;
   if (!row) return;
   const { market, fit, risk, decision, survival, counts } = playerDrawerMetrics(row);
+  const udk = udkAlignmentSignal(row);
   const drafted = isDrafted(row);
   closePlayerDrawer();
   const drawer = document.createElement("aside");
@@ -2452,6 +2541,7 @@ function openPlayerDrawer(playerName) {
         ${playerDrawerStat(scoringProjectionLabel(), projectionDisplay(row), row["Projection Source"] || "")}
         ${playerDrawerStat("League Value", valueDisplay(row), projectionEdgeDisplay(row))}
         ${playerDrawerStat("Market", market.label, market.detail)}
+        ${hasUdkSignal(row) ? playerDrawerStat("UDK View", udk.label, udk.detail) : ""}
         ${playerDrawerStat("League Fit", fit.label, fit.detail)}
         ${playerDrawerStat("Risk", risk.label, risk.detail)}
         ${playerDrawerStat("Make It Back", survival ? `${survival.pct}%` : "Select team", survival ? survival.detail : "Choose your ESPN team for survival odds.")}
@@ -4098,6 +4188,7 @@ function preDraftRecentPicksEmpty() {
 function renderRecommendationCard(row, counts, index = 0) {
   const decision = recommendationDecision(row, counts);
   const momentum = playerMarketMomentum(row);
+  const udk = udkAlignmentSignal(row);
   const priority = decision.label === "Pick now" || index < 3 ? "priority" : "";
   const survivalText = decision.survival.label === "Select team" ? "team needed" : `${decision.survival.pct}% back`;
   const proof = [
@@ -4106,7 +4197,8 @@ function renderRecommendationCard(row, counts, index = 0) {
     lineupSummary(),
     selectedTeamId() ? "selected roster" : "board value",
     liveDraft?.draftedNames?.length ? `${liveDraft.draftedNames.length} drafted filtered` : "draft board state",
-  ];
+    hasUdkSignal(row) ? `UDK ${row["UDK Alignment"]}` : "",
+  ].filter(Boolean);
   return `<div class="pick-card recommendation ${priority} ${decision.className}">
     <span>#${row.Rank} / ${row.Pos} / ${row.Team}</span>
     ${playerFocusButton(row)}
@@ -4114,9 +4206,10 @@ function renderRecommendationCard(row, counts, index = 0) {
       <em>${decision.label}</em>
       <b class="${decision.survival.className}">${survivalText}</b>
       ${momentum.hasSleeperSignal ? `<b class="${momentum.className}">${htmlEscape(momentum.label)}</b>` : ""}
+      ${hasUdkSignal(row) ? `<b class="${udk.className}">${htmlEscape(udk.label)}</b>` : ""}
       <b>${row["Pos Tier"] || row.Category}</b>
     </div>
-    <small>${decision.reason} ${scoringProjectionLabel()}: ${projectionDisplay(row)}. League value: ${valueDisplay(row)}. ${decision.survival.detail} ${momentum.hasSleeperSignal ? htmlEscape(momentum.detail) : ""}</small>
+    <small>${decision.reason} ${scoringProjectionLabel()}: ${projectionDisplay(row)}. League value: ${valueDisplay(row)}. ${decision.survival.detail} ${momentum.hasSleeperSignal ? htmlEscape(momentum.detail) : ""} ${hasUdkSignal(row) ? htmlEscape(udk.detail) : ""}</small>
     <div class="recommendation-proof">Based on: ${proof.map(htmlEscape).join(" / ")}</div>
     ${playerSynopsisBlock(row, { compact: true })}
   </div>`;
@@ -5117,6 +5210,7 @@ function simBotScore(row, counts, slot) {
   const round = simRound();
   const profile = simManagerProfile(slot);
   const momentum = playerMarketMomentum(row);
+  const expert = udkAlignmentSignal(row);
   const tier = simTopTierInfo(row.Pos);
   const rank = Number(row.Rank || 999);
   const value = leagueValueScore(row);
@@ -5127,6 +5221,7 @@ function simBotScore(row, counts, slot) {
 
   score += needScore * profile.need;
   score += clampNumber(momentum.score * 7 * profile.market, -120, 145);
+  score += clampNumber(expert.score * 18 * profile.market, -90, 90);
   score += simBotSurvivalPressure(row, slot) * profile.scarcity;
   score += simBotRunPressure(row) * profile.scarcity;
   if (tier.count <= 2 && (row["Pos Tier"] || row.Category) === tier.tier && !["DST", "K"].includes(row.Pos)) score += 56 * profile.scarcity;
@@ -5512,7 +5607,7 @@ function renderMockSimulator() {
   const currentManager = currentSlot ? simManagerProfile(currentSlot) : null;
 
   simStatus.innerHTML = active
-    ? `<strong>${userPick ? "You are on the clock." : "Mock in progress."}</strong> Slot ${mockSim.userSlot}, ${completed}/${totalPicks} picks complete. CPU managers now draft with value, scarcity, market, and roster-build profiles.`
+    ? `<strong>${userPick ? "You are on the clock." : "Mock in progress."}</strong> Slot ${mockSim.userSlot}, ${completed}/${totalPicks} picks complete. CPU managers now draft with value, scarcity, market${boardData?.externalSignals?.udk?.available ? ", expert alignment," : ","} and roster-build profiles.`
     : "Start a mock, then practice making picks while the room auto-drafts around you.";
   if (simCurrentPick) simCurrentPick.textContent = active && mockSim.currentOverall <= totalPicks ? `Round ${simRound()}, Pick ${simRoundPick(mockSim.currentOverall)}` : active ? "Mock complete" : "No mock started";
   if (simCurrentTeam) simCurrentTeam.textContent = active && mockSim.currentOverall <= totalPicks ? `Overall ${mockSim.currentOverall}: Team ${currentSlot}${userPick ? " (you)" : currentManager ? ` / ${currentManager.name}` : ""}` : "Choose a slot and start.";

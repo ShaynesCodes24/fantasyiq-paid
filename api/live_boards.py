@@ -106,6 +106,7 @@ _board_cache: dict[str, dict[str, Any]] = {}
 _rookie_names: set[str] | None = None
 _sleeper_players_cache: dict[str, Any] = {}
 _sleeper_signal_cache: dict[str, Any] = {}
+_udk_signal_cache: dict[str, Any] = {}
 
 
 def int_env(name: str, default: int) -> int:
@@ -125,6 +126,17 @@ def clamp(value: float, low: float, high: float) -> float:
 
 def normalize_name(name: str) -> str:
     return "".join(ch for ch in name.lower() if ch.isalnum())
+
+
+def normalize_player_key(name: str) -> str:
+    cleaned = (
+        str(name or "")
+        .lower()
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
+    cleaned = re.sub(r"\b(jr|sr|ii|iii|iv)\b\.?", "", cleaned)
+    return "".join(ch for ch in cleaned if ch.isalnum())
 
 
 def clean_text(value: Any) -> str:
@@ -354,6 +366,117 @@ def sleeper_external_signals(
     }
     _sleeper_signal_cache[cache_key] = {"data": data, "ts": now}
     return data
+
+
+def udk_signal_payload(force: bool = False) -> dict[str, Any]:
+    if os.environ.get("FANTASYIQ_UDK_ENABLED", "").strip().lower() in {"0", "false", "no", "off"}:
+        return {"available": False, "players": {}, "aliases": {}, "reason": "disabled"}
+
+    raw_json = os.environ.get("FANTASYIQ_UDK_SIGNALS_JSON", "").strip()
+    file_value = os.environ.get("FANTASYIQ_UDK_SIGNALS_FILE", "").strip()
+    default_path = Path(__file__).resolve().parents[1] / "private" / "udk" / "udk_signals.local.json"
+    file_path = Path(file_value) if file_value else default_path
+    if file_path and not file_path.is_absolute():
+        file_path = Path(__file__).resolve().parents[1] / file_path
+
+    cache_key = raw_json or str(file_path)
+    now = time.time()
+    cached = _udk_signal_cache.get(cache_key)
+    if not force and cached and now - float(cached.get("ts") or 0) < CACHE_TTL_SECONDS:
+        return cached["data"]
+
+    try:
+        if raw_json:
+            payload = json.loads(raw_json)
+        elif file_path.exists():
+            payload = json.loads(file_path.read_text(encoding="utf-8"))
+        else:
+            payload = {"available": False, "players": {}, "aliases": {}, "reason": "not_configured"}
+    except (OSError, json.JSONDecodeError) as exc:
+        payload = {"available": False, "players": {}, "aliases": {}, "error": str(exc)}
+
+    players = payload.get("players") if isinstance(payload.get("players"), dict) else {}
+    aliases = payload.get("aliases") if isinstance(payload.get("aliases"), dict) else {}
+    data = {
+        **payload,
+        "available": bool(players),
+        "players": players,
+        "aliases": aliases,
+    }
+    _udk_signal_cache[cache_key] = {"data": data, "ts": now}
+    return data
+
+
+def udk_signal_for_player(name: str, pos: str, signals: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not signals or not signals.get("available"):
+        return None
+    name_key = normalize_player_key(name)
+    players = signals.get("players") if isinstance(signals.get("players"), dict) else {}
+    aliases = signals.get("aliases") if isinstance(signals.get("aliases"), dict) else {}
+    exact_key = f"{name_key}|{pos}"
+    signal = players.get(exact_key)
+    if isinstance(signal, dict):
+        return signal
+    for key in aliases.get(name_key, []):
+        signal = players.get(key)
+        if isinstance(signal, dict) and (not pos or signal.get("pos") == pos):
+            return signal
+    return None
+
+
+def udk_row_fields(row: dict[str, Any], signal: dict[str, Any] | None) -> dict[str, Any]:
+    if not signal:
+        return {
+            "UDK Matched": False,
+            "UDK Alignment": "",
+            "UDK Signal": "",
+            "UDK Source": "",
+        }
+    udk_rank = signal.get("udkRank")
+    rank = row.get("Rank")
+    delta = None
+    try:
+        if udk_rank is not None and rank is not None:
+            delta = int(udk_rank) - int(rank)
+    except (TypeError, ValueError):
+        delta = None
+
+    if delta is None:
+        alignment = "UDK matched"
+        view = "Matched"
+        detail = "UDK+ matched this player, but no overall-rank delta was available."
+    elif abs(delta) <= 8:
+        alignment = "Consensus"
+        view = "Consensus"
+        detail = f"FantasyIQ #{rank} and UDK #{udk_rank} are in the same range."
+    elif delta < 0:
+        alignment = "UDK higher"
+        view = "UDK higher"
+        detail = f"UDK is {abs(delta)} spot(s) higher than FantasyIQ."
+    else:
+        alignment = "FantasyIQ higher"
+        view = "FantasyIQ higher"
+        detail = f"FantasyIQ is {delta} spot(s) higher than UDK."
+
+    tier = signal.get("udkTier") or ""
+    if tier:
+        detail = f"{detail} UDK tier: {tier}."
+
+    return {
+        "UDK Matched": True,
+        "UDK View": view,
+        "UDK Rank": udk_rank or "",
+        "UDK Pos Rank": signal.get("udkPosRank") or "",
+        "UDK Tier": tier,
+        "UDK Delta": delta if delta is not None else "",
+        "UDK Risk": signal.get("udkRisk") if signal.get("udkRisk") is not None else "",
+        "UDK Upside": signal.get("udkUpside") if signal.get("udkUpside") is not None else "",
+        "UDK Projection": signal.get("udkProjection") if signal.get("udkProjection") is not None else "",
+        "UDK ADP": signal.get("udkAdp") if signal.get("udkAdp") is not None else "",
+        "UDK Alignment": alignment,
+        "UDK Signal": detail,
+        "UDK Source": "Private UDK+ CSV import",
+    }
 
 
 def external_signal_for_player(player: dict[str, Any], signals: dict[str, Any] | None) -> dict[str, Any]:
@@ -848,11 +971,13 @@ def analysis_for(row: dict[str, Any], ownership: dict[str, Any]) -> str:
     scoring_label = row.get("Scoring Label") or "league"
     external_signal = str(row.get("External Signal") or "").strip()
     market = f" Sleeper market: {external_signal}." if external_signal else " No strong Sleeper add/drop signal yet."
+    udk_signal = str(row.get("UDK Signal") or "").strip()
+    expert = f" Expert alignment: {udk_signal}" if udk_signal else ""
     return (
         f"{row['Player']} is {row['Pos']}{row['Pos Rank']} and #{row['Rank']} overall. "
         f"Projection: {row['Proj PPR Pts']} {scoring_label}. ADP: {adp_text}. "
         f"Last year: {row['Last Year PPR']}. Rostered in {owned:.1f}% of ESPN leagues and started in {started:.1f}%. "
-        f"Draft move: {row['Action']}. Risk: {row['Risk']}/10. {row['Risk Notes']}.{market}"
+        f"Draft move: {row['Action']}. Risk: {row['Risk']}/10. {row['Risk Notes']}.{market}{expert}"
     )
 
 
@@ -1021,6 +1146,7 @@ def build_rows(
     limit: int,
     scoring_profile: dict[str, Any],
     external_signals: dict[str, Any] | None = None,
+    udk_signals: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     seeds = [seed for player in players if (seed := build_row_seed(player, season, scoring_profile, external_signals))]
     seeds.sort(key=lambda item: (item["league_sort_rank"], item["rank"], -item["projected"], item["player"].get("fullName", "")))
@@ -1096,11 +1222,30 @@ def build_rows(
             "External Updated": external_signal.get("updated_at") or "",
             "Rookie Signal": "Sleeper rookie profile" if external_signal.get("rookie") else "",
         }
+        row.update(udk_row_fields(row, udk_signal_for_player(str(row.get("Player") or ""), pos, udk_signals)))
         row["Analysis"] = analysis_for(row, seed["ownership"])
         row.update(daily_synopsis_for(row, seed, season))
         rows.append(row)
 
     return rows
+
+
+def udk_alignment_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    matched = [row for row in rows if row.get("UDK Matched")]
+    def priority(row: dict[str, Any]) -> tuple[int, float, int]:
+        alignment = str(row.get("UDK Alignment") or "")
+        delta = float_value(row.get("UDK Delta"), 0.0)
+        if alignment == "Consensus":
+            bucket = 0
+        elif alignment == "UDK higher":
+            bucket = 1
+        elif alignment == "FantasyIQ higher":
+            bucket = 2
+        else:
+            bucket = 3
+        return (bucket, -abs(delta), int_value(row.get("Rank"), 999))
+
+    return sorted(matched, key=priority)[:160]
 
 
 def trend_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1210,9 +1355,11 @@ def build_live_board_payload(
     row_limit = limit or int_env("FANTASY_IQ_BOARD_LIMIT", DEFAULT_LIMIT)
     fetch_limit = max(row_limit + 80, 420)
     external_signals = sleeper_external_signals()
+    udk_signals = udk_signal_payload(force=force)
     data = fetch_json(player_feed_url(season), {"x-fantasy-filter": player_filter(fetch_limit)})
     players = [entry.get("player") or {} for entry in data.get("players", [])]
-    rows = build_rows(players, season, row_limit, scoring_profile, external_signals)
+    rows = build_rows(players, season, row_limit, scoring_profile, external_signals, udk_signals)
+    udk_rows = udk_alignment_rows(rows)
     customer = context.public_dict()
     customer["leagueSettings"] = merge_dicts(customer.get("leagueSettings") or {}, league_settings)
 
@@ -1220,7 +1367,7 @@ def build_live_board_payload(
         "updated": datetime.now(timezone.utc).date().isoformat(),
         "syncedAt": utc_now(),
         "live": True,
-        "source": "ESPN public fantasy player feed + Sleeper add/drop trends",
+        "source": "ESPN public fantasy player feed + Sleeper add/drop trends + optional private UDK+ signals",
         "externalSignals": {
             "sleeper": {
                 "available": bool(external_signals.get("available")),
@@ -1229,7 +1376,14 @@ def build_live_board_payload(
                 "lookbackHours": external_signals.get("lookbackHours"),
                 "limit": external_signals.get("limit"),
                 "attribution": "Trending add/drop data from Sleeper",
-            }
+            },
+            "udk": {
+                "available": bool(udk_signals.get("available")),
+                "source": udk_signals.get("source") or "Private UDK+ CSV import",
+                "generatedAt": udk_signals.get("generatedAt") or "",
+                "matchedPlayers": len(udk_rows),
+                "policy": "Private CSV-derived second-opinion signal; raw UDK+ exports stay out of git and public deploys.",
+            },
         },
         "customer": customer,
         "customerSlug": context.slug,
@@ -1244,7 +1398,8 @@ def build_live_board_payload(
             "Live FantasyIQ board built from ESPN raw projected stats, league-native scoring items, "
             "prior-year raw stat scoring, ADP, ownership, start rate, market movement, volatility, "
             "injury flags, and Sleeper add/drop pressure. PPR ranks remain as one market signal, "
-            "but projections and values are scored for the active league format."
+            "but projections and values are scored for the active league format. Private UDK+ CSV signals, "
+            "when configured, are used as expert alignment rather than a raw data replacement."
         ),
         "positionColors": POSITION_COLORS,
         "boards": {
@@ -1274,6 +1429,7 @@ def build_live_board_payload(
             },
             "kdst": {"title": "Live K/DST Board", "rows": [row for row in rows if row["Pos"] in {"K", "DST"}]},
             "trends": {"title": "Live Risers/Fallers", "rows": trend_rows(rows)},
+            "udk": {"title": "UDK Alignment View", "rows": udk_rows},
         },
     }
     _board_cache[cache_key] = {"data": payload, "ts": now}
