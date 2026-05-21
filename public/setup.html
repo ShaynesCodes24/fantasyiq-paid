@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FantasyIQ Setup</title>
-    <link rel="stylesheet" href="./site.css?v=20260521_setup_auto_33" />
+    <link rel="stylesheet" href="./site.css?v=20260521_setup_simple_35" />
   </head>
   <body class="policy-page">
     <header class="site-header">
@@ -22,21 +22,71 @@
     <main class="policy-main">
       <section class="policy-card">
         <p class="eyebrow">Customer Setup</p>
-        <h1>Validate ESPN league details</h1>
+        <h1>Set up FantasyIQ in two minutes</h1>
         <p>
-          Use the same ESPN league ID, team ID, and season from checkout. The validator confirms the public ESPN league can be reached,
-          checks that the team ID belongs to that league, and saves the league profile to your FantasyIQ account.
+          Start with the access code from your setup email. Then paste your ESPN league ID and team ID. FantasyIQ
+          auto-fills scoring, roster, flex, bench, and draft settings from ESPN.
         </p>
 
-        <form class="tool-card" id="setup-form">
-          <div class="field-grid">
-            <label>
-              League label
-              <input id="league-label" name="leagueLabel" autocomplete="off" placeholder="Home league" />
-            </label>
+        <div class="setup-steps" aria-label="Setup steps">
+          <article>
+            <span>1</span>
+            <strong>Create login</strong>
+            <p>Use the access code from your email once.</p>
+          </article>
+          <article>
+            <span>2</span>
+            <strong>Connect ESPN</strong>
+            <p>Paste league ID, team ID, and season.</p>
+          </article>
+          <article>
+            <span>3</span>
+            <strong>Open dashboard</strong>
+            <p>Your league profile stays saved.</p>
+          </article>
+        </div>
+
+        <section class="tool-card setup-password-card" id="create-password">
+          <div>
+            <p class="eyebrow">Step 1</p>
+            <h2>Create or reset your password</h2>
+            <p>Use the FantasyIQ access code from your setup email. This is not your ESPN password.</p>
+          </div>
+          <div class="field-grid setup-account-grid">
             <label id="setup-access-wrap">
               Access code
               <input id="setup-access-code" name="accessCode" type="password" autocomplete="off" placeholder="From setup email" />
+            </label>
+            <label id="password-email-wrap">
+              Checkout email
+              <input id="password-email" type="email" autocomplete="email" placeholder="you@example.com" />
+            </label>
+            <label>
+              New password
+              <input id="setup-password" type="password" autocomplete="new-password" />
+            </label>
+            <label>
+              Confirm password
+              <input id="setup-password-confirm" type="password" autocomplete="new-password" />
+            </label>
+          </div>
+          <div class="button-row">
+            <button class="primary" id="create-password-button" type="button">Create / Reset password</button>
+            <a class="primary dark" id="setup-sign-in-link" href="./FantasyIQ/">Open dashboard</a>
+          </div>
+          <div class="result-panel" id="password-result">Create a password, or use the same access code below to connect a league.</div>
+        </section>
+
+        <form class="tool-card setup-league-card" id="setup-form">
+          <div>
+            <p class="eyebrow">Step 2</p>
+            <h2>Connect your ESPN league</h2>
+            <p>Paste the IDs from ESPN. FantasyIQ checks the public league and saves it to your account.</p>
+          </div>
+          <div class="field-grid setup-basic-grid">
+            <label>
+              League nickname
+              <input id="league-label" name="leagueLabel" autocomplete="off" placeholder="Home league" />
             </label>
             <label>
               ESPN league ID
@@ -50,6 +100,22 @@
               Season
               <input id="season" name="season" inputmode="numeric" value="2026" required />
             </label>
+          </div>
+
+          <details class="setup-help">
+            <summary>Where do I find my ESPN IDs?</summary>
+            <ol>
+              <li>Open your ESPN fantasy league in a web browser.</li>
+              <li>Copy the number after <strong>leagueId=</strong> in the address bar.</li>
+              <li>Open your team page or roster page.</li>
+              <li>Copy the number after <strong>teamId=</strong> in the address bar.</li>
+            </ol>
+          </details>
+
+          <details class="setup-help advanced-settings">
+            <summary>Advanced settings FantasyIQ auto-fills from ESPN</summary>
+            <p id="settings-note">FantasyIQ will auto-detect league format from ESPN after the league ID and season are recognized.</p>
+            <div class="field-grid">
             <label>
               Scoring
               <select id="scoring-type" name="scoringType">
@@ -79,41 +145,15 @@
               Draft rounds
               <input id="draft-rounds" name="draftRounds" inputmode="numeric" value="16" required />
             </label>
-          </div>
-          <p class="setup-note" id="settings-note">FantasyIQ will auto-detect league format from ESPN after the league ID and season are recognized.</p>
-          <div class="button-row">
-            <button class="primary" type="submit">Validate setup</button>
-            <a class="primary dark" href="./FantasyIQ/">Open dashboard</a>
-          </div>
-          <div class="result-panel" id="setup-result">Waiting for ESPN details.</div>
-        </form>
+            </div>
+          </details>
 
-        <section class="tool-card setup-password-card" id="create-password">
-          <div>
-            <p class="eyebrow">Account Login</p>
-            <h2>Create your password</h2>
-            <p>Use the access code from your setup email once, then sign in with email and password going forward.</p>
-          </div>
-          <div class="field-grid">
-            <label id="password-email-wrap">
-              Checkout email
-              <input id="password-email" type="email" autocomplete="email" placeholder="you@example.com" />
-            </label>
-            <label>
-              New password
-              <input id="setup-password" type="password" autocomplete="new-password" />
-            </label>
-            <label>
-              Confirm password
-              <input id="setup-password-confirm" type="password" autocomplete="new-password" />
-            </label>
-          </div>
           <div class="button-row">
-            <button class="primary" id="create-password-button" type="button">Create / Reset password</button>
-            <a class="primary dark" id="setup-sign-in-link" href="./FantasyIQ/">Sign in</a>
+            <button class="primary" type="submit">Connect league</button>
+            <a class="primary dark" id="setup-open-dashboard-link" href="./FantasyIQ/">Open dashboard</a>
           </div>
-          <div class="result-panel" id="password-result">Enter your access code above and choose a password.</div>
-        </section>
+          <div class="result-panel" id="setup-result">Paste your ESPN IDs and click Connect league.</div>
+        </form>
       </section>
     </main>
 
@@ -131,6 +171,7 @@
       const setupPasswordConfirm = document.querySelector("#setup-password-confirm");
       const createPasswordButton = document.querySelector("#create-password-button");
       const setupSignInLink = document.querySelector("#setup-sign-in-link");
+      const setupOpenDashboardLink = document.querySelector("#setup-open-dashboard-link");
       const passwordResult = document.querySelector("#password-result");
       const settingsInputs = {
         scoringType: document.querySelector("#scoring-type"),
@@ -178,8 +219,9 @@
       }
 
       function updateSetupSignInLink(customer = customerSlug, league = "") {
-        if (!setupSignInLink) return;
-        setupSignInLink.href = customerDashboardHref(customer, league);
+        const href = customerDashboardHref(customer, league);
+        if (setupSignInLink) setupSignInLink.href = href;
+        if (setupOpenDashboardLink) setupOpenDashboardLink.href = href;
       }
 
       updateSetupSignInLink();
@@ -195,7 +237,7 @@
 
       function renderTeams(teams) {
         if (!teams?.length) return "";
-        return `<div class="mini-table">${teams
+        return `<details class="team-list"><summary>Show ESPN teams and IDs</summary><div class="mini-table">${teams
           .map(
             (team) => `<div>
               <span>Team ${escapeHtml(team.teamId)}</span>
@@ -203,7 +245,7 @@
               <span>${escapeHtml(team.manager || "Manager unavailable")}</span>
             </div>`,
           )
-          .join("")}</div>`;
+          .join("")}</div></details>`;
       }
 
       function slugify(value) {
@@ -331,7 +373,7 @@
             applyLeagueSettings(payload.leagueSettings);
             if (!quiet) {
               if (payload.ok) {
-                result.innerHTML = `<strong>ESPN settings found.</strong><p>${escapeHtml(payload.leagueName)} / ${escapeHtml(payload.teamName)} is ready. Review the auto-filled settings, then validate setup.</p>`;
+                result.innerHTML = `<strong>ESPN settings found.</strong><p>${escapeHtml(payload.leagueName)} / ${escapeHtml(payload.teamName)} is ready. Click Connect league to save it.</p>`;
               } else {
                 result.innerHTML = `<strong>ESPN settings found.</strong><p>${escapeHtml(payload.message || "Enter your ESPN team ID to finish validation.")}</p>${renderTeams(payload.teams)}`;
               }
@@ -420,7 +462,8 @@
         if (customerSlug) params.set("customer", customerSlug);
         if (customerSlug) params.set("save", "1");
         if (settingsOverride) params.set("settingsOverride", "1");
-        const accessCode = String(data.get("accessCode") || savedAccessCode(customerSlug) || "").trim();
+        const accessCode = String(setupAccessCode?.value || data.get("accessCode") || savedAccessCode(customerSlug) || "").trim();
+        if (accessCode) params.set("accessCode", accessCode);
         const headers = { "Content-Type": "application/x-www-form-urlencoded" };
         if (accessCode) headers["x-fantasyiq-access-code"] = accessCode;
         try {

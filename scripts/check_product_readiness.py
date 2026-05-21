@@ -251,7 +251,7 @@ def main() -> int:
         api_check(),
         board_freshness_check(),
         trade_history_check(),
-        page_check("Setup page", f"{SITE_URL}/setup.html", ["Validate ESPN league details", "Create your password", "auto-detect"]),
+        page_check("Setup page", f"{SITE_URL}/setup.html", ["Set up FantasyIQ in two minutes", "Create or reset your password", "auto-fills"]),
         page_check("Admin page", f"{SITE_URL}/admin.html", ["Customer operations"]),
         setup_validate_check(),
         customer_status_check(),
