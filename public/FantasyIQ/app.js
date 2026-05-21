@@ -558,7 +558,7 @@ function showCustomerAccessGate(message = "") {
       </div>
       <div class="access-actions">
         <button type="button" id="customer-code-unlock">Unlock With Code</button>
-        <button type="button" id="customer-create-password">Create Password</button>
+        <button type="button" id="customer-create-password">Create / Reset Password</button>
       </div>
       <div class="access-message" role="status" aria-live="polite" data-state="${message ? "info" : "idle"}">${message ? htmlEscape(message) : ""}</div>
       <small>Need help? Email ${htmlEscape(appConfig.supportEmail || "support")}.</small>
@@ -574,7 +574,7 @@ function showCustomerAccessGate(message = "") {
   const authButtons = Array.from(gate.querySelectorAll("button"));
   const identityValue = () => (needsIdentity ? identityInput.value.trim() : appConfig.loadoutKey);
   const passwordSetupMessage =
-    "This account does not have a password yet. Use the access code from the setup email below, enter a new password twice, then click Create Password. You can also click Unlock With Code for one-time access.";
+    "This account does not have a saved password yet. Use the access code from the setup email below, enter the password twice, then click Create / Reset Password. You can also click Unlock With Code for one-time access.";
   const friendlyAuthMessage = (message = "") => {
     if (/create a password/i.test(message)) return passwordSetupMessage;
     if (/customer account was not found/i.test(message)) {

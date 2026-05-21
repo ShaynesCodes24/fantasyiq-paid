@@ -109,8 +109,8 @@
             </label>
           </div>
           <div class="button-row">
-            <button class="primary" id="create-password-button" type="button">Create password</button>
-            <a class="primary dark" href="./FantasyIQ/">Sign in</a>
+            <button class="primary" id="create-password-button" type="button">Create / Reset password</button>
+            <a class="primary dark" id="setup-sign-in-link" href="./FantasyIQ/">Sign in</a>
           </div>
           <div class="result-panel" id="password-result">Enter your access code above and choose a password.</div>
         </section>
@@ -130,6 +130,7 @@
       const setupPassword = document.querySelector("#setup-password");
       const setupPasswordConfirm = document.querySelector("#setup-password-confirm");
       const createPasswordButton = document.querySelector("#create-password-button");
+      const setupSignInLink = document.querySelector("#setup-sign-in-link");
       const passwordResult = document.querySelector("#password-result");
       const settingsInputs = {
         scoringType: document.querySelector("#scoring-type"),
@@ -168,6 +169,20 @@
       if (customerSlug && passwordEmailWrap) {
         passwordEmailWrap.hidden = true;
       }
+
+      function customerDashboardHref(customer, league = "") {
+        const dashboard = new URL("./FantasyIQ/", window.location.href);
+        if (customer) dashboard.searchParams.set("customer", customer);
+        if (league) dashboard.searchParams.set("league", league);
+        return dashboard.pathname + dashboard.search;
+      }
+
+      function updateSetupSignInLink(customer = customerSlug, league = "") {
+        if (!setupSignInLink) return;
+        setupSignInLink.href = customerDashboardHref(customer, league);
+      }
+
+      updateSetupSignInLink();
 
       function escapeHtml(value) {
         return String(value || "")
@@ -382,7 +397,9 @@
             return;
           }
           const dashboard = payload.dashboardUrl || "./FantasyIQ/";
-          rememberAccessCode(payload.customer?.customerSlug || customerSlug || identity, accessCode);
+          const signedInCustomer = payload.customer?.customerSlug || customerSlug || identity;
+          rememberAccessCode(signedInCustomer, accessCode);
+          updateSetupSignInLink(signedInCustomer, savedPacket.leagueKey || pageParams.get("league") || "");
           passwordResult.innerHTML = `
             <strong>Password created.</strong>
             <p>You can now sign in with your checkout email and password.</p>
@@ -421,6 +438,7 @@
             if (payload.saved) {
               packet.leagueKey = payload.leagueKey || packet.leagueKey;
               rememberAccessCode(packet.customer, accessCode);
+              updateSetupSignInLink(packet.customer, packet.leagueKey);
             }
             localStorage.setItem(setupStorageKey, JSON.stringify(packet));
             const saveNote = payload.saved

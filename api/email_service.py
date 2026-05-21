@@ -138,7 +138,7 @@ Support:
       <h1 style="color:#0f3a30;">Create your FantasyIQ password</h1>
       <p>Thanks for grabbing FantasyIQ, {escape(name)}.</p>
       <p><strong>Access code:</strong><br />{escape(access_code)}</p>
-      <p><a href="{escape(create_password)}" style="display:inline-block; background:#0f3a30; color:#fff8e8; font-weight:700; padding:12px 16px; border-radius:8px; text-decoration:none;">Create password</a></p>
+      <p><a href="{escape(create_password)}" style="display:inline-block; background:#0f3a30; color:#fff8e8; font-weight:700; padding:12px 16px; border-radius:8px; text-decoration:none;">Create / reset password</a></p>
       <p><a href="{escape(dashboard)}" style="color:#0f3a30; font-weight:700;">Open your dashboard</a></p>
       <p><strong>Next step:</strong><br />Validate each public ESPN league you want connected. FantasyIQ auto-detects scoring, team count, flex, superflex, bench, and draft rounds from ESPN.</p>
       <p><a href="{escape(setup)}" style="color:#0f3a30; font-weight:700;">Open setup page</a></p>
