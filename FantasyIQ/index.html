@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>FantasyIQ</title>
-    <link rel="stylesheet" href="./styles.css?v=20260521_password_login_28" />
+    <link rel="stylesheet" href="./styles.css?v=20260521_war_room_29" />
   </head>
   <body>
     <div class="field-overlay" aria-hidden="true">
@@ -366,6 +366,39 @@
               <small>Action mode</small>
             </article>
           </div>
+
+          <section class="war-room-command live-panel" id="war-room-command">
+            <div class="war-room-main">
+              <p class="eyebrow">War Room Command</p>
+              <h3 id="war-room-player">Loading best move</h3>
+              <p id="war-room-action">FantasyIQ is connecting board value, roster build, market signal, and league settings.</p>
+              <div class="war-room-actions">
+                <button id="war-room-player-card" class="primary-action" type="button">Open Player Card</button>
+                <button id="war-room-big-board" class="secondary-action nav-jump" type="button" data-jump="workbooks">Big Board</button>
+              </div>
+            </div>
+            <div class="war-room-signals" aria-label="Draft room command signals">
+              <article>
+                <span>Why</span>
+                <strong id="war-room-why">Waiting</strong>
+              </article>
+              <article>
+                <span>Market</span>
+                <strong id="war-room-market">Waiting</strong>
+              </article>
+              <article>
+                <span>League Fit</span>
+                <strong id="war-room-fit">Waiting</strong>
+              </article>
+              <article>
+                <span>Risk</span>
+                <strong id="war-room-risk">Waiting</strong>
+              </article>
+            </div>
+            <div class="war-room-secondary" id="war-room-secondary">
+              Select your ESPN team to unlock next-pick survival and roster-build pressure.
+            </div>
+          </section>
 
           <div class="live-grid draft-primary-grid draft-core-grid">
             <section class="live-panel">
@@ -841,7 +874,7 @@
       </section>
     </main>
 
-    <script src="./config.js?v=20260521_password_login_28"></script>
-    <script src="./app.js?v=20260521_password_login_28"></script>
+    <script src="./config.js?v=20260521_war_room_29"></script>
+    <script src="./app.js?v=20260521_war_room_29"></script>
   </body>
 </html>

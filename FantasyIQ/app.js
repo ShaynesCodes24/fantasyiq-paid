@@ -42,6 +42,16 @@ const alphaScarcity = document.querySelector("#alpha-scarcity");
 const alphaMarket = document.querySelector("#alpha-market");
 const alphaBuild = document.querySelector("#alpha-build");
 const alphaLeverage = document.querySelector("#alpha-leverage");
+const warRoomCommand = document.querySelector("#war-room-command");
+const warRoomPlayer = document.querySelector("#war-room-player");
+const warRoomAction = document.querySelector("#war-room-action");
+const warRoomWhy = document.querySelector("#war-room-why");
+const warRoomMarket = document.querySelector("#war-room-market");
+const warRoomFit = document.querySelector("#war-room-fit");
+const warRoomRisk = document.querySelector("#war-room-risk");
+const warRoomSecondary = document.querySelector("#war-room-secondary");
+const warRoomPlayerCard = document.querySelector("#war-room-player-card");
+const warRoomBigBoard = document.querySelector("#war-room-big-board");
 const liveStatus = document.querySelector("#live-status");
 const liveSyncToggle = document.querySelector("#live-sync-toggle");
 const manualSync = document.querySelector("#manual-sync");
@@ -1535,6 +1545,69 @@ function playerFocusButton(row, className = "player-focus-button") {
   return `<button type="button" class="${className}" data-player-focus="${htmlEscape(row.Player)}">${htmlEscape(row.Player)}</button>`;
 }
 
+function marketSignal(row) {
+  if (!row) return { label: "Waiting", detail: "No market read yet.", className: "watch" };
+  const rank = Number(row.Rank || 999);
+  const espnAdp = Number(row["ESPN ADP"] || 0);
+  const adpValue = Number(row["ADP Value"] || 0);
+  if (Number.isFinite(espnAdp) && espnAdp > 0) {
+    const gap = espnAdp - rank;
+    if (gap >= 12) {
+      return {
+        label: `Discount by ${Math.round(gap)} picks`,
+        detail: `ESPN ADP is ${espnAdp.toFixed(1)} while FantasyIQ rank is ${rank}.`,
+        className: "good",
+      };
+    }
+    if (gap <= -10) {
+      return {
+        label: `Market tax ${Math.abs(Math.round(gap))} picks`,
+        detail: `ESPN drafters are paying earlier than FantasyIQ rank.`,
+        className: "danger",
+      };
+    }
+    return {
+      label: "Fair market",
+      detail: `ESPN ADP ${espnAdp.toFixed(1)} is close to FantasyIQ rank ${rank}.`,
+      className: "watch",
+    };
+  }
+  if (adpValue >= 74) return { label: "Positive value", detail: `ADP value score ${adpValue}/100.`, className: "good" };
+  if (adpValue <= 48) return { label: "Needs discount", detail: `ADP value score ${adpValue}/100.`, className: "danger" };
+  return { label: "Neutral market", detail: `ADP value score ${adpValue || "TBD"}.`, className: "watch" };
+}
+
+function leagueFitSignal(row, counts = emptyPositionCounts()) {
+  if (!row) return { label: "Waiting", detail: "No player selected.", className: "watch" };
+  const settings = activeLeagueSettings();
+  const scoring = settings.scoringLabel || SCORING_LABELS[settings.scoringType] || "Custom";
+  const need = rosterNeed(row, counts);
+  const starterText = need === "starter" ? "starter fit" : need === "depth" ? "depth fit" : "luxury fit";
+  const className = need === "starter" ? "good" : need === "depth" ? "watch" : "danger";
+  return {
+    label: `${starterText} in ${scoring}`,
+    detail: `${leagueTeamTotal()} teams / ${lineupSummary(settings)}.`,
+    className,
+  };
+}
+
+function riskSignal(row) {
+  if (!row) return { label: "Waiting", detail: "No risk read yet.", className: "watch" };
+  const risk = Number(row.Risk || 0);
+  const floor = Number(row.Floor || 0);
+  const upside = Number(row.Upside || row.Ceiling || 0);
+  if (risk >= 7) return { label: `High risk ${risk}/10`, detail: `Upside ${upside || "TBD"} but fragile profile.`, className: "danger" };
+  if (risk >= 5) return { label: `Volatile ${risk}/10`, detail: `Pair with stable picks. Floor ${floor || "TBD"}.`, className: "watch" };
+  return { label: `Stable ${risk || "low"}/10`, detail: `Floor ${floor || "TBD"} / upside ${upside || "TBD"}.`, className: "good" };
+}
+
+function commandReason(row, decision, counts) {
+  if (!row) return "Waiting for board data.";
+  const fit = leagueFitSignal(row, counts);
+  const market = marketSignal(row);
+  return `${decision?.label || "Target"}: ${decision?.reason || recommendationReason(row, counts)} ${fit.detail} ${market.detail}`;
+}
+
 function filteredRows() {
   if (!boardData) return [];
   const query = boardSearch.value.trim().toLowerCase();
@@ -1897,6 +1970,80 @@ function showTrendAnalysis(row) {
   `;
 }
 
+function closePlayerDrawer() {
+  document.querySelector("#player-card-drawer")?.remove();
+  document.body.classList.remove("player-drawer-open");
+}
+
+function playerDrawerMetrics(row) {
+  const market = marketSignal(row);
+  const teamId = selectedTeamId();
+  const counts = teamId ? rosterCountsFor(teamId).counts : emptyPositionCounts();
+  const fit = leagueFitSignal(row, counts);
+  const risk = riskSignal(row);
+  const decision = recommendationDecision(row, counts);
+  const targetPick = recommendationTargetPick();
+  const survival = targetPick ? survivalProjection(row, targetPick) : null;
+  return { market, fit, risk, decision, survival, counts };
+}
+
+function playerDrawerStat(label, value, detail = "") {
+  return `<article>
+    <span>${htmlEscape(label)}</span>
+    <strong>${htmlEscape(value)}</strong>
+    ${detail ? `<small>${htmlEscape(detail)}</small>` : ""}
+  </article>`;
+}
+
+function openPlayerDrawer(playerName) {
+  const row = typeof playerName === "string" ? findPlayer(playerName) : playerName;
+  if (!row) return;
+  const { market, fit, risk, decision, survival, counts } = playerDrawerMetrics(row);
+  const drafted = isDrafted(row);
+  closePlayerDrawer();
+  const drawer = document.createElement("aside");
+  drawer.id = "player-card-drawer";
+  drawer.className = "player-card-drawer";
+  drawer.setAttribute("role", "dialog");
+  drawer.setAttribute("aria-modal", "true");
+  drawer.setAttribute("aria-label", `${row.Player} player card`);
+  drawer.innerHTML = `
+    <div class="player-drawer-scrim" data-close-player-drawer></div>
+    <section class="player-drawer-panel">
+      <button class="player-drawer-close" type="button" data-close-player-drawer aria-label="Close player card">x</button>
+      <p class="eyebrow">${htmlEscape(row.Pos)} / ${htmlEscape(row.Team)} / Bye ${htmlEscape(row.Bye || "TBD")}</p>
+      <h2>${htmlEscape(row.Player)}</h2>
+      <div class="player-drawer-verdict ${drafted ? "danger" : decision.className}">
+        <span>${drafted ? "Drafted" : htmlEscape(decision.label)}</span>
+        <strong>${htmlEscape(decision.reason)}</strong>
+      </div>
+      <div class="player-drawer-grid">
+        ${playerDrawerStat("Rank", `#${row.Rank}`, row["Pos Tier"] || row.Category || "")}
+        ${playerDrawerStat(scoringProjectionLabel(), projectionDisplay(row), row["Projection Source"] || "")}
+        ${playerDrawerStat("League Value", valueDisplay(row), projectionEdgeDisplay(row))}
+        ${playerDrawerStat("Market", market.label, market.detail)}
+        ${playerDrawerStat("League Fit", fit.label, fit.detail)}
+        ${playerDrawerStat("Risk", risk.label, risk.detail)}
+        ${playerDrawerStat("Make It Back", survival ? `${survival.pct}%` : "Select team", survival ? survival.detail : "Choose your ESPN team for survival odds.")}
+        ${playerDrawerStat("Roster Need", rosterNeed(row, counts), lineupSummary())}
+      </div>
+      ${playerSynopsisBlock(row)}
+      <div class="player-drawer-copy">
+        <h3>FantasyIQ Read</h3>
+        <p>${htmlEscape(row.Action || decision.reason)}</p>
+        <p>${htmlEscape(row.Analysis || playerSynopsisText(row))}</p>
+      </div>
+      <div class="player-drawer-actions">
+        <button class="primary-action" type="button" data-player-focus-board="${htmlEscape(row.Player)}">Open In Big Board</button>
+        <button class="secondary-action" type="button" data-close-player-drawer>Close</button>
+      </div>
+    </section>
+  `;
+  document.body.appendChild(drawer);
+  document.body.classList.add("player-drawer-open");
+  drawer.querySelector(".player-drawer-close")?.focus();
+}
+
 function openPlayerAnalysis(playerName) {
   const row = findPlayer(playerName);
   if (!row) return;
@@ -1914,10 +2061,27 @@ function openPlayerAnalysis(playerName) {
 }
 
 document.addEventListener("click", (event) => {
+  const closeDrawer = event.target.closest("[data-close-player-drawer]");
+  if (closeDrawer) {
+    event.preventDefault();
+    closePlayerDrawer();
+    return;
+  }
+  const boardFocus = event.target.closest("[data-player-focus-board]");
+  if (boardFocus) {
+    event.preventDefault();
+    closePlayerDrawer();
+    openPlayerAnalysis(boardFocus.dataset.playerFocusBoard);
+    return;
+  }
   const button = event.target.closest("[data-player-focus]");
   if (!button) return;
   event.preventDefault();
-  openPlayerAnalysis(button.dataset.playerFocus);
+  openPlayerDrawer(button.dataset.playerFocus);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closePlayerDrawer();
 });
 
 function expectedPickFor(row) {
@@ -3083,6 +3247,59 @@ function renderAlphaLayer(counts = emptyPositionCounts(), picks = {}) {
   setAlphaText(alphaLeverage, alpha.leverage);
 }
 
+function setWarRoomText(node, value) {
+  if (node) node.textContent = value;
+}
+
+function renderWarRoomCommand(counts = emptyPositionCounts(), picks = {}) {
+  if (!warRoomCommand) return;
+  if (!boardData) {
+    setWarRoomText(warRoomPlayer, "Loading best move");
+    setWarRoomText(warRoomAction, "FantasyIQ is connecting board value, roster build, market signal, and league settings.");
+    setWarRoomText(warRoomWhy, "Waiting");
+    setWarRoomText(warRoomMarket, "Waiting");
+    setWarRoomText(warRoomFit, "Waiting");
+    setWarRoomText(warRoomRisk, "Waiting");
+    setWarRoomText(warRoomSecondary, "Select your ESPN team to unlock next-pick survival and roster-build pressure.");
+    if (warRoomPlayerCard) warRoomPlayerCard.disabled = true;
+    return;
+  }
+
+  const teamId = selectedTeamId();
+  const best = picks.bestNow?.row || picks.bestValue?.row || picks.safe?.row || availableRows()[0];
+  if (!best) return;
+  const decision = recommendationDecision(best, counts);
+  const market = marketSignal(best);
+  const fit = leagueFitSignal(best, counts);
+  const risk = riskSignal(best);
+  const targetPick = recommendationTargetPick();
+  const survival = targetPick ? survivalProjection(best, targetPick) : null;
+  const nextPick = teamId ? nextMyPick(teamId) : null;
+
+  setWarRoomText(warRoomPlayer, best.Player);
+  setWarRoomText(
+    warRoomAction,
+    `${decision.label}: ${decision.reason} ${scoringProjectionLabel()} ${projectionDisplay(best)} / value ${valueDisplay(best)} / ${best.Pos} ${best["Pos Tier"] || best.Category}.`,
+  );
+  setWarRoomText(warRoomWhy, commandReason(best, decision, counts));
+  setWarRoomText(warRoomMarket, market.label);
+  setWarRoomText(warRoomFit, fit.label);
+  setWarRoomText(warRoomRisk, risk.label);
+  setWarRoomText(
+    warRoomSecondary,
+    teamId && nextPick
+      ? `Next pick: R${nextPick.round} P${nextPick.roundPick}, overall ${nextPick.overall}. ${survival ? `${best.Player} has a ${survival.pct}% make-it-back read.` : ""} ${market.detail}`
+      : `League-aware board is active for ${leagueTeamTotal()} teams, ${activeLeagueSettings().scoringLabel || "custom scoring"}, ${lineupSummary()}. Select your ESPN team for survival odds.`,
+  );
+  if (warRoomPlayerCard) {
+    warRoomPlayerCard.disabled = false;
+    warRoomPlayerCard.dataset.playerFocus = best.Player;
+  }
+  if (warRoomBigBoard) {
+    warRoomBigBoard.dataset.playerFocusBoard = best.Player;
+  }
+}
+
 function renderCheatcodeMode() {
   if (!cheatcodeStatus) return;
   if (!boardData) {
@@ -3093,6 +3310,7 @@ function renderCheatcodeMode() {
         node.textContent = "Waiting for board data.";
       });
     renderAlphaLayer();
+    renderWarRoomCommand();
     return;
   }
 
@@ -3103,6 +3321,7 @@ function renderCheatcodeMode() {
   const until = nextPick ? picksUntil(nextPick) : null;
   const { bestNow, bestValue, safe, upside, ranked } = bestCheatcodeRows(counts);
   renderAlphaLayer(counts, { bestNow, bestValue, safe, upside });
+  renderWarRoomCommand(counts, { bestNow, bestValue, safe, upside });
   const nowDecision = bestNow ? recommendationDecision(bestNow.row, counts) : null;
   const bestPlayer = bestNow?.row || bestValue?.row || safe?.row || availableRows()[0];
   const heroState = !teamId
