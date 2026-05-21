@@ -22,6 +22,8 @@ const tradeGiveList = document.querySelector("#trade-give-list");
 const tradeGetList = document.querySelector("#trade-get-list");
 const tradeRosterStatus = document.querySelector("#trade-roster-status");
 const tradeRosterPills = document.querySelector("#trade-roster-pills");
+const tradeFinder = document.querySelector("#trade-finder");
+const waiverAssistant = document.querySelector("#waiver-assistant");
 const cheatcodeStatus = document.querySelector("#cheatcode-status");
 const cheatcodeHero = document.querySelector("#cheatcode-hero");
 const cheatcodeNow = document.querySelector("#cheatcode-now");
@@ -70,6 +72,7 @@ const liveTierSearch = document.querySelector("#live-tier-search");
 const liveTierBoard = document.querySelector("#live-tier-board");
 const liveTierButtons = document.querySelectorAll(".live-tier-toggle");
 const liveMyRoster = document.querySelector("#live-my-roster");
+const postDraftPlan = document.querySelector("#post-draft-plan");
 const liveRecentPicks = document.querySelector("#live-recent-picks");
 const liveNextPicks = document.querySelector("#live-next-picks");
 const draftOrderGrid = document.querySelector("#draft-order-grid");
@@ -2403,6 +2406,345 @@ function renderTradeCalc() {
     ${warnings.length ? `<div class="trade-warning-list">${warnings.map((warning) => `<span>${htmlEscape(warning)}</span>`).join("")}</div>` : ""}
     ${unknowns.length ? `<p><strong>Unknown players:</strong> ${unknowns.map(htmlEscape).join(", ")}.</p>` : ""}
   `;
+  renderRosterEngines();
+}
+
+function gradeLetter(score) {
+  if (score >= 93) return "A";
+  if (score >= 88) return "A-";
+  if (score >= 83) return "B+";
+  if (score >= 78) return "B";
+  if (score >= 73) return "B-";
+  if (score >= 68) return "C+";
+  if (score >= 62) return "C";
+  if (score >= 55) return "D";
+  return "F";
+}
+
+function rosterRowsFromText(text = "") {
+  return tradeSideValue(text).filter((item) => item.row);
+}
+
+function emptyRosterSnapshot(source = "none") {
+  return { source, teamId: "", counts: emptyPositionCounts(), picks: [], rows: [], players: [] };
+}
+
+function pastedRosterSnapshot() {
+  const pasted = rosterRowsFromText(tradeRoster?.value || "");
+  if (!pasted.length) return null;
+  const rows = pasted.map((item) => item.row);
+  return {
+    source: "pasted",
+    teamId: "",
+    counts: positionCounts(pasted),
+    picks: [],
+    rows,
+    players: pasted,
+  };
+}
+
+function espnRosterSnapshot() {
+  const teamId = selectedTeamId();
+  if (!teamId) return null;
+  const roster = rosterCountsFor(teamId);
+  const rows = roster.picks.map((pick) => pickBoardRow(pick)).filter(Boolean);
+  const players = rows.map((row) => ({ name: row.Player, row, value: leagueValueScore(row), risk: Number(row.Risk || 0), projection: projectionValue(row) }));
+  return {
+    source: "espn",
+    teamId,
+    counts: roster.counts,
+    picks: roster.picks,
+    rows,
+    players,
+  };
+}
+
+function activeRosterSnapshot({ preferPasted = false } = {}) {
+  if (!boardData) {
+    return emptyRosterSnapshot("loading");
+  }
+  const pasted = pastedRosterSnapshot();
+  const espn = espnRosterSnapshot();
+  return preferPasted ? pasted || espn || emptyRosterSnapshot() : espn || pasted || emptyRosterSnapshot();
+}
+
+function rosterWeaknesses(snapshot) {
+  const counts = snapshot.counts || emptyPositionCounts();
+  const starters = starterTargetCounts();
+  const targets = draftTargetCounts();
+  const positions = ["QB", "RB", "WR", "TE", "DST", "K"].filter((pos) => positionHasDraftSlot(pos));
+  return positions
+    .map((pos) => {
+      const starterGap = Math.max(0, Number(starters[pos] || 0) - Number(counts[pos] || 0));
+      const depthGap = Math.max(0, Number(targets[pos] || 0) - Number(counts[pos] || 0));
+      const weight = starterGap * 10 + depthGap;
+      return { pos, starterGap, depthGap, weight };
+    })
+    .filter((item) => item.weight > 0)
+    .sort((a, b) => b.weight - a.weight);
+}
+
+function rosterStrengths(snapshot) {
+  const counts = snapshot.counts || emptyPositionCounts();
+  const targets = draftTargetCounts();
+  return ["QB", "RB", "WR", "TE", "DST", "K"]
+    .map((pos) => {
+      const rows = snapshot.rows.filter((row) => row.Pos === pos).sort((a, b) => leagueValueScore(b) - leagueValueScore(a));
+      const surplus = Math.max(0, Number(counts[pos] || 0) - Number(targets[pos] || 0));
+      const topValue = rows[0] ? leagueValueScore(rows[0]) : 0;
+      return { pos, surplus, rows, topValue };
+    })
+    .filter((item) => item.surplus > 0 || item.topValue >= 76)
+    .sort((a, b) => b.surplus - a.surplus || b.topValue - a.topValue);
+}
+
+function postDraftGrade(snapshot) {
+  if (!snapshot.rows.length) {
+    return { score: 0, grade: "Pending", label: "Select roster", notes: ["Select your ESPN team or paste a roster to grade it."] };
+  }
+  const rows = snapshot.rows;
+  const values = rows.map((row) => leagueValueScore(row));
+  const avgValue = values.reduce((sum, value) => sum + value, 0) / values.length;
+  const avgRisk = rows.reduce((sum, row) => sum + Number(row.Risk || 0), 0) / rows.length;
+  const rbWr = Number(snapshot.counts.RB || 0) + Number(snapshot.counts.WR || 0);
+  const weaknesses = rosterWeaknesses(snapshot);
+  const starterGaps = weaknesses.reduce((sum, item) => sum + item.starterGap, 0);
+  const depthGaps = weaknesses.reduce((sum, item) => sum + item.depthGap, 0);
+  let score = 68 + (avgValue - 50) * 0.45;
+
+  if (snapshot.picks.length) {
+    const pickGrades = snapshot.picks.map((pick) => valueForPick(pick).label);
+    score += pickGrades.filter((label) => label === "Steal").length * 3;
+    score += pickGrades.filter((label) => label === "Good value").length * 2;
+    score -= pickGrades.filter((label) => label === "Reach").length * 4;
+  }
+  score -= starterGaps * 8;
+  score -= Math.max(0, depthGaps - starterGaps) * 1.5;
+  if (rbWr >= Math.max(5, starterTargetCounts().RB + starterTargetCounts().WR + flexStarterTarget())) score += 4;
+  if (avgRisk > 5.2) score -= 4;
+  if (avgRisk < 3.2 && rows.length >= 7) score += 2;
+  if (activeLineupSlots().SUPERFLEX && Number(snapshot.counts.QB || 0) < 2) score -= 8;
+  score = Math.round(clampNumber(score, 45, 98));
+  const notes = [
+    `Average league value ${avgValue.toFixed(1)} with ${avgRisk.toFixed(1)}/10 average risk.`,
+    weaknesses.length
+      ? `Main need: ${weaknesses.slice(0, 2).map((item) => item.pos).join(" / ")}.`
+      : "Starter and bench targets are mostly covered.",
+  ];
+  return { score, grade: `${gradeLetter(score)} (${score})`, label: score >= 83 ? "Contender build" : score >= 72 ? "Playable build" : "Needs work", notes };
+}
+
+function postDraftActions(snapshot) {
+  if (!snapshot.rows.length) return ["Select your ESPN team or paste your roster to generate the plan."];
+  const weaknesses = rosterWeaknesses(snapshot);
+  const strengths = rosterStrengths(snapshot);
+  const actions = [];
+  const topNeed = weaknesses[0]?.pos;
+  const topSurplus = strengths.find((item) => item.surplus > 0)?.pos;
+  if (topNeed) actions.push(`Waiver priority: add ${topNeed} depth before chasing luxury bench points.`);
+  if (topNeed && topSurplus) actions.push(`Trade lane: shop extra ${topSurplus} for a ${topNeed} upgrade.`);
+  if (snapshot.rows.some((row) => Number(row.Risk || 0) >= 7)) actions.push("Stabilize the bench: pair high-risk upside with one safer weekly role.");
+  if (!actions.length) actions.push("Hold the core. Your first move should be opportunistic, not forced.");
+  actions.push("Watch injury/news changes before waivers lock; prioritize roles that can become weekly starters.");
+  return actions.slice(0, 4);
+}
+
+function waiverCandidates(snapshot, limit = 6) {
+  if (!boardData) return [];
+  const needs = rosterWeaknesses(snapshot);
+  const needWeights = needs.reduce((map, item) => {
+    map[item.pos] = item.weight;
+    return map;
+  }, {});
+  const rostered = new Set(snapshot.rows.map((row) => normalizePlayerName(row.Player)));
+  return availableRows()
+    .filter((row) => !rostered.has(normalizePlayerName(row.Player)))
+    .filter((row) => positionHasDraftSlot(row.Pos) && !["K", "DST"].includes(row.Pos))
+    .map((row) => {
+      const score =
+        leagueValueScore(row) +
+        (needWeights[row.Pos] || 0) * 2.4 +
+        Number(row.Upside || row.Ceiling || 0) * 0.08 -
+        Number(row.Risk || 0) * 0.7 +
+        (row.Category === "Sleeper" ? 6 : 0);
+      return { row, score };
+    })
+    .sort((a, b) => b.score - a.score || Number(a.row.Rank) - Number(b.row.Rank))
+    .slice(0, limit)
+    .map((item) => item.row);
+}
+
+function tradeAwayCandidates(snapshot, limit = 3) {
+  const strengths = rosterStrengths(snapshot);
+  const surplusPositions = new Set(strengths.filter((item) => item.surplus > 0).map((item) => item.pos));
+  return snapshot.rows
+    .filter((row) => surplusPositions.has(row.Pos) || Number(row.Risk || 0) >= 6 || marketSignal(row).className === "good")
+    .sort((a, b) => {
+      const surplusBonus = Number(surplusPositions.has(b.Pos)) - Number(surplusPositions.has(a.Pos));
+      return surplusBonus || leagueValueScore(b) - leagueValueScore(a);
+    })
+    .slice(0, limit);
+}
+
+function tradeTargetCandidates(snapshot, limit = 5) {
+  const needs = rosterWeaknesses(snapshot);
+  const needPositions = needs.length ? new Set(needs.slice(0, 3).map((item) => item.pos)) : new Set(["RB", "WR", "TE"]);
+  const rostered = new Set(snapshot.rows.map((row) => normalizePlayerName(row.Player)));
+  const draftedTargets = (liveDraft?.picks || [])
+    .map((pick) => ({ pick, row: pickBoardRow(pick) }))
+    .filter((item) => item.row && !rostered.has(normalizePlayerName(item.row.Player)) && needPositions.has(item.row.Pos));
+  const pool = draftedTargets.length
+    ? draftedTargets
+    : (boardData?.boards?.combined?.rows || [])
+        .filter((row) => !rostered.has(normalizePlayerName(row.Player)) && needPositions.has(row.Pos))
+        .map((row) => ({ pick: null, row }));
+  return pool
+    .sort((a, b) => leagueValueScore(b.row) - leagueValueScore(a.row) || Number(a.row.Rank) - Number(b.row.Rank))
+    .slice(0, limit);
+}
+
+function renderPlayerMiniCard(row, label = "") {
+  return `<div class="trade-player-chip">
+    ${playerFocusButton(row)}
+    <span>${htmlEscape(label || `${row.Pos}${row["Pos Rank"] || ""} / #${row.Rank}`)}</span>
+    <small>Value ${valueDisplay(row)} / ${scoringProjectionLabel()} ${projectionDisplay(row)} / Risk ${row.Risk}/10</small>
+  </div>`;
+}
+
+function renderPostDraftPlan(snapshot = activeRosterSnapshot()) {
+  if (!postDraftPlan) return;
+  if (!boardData) {
+    postDraftPlan.textContent = "Waiting for board data.";
+    return;
+  }
+  if (!snapshot.rows.length) {
+    postDraftPlan.innerHTML = `
+      <div class="post-draft-hero">
+        <article>
+          <span>Grade</span>
+          <strong>Pending</strong>
+          <small>Select your ESPN team</small>
+        </article>
+        <article>
+          <span>Plan</span>
+          <strong>Locked</strong>
+          <small>Needs roster context</small>
+        </article>
+        <article>
+          <span>Next Move</span>
+          <strong>Connect</strong>
+          <small>Use the team selector above</small>
+        </article>
+      </div>
+      <div class="post-draft-grid">
+        <section>
+          <h4>What unlocks</h4>
+          <p>Grade, roster needs, early waiver watchlist, and clean trade lanes.</p>
+        </section>
+        <section>
+          <h4>Source</h4>
+          <p>FantasyIQ uses the selected ESPN team first so the plan stays attached to the customer dashboard.</p>
+        </section>
+        <section>
+          <h4>Manual fallback</h4>
+          <p>You can paste a roster in the Trade Calculator when ESPN data is not available yet.</p>
+        </section>
+      </div>
+    `;
+    return;
+  }
+  const grade = postDraftGrade(snapshot);
+  const actions = postDraftActions(snapshot);
+  const weaknesses = rosterWeaknesses(snapshot);
+  const strengths = rosterStrengths(snapshot);
+  postDraftPlan.innerHTML = `
+    <div class="post-draft-hero">
+      <article>
+        <span>Grade</span>
+        <strong>${htmlEscape(grade.grade)}</strong>
+        <small>${htmlEscape(grade.label)}</small>
+      </article>
+      <article>
+        <span>Roster Source</span>
+        <strong>${snapshot.source === "espn" ? "ESPN Team" : snapshot.source === "pasted" ? "Pasted Roster" : "Needed"}</strong>
+        <small>${snapshot.rows.length} matched player${snapshot.rows.length === 1 ? "" : "s"}</small>
+      </article>
+      <article>
+        <span>Main Need</span>
+        <strong>${weaknesses[0]?.pos || "None"}</strong>
+        <small>${weaknesses.length ? `${weaknesses[0].depthGap} target gap` : "No obvious gap"}</small>
+      </article>
+    </div>
+    <div class="post-draft-grid">
+      <section>
+        <h4>Next 7 Days</h4>
+        ${actions.map((item) => `<p>${htmlEscape(item)}</p>`).join("")}
+      </section>
+      <section>
+        <h4>Strengths</h4>
+        ${strengths.length ? strengths.slice(0, 3).map((item) => `<p>${item.pos}: ${item.rows.slice(0, 2).map((row) => htmlEscape(row.Player)).join(", ")}</p>`).join("") : "<p>No standout surplus yet.</p>"}
+      </section>
+      <section>
+        <h4>Grade Notes</h4>
+        ${grade.notes.map((item) => `<p>${htmlEscape(item)}</p>`).join("")}
+      </section>
+    </div>
+  `;
+}
+
+function renderTradeFinder(snapshot = activeRosterSnapshot({ preferPasted: true })) {
+  if (!tradeFinder) return;
+  if (!boardData) {
+    tradeFinder.textContent = "Waiting for board data.";
+    return;
+  }
+  if (!snapshot.rows.length) {
+    tradeFinder.textContent = "Select your ESPN team or paste your roster above to generate trade lanes.";
+    return;
+  }
+  const away = tradeAwayCandidates(snapshot);
+  const targets = tradeTargetCandidates(snapshot);
+  const needs = rosterWeaknesses(snapshot);
+  const topNeed = needs[0]?.pos || "starter upgrade";
+  tradeFinder.innerHTML = `
+    <div class="trade-lane-summary">
+      <strong>${away.length ? `Shop ${away[0].Pos} depth` : "Hold core"}</strong>
+      <span>${needs.length ? `Primary target lane: ${topNeed}` : "No forced target lane. Look for value discounts."}</span>
+    </div>
+    <div class="trade-finder-grid">
+      <section>
+        <h4>Shop</h4>
+        ${away.length ? away.map((row) => renderPlayerMiniCard(row, marketSignal(row).label)).join("") : "<p>No obvious sell candidates. Do not force a trade.</p>"}
+      </section>
+      <section>
+        <h4>Target</h4>
+        ${targets.length ? targets.map((item) => renderPlayerMiniCard(item.row, item.pick?.fantasyTeam ? `Rostered by ${item.pick.fantasyTeam}` : `${item.row.Pos} upgrade lane`)).join("") : "<p>No clean targets yet.</p>"}
+      </section>
+    </div>
+  `;
+}
+
+function renderWaiverAssistant(snapshot = activeRosterSnapshot({ preferPasted: true })) {
+  if (!waiverAssistant) return;
+  if (!boardData) {
+    waiverAssistant.textContent = "Waiting for board data.";
+    return;
+  }
+  if (!snapshot.rows.length) {
+    waiverAssistant.textContent = "Select your ESPN team or paste your roster above to generate a real waiver watchlist.";
+    return;
+  }
+  const candidates = waiverCandidates(snapshot);
+  waiverAssistant.innerHTML = candidates.length
+    ? `<div class="waiver-list">${candidates.map((row) => renderPlayerMiniCard(row, leagueFitSignal(row, snapshot.counts).label)).join("")}</div>`
+    : "<p>No strong waiver adds from the current board. Hold roster spots for news-driven role changes.</p>";
+}
+
+function renderRosterEngines() {
+  renderPostDraftPlan(activeRosterSnapshot());
+  const tradeSnapshot = activeRosterSnapshot({ preferPasted: true });
+  renderTradeFinder(tradeSnapshot);
+  renderWaiverAssistant(tradeSnapshot);
 }
 
 function formatSyncTime(iso) {
@@ -3497,6 +3839,7 @@ function renderLiveDraft() {
   renderTierAlerts();
   renderRoomDetector();
   renderRiskMeter();
+  renderRosterEngines();
   renderCheatcodeMode();
   renderPickCards(liveRecentPicks, liveDraft.recentPicks, "No picks have been made yet.");
   renderPickCards(liveNextPicks, liveDraft.nextPicks, "No upcoming picks found.");
@@ -4052,6 +4395,7 @@ function applyBoardPayload(data) {
   renderLiveTierBoard();
   renderMockSimulator();
   renderTradeCalc();
+  renderRosterEngines();
   refreshActivePlayerAutocomplete();
 }
 
@@ -4206,6 +4550,7 @@ function setHideDrafted(value) {
   renderTierAlerts();
   renderRoomDetector();
   renderRiskMeter();
+  renderRosterEngines();
 }
 
 hideDrafted?.addEventListener("change", () => setHideDrafted(hideDrafted.checked));
