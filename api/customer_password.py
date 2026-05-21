@@ -9,12 +9,12 @@ from urllib.parse import parse_qs
 
 try:
     from auth_service import make_session, password_hash, password_policy_error, session_cookie
-    from customer_context import ConfigError, all_customer_contexts, database_customer_context, slugify
-    from database import set_customer_password
+    from customer_context import ConfigError, CustomerContext, all_customer_contexts, database_customer_context, slugify
+    from database import customer_auth_record, set_customer_password, upsert_customer, upsert_league
 except ModuleNotFoundError:
     from api.auth_service import make_session, password_hash, password_policy_error, session_cookie
-    from api.customer_context import ConfigError, all_customer_contexts, database_customer_context, slugify
-    from api.database import set_customer_password
+    from api.customer_context import ConfigError, CustomerContext, all_customer_contexts, database_customer_context, slugify
+    from api.database import customer_auth_record, set_customer_password, upsert_customer, upsert_league
 
 
 def utc_now() -> str:
@@ -42,6 +42,51 @@ def dashboard_url(customer_slug: str, league_key: str = "") -> str:
     return f"/FantasyIQ/?{urlencode(query)}"
 
 
+def ensure_database_customer(context: CustomerContext) -> None:
+    if customer_auth_record(context.slug):
+        return
+
+    upsert_customer(
+        slug=context.slug,
+        customer_name=context.customer_name,
+        email=context.email,
+        access_code=context.access_code,
+        status=context.status or "configured",
+        subscription_status=context.subscription_status,
+        included_league_limit=context.included_league_limit,
+        additional_league_count=context.additional_league_count,
+        default_league_key=context.league_key,
+    )
+    leagues = context.available_leagues or []
+    if not leagues and context.league_id:
+        leagues = [
+            {
+                "key": context.league_key or "primary",
+                "label": context.league_name or "Primary League",
+                "leagueName": context.league_name,
+                "leagueId": context.league_id,
+                "teamId": context.customer_team_id,
+                "teamName": context.customer_team_name,
+                "season": context.season,
+                "leagueSettings": context.league_settings,
+            }
+        ]
+    for league in leagues:
+        upsert_league(
+            customer_slug=context.slug,
+            league_key=str(league.get("key") or league.get("leagueKey") or context.league_key or "primary"),
+            label=str(league.get("label") or league.get("leagueName") or context.league_name or ""),
+            league_name=str(league.get("leagueName") or league.get("league_name") or context.league_name or ""),
+            league_id=league.get("leagueId") or league.get("league_id"),
+            team_id=league.get("teamId") or league.get("team_id") or league.get("customerTeamId"),
+            team_name=str(league.get("teamName") or league.get("team_name") or league.get("customerTeamName") or ""),
+            season=league.get("season") or context.season,
+            league_settings=league.get("leagueSettings") or league.get("league_settings") or context.league_settings,
+            status=str(league.get("status") or "configured"),
+            source="password_migration",
+        )
+
+
 def create_password_payload(raw: dict[str, Any], headers: Any | None = None) -> tuple[dict[str, Any], list[tuple[str, str]]]:
     identity = str(raw.get("customer") or raw.get("email") or raw.get("dashboard") or "").strip()
     access_code = str(raw.get("accessCode") or raw.get("access_code") or raw.get("code") or "").strip()
@@ -65,6 +110,7 @@ def create_password_payload(raw: dict[str, Any], headers: Any | None = None) -> 
     if access_code != context.access_code:
         raise PermissionError("Valid customer access code required.")
 
+    ensure_database_customer(context)
     saved = set_customer_password(context.slug, password_hash(password))
     if not saved:
         raise PermissionError("Could not update that customer account.")
