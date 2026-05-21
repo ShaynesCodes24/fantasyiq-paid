@@ -131,6 +131,56 @@ def metadata_value(session: dict[str, Any], *keys: str) -> str:
     return ""
 
 
+def checkout_league_profile(row: dict[str, str]) -> dict[str, Any]:
+    if not row.get("league_id") or not row.get("team_id"):
+        return {"saved": False, "reason": "missing_checkout_league_fields"}
+
+    raw = {
+        "leagueId": row.get("league_id", ""),
+        "teamId": row.get("team_id", ""),
+        "season": row.get("season") or str(DEFAULT_SEASON),
+        "leagueLabel": row.get("league_name", ""),
+    }
+    try:
+        try:
+            from setup_validate import setup_league_settings, validate_setup
+        except ImportError:
+            from api.setup_validate import setup_league_settings, validate_setup
+
+        payload, _status = validate_setup(raw)
+        if not payload.get("ok"):
+            return {
+                "saved": False,
+                "reason": str(payload.get("status") or "validation_failed"),
+                "message": str(payload.get("message") or "ESPN league validation did not pass."),
+                "leagueId": payload.get("leagueId") or row.get("league_id"),
+                "teamId": payload.get("teamId") or row.get("team_id"),
+                "season": payload.get("season") or row.get("season"),
+            }
+        label = row.get("league_name") or str(payload.get("leagueName") or "").strip() or "ESPN league"
+        return {
+            "saved": True,
+            "leagueKey": row.get("league_name") or str(payload.get("leagueName") or row.get("league_id") or "league"),
+            "label": label,
+            "leagueName": str(payload.get("leagueName") or label),
+            "leagueId": payload.get("leagueId") or row.get("league_id"),
+            "teamId": payload.get("teamId") or row.get("team_id"),
+            "teamName": str(payload.get("teamName") or ""),
+            "season": payload.get("season") or row.get("season"),
+            "leagueSettings": setup_league_settings(raw, payload),
+            "status": str(payload.get("status") or "ready"),
+        }
+    except Exception as exc:
+        return {
+            "saved": False,
+            "reason": "auto_validation_failed",
+            "message": str(exc),
+            "leagueId": row.get("league_id"),
+            "teamId": row.get("team_id"),
+            "season": row.get("season"),
+        }
+
+
 def checkout_customer_slug(session: dict[str, Any], row: dict[str, str]) -> str:
     try:
         try:
@@ -235,9 +285,9 @@ def persist_additional_league_checkout(event: dict[str, Any], session: dict[str,
 def persist_checkout_to_database(event: dict[str, Any], session: dict[str, Any], row: dict[str, str]) -> dict[str, Any]:
     try:
         try:
-            from database import DatabaseUnavailable, database_status, record_stripe_event, upsert_customer, upsert_league
+            from database import DatabaseUnavailable, database_status, record_ops_event, record_stripe_event, upsert_customer, upsert_league
         except ImportError:
-            from api.database import DatabaseUnavailable, database_status, record_stripe_event, upsert_customer, upsert_league
+            from api.database import DatabaseUnavailable, database_status, record_ops_event, record_stripe_event, upsert_customer, upsert_league
 
         status = database_status()
         if not status["enabled"]:
@@ -254,8 +304,38 @@ def persist_checkout_to_database(event: dict[str, Any], session: dict[str, Any],
             included_league_limit=int(env("FANTASYIQ_INCLUDED_LEAGUE_LIMIT", "3") or 3),
         )
 
-        if row.get("league_id") and row.get("team_id"):
-            upsert_league(
+        auto_setup = checkout_league_profile(row)
+        if auto_setup.get("saved"):
+            saved_league = upsert_league(
+                customer_slug=saved_customer.get("slug") or customer_slug,
+                league_key=metadata_value(session, "league_key") or str(auto_setup.get("leagueKey") or ""),
+                label=str(auto_setup.get("label") or "Checkout league"),
+                league_name=str(auto_setup.get("leagueName") or ""),
+                league_id=auto_setup.get("leagueId"),
+                team_id=auto_setup.get("teamId"),
+                team_name=str(auto_setup.get("teamName") or ""),
+                season=auto_setup.get("season"),
+                league_settings=auto_setup.get("leagueSettings") or {"source": "Stripe checkout auto setup"},
+                status="configured",
+                source="stripe_checkout",
+            )
+            auto_setup["leagueKey"] = saved_league.get("league_key") or auto_setup.get("leagueKey")
+            record_ops_event(
+                event_type="checkout.league_auto_configured",
+                severity="info",
+                source="stripe_webhook",
+                customer_slug=saved_customer.get("slug") or customer_slug,
+                league_key=str(auto_setup.get("leagueKey") or ""),
+                message="Stripe checkout ESPN details were validated and saved automatically.",
+                payload={
+                    "leagueId": auto_setup.get("leagueId"),
+                    "teamId": auto_setup.get("teamId"),
+                    "season": auto_setup.get("season"),
+                    "validationStatus": auto_setup.get("status"),
+                },
+            )
+        elif row.get("league_id") and row.get("team_id"):
+            saved_league = upsert_league(
                 customer_slug=saved_customer.get("slug") or customer_slug,
                 league_key=metadata_value(session, "league_key") or row.get("league_name") or row.get("league_id") or "league",
                 label=row.get("league_name") or "Checkout league",
@@ -263,9 +343,29 @@ def persist_checkout_to_database(event: dict[str, Any], session: dict[str, Any],
                 league_id=row.get("league_id"),
                 team_id=row.get("team_id"),
                 season=row.get("season"),
-                league_settings={"source": "Stripe checkout intake"},
+                league_settings={
+                    "source": "Stripe checkout intake",
+                    "autoSetupReason": auto_setup.get("reason") or "validation_failed",
+                    "autoSetupMessage": auto_setup.get("message") or "",
+                },
                 status="pending_validation",
                 source="stripe_checkout",
+            )
+            auto_setup["leagueKey"] = saved_league.get("league_key") or auto_setup.get("leagueKey") or ""
+            record_ops_event(
+                event_type="checkout.league_needs_setup",
+                severity="warning",
+                source="stripe_webhook",
+                customer_slug=saved_customer.get("slug") or customer_slug,
+                league_key=str(auto_setup.get("leagueKey") or ""),
+                message="Stripe checkout ESPN details need setup validation before the league is active.",
+                payload={
+                    "reason": auto_setup.get("reason"),
+                    "message": auto_setup.get("message"),
+                    "leagueId": row.get("league_id"),
+                    "teamId": row.get("team_id"),
+                    "season": row.get("season"),
+                },
             )
 
         inserted_event = record_stripe_event(
@@ -280,10 +380,6 @@ def persist_checkout_to_database(event: dict[str, Any], session: dict[str, Any],
             payload={"session": session},
         )
         try:
-            try:
-                from database import record_ops_event
-            except ImportError:
-                from api.database import record_ops_event
             record_ops_event(
                 event_type="checkout.completed",
                 severity="info",
@@ -318,6 +414,7 @@ def persist_checkout_to_database(event: dict[str, Any], session: dict[str, Any],
             "persistedDatabase": True,
             "insertedEvent": inserted_event,
             "customerSlug": saved_customer.get("slug") or customer_slug,
+            "autoSetup": auto_setup,
             "setupEmail": email_result,
         }
     except (DatabaseUnavailable, ValueError) as exc:

@@ -152,8 +152,15 @@ def main() -> int:
         setup_email = database.get("setupEmail") or {}
         if os.environ.get("FANTASYIQ_ASSERT_EMAIL_DELIVERY", "1") != "0" and not setup_email.get("sent"):
             raise RuntimeError(f"Webhook did not send setup email: {setup_email}")
+        auto_setup = database.get("autoSetup") or {}
+        if not auto_setup.get("saved"):
+            raise RuntimeError(f"Webhook did not auto-configure checkout league: {auto_setup}")
+        league_key = auto_setup.get("leagueKey")
+        if not league_key:
+            raise RuntimeError(f"Webhook auto setup did not return a league key: {auto_setup}")
         created_customer = True
         print(f"PASS webhook persisted customer {database.get('customerSlug')}")
+        print(f"PASS webhook auto-configured league {league_key}")
         print("PASS webhook sent setup email")
 
         reset = admin_action("reset_access_code", slug)
@@ -162,12 +169,22 @@ def main() -> int:
             raise RuntimeError("Admin reset did not return an access code.")
         print("PASS admin reset returned access code")
 
+        customer_status, customer_payload = request_json(
+            f"{SITE_URL}/api/customer-status?customer={slug}&league={league_key}",
+            headers={"x-fantasyiq-access-code": access_code},
+        )
+        customer = customer_payload.get("customer") or {}
+        if customer_status != 200 or customer.get("source") != "database" or not customer_payload.get("authenticated"):
+            raise RuntimeError(f"Customer status failed after auto setup: {customer_payload}")
+        print("PASS customer-status reads auto-configured database league")
+
         setup_status, setup = post_form(
             f"{SITE_URL}/api/setup-validate",
             {
                 "customer": slug,
                 "save": "1",
                 "leagueLabel": "Smoke Verified League",
+                "leagueKey": league_key,
                 "leagueId": TEST_LEAGUE_ID,
                 "teamId": TEST_TEAM_ID,
                 "season": TEST_SEASON,

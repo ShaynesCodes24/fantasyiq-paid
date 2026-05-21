@@ -445,12 +445,29 @@ def upsert_league(
             cursor.execute(
                 """
                 UPDATE fantasyiq_customers
-                   SET default_league_key = COALESCE(NULLIF(default_league_key, ''), %s),
-                       status = CASE WHEN status = 'paid_needs_setup' THEN 'configured' ELSE status END,
+                   SET default_league_key = CASE
+                           WHEN %s IN ('configured', 'active')
+                            AND (
+                                NULLIF(default_league_key, '') IS NULL
+                                OR NOT EXISTS (
+                                    SELECT 1
+                                      FROM fantasyiq_leagues active_default
+                                     WHERE active_default.customer_slug = fantasyiq_customers.slug
+                                       AND active_default.league_key = fantasyiq_customers.default_league_key
+                                       AND COALESCE(active_default.status, 'configured') IN ('configured', 'active')
+                                )
+                            )
+                           THEN %s
+                           ELSE default_league_key
+                       END,
+                       status = CASE
+                           WHEN status = 'paid_needs_setup' AND %s IN ('configured', 'active') THEN 'configured'
+                           ELSE status
+                       END,
                        updated_at = now()
                  WHERE slug = %s
                 """,
-                (resolved_key, resolved_customer),
+                (status.strip(), resolved_key, status.strip(), resolved_customer),
             )
             return saved or {"customer_slug": resolved_customer, "league_key": resolved_key}
 

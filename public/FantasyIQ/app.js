@@ -1048,9 +1048,12 @@ function activeLeagueOption() {
   return options.find((league) => league.key === appConfig.leagueKey) || options[0] || null;
 }
 
+function hasPrimaryLeagueProfile() {
+  return Boolean(appConfig.leagueId || appConfig.customerTeamName);
+}
+
 function configuredLeagueCount(options = currentLeagueOptions()) {
-  const hasPrimaryLeague = Boolean(appConfig.leagueId || appConfig.customerTeamName || requiresCustomerAccess());
-  return Math.max(options.length, hasPrimaryLeague ? 1 : 0);
+  return Math.max(options.length, hasPrimaryLeagueProfile() ? 1 : 0);
 }
 
 function includedLeagueLimit() {
@@ -1064,7 +1067,7 @@ function additionalLeaguePaymentUrl() {
 function leagueSlotText(count = configuredLeagueCount()) {
   const limit = includedLeagueLimit();
   const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
-  if (count < limit) return `${count || 1}/${limit} included leagues`;
+  if (count < limit) return `${count}/${limit} included leagues`;
   if (count === limit) return `${limit}/${limit} included / + extra ${price}`;
   return `${count} leagues / extras ${price} each`;
 }
@@ -1105,7 +1108,8 @@ function renderAccountPanel() {
 
   const leagues = options.length
     ? options
-    : [
+    : hasPrimaryLeagueProfile()
+      ? [
         {
           key: appConfig.leagueKey || "current",
           label: currentLeagueDisplayLabel(),
@@ -1115,14 +1119,16 @@ function renderAccountPanel() {
           teamName: appConfig.customerTeamName,
           leagueSettings: appConfig.leagueSettings,
         },
-      ];
+      ]
+      : [];
 
   const statusSteps = renderAccountProgress(count, limit);
-  accountLeagueList.innerHTML = `${statusSteps}${leagues
-    .map((league) => {
-      const settings = mergeLeagueSettings(appConfig.baseLeagueSettings || DEFAULT_LEAGUE_SETTINGS, league.leagueSettings || {});
-      const isActive = active?.key === league.key || (!active && league.key === appConfig.leagueKey);
-      return `<article class="${isActive ? "active" : ""}">
+  const leagueMarkup = leagues.length
+    ? leagues
+      .map((league) => {
+        const settings = mergeLeagueSettings(appConfig.baseLeagueSettings || DEFAULT_LEAGUE_SETTINGS, league.leagueSettings || {});
+        const isActive = active?.key === league.key || (!active && league.key === appConfig.leagueKey);
+        return `<article class="${isActive ? "active" : ""}">
         <div>
           <span>${isActive ? "Active league" : "League profile"}</span>
           <strong>${htmlEscape(league.label || league.leagueName || league.key)}</strong>
@@ -1133,8 +1139,27 @@ function renderAccountPanel() {
           <a href="${htmlEscape(leagueSetupUrl(league))}">Revalidate</a>
         </div>
       </article>`;
-    })
-    .join("")}`;
+      })
+      .join("")
+    : requiresCustomerAccess()
+    ? `<article class="setup-needed">
+        <div>
+          <span>League setup</span>
+          <strong>Connect your ESPN league</strong>
+          <p>Your account is active. Add your public ESPN league ID and team ID once so FantasyIQ can personalize every tool.</p>
+        </div>
+        <div class="account-league-actions">
+          <a href="${htmlEscape(leagueSetupUrl())}" data-open-setup>Open setup</a>
+        </div>
+      </article>`
+    : `<article>
+        <div>
+          <span>Preview mode</span>
+          <strong>Public demo league</strong>
+          <p>Subscribe to connect FantasyIQ to your own ESPN league profile.</p>
+        </div>
+      </article>`;
+  accountLeagueList.innerHTML = `${statusSteps}${leagueMarkup}`;
 
   accountLeagueList.querySelectorAll("[data-account-switch]").forEach((button) => {
     button.addEventListener("click", () => setActiveLeague(button.dataset.accountSwitch));
@@ -1166,6 +1191,7 @@ function renderAccountProgress(count, limit) {
 function addLeagueActionTitle(count = configuredLeagueCount()) {
   const limit = includedLeagueLimit();
   const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
+  if (requiresCustomerAccess() && count <= 0) return "Finish league setup";
   return count < limit ? "Add included league" : `Add extra league (${price})`;
 }
 
@@ -1175,7 +1201,7 @@ function currentLeagueDisplayLabel() {
   if (requiresCustomerAccess()) {
     if (appConfig.customerTeamName) return appConfig.customerTeamName;
     if (appConfig.leagueName && appConfig.leagueName !== "Public Demo League") return appConfig.leagueName;
-    return "Current league";
+    return "Finish league setup";
   }
   return appConfig.leagueName || "Public demo";
 }
@@ -1193,7 +1219,7 @@ function applyLeagueOption(option) {
 function applyServerCustomerContext(customer = {}) {
   if (!customer || typeof customer !== "object") return;
   const serverLeagues = normalizeLeagueProfiles(customer.leagues || []);
-  if (serverLeagues.length) appConfig.leagues = serverLeagues;
+  appConfig.leagues = serverLeagues;
   if (customer.customerSlug) appConfig.loadoutKey = normalizeDashboardSlug(customer.customerSlug);
   if (customer.customerName) appConfig.customerName = customer.customerName;
   if (customer.leagueKey) appConfig.leagueKey = normalizeDashboardSlug(customer.leagueKey);
@@ -1204,6 +1230,13 @@ function applyServerCustomerContext(customer = {}) {
   if (customer.includedLeagueLimit) appConfig.includedLeagueLimit = Number(customer.includedLeagueLimit);
   if (customer.additionalLeagueCount !== undefined) appConfig.additionalLeagueCount = Number(customer.additionalLeagueCount || 0);
   if (customer.leagueSettings) appConfig.leagueSettings = mergeLeagueSettings(appConfig.leagueSettings, customer.leagueSettings);
+  if (!serverLeagues.length && !customer.leagueId) {
+    appConfig.leagueId = "";
+    appConfig.leagueKey = "";
+    appConfig.customerTeamId = "";
+    appConfig.customerTeamName = "";
+    if (appConfig.leagueName === "Public Demo League") appConfig.leagueName = "";
+  }
   applyLeagueOption(activeLeagueOption());
 }
 
@@ -1217,8 +1250,10 @@ function renderLeagueSwitcher() {
   const count = configuredLeagueCount(options);
   if (leagueSlotNote) leagueSlotNote.textContent = leagueSlotText(count);
   if (addLeagueAction) {
+    addLeagueAction.textContent = requiresCustomerAccess() && count <= 0 ? "Set up" : "+";
     addLeagueAction.title = addLeagueActionTitle(count);
   }
+  leagueSwitcher.classList.toggle("needs-setup", requiresCustomerAccess() && count <= 0);
   if (options.length <= 1) {
     leagueSelect.innerHTML = "";
     leagueSelect.hidden = true;
@@ -1297,21 +1332,24 @@ function openAddLeagueDialog() {
   const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
   const includedRemaining = Math.max(0, limit - count);
   const needsPayment = count >= limit;
+  const needsInitialSetup = requiresCustomerAccess() && count <= 0;
   const title = dialog.querySelector("#add-league-title");
   const message = dialog.querySelector("#add-league-message");
   const summary = dialog.querySelector("#add-league-summary");
   const primary = dialog.querySelector("#add-league-primary");
 
-  if (title) title.textContent = needsPayment ? "Add Extra League" : "Add Included League";
+  if (title) title.textContent = needsInitialSetup ? "Finish League Setup" : needsPayment ? "Add Extra League" : "Add Included League";
   if (message) {
-    message.textContent = needsPayment
+    message.textContent = needsInitialSetup
+      ? "Your FantasyIQ account is active. Open setup once to save the ESPN league ID and team ID to this dashboard."
+      : needsPayment
       ? `Your Season Pass includes ${limit} leagues. Extra league profiles are ${price} each and can be added after checkout.`
       : `You have ${includedRemaining} included league ${includedRemaining === 1 ? "slot" : "slots"} left in your Season Pass. Open the setup validator to confirm the public ESPN league ID and team ID.`;
   }
   if (summary) {
     summary.innerHTML = `
       <span>${count}/${limit} included leagues configured</span>
-      <strong>${needsPayment ? `Extra league add-on: ${htmlEscape(price)}` : "No extra payment needed yet"}</strong>
+      <strong>${needsInitialSetup ? "Setup required before live sync" : needsPayment ? `Extra league add-on: ${htmlEscape(price)}` : "No extra payment needed yet"}</strong>
     `;
   }
   if (primary) {
