@@ -124,6 +124,38 @@ async function activateDashboardSection(page, section) {
   await page.locator(`.panel#${section}.active`).waitFor({ state: "visible", timeout: 15000 });
 }
 
+async function checkPreDraftState(page, viewport) {
+  const liveStatusText = await page.locator("#live-status").innerText({ timeout: 15000 });
+  if (!liveStatusText.includes("Pre-draft board ready")) return;
+
+  const preDraftPanel = page.locator("#pre-draft-panel");
+  await preDraftPanel.waitFor({ state: "visible", timeout: 15000 });
+  const preDraftText = await preDraftPanel.innerText({ timeout: 10000 });
+  const normalizedPreDraftText = preDraftText.toLowerCase();
+  for (const text of ["before the draft opens", "room is staged", "league", "order", "tier watch"]) {
+    if (!normalizedPreDraftText.includes(text)) {
+      throw new Error(`${viewport.name} pre-draft panel missing: ${text}`);
+    }
+  }
+
+  const recommendationText = await page.locator("#live-recommendations").innerText({ timeout: 10000 });
+  if (!recommendationText.toLowerCase().includes("pre-draft board value is ready")) {
+    throw new Error(`${viewport.name} pre-draft recommendations did not render the readiness intro`);
+  }
+
+  const rosterText = await page.locator("#live-my-roster").innerText({ timeout: 10000 });
+  const normalizedRosterText = rosterText.toLowerCase();
+  if (!normalizedRosterText.includes("roster starts clean") && !normalizedRosterText.includes("pick your espn team")) {
+    throw new Error(`${viewport.name} pre-draft roster empty state was not helpful`);
+  }
+
+  const postDraftText = await page.locator("#post-draft-plan").innerText({ timeout: 10000 });
+  const normalizedPostDraftText = postDraftText.toLowerCase();
+  if (!normalizedPostDraftText.includes("armed") || !normalizedPostDraftText.includes("after the draft")) {
+    throw new Error(`${viewport.name} pre-draft post-draft plan was not armed`);
+  }
+}
+
 async function checkDashboard(browser, viewport) {
   const page = await newPage(browser, viewport);
   const response = await page.goto(urlFor("/FantasyIQ/"), { waitUntil: "domcontentloaded", timeout: 45000 });
@@ -141,6 +173,7 @@ async function checkDashboard(browser, viewport) {
 
   for (const section of ["draft", "live", "simulator", "trade", "workbooks", "account"]) {
     await activateDashboardSection(page, section);
+    if (section === "live") await checkPreDraftState(page, viewport);
     await screenshot(page, `${viewport.name}-dashboard-${section}`);
   }
 

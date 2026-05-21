@@ -56,6 +56,7 @@ Draft Room:
 - Draft recommendations use current league scoring, team count, and superflex/flex settings.
 - Cheatcode/intelligence is helpful but does not overpower the draft room.
 - Live draft sync state is clear when draft has not started.
+- Pre-draft states show readiness, draft order, team-slot guidance, useful empty pick queues, and an armed post-draft plan before pick 1.
 
 Mock Simulator:
 - Team count and draft rounds follow active league settings.

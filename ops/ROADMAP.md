@@ -29,7 +29,6 @@ These are the highest-leverage upgrades for the next build cycle.
 
 These make the platform feel more premium after self-serve is stable.
 
-- Add better empty states for leagues before draft day.
 - Add visual polish pass for dashboard spacing, forms, account card, and mobile drawer.
 - Add customer renewal workflow and renewal status display.
 
@@ -44,6 +43,7 @@ These make the platform feel more premium after self-serve is stable.
 - Mock Simulator opponents use competitive manager profiles and stricter grading.
 - Player cards use plain-English Daily Player Synopsis and FantasyIQ Read sections.
 - Production monitoring runbook and script cover public pages, core APIs, webhook boundaries, admin auth boundaries, and ops event review.
+- Pre-draft live room states show readiness, draft order, team-slot guidance, smarter empty queues, and an armed post-draft plan before pick 1.
 
 ## Later
 

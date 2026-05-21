@@ -125,6 +125,7 @@ const leagueDraftRounds = document.querySelector("#league-draft-rounds");
 const leagueDraftNote = document.querySelector("#league-draft-note");
 const leagueProfileStrip = document.querySelector("#league-profile-strip");
 const leagueRoomNote = document.querySelector("#league-room-note");
+const preDraftPanel = document.querySelector("#pre-draft-panel");
 const leagueHealthPanel = document.querySelector("#league-health-panel");
 const leagueHealthTitle = document.querySelector("#league-health-title");
 const leagueHealthScore = document.querySelector("#league-health-score");
@@ -1242,7 +1243,7 @@ function leagueHealthItems() {
         : requiresCustomerAccess()
           ? "League setup is still needed"
           : "Demo league will connect automatically";
-  const draftState = liveDraft?.inProgress ? "Draft live" : liveDraft?.drafted ? "Draft complete" : liveDraft ? "Board loaded" : "Pending";
+  const draftState = liveDraft?.inProgress ? "Draft live" : liveDraft?.drafted ? "Draft complete" : isPreDraftLeague() ? "Pre-draft ready" : liveDraft ? "Board loaded" : "Pending";
   return [
     {
       label: "Account",
@@ -1275,7 +1276,11 @@ function leagueHealthItems() {
     {
       label: "Draft State",
       value: draftState,
-      detail: liveDraft ? `${Number(liveDraft.completedPicks || 0)}/${Number(liveDraft.totalPicks || 0) || leagueTeamTotal() * draftRoundTotal(settings)} picks complete.` : "Sync once before draft day.",
+      detail: isPreDraftLeague()
+        ? `${(liveDraft?.draftOrder || []).length || leagueTeamTotal()} draft slots loaded; 0 picks made.`
+        : liveDraft
+          ? `${Number(liveDraft.completedPicks || 0)}/${Number(liveDraft.totalPicks || 0) || leagueTeamTotal() * draftRoundTotal(settings)} picks complete.`
+          : "Sync once before draft day.",
       state: liveDraft ? "good" : "warn",
     },
   ];
@@ -3345,6 +3350,42 @@ function renderPostDraftPlan(snapshot = activeRosterSnapshot()) {
     return;
   }
   if (!snapshot.rows.length) {
+    if (isPreDraftLeague()) {
+      postDraftPlan.innerHTML = `
+        <div class="post-draft-hero">
+          <article>
+            <span>Grade</span>
+            <strong>Armed</strong>
+            <small>Starts after picks</small>
+          </article>
+          <article>
+            <span>Plan</span>
+            <strong>Ready</strong>
+            <small>${htmlEscape(selectedTeamId() ? preDraftSlotSummary() : "Select team")}</small>
+          </article>
+          <article>
+            <span>Next Move</span>
+            <strong>Draft</strong>
+            <small>Roster plan updates live</small>
+          </article>
+        </div>
+        <div class="post-draft-grid">
+          <section>
+            <h4>Before pick 1</h4>
+            <p>FantasyIQ has the league settings, board tiers, and draft order ready.</p>
+          </section>
+          <section>
+            <h4>During the draft</h4>
+            <p>Your grade and roster needs will update as ESPN records each selection.</p>
+          </section>
+          <section>
+            <h4>After the draft</h4>
+            <p>This panel becomes the waiver watchlist, roster gaps, and trade-lane plan.</p>
+          </section>
+        </div>
+      `;
+      return;
+    }
     postDraftPlan.innerHTML = `
       <div class="post-draft-hero">
         <article>
@@ -3903,6 +3944,157 @@ function renderTieredRows(rows, pos, options = {}) {
     .join("");
 }
 
+function isPreDraftLeague(data = liveDraft) {
+  return Boolean(data && !data.inProgress && !data.drafted && Number(data.completedPicks || 0) === 0);
+}
+
+function selectedEspnTeam() {
+  const teamId = selectedTeamId();
+  if (!teamId) return null;
+  return (liveDraft?.teams || []).find((team) => String(team.teamId) === String(teamId)) || null;
+}
+
+function firstRoundPickForTeam(teamId = selectedTeamId()) {
+  if (!teamId) return null;
+  return (liveDraft?.draftOrder || liveDraft?.picks || [])
+    .filter((pick) => String(pick.teamId) === String(teamId))
+    .sort((a, b) => Number(a.overall || 999) - Number(b.overall || 999))[0] || null;
+}
+
+function preDraftSlotSummary(teamId = selectedTeamId()) {
+  const pick = firstRoundPickForTeam(teamId);
+  if (!pick) return "Choose your ESPN team to lock the room to your slot.";
+  return `Your first pick: Round ${pick.round}, Pick ${pick.roundPick}, Overall ${pick.overall}.`;
+}
+
+function emptyStateHtml(title, detail, items = [], tone = "neutral") {
+  return `<div class="pre-draft-empty ${tone}">
+    <strong>${htmlEscape(title)}</strong>
+    <p>${htmlEscape(detail)}</p>
+    ${items.length ? `<ul>${items.map((item) => `<li>${htmlEscape(item)}</li>`).join("")}</ul>` : ""}
+  </div>`;
+}
+
+function topTierNames(pos, limit = 3) {
+  return topAvailableByPosition(pos)
+    .slice(0, limit)
+    .map((row) => row.Player)
+    .join(", ");
+}
+
+function renderPreDraftPanel() {
+  if (!preDraftPanel) return;
+  if (!isPreDraftLeague()) {
+    preDraftPanel.hidden = true;
+    return;
+  }
+  const teamId = selectedTeamId();
+  const team = selectedEspnTeam();
+  const firstPick = firstRoundPickForTeam(teamId);
+  const orderCount = (liveDraft?.draftOrder || []).length;
+  const settings = activeLeagueSettings();
+  const bestRb = topTierNames("RB", 2) || "RB tier loading";
+  const bestWr = topTierNames("WR", 2) || "WR tier loading";
+  const prepItems = [
+    {
+      label: "League",
+      value: `${leagueTeamTotal()} teams`,
+      detail: `${settings.scoringLabel || SCORING_LABELS[settings.scoringType] || "Custom scoring"} / ${lineupSummary(settings)}`,
+      state: "good",
+    },
+    {
+      label: "Order",
+      value: orderCount ? `${orderCount} slots` : "Pending",
+      detail: orderCount ? "ESPN has published the Round 1 order." : "Sync again once ESPN publishes the order.",
+      state: orderCount ? "good" : "watch",
+    },
+    {
+      label: "Your Slot",
+      value: firstPick ? `Pick ${firstPick.roundPick}` : "Select team",
+      detail: firstPick ? `${team?.teamName || "Your team"} opens at overall ${firstPick.overall}.` : "Use My ESPN Team to personalize survival odds.",
+      state: firstPick ? "good" : "watch",
+    },
+    {
+      label: "Tier Watch",
+      value: "RB/WR base",
+      detail: `${bestRb}; ${bestWr}`,
+      state: "good",
+    },
+  ];
+  preDraftPanel.hidden = false;
+  preDraftPanel.innerHTML = `
+    <div class="pre-draft-copy">
+      <span>Before the draft opens</span>
+      <strong>${htmlEscape(firstPick ? "Your room is staged" : "Draft room is staged")}</strong>
+      <p>${htmlEscape(firstPick ? preDraftSlotSummary(teamId) : "Pick your ESPN team once, then FantasyIQ will show your first turn, make-it-back reads, and roster pressure before the first pick is made.")}</p>
+    </div>
+    <div class="pre-draft-checks">
+      ${prepItems
+        .map(
+          (item) => `<article class="${item.state}">
+            <span>${htmlEscape(item.label)}</span>
+            <strong>${htmlEscape(item.value)}</strong>
+            <small>${htmlEscape(item.detail)}</small>
+          </article>`,
+        )
+        .join("")}
+    </div>
+    <div class="pre-draft-actions">
+      <button class="secondary-action pre-draft-nav" type="button" data-jump="simulator">Practice This Room</button>
+      <button class="secondary-action pre-draft-nav" type="button" data-jump="workbooks">Review Big Board</button>
+    </div>
+  `;
+  preDraftPanel.querySelectorAll(".pre-draft-nav").forEach((button) => {
+    button.addEventListener("click", () => activateSection(button.dataset.jump));
+  });
+}
+
+function preDraftRecommendationIntro(teamId) {
+  return emptyStateHtml(
+    "Pre-draft board value is ready",
+    teamId
+      ? `${preDraftSlotSummary(teamId)} These cards use your slot, league scoring, and the live board before picks start.`
+      : "Choose My ESPN Team to turn overall values into slot-specific survival reads.",
+    [
+      "Use Pick Now for players you should not risk trying to sneak back.",
+      "Use Can Wait once your team is selected and FantasyIQ can see the return pick.",
+      "Keep K/DST late unless the draft is already in the endgame.",
+    ],
+    "good",
+  );
+}
+
+function preDraftRosterEmpty(teamId) {
+  return emptyStateHtml(
+    "Roster starts clean",
+    preDraftSlotSummary(teamId),
+    [
+      "Early goal: secure RB/WR volume before luxury picks.",
+      "Do not take backup QB, second TE, DST, or K before the board forces it.",
+      "Roster tracker will switch from plan to actual picks as ESPN records them.",
+    ],
+    "good",
+  );
+}
+
+function preDraftNoTeamEmpty() {
+  return emptyStateHtml(
+    "Pick your ESPN team",
+    "The board is live, but roster pressure and next-pick survival need your team slot.",
+    ["Use the My ESPN Team selector above.", "FantasyIQ will remember it on this device.", "Then the first-pick radar and build tracker become personalized."],
+    "watch",
+  );
+}
+
+function preDraftRecentPicksEmpty() {
+  return emptyStateHtml(
+    "No picks yet",
+    "ESPN has the order loaded, but the room has not started drafting.",
+    ["Keep Sync Now handy near draft time.", "Recent picks will appear here as soon as ESPN records the first selection."],
+    "good",
+  );
+}
+
 function renderRecommendationCard(row, counts, index = 0) {
   const decision = recommendationDecision(row, counts);
   const momentum = playerMarketMomentum(row);
@@ -3962,19 +4154,21 @@ function renderRecommendations() {
     ? ranked.filter((row) => recommendationDecision(row, counts).label === "Can wait").slice(0, 2)
     : [];
   const avoids = teamId ? avoidRows(counts).slice(0, 2) : [];
+  const preDraft = isPreDraftLeague();
 
   liveRecommendations.innerHTML = `
+    ${preDraft ? preDraftRecommendationIntro(teamId) : ""}
     <div class="recommendation-block">
       <h4>${teamId ? "Pick Now" : "Best Board Values"}</h4>
       ${pickNow.length ? pickNow.map((row, index) => renderRecommendationCard(row, counts, index)).join("") : "<p>No urgent pick yet. Let the room make the first mistake.</p>"}
     </div>
     <div class="recommendation-block">
       <h4>Can Wait</h4>
-      ${waitList.length ? waitList.map((row) => renderRecommendationCard(row, counts)).join("") : "<p>Not enough separation yet for a confident wait list.</p>"}
+      ${waitList.length ? waitList.map((row) => renderRecommendationCard(row, counts)).join("") : preDraft && !teamId ? "<p>Select your ESPN team to see what can survive back to your next pick.</p>" : "<p>Not enough separation yet for a confident wait list.</p>"}
     </div>
     <div class="recommendation-block compact-block">
       <h4>Avoid Under Clock</h4>
-      ${avoids.length ? avoids.map((row) => renderRecommendationCard(row, counts)).join("") : "<p>No major avoid flags from roster/round logic.</p>"}
+      ${avoids.length ? avoids.map((row) => renderRecommendationCard(row, counts)).join("") : preDraft ? "<p>Pre-draft avoid rule: do not force K/DST, backup QB, or second TE before starter value dries up.</p>" : "<p>No major avoid flags from roster/round logic.</p>"}
     </div>
   `;
 }
@@ -4017,7 +4211,7 @@ function renderTeamOptions() {
 function renderPickCards(container, picks, emptyMessage) {
   if (!container) return;
   if (!picks?.length) {
-    container.textContent = emptyMessage;
+    container.innerHTML = String(emptyMessage || "").includes("<") ? emptyMessage : `<p>${htmlEscape(emptyMessage)}</p>`;
     return;
   }
   container.innerHTML = picks
@@ -4045,7 +4239,9 @@ function renderMyRoster() {
   if (!liveMyRoster) return;
   const teamId = selectedTeamId();
   if (!teamId) {
-    liveMyRoster.textContent = "Select your ESPN team after the order appears.";
+    liveMyRoster.innerHTML = isPreDraftLeague()
+      ? preDraftNoTeamEmpty()
+      : "<p>Select your ESPN team after the order appears.</p>";
     return;
   }
   const roster = rosterCountsFor(teamId);
@@ -4056,7 +4252,7 @@ function renderMyRoster() {
       <div class="roster-counts">
         <span>QB ${counts.QB}</span><span>RB ${counts.RB}</span><span>WR ${counts.WR}</span><span>TE ${counts.TE}</span><span>DST ${counts.DST}</span><span>K ${counts.K}</span>
       </div>
-      <p>No picks for your team yet.</p>
+      ${isPreDraftLeague() ? preDraftRosterEmpty(teamId) : "<p>No picks for your team yet.</p>"}
     `;
     return;
   }
@@ -4108,7 +4304,9 @@ function renderNextPickRadar() {
   }
   const teamId = selectedTeamId();
   if (!teamId) {
-    nextPickRadar.textContent = "Select your ESPN team to unlock live survival odds.";
+    nextPickRadar.innerHTML = isPreDraftLeague()
+      ? preDraftNoTeamEmpty()
+      : "<p>Select your ESPN team to unlock live survival odds.</p>";
     return;
   }
   const upcoming = pendingPicksForTeam(teamId);
@@ -4133,6 +4331,7 @@ function renderNextPickRadar() {
     .slice(0, 3);
 
   nextPickRadar.innerHTML = `
+    ${isPreDraftLeague() ? emptyStateHtml("First-pick radar", preDraftSlotSummary(teamId), ["Likely Gone means do not count on that player coming back.", "Can Wait means FantasyIQ sees enough room before your return pick."], "good") : ""}
     <div class="intel-card ${until === 0 ? "danger" : until <= 3 ? "watch" : "good"}">
       <strong>${until === 0 ? "You are on the clock" : `${until} picks until you`}</strong>
       <small>Next pick: Round ${next.round}, Pick ${next.roundPick}, Overall ${next.overall}.${returnPick ? ` Return pick: Overall ${returnPick.overall}.` : ""}</small>
@@ -4190,7 +4389,7 @@ function renderRoomDetector() {
   const windowSize = Math.min(12, leagueTeamTotal());
   const recent = recentDraftedPicks(windowSize);
   if (!recent.length) {
-    roomDetector.innerHTML = `<div class="intel-card good"><strong>No run yet</strong><small>ESPN has not recorded any picks. Once the room starts drafting, this will spot panic pockets.</small></div>`;
+    roomDetector.innerHTML = `<div class="intel-card good"><strong>${isPreDraftLeague() ? "No room behavior yet" : "No run yet"}</strong><small>${isPreDraftLeague() ? "Pre-draft signal is quiet by design. Once picks start, this will separate real position runs from noise." : "ESPN has not recorded any picks. Once the room starts drafting, this will spot panic pockets."}</small></div>`;
     return;
   }
   const counts = recentPositionCounts(windowSize);
@@ -4228,7 +4427,9 @@ function renderRiskMeter() {
   if (!riskMeter) return;
   const teamId = selectedTeamId();
   if (!teamId) {
-    riskMeter.textContent = "Select your ESPN team after the order appears.";
+    riskMeter.innerHTML = isPreDraftLeague()
+      ? preDraftNoTeamEmpty()
+      : "<p>Select your ESPN team after the order appears.</p>";
     return;
   }
   const { counts, picks } = rosterCountsFor(teamId);
@@ -4627,6 +4828,7 @@ function renderLiveDraftSummary() {
   if (!liveStatus) return;
   if (!liveDraft) {
     liveStatus.textContent = "Connecting to ESPN public draft sync...";
+    renderPreDraftPanel();
     return;
   }
 
@@ -4636,28 +4838,34 @@ function renderLiveDraftSummary() {
   const totalFallback = leagueTeamTotal() * draftRoundTotal();
   const pct = total || totalFallback ? Math.round((completed / (total || totalFallback)) * 100) : 0;
   const stale = liveDraft.staleError ? ` Stale fallback shown because ESPN sync errored: ${liveDraft.staleError}` : "";
-  const state = liveDraft.inProgress ? "Draft live" : liveDraft.drafted ? "Draft complete" : "Draft board loaded";
+  const preDraft = isPreDraftLeague();
+  const state = liveDraft.inProgress ? "Draft live" : liveDraft.drafted ? "Draft complete" : preDraft ? "Pre-draft board ready" : "Draft board loaded";
   const syncContext = liveDraft.demoMode
     ? " Public demo league is connected; subscribers get their ESPN league configured after checkout."
-    : ` Auto sync checks ESPN every ${LIVE_SYNC_INTERVAL_MS / 1000} seconds.`;
+    : preDraft
+      ? " ESPN order is loaded; keep auto sync on when the room opens."
+      : ` Auto sync checks ESPN every ${LIVE_SYNC_INTERVAL_MS / 1000} seconds.`;
 
   liveStatus.innerHTML = `<strong>${state}</strong>: ${completed}/${total || totalFallback} picks completed.${syncContext}${stale}`;
   if (liveSyncStatus) {
-    liveSyncStatus.textContent = liveDraft.demoMode ? "Demo league connected" : liveDraft.inProgress ? "Draft live" : "ESPN connected";
+    liveSyncStatus.textContent = liveDraft.demoMode ? "Demo league connected" : liveDraft.inProgress ? "Draft live" : preDraft ? "Pre-draft ready" : "ESPN connected";
   }
   if (liveCurrentPick) {
     liveCurrentPick.textContent = current ? `Round ${current.round}, Pick ${current.roundPick}` : "Draft complete";
   }
   if (liveCurrentTeam) {
-    liveCurrentTeam.textContent = current
-      ? `Overall ${current.overall}: ${current.fantasyTeam}${current.manager ? ` / ${current.manager}` : ""}`
-      : "All picks are complete.";
+    liveCurrentTeam.textContent = preDraft && selectedTeamId()
+      ? preDraftSlotSummary()
+      : current
+        ? `Overall ${current.overall}: ${current.fantasyTeam}${current.manager ? ` / ${current.manager}` : ""}`
+        : "All picks are complete.";
   }
   if (liveCompleted) liveCompleted.textContent = String(completed);
   if (liveTotal) liveTotal.textContent = `of ${total || totalFallback}`;
   if (liveProgressBar) liveProgressBar.style.width = `${pct}%`;
   if (liveLastSync) liveLastSync.textContent = formatSyncTime(liveDraft.syncedAt);
   if (liveSource) liveSource.textContent = liveDraft.demoMode ? "ESPN public demo league" : liveDraft.source || "ESPN public league API";
+  renderPreDraftPanel();
   renderLeagueHealth();
 }
 
@@ -4684,7 +4892,7 @@ function renderLiveDraft(options = {}) {
   renderRiskMeter();
   renderRosterEngines();
   renderCheatcodeMode();
-  renderPickCards(liveRecentPicks, liveDraft.recentPicks, "No picks have been made yet.");
+  renderPickCards(liveRecentPicks, liveDraft.recentPicks, isPreDraftLeague() ? preDraftRecentPicksEmpty() : "No picks have been made yet.");
   renderPickCards(liveNextPicks, liveDraft.nextPicks, "No upcoming picks found.");
   renderLiveTierBoard();
   renderDraftOrder();
