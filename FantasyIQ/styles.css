@@ -18,7 +18,7 @@
   --warn: #a13f2f;
   --shadow: 0 24px 70px rgba(5, 17, 14, 0.25);
   --shadow-soft: 0 8px 24px rgba(5, 17, 14, 0.14);
-  --football-cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ctext x='20' y='30' text-anchor='middle' font-size='30' font-family='Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif'%3E%F0%9F%8F%88%3C/text%3E%3C/svg%3E") 8 8, auto;
+  --football-cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44' viewBox='0 0 44 44'%3E%3Cg transform='rotate(28 22 22)'%3E%3Ctext x='22' y='32' text-anchor='middle' font-size='31' font-family='Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif'%3E%F0%9F%8F%88%3C/text%3E%3C/g%3E%3C/svg%3E") 8 10, auto;
 }
 
 * {
