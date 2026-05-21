@@ -87,6 +87,34 @@ async function checkPublicPages(browser, viewport) {
   }
 }
 
+async function checkLoginRoute(browser, viewport) {
+  const page = await newPage(browser, viewport);
+  const response = await page.goto(urlFor("/login"), { waitUntil: "domcontentloaded", timeout: 45000 });
+  await waitForQuietPage(page);
+  await page.locator("#customer-access-gate").waitFor({ state: "visible", timeout: 15000 });
+  await page.locator("#customer-login-identity").waitFor({ state: "visible", timeout: 15000 });
+  await page.locator("#customer-login-password").waitFor({ state: "visible", timeout: 15000 });
+
+  const heading = await page.locator(".access-card h2").innerText({ timeout: 10000 });
+  if (!heading.includes("Log in to your dashboard")) {
+    throw new Error(`${viewport.name} login route rendered unexpected heading: ${heading}`);
+  }
+  const forgot = page.locator("#customer-forgot-password");
+  if ((await forgot.count()) !== 1) throw new Error(`${viewport.name} login forgot-password action is missing`);
+
+  const recovery = page.locator(".access-recovery");
+  const recoveryOpen = await recovery.evaluate((node) => node.open);
+  if (recoveryOpen) throw new Error(`${viewport.name} login recovery panel should start collapsed`);
+  await recovery.locator("summary").click();
+  await page.locator("#customer-access-code").waitFor({ state: "visible", timeout: 15000 });
+  await page.locator("#customer-email-reset").waitFor({ state: "visible", timeout: 15000 });
+  const file = await screenshot(page, `${viewport.name}-login-route`);
+  record(`${viewport.name} login route`, {
+    detail: `HTTP ${response?.status() || "unknown"}, redirected to ${page.url()}, screenshot ${file}`,
+  });
+  await page.close();
+}
+
 async function activateDashboardSection(page, section) {
   const nav = page.locator(`.nav-item[data-section="${section}"]`);
   if ((await nav.count()) !== 1) {
@@ -125,6 +153,8 @@ async function checkDashboard(browser, viewport) {
   await accountAction.click();
   await page.locator("#customer-access-gate").waitFor({ state: "visible", timeout: 15000 });
   await page.locator("#customer-login-password").waitFor({ state: "visible", timeout: 15000 });
+  await page.locator("#customer-forgot-password").waitFor({ state: "visible", timeout: 15000 });
+  await page.locator(".access-recovery summary").click();
   await page.locator("#customer-access-code").waitFor({ state: "visible", timeout: 15000 });
   await screenshot(page, `${viewport.name}-dashboard-sign-in`);
 
@@ -140,6 +170,7 @@ async function main() {
   try {
     for (const viewport of VIEWPORTS) {
       await checkPublicPages(browser, viewport);
+      await checkLoginRoute(browser, viewport);
       await checkDashboard(browser, viewport);
     }
   } finally {

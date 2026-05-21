@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import time
@@ -24,6 +25,10 @@ DEFAULT_SEASON = 2026
 DEFAULT_LIMIT = 320
 CACHE_TTL_SECONDS = 900
 DEFAULT_DEMO_LEAGUE_ID = 584856941
+SLEEPER_API_BASE = "https://api.sleeper.app/v1"
+SLEEPER_LOOKBACK_HOURS = 72
+SLEEPER_TREND_LIMIT = 150
+SLEEPER_PLAYERS_TTL_SECONDS = 86400
 
 
 DEFAULT_SCORING_WEIGHTS: dict[int, float] = {
@@ -99,6 +104,8 @@ POSITION_COLORS = {
 
 _board_cache: dict[str, dict[str, Any]] = {}
 _rookie_names: set[str] | None = None
+_sleeper_players_cache: dict[str, Any] = {}
+_sleeper_signal_cache: dict[str, Any] = {}
 
 
 def int_env(name: str, default: int) -> int:
@@ -192,6 +199,179 @@ def fetch_json(url: str, extra_headers: dict[str, str] | None = None) -> Any:
     with urllib.request.urlopen(request, timeout=25) as response:
         charset = response.headers.get_content_charset() or "utf-8"
         return json.loads(response.read().decode(charset))
+
+
+def sleeper_players_url() -> str:
+    return f"{SLEEPER_API_BASE}/players/nfl"
+
+
+def sleeper_trending_url(kind: str, lookback_hours: int = SLEEPER_LOOKBACK_HOURS, limit: int = SLEEPER_TREND_LIMIT) -> str:
+    return (
+        f"{SLEEPER_API_BASE}/players/nfl/trending/{kind}"
+        f"?lookback_hours={lookback_hours}&limit={limit}"
+    )
+
+
+def sleeper_players() -> dict[str, Any]:
+    now = time.time()
+    cached = _sleeper_players_cache.get("data")
+    if cached and now - float(_sleeper_players_cache.get("ts") or 0) < SLEEPER_PLAYERS_TTL_SECONDS:
+        return cached
+    payload = fetch_json(sleeper_players_url())
+    players = payload if isinstance(payload, dict) else {}
+    _sleeper_players_cache.update({"data": players, "ts": now})
+    return players
+
+
+def sleeper_position(player: dict[str, Any]) -> str:
+    pos = str(player.get("position") or "").upper()
+    if pos in {"DEF", "D/ST"}:
+        return "DST"
+    fantasy_positions = player.get("fantasy_positions") or []
+    if isinstance(fantasy_positions, list):
+        for fantasy_pos in fantasy_positions:
+            candidate = str(fantasy_pos or "").upper()
+            if candidate in {"QB", "RB", "WR", "TE", "K"}:
+                return candidate
+            if candidate in {"DEF", "D/ST"}:
+                return "DST"
+    return pos
+
+
+def sleeper_name_keys(player: dict[str, Any]) -> set[str]:
+    first = str(player.get("first_name") or "")
+    last = str(player.get("last_name") or "")
+    names = {
+        str(player.get("full_name") or ""),
+        str(player.get("search_full_name") or ""),
+        f"{first} {last}",
+    }
+    return {normalize_name(name) for name in names if normalize_name(name)}
+
+
+def sleeper_trend_score(add_count: int, drop_count: int) -> float:
+    volume = add_count + drop_count
+    if volume <= 0:
+        return 0.0
+    polarity = (add_count - drop_count) / volume
+    volume_score = min(28.0, math.log10(volume + 1) * 6.0)
+    return round(polarity * volume_score, 1)
+
+
+def store_signal(signal_map: dict[str, dict[str, Any]], key: str, signal: dict[str, Any]) -> None:
+    if not key:
+        return
+    existing = signal_map.get(key)
+    if not existing or abs(float(signal.get("external_score") or 0)) > abs(float(existing.get("external_score") or 0)):
+        signal_map[key] = signal
+
+
+def sleeper_external_signals(
+    lookback_hours: int = SLEEPER_LOOKBACK_HOURS,
+    limit: int = SLEEPER_TREND_LIMIT,
+) -> dict[str, Any]:
+    now = time.time()
+    cache_key = f"{lookback_hours}:{limit}"
+    cached = _sleeper_signal_cache.get(cache_key)
+    if cached and now - float(cached.get("ts") or 0) < CACHE_TTL_SECONDS:
+        return cached["data"]
+
+    fallback = {
+        "byName": {},
+        "byEspnId": {},
+        "updatedAt": utc_now(),
+        "source": "Sleeper add/drop trends",
+        "lookbackHours": lookback_hours,
+        "limit": limit,
+        "available": False,
+    }
+    try:
+        players = sleeper_players()
+        add_rows = fetch_json(sleeper_trending_url("add", lookback_hours, limit))
+        drop_rows = fetch_json(sleeper_trending_url("drop", lookback_hours, limit))
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError, ValueError) as exc:
+        data = {**fallback, "error": str(exc)}
+        _sleeper_signal_cache[cache_key] = {"data": data, "ts": now}
+        return data
+
+    counts: dict[str, dict[str, int]] = {}
+    for kind, rows in (("add", add_rows), ("drop", drop_rows)):
+        if not isinstance(rows, list):
+            continue
+        for item in rows:
+            if not isinstance(item, dict):
+                continue
+            player_id = str(item.get("player_id") or "")
+            if not player_id:
+                continue
+            counts.setdefault(player_id, {"add": 0, "drop": 0})[kind] += int_value(item.get("count"), 0)
+
+    by_name: dict[str, dict[str, Any]] = {}
+    by_espn_id: dict[str, dict[str, Any]] = {}
+    updated_at = utc_now()
+    for player_id, trend_counts in counts.items():
+        player = players.get(player_id) if isinstance(players, dict) else None
+        if not isinstance(player, dict):
+            continue
+        pos = sleeper_position(player)
+        if pos not in {"QB", "RB", "WR", "TE", "K", "DST"}:
+            continue
+        add_count = int(trend_counts.get("add") or 0)
+        drop_count = int(trend_counts.get("drop") or 0)
+        net_count = add_count - drop_count
+        score = sleeper_trend_score(add_count, drop_count)
+        trend = "Rising" if score >= 2.5 else "Falling" if score <= -2.5 else "Neutral"
+        years_exp = int_value(player.get("years_exp"), -1)
+        signal = {
+            "sleeper_player_id": player_id,
+            "player": player.get("full_name") or "",
+            "position": pos,
+            "team": player.get("team") or player.get("team_abbr") or "",
+            "years_exp": years_exp,
+            "rookie": years_exp == 0,
+            "add_count": add_count,
+            "drop_count": drop_count,
+            "net_count": net_count,
+            "external_score": score,
+            "trend": trend,
+            "updated_at": updated_at,
+            "source": "Sleeper add/drop trends",
+            "summary": f"Sleeper {lookback_hours}h adds {add_count:,}, drops {drop_count:,}, net {net_count:+,}.",
+        }
+        for key in sleeper_name_keys(player):
+            store_signal(by_name, key, signal)
+        espn_id = str(player.get("espn_id") or "")
+        if espn_id and espn_id != "0":
+            store_signal(by_espn_id, espn_id, signal)
+
+    data = {
+        **fallback,
+        "byName": by_name,
+        "byEspnId": by_espn_id,
+        "updatedAt": updated_at,
+        "available": True,
+        "matchedSignals": len(by_name),
+    }
+    _sleeper_signal_cache[cache_key] = {"data": data, "ts": now}
+    return data
+
+
+def external_signal_for_player(player: dict[str, Any], signals: dict[str, Any] | None) -> dict[str, Any]:
+    if not signals:
+        return {}
+    by_espn_id = signals.get("byEspnId") or {}
+    espn_id = str(player.get("id") or "")
+    if espn_id and espn_id in by_espn_id:
+        return by_espn_id[espn_id]
+    by_name = signals.get("byName") or {}
+    name_keys = {
+        normalize_name(str(player.get("fullName") or "")),
+        normalize_name(str(player.get("displayName") or "")),
+    }
+    for key in name_keys:
+        if key and key in by_name:
+            return by_name[key]
+    return {}
 
 
 def ppr_rank(player: dict[str, Any]) -> int:
@@ -500,10 +680,10 @@ def category_for(row_seed: dict[str, Any]) -> str:
         return "K/DST"
     if rank <= 36:
         return "Elite"
+    if player_name in rookie_names() or row_seed.get("external_rookie"):
+        return "Rookie"
     if value_score >= 56 and rank > 55:
         return "Sleeper"
-    if player_name in rookie_names():
-        return "Rookie"
     return "Staple"
 
 
@@ -666,12 +846,15 @@ def analysis_for(row: dict[str, Any], ownership: dict[str, Any]) -> str:
     owned = float(ownership.get("percentOwned") or 0.0)
     started = float(ownership.get("percentStarted") or 0.0)
     scoring_label = row.get("Scoring Label") or "league"
+    external_signal = str(row.get("External Signal") or "").strip()
+    external_text = f" Sleeper market signal: {external_signal}" if external_signal else ""
     return (
         f"Live ESPN feed ranks {row['Player']} #{row['Rank']} overall and {row['Pos']}{row['Pos Rank']}. "
         f"Current ADP is {adp_text}, native {scoring_label} projection is {row['Proj PPR Pts']}, "
         f"last-year {scoring_label} scoring is {row['Last Year PPR']}, ownership is {owned:.1f}%, "
         f"and start rate is {started:.1f}%. FantasyIQ value is recalculated from ESPN rank, ADP, raw-stat projection, "
-        f"prior-year raw-stat production, volatility, ownership, and injury flags whenever the live board refreshes. "
+        f"prior-year raw-stat production, volatility, ownership, injury flags, and live add/drop pressure whenever the live board refreshes. "
+        f"{external_text} "
         f"Risk read: {row['Risk Notes']}."
     )
 
@@ -694,6 +877,8 @@ def daily_synopsis_for(row: dict[str, Any], seed: dict[str, Any], season: int) -
         last_year_text,
         f"risk {row['Risk']}/10",
     ]
+    if row.get("External Signal"):
+        status_parts.append(str(row.get("External Signal")))
     fallback = (
         f"{row['Player']} is a {row['Pos']} for {row['Team']} with {', '.join(status_parts)}. "
         f"FantasyIQ's current action is: {row['Action']}. Risk read: {row['Risk Notes']}."
@@ -711,11 +896,16 @@ def daily_synopsis_for(row: dict[str, Any], seed: dict[str, Any], season: int) -
         "Latest News Date": news_date or "No dated update",
         "News Status": news_status,
         "Player Outlook": short_text(body),
-        "Synopsis Source": "ESPN live player outlook, ESPN public fantasy board data, and FantasyIQ daily board model",
+        "Synopsis Source": "ESPN live player outlook, ESPN public fantasy board data, Sleeper add/drop trends, and FantasyIQ daily board model",
     }
 
 
-def build_row_seed(player: dict[str, Any], season: int, scoring_profile: dict[str, Any]) -> dict[str, Any] | None:
+def build_row_seed(
+    player: dict[str, Any],
+    season: int,
+    scoring_profile: dict[str, Any],
+    external_signals: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
     pos = POSITION_BY_ID.get(player.get("defaultPositionId"))
     if not pos:
         return None
@@ -726,6 +916,9 @@ def build_row_seed(player: dict[str, Any], season: int, scoring_profile: dict[st
     if rank >= 9000:
         return None
     ownership = player.get("ownership") or {}
+    external_signal = external_signal_for_player(player, external_signals)
+    external_score = float(external_signal.get("external_score") or 0.0)
+    external_rookie = bool(external_signal.get("rookie"))
     scoring_items = scoring_profile["items"]
     ppr_items = ppr_scoring_items(scoring_items)
     projected = projected_scored_points(player, season, scoring_items)
@@ -737,7 +930,13 @@ def build_row_seed(player: dict[str, Any], season: int, scoring_profile: dict[st
     market_delta = adp - rank
     percent_change = float(ownership.get("percentChange") or 0.0)
     auction_change = float(ownership.get("auctionValueAverageChange") or 0.0)
-    adp_value = clamp(50 + market_delta * 1.15 + percent_change * 6 + auction_change * 2, 10, 95)
+    external_value_adjustment = clamp(external_score * 0.35, -8, 8)
+    rookie_momentum_adjustment = 2.0 if external_rookie and external_score >= 6 else 0.0
+    adp_value = clamp(
+        50 + market_delta * 1.15 + percent_change * 6 + auction_change * 2 + external_value_adjustment,
+        10,
+        95,
+    )
     risk, risk_notes = risk_profile_for(
         player,
         rank,
@@ -748,17 +947,42 @@ def build_row_seed(player: dict[str, Any], season: int, scoring_profile: dict[st
         ownership,
         pos,
     )
+    external_risk_notes: list[str] = []
+    if external_score <= -9:
+        risk = min(10, risk + 1)
+        external_risk_notes.append("Sleeper add/drop market is negative")
+    elif external_score >= 10 and rank > 70:
+        external_risk_notes.append("Sleeper add/drop market is warming")
+    if external_rookie and normalize_name(str(player.get("fullName") or "")) not in rookie_names() and last_year <= 0:
+        risk = min(10, risk + 1)
+        external_risk_notes.append("rookie profile from Sleeper player map")
+    if external_risk_notes:
+        risk_notes = "; ".join([risk_notes, *external_risk_notes])
     overall = clamp(100 - (rank - 1) * 0.28, 40, 99)
     volume = clamp(45 + float(ownership.get("percentStarted") or 0.0) * 0.45, 35, 96)
-    upside = clamp(overall + float(ownership.get("auctionValueAverage") or 0.0) * 0.22 + max(market_delta, 0) * 0.1, 45, 99)
+    upside = clamp(
+        overall
+        + float(ownership.get("auctionValueAverage") or 0.0) * 0.22
+        + max(market_delta, 0) * 0.1
+        + max(external_score, 0) * 0.25,
+        45,
+        99,
+    )
     stability = clamp(96 - risk * 5 + float(ownership.get("percentStarted") or 0.0) * 0.08, 30, 94)
     floor = clamp((overall + stability) / 2 - risk * 0.8, 28, 95)
     ceiling = clamp(max(upside, overall + 4), 45, 99)
     projection_edge = projected - ppr_projected
     projection_adjustment = clamp(projection_edge / 8, -8, 8)
-    league_sort_rank = rank - projection_edge * 0.18
+    market_momentum_adjustment = clamp(external_score * 0.22, -6, 6)
+    league_sort_rank = rank - projection_edge * 0.18 - market_momentum_adjustment
     value_score = clamp(
-        (overall * 0.38) + (adp_value * 0.34) + (upside * 0.18) + ((10 - risk) * 1.0) + projection_adjustment,
+        (overall * 0.38)
+        + (adp_value * 0.34)
+        + (upside * 0.18)
+        + ((10 - risk) * 1.0)
+        + projection_adjustment
+        + market_momentum_adjustment
+        + rookie_momentum_adjustment,
         20,
         96,
     )
@@ -775,6 +999,9 @@ def build_row_seed(player: dict[str, Any], season: int, scoring_profile: dict[st
         "last_year_profile": last_year_profile,
         "last_year_ppr": float(last_year_ppr_profile["points"]),
         "ownership": ownership,
+        "external_signal": external_signal,
+        "external_score": round(external_score, 1),
+        "external_rookie": external_rookie,
         "outlook": str(player.get("seasonOutlook") or ""),
         "market_delta": market_delta,
         "percent_change": percent_change,
@@ -797,8 +1024,14 @@ def build_row_seed(player: dict[str, Any], season: int, scoring_profile: dict[st
     }
 
 
-def build_rows(players: list[dict[str, Any]], season: int, limit: int, scoring_profile: dict[str, Any]) -> list[dict[str, Any]]:
-    seeds = [seed for player in players if (seed := build_row_seed(player, season, scoring_profile))]
+def build_rows(
+    players: list[dict[str, Any]],
+    season: int,
+    limit: int,
+    scoring_profile: dict[str, Any],
+    external_signals: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    seeds = [seed for player in players if (seed := build_row_seed(player, season, scoring_profile, external_signals))]
     seeds.sort(key=lambda item: (item["league_sort_rank"], item["rank"], -item["projected"], item["player"].get("fullName", "")))
     rows: list[dict[str, Any]] = []
     pos_counts: dict[str, int] = {}
@@ -806,6 +1039,7 @@ def build_rows(players: list[dict[str, Any]], season: int, limit: int, scoring_p
     for overall_rank, seed in enumerate(seeds[:limit], start=1):
         player = seed["player"]
         pos = seed["pos"]
+        external_signal = seed.get("external_signal") or {}
         pos_counts[pos] = pos_counts.get(pos, 0) + 1
         pos_rank = pos_counts[pos]
         seed["rank"] = overall_rank
@@ -860,6 +1094,16 @@ def build_rows(players: list[dict[str, Any]], season: int, limit: int, scoring_p
             "ESPN Percent Started": seed["ownership"].get("percentStarted"),
             "ESPN Ownership Change": seed["percent_change"],
             "ESPN ADP Change": seed["adp_change"],
+            "Sleeper Player ID": external_signal.get("sleeper_player_id") or "",
+            "Sleeper Add Count": external_signal.get("add_count", 0),
+            "Sleeper Drop Count": external_signal.get("drop_count", 0),
+            "Sleeper Net Adds": external_signal.get("net_count", 0),
+            "Sleeper Trend": external_signal.get("trend") or "",
+            "External Trend Score": seed["external_score"],
+            "External Signal": external_signal.get("summary") or "",
+            "External Source": external_signal.get("source") or "",
+            "External Updated": external_signal.get("updated_at") or "",
+            "Rookie Signal": "Sleeper rookie profile" if external_signal.get("rookie") else "",
         }
         row["Analysis"] = analysis_for(row, seed["ownership"])
         row.update(daily_synopsis_for(row, seed, season))
@@ -873,30 +1117,87 @@ def trend_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for row in rows:
         ownership_change = float(row.get("ESPN Ownership Change") or 0.0)
         adp_change = float(row.get("ESPN ADP Change") or 0.0)
+        external_score = float(row.get("External Trend Score") or 0.0)
+        sleeper_adds = int_value(row.get("Sleeper Add Count"), 0)
+        sleeper_drops = int_value(row.get("Sleeper Drop Count"), 0)
+        sleeper_net = int_value(row.get("Sleeper Net Adds"), 0)
         adp = row.get("ESPN ADP")
         rank = float(row.get("Rank") or 999)
         adp_gap = float(adp) - rank if adp is not None else 0.0
-        trend_score = abs(ownership_change) * 8 + abs(adp_change) * 2 + max(adp_gap, 0) * 0.25
-        if trend_score < 3 and row["Rank"] > 120:
+        direction_score = ownership_change * 8 - adp_change * 2 + external_score
+        value_gap_score = max(adp_gap, 0) * 0.25
+        magnitude = abs(direction_score) + value_gap_score
+        is_value_gap = adp_gap >= 12 and direction_score > -2
+        if magnitude < 3 and not is_value_gap:
             continue
-        direction = "Rising" if ownership_change > 0 or adp_change < 0 else "Value Gap" if adp_gap > 12 else "Falling"
+        if direction_score >= 3:
+            direction = "Rising"
+        elif direction_score <= -3:
+            direction = "Falling"
+        elif is_value_gap:
+            direction = "Value Gap"
+        else:
+            continue
+        trend_score = direction_score if direction in {"Rising", "Falling"} else value_gap_score
+        if abs(trend_score) < 3 and row["Rank"] > 170 and sleeper_adds + sleeper_drops == 0:
+            continue
+        sleeper_text = (
+            f"Sleeper {SLEEPER_LOOKBACK_HOURS}h: {sleeper_adds:,} adds, {sleeper_drops:,} drops, net {sleeper_net:+,}. "
+            if sleeper_adds or sleeper_drops
+            else ""
+        )
+        draft_action = (
+            "Move up only if price still fits"
+            if direction == "Rising"
+            else "Discount only; confirm role before clicking"
+            if direction == "Falling"
+            else "Compare price to rank"
+        )
         trend = {
             **row,
             "Trend": direction,
             "Board Rank": row["Rank"],
             "Trend Score": round(trend_score, 1),
-            "Confidence": "High" if trend_score >= 18 else "Medium" if trend_score >= 8 else "Watch",
-            "Draft Action": "Move up the queue" if direction == "Rising" else "Compare price to rank" if direction == "Value Gap" else "Discount only",
-            "Source Signal": "ESPN live ownership, ADP, and projection movement",
-            "Catalyst": "Market movement in ESPN public fantasy data",
+            "Trend Magnitude": round(magnitude, 1),
+            "Market Signal": f"{sleeper_text}ESPN ownership {ownership_change:+.2f}, ADP movement {adp_change:+.2f}.",
+            "Confidence": "High" if magnitude >= 18 else "Medium" if magnitude >= 8 else "Watch",
+            "Draft Action": draft_action,
+            "Source Signal": (
+                "Sleeper add/drop trends + ESPN ownership/ADP movement"
+                if sleeper_adds or sleeper_drops
+                else "ESPN live ownership, ADP, and projection movement"
+            ),
+            "Catalyst": (
+                f"{sleeper_text}Market movement in ESPN public fantasy data."
+                if sleeper_adds or sleeper_drops
+                else "Market movement in ESPN public fantasy data"
+            ),
             "Why Rising/Falling": (
-                f"Ownership change {ownership_change:+.2f}, ADP change {adp_change:+.2f}, "
-                f"rank/ADP gap {adp_gap:+.1f}."
+                f"{sleeper_text}Ownership change {ownership_change:+.2f}, ADP change {adp_change:+.2f}, "
+                f"rank/ADP gap {adp_gap:+.1f}, combined direction score {direction_score:+.1f}."
             ),
         }
         trends.append(trend)
-    trends.sort(key=lambda item: (-float(item["Trend Score"]), int(item["Rank"])))
-    return trends[:80]
+    risers = sorted(
+        [item for item in trends if item["Trend"] == "Rising"],
+        key=lambda item: (-abs(float(item["Trend Score"])), int(item["Rank"])),
+    )[:35]
+    fallers = sorted(
+        [item for item in trends if item["Trend"] == "Falling"],
+        key=lambda item: (-abs(float(item["Trend Score"])), int(item["Rank"])),
+    )[:35]
+    values = sorted(
+        [item for item in trends if item["Trend"] == "Value Gap"],
+        key=lambda item: (-abs(float(item["Trend Score"])), int(item["Rank"])),
+    )[:15]
+    grouped: list[dict[str, Any]] = []
+    for index in range(max(len(risers), len(fallers))):
+        if index < len(risers):
+            grouped.append(risers[index])
+        if index < len(fallers):
+            grouped.append(fallers[index])
+    grouped.extend(values)
+    return grouped[:85]
 
 
 def build_live_board_payload(
@@ -917,9 +1218,10 @@ def build_live_board_payload(
     scoring_profile = scoring_profile_for(league_settings)
     row_limit = limit or int_env("FANTASY_IQ_BOARD_LIMIT", DEFAULT_LIMIT)
     fetch_limit = max(row_limit + 80, 420)
+    external_signals = sleeper_external_signals()
     data = fetch_json(player_feed_url(season), {"x-fantasy-filter": player_filter(fetch_limit)})
     players = [entry.get("player") or {} for entry in data.get("players", [])]
-    rows = build_rows(players, season, row_limit, scoring_profile)
+    rows = build_rows(players, season, row_limit, scoring_profile, external_signals)
     customer = context.public_dict()
     customer["leagueSettings"] = merge_dicts(customer.get("leagueSettings") or {}, league_settings)
 
@@ -927,7 +1229,17 @@ def build_live_board_payload(
         "updated": datetime.now(timezone.utc).date().isoformat(),
         "syncedAt": utc_now(),
         "live": True,
-        "source": "ESPN public fantasy player feed",
+        "source": "ESPN public fantasy player feed + Sleeper add/drop trends",
+        "externalSignals": {
+            "sleeper": {
+                "available": bool(external_signals.get("available")),
+                "source": external_signals.get("source"),
+                "updatedAt": external_signals.get("updatedAt"),
+                "lookbackHours": external_signals.get("lookbackHours"),
+                "limit": external_signals.get("limit"),
+                "attribution": "Trending add/drop data from Sleeper",
+            }
+        },
         "customer": customer,
         "customerSlug": context.slug,
         "season": season,
@@ -940,8 +1252,8 @@ def build_live_board_payload(
         "method": (
             "Live FantasyIQ board built from ESPN raw projected stats, league-native scoring items, "
             "prior-year raw stat scoring, ADP, ownership, start rate, market movement, volatility, "
-            "and injury flags. PPR ranks remain as one market signal, but projections and values are "
-            "scored for the active league format."
+            "injury flags, and Sleeper add/drop pressure. PPR ranks remain as one market signal, "
+            "but projections and values are scored for the active league format."
         ),
         "positionColors": POSITION_COLORS,
         "boards": {
@@ -953,7 +1265,13 @@ def build_live_board_payload(
             },
             "rookies": {
                 "title": "Live Rookie Board",
-                "rows": [row for row in rows if normalize_name(str(row.get("Player") or "")) in rookie_names()],
+                "rows": [
+                    row
+                    for row in rows
+                    if row["Category"] == "Rookie"
+                    or row.get("Rookie Signal")
+                    or normalize_name(str(row.get("Player") or "")) in rookie_names()
+                ],
             },
             "sleepers": {
                 "title": "Live Sleeper Board",

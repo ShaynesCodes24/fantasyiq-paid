@@ -274,8 +274,10 @@ def customer_password_reset_email(
     dashboard = dashboard_url(customer_slug, league_key)
     create_password = f"{setup}#create-password"
     support = support_email()
-    subject = "Reset your FantasyIQ password"
-    text = f"""Use this link to reset your FantasyIQ password:
+    subject = "Create or reset your FantasyIQ password"
+    text = f"""Your FantasyIQ account now supports email and password login.
+
+Use this link to create or reset your FantasyIQ password:
 {create_password}
 
 Access code:
@@ -292,8 +294,9 @@ Support:
     html = f"""
     <div style="font-family:Arial,sans-serif;color:#151813;line-height:1.55;max-width:620px;">
       <p style="color:#8a4f24;font-weight:700;text-transform:uppercase;font-size:12px;">FantasyIQ account</p>
-      <h1 style="color:#0f3a30;">Reset your FantasyIQ password</h1>
-      <p>Hi {escape(name)}. Use the button below with your access code to create a new password.</p>
+      <h1 style="color:#0f3a30;">Create or reset your FantasyIQ password</h1>
+      <p>Hi {escape(name)}. Your FantasyIQ account now supports email and password login.</p>
+      <p>Use the button below with your access code to create a new password.</p>
       <p><strong>Access code:</strong><br />{escape(access_code)}</p>
       <p><a href="{escape(create_password)}" style="display:inline-block;background:#0f3a30;color:#fff8e8;font-weight:700;padding:12px 16px;border-radius:8px;text-decoration:none;">Create / reset password</a></p>
       <p><a href="{escape(dashboard)}" style="color:#0f3a30;font-weight:700;">Open dashboard</a></p>

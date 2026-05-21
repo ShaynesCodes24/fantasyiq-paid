@@ -3560,6 +3560,8 @@ body.access-locked .topbar {
 
 .access-card {
   width: min(560px, 100%);
+  max-height: calc(100vh - 44px);
+  overflow: auto;
   border: 1px solid rgba(247, 205, 101, 0.55);
   border-radius: 8px;
   padding: 28px;
@@ -3608,9 +3610,50 @@ body.access-locked .topbar {
   justify-content: center;
 }
 
+.access-forgot {
+  width: auto !important;
+  min-height: 34px;
+  margin: -4px 0 14px auto;
+  border: 0;
+  background: transparent;
+  color: #0f3a30;
+  padding: 0;
+  text-align: right;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  box-shadow: none;
+  font-weight: 900;
+}
+
+.access-forgot:hover {
+  transform: none;
+  box-shadow: none;
+}
+
 .access-card button:disabled {
   cursor: wait;
   opacity: 0.64;
+}
+
+.access-recovery {
+  margin-top: 16px;
+  border: 1px solid rgba(18, 63, 52, 0.16);
+  border-radius: 8px;
+  background: rgba(248, 239, 216, 0.56);
+  padding: 0 14px;
+}
+
+.access-recovery summary {
+  min-height: 46px;
+  cursor: pointer;
+  color: #082217;
+  display: grid;
+  align-items: center;
+  font-weight: 900;
+}
+
+.access-recovery[open] {
+  padding-bottom: 14px;
 }
 
 .access-actions {
@@ -4504,6 +4547,34 @@ textarea,
 
   .player-drawer-panel {
     padding: 22px 16px;
+  }
+
+  .access-gate {
+    align-items: start;
+    padding: 12px;
+    overflow: auto;
+  }
+
+  .access-card {
+    max-height: none;
+    padding: 18px;
+  }
+
+  .access-card h2 {
+    font-size: clamp(25px, 8vw, 31px);
+  }
+
+  .access-card label {
+    margin: 14px 0 10px;
+  }
+
+  .access-card input {
+    min-height: 48px;
+  }
+
+  .access-forgot {
+    margin-left: 0;
+    text-align: left;
   }
 }
 

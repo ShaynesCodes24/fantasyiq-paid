@@ -77,11 +77,17 @@ footer a {
   text-decoration: none;
 }
 
-.dashboard-link {
+.dashboard-link,
+.login-link {
   min-height: 36px;
   border: 1px solid rgba(243, 208, 113, 0.58);
   border-radius: 8px;
   padding: 8px 12px;
+}
+
+.login-link {
+  background: var(--gold);
+  color: #26160d !important;
 }
 
 .hero {
@@ -602,5 +608,31 @@ footer a {
   .support-panel p,
   .support-panel a {
     overflow-wrap: anywhere;
+  }
+
+  .site-header nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .site-header nav a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    border: 1px solid rgba(255, 248, 232, 0.18);
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+
+  .site-header nav a[href^="mailto:"] {
+    display: none;
+  }
+
+  .login-link,
+  .dashboard-link {
+    width: 100%;
   }
 }

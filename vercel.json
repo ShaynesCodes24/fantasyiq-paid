@@ -5,8 +5,33 @@
   "outputDirectory": "dist",
   "redirects": [
     {
+      "source": "/login",
+      "destination": "/FantasyIQ/?login=1",
+      "permanent": false
+    },
+    {
+      "source": "/sign-in",
+      "destination": "/FantasyIQ/?login=1",
+      "permanent": false
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/FantasyIQ/?login=1",
+      "permanent": false
+    },
+    {
       "source": "/FantasyIQ",
       "destination": "/FantasyIQ/",
+      "permanent": false
+    },
+    {
+      "source": "/fantasyiq",
+      "destination": "/FantasyIQ/",
+      "permanent": false
+    },
+    {
+      "source": "/fantasyiq/(.*)",
+      "destination": "/FantasyIQ/$1",
       "permanent": false
     }
   ],

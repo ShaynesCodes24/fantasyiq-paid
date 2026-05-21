@@ -2,7 +2,9 @@
   "name": "fantasyiq-paid",
   "private": true,
   "scripts": {
+    "dev:vercel": "vercel dev",
     "build": "node scripts/build_static.js",
+    "preview:static": "node scripts/build_static.js && python -m http.server 4173 --directory dist",
     "test:visual": "node scripts/visual_smoke.js",
     "test:readiness": "python scripts/check_product_readiness.py"
   },

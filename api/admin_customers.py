@@ -265,6 +265,72 @@ def admin_action(raw: dict[str, Any]) -> dict[str, Any]:
             "syncedAt": utc_now(),
         }
 
+    if action == "upsert_customer_account":
+        slug = str(raw.get("slug") or raw.get("customer") or "").strip()
+        email = str(raw.get("email") or "").strip()
+        customer_name = str(raw.get("customerName") or raw.get("customer_name") or "").strip()
+        league_key = str(raw.get("leagueKey") or raw.get("league_key") or "primary").strip()
+        league_name = str(raw.get("leagueName") or raw.get("league_name") or "").strip()
+        team_name = str(raw.get("teamName") or raw.get("team_name") or "").strip()
+        league_id = raw.get("leagueId") or raw.get("league_id")
+        team_id = raw.get("teamId") or raw.get("team_id")
+        season = raw.get("season") or 2026
+        status = str(raw.get("status") or "configured").strip()
+        subscription_status = str(raw.get("subscriptionStatus") or raw.get("subscription_status") or "").strip()
+        if not slug and not email:
+            raise ConfigError("Enter a customer slug or email.")
+        if not email:
+            raise ConfigError("Enter the customer email for email-first login.")
+        try:
+            try:
+                from database import upsert_customer, upsert_league
+            except ImportError:
+                from api.database import upsert_customer, upsert_league
+
+            customer = upsert_customer(
+                slug=slug,
+                customer_name=customer_name,
+                email=email,
+                status=status,
+                subscription_status=subscription_status,
+                default_league_key=league_key,
+            )
+            resolved_slug = str(customer.get("slug") or slug)
+            league = None
+            if league_id or league_name:
+                league = upsert_league(
+                    customer_slug=resolved_slug,
+                    league_key=league_key,
+                    label=league_name or league_key,
+                    league_name=league_name,
+                    league_id=league_id,
+                    team_id=team_id,
+                    team_name=team_name,
+                    season=season,
+                    league_settings=raw.get("leagueSettings") if isinstance(raw.get("leagueSettings"), dict) else {},
+                    status="configured",
+                    source="admin_account_repair",
+                )
+            detail = admin_customer_detail(resolved_slug) or customer
+        except Exception as exc:
+            raise ConfigError(f"Could not repair customer account: {exc}") from exc
+        return {
+            "ok": True,
+            "action": action,
+            "customer": {
+                "slug": detail.get("slug"),
+                "customer_name": detail.get("customer_name"),
+                "email": detail.get("email"),
+                "status": detail.get("status"),
+                "passwordConfigured": bool(detail.get("password_configured")),
+                "accessCodeSet": bool(detail.get("access_code") or detail.get("accessCode")),
+            },
+            "league": league,
+            "dashboardUrl": dashboard_url(str(detail.get("slug") or "")),
+            "setupUrl": setup_url(str(detail.get("slug") or "")),
+            "syncedAt": utc_now(),
+        }
+
     if action == "send_onboarding_email":
         detail = admin_customer_detail(customer_slug)
         if not detail:

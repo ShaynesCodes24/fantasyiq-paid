@@ -64,6 +64,32 @@ Install Command: empty
 Output Directory: dist
 ```
 
+## Local Development
+
+Use Vercel's local dev server whenever you need login, sessions, checkout
+callbacks, live boards, or any `/api/...` route:
+
+```powershell
+npm run dev:vercel
+```
+
+Then open the local URL Vercel prints, usually:
+
+```text
+http://localhost:3000
+```
+
+Do not use Python's static server for auth/API testing. A static server can only
+serve HTML, CSS, JavaScript, and images, so API calls such as
+`/api/customer-login`, `/api/customer-session`, and `/api/live-boards` return
+404 locally even though they work on Vercel.
+
+For layout-only checks where API behavior is not needed, use:
+
+```powershell
+npm run preview:static
+```
+
 ## Customer Promise
 
 Use this positioning for the paid offer:
@@ -357,9 +383,11 @@ The dashboard now loads player boards from:
 
 That endpoint rebuilds the big board, league-native projected points, tiers,
 value/risk scores, trends, mock simulator board, and trade values from ESPN's
-public fantasy player feed. The bundled `FantasyIQ/data/boards.json` file
-remains only as a fallback if ESPN or the serverless endpoint is temporarily
-unavailable.
+public fantasy player feed plus Sleeper's public add/drop trend API. Sleeper
+signals are cached in the serverless function and used to surface both risers
+and fallers, rookie momentum, and draft-room market warnings without manual
+player updates. The bundled `FantasyIQ/data/boards.json` file remains only as a
+fallback if ESPN or the serverless endpoint is temporarily unavailable.
 
 ## League Settings Engine
 
@@ -378,7 +406,9 @@ Supported setup examples:
 
 The live board now scores ESPN raw projected stats against the active league's
 scoring items. Half-PPR, standard, superflex, and custom reception formats get
-native projected points instead of frontend PPR conversions.
+native projected points instead of frontend PPR conversions. Draft Room Pick Now
+recommendations also consider live Sleeper add/drop pressure so the top card is
+not just the next available rank.
 
 Live readiness check:
 
