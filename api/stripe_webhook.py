@@ -149,8 +149,87 @@ def checkout_customer_slug(session: dict[str, Any], row: dict[str, str]) -> str:
         metadata_value(session, "customer_slug", "customer", "dashboard")
         or custom_field_value(session, "customerslug")
         or custom_field_value(session, "customer")
+        or str(session.get("client_reference_id") or "")
     )
     return slugify(explicit or customer_slug_from_email(row.get("email", "")) or row.get("customer_name", ""))
+
+
+def is_additional_league_checkout(session: dict[str, Any]) -> bool:
+    metadata = session.get("metadata") or {}
+    product = str(metadata.get("product") or metadata.get("type") or metadata.get("checkout_type") or "").lower()
+    if any(token in product for token in ("additional_league", "league_addon", "add-on", "addon")):
+        return True
+    amount_total = int(session.get("amount_total") or 0)
+    try:
+        add_on_amount = int(env("FANTASYIQ_ADDITIONAL_LEAGUE_AMOUNT_CENTS", "500") or 500)
+    except ValueError:
+        add_on_amount = 500
+    has_league_intake = bool(custom_field_value(session, "leagueid") or custom_field_value(session, "teamid"))
+    return amount_total > 0 and amount_total <= add_on_amount and not has_league_intake
+
+
+def persist_additional_league_checkout(event: dict[str, Any], session: dict[str, Any], row: dict[str, str]) -> dict[str, Any]:
+    try:
+        try:
+            from database import (
+                DatabaseUnavailable,
+                database_status,
+                increment_additional_league_count,
+                record_ops_event,
+                record_stripe_event,
+            )
+        except ImportError:
+            from api.database import (
+                DatabaseUnavailable,
+                database_status,
+                increment_additional_league_count,
+                record_ops_event,
+                record_stripe_event,
+            )
+
+        status = database_status()
+        if not status["enabled"]:
+            return {"databaseEnabled": status["enabled"], "persistedDatabase": False, "reason": "database_not_connected"}
+
+        customer_slug = checkout_customer_slug(session, row)
+        inserted_event = record_stripe_event(
+            stripe_event_id=str(event.get("id") or ""),
+            event_type=str(event.get("type") or ""),
+            stripe_object_id=str(session.get("id") or ""),
+            customer_slug=customer_slug,
+            email=row["email"],
+            amount_total=session.get("amount_total"),
+            currency=str(session.get("currency") or ""),
+            status="additional_league_paid",
+            payload={"session": session, "fulfillment": "additional_league"},
+        )
+        saved_customer = None
+        if inserted_event:
+            saved_customer = increment_additional_league_count(customer_slug or row.get("email", ""), 1)
+            record_ops_event(
+                event_type="checkout.additional_league_paid",
+                severity="info",
+                source="stripe_webhook",
+                customer_slug=(saved_customer or {}).get("slug") or customer_slug,
+                message="Additional league add-on credited to customer account.",
+                payload={
+                    "stripeEventId": event.get("id") or "",
+                    "stripeObjectId": session.get("id") or "",
+                    "amountTotal": session.get("amount_total"),
+                    "currency": session.get("currency") or "",
+                },
+            )
+        return {
+            "databaseEnabled": True,
+            "persistedDatabase": bool(saved_customer) or not inserted_event,
+            "insertedEvent": inserted_event,
+            "customerSlug": (saved_customer or {}).get("slug") or customer_slug,
+            "additionalLeagueCount": (saved_customer or {}).get("additional_league_count"),
+        }
+    except (DatabaseUnavailable, ValueError) as exc:
+        return {"databaseEnabled": False, "persistedDatabase": False, "reason": str(exc)}
+    except Exception:
+        return {"databaseEnabled": True, "persistedDatabase": False, "reason": "additional_league_fulfillment_failed"}
 
 
 def persist_checkout_to_database(event: dict[str, Any], session: dict[str, Any], row: dict[str, str]) -> dict[str, Any]:
@@ -317,6 +396,19 @@ def process_event(event: dict[str, Any]) -> dict[str, Any]:
     data_object = ((event.get("data") or {}).get("object") or {})
     if event_type == "checkout.session.completed":
         row = checkout_row(data_object)
+        if is_additional_league_checkout(data_object):
+            database_result = persist_additional_league_checkout(event, data_object, row)
+            return {
+                "action": "additional_league_paid",
+                "status": "additional_league_paid",
+                "customer": {
+                    "customer_name": row["customer_name"],
+                    "email": row["email"],
+                    "dashboard_url": row["dashboard_url"],
+                },
+                "database": database_result,
+                "nextStep": "Customer can open setup and save the new league profile.",
+            }
         appended = append_customer_locally(row)
         database_result = persist_checkout_to_database(event, data_object, row)
         return {

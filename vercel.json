@@ -44,6 +44,14 @@
       "destination": "/api/customer_status"
     },
     {
+      "source": "/api/customer-login",
+      "destination": "/api/customer_login"
+    },
+    {
+      "source": "/api/add-league-checkout",
+      "destination": "/api/add_league_checkout"
+    },
+    {
       "source": "/api/admin-customers",
       "destination": "/api/admin_customers"
     },

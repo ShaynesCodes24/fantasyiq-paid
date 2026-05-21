@@ -304,7 +304,7 @@ let fullBoardLoadStarted = false;
 function rememberedCustomerLoadout(loadouts) {
   try {
     const lastLoadout = localStorage.getItem("fantasy-dashboard:last-loadout") || "";
-    if (lastLoadout && loadouts[lastLoadout] && localStorage.getItem(`fantasy-dashboard:${lastLoadout}:access-code`)) {
+    if (lastLoadout && localStorage.getItem(`fantasy-dashboard:${lastLoadout}:access-code`)) {
       return lastLoadout;
     }
     const savedLoadouts = Object.keys(loadouts).filter((key) =>
@@ -483,17 +483,22 @@ function removeCustomerAccessGate() {
 }
 
 function showCustomerAccessGate(message = "") {
-  if (!requiresCustomerAccess() || customerAccessGate()) return;
+  if (customerAccessGate()) return;
   document.body.classList.add("access-locked");
   const customerLabel = appConfig.customerName || appConfig.customerTeamName || "your dashboard";
+  const needsIdentity = !requiresCustomerAccess();
   const gate = document.createElement("section");
   gate.id = "customer-access-gate";
   gate.className = "access-gate";
   gate.innerHTML = `
     <form class="access-card">
       <p class="eyebrow">Customer Login</p>
-      <h2>Open ${htmlEscape(customerLabel)}</h2>
-      <p>Enter the dashboard access code from your FantasyIQ setup email.</p>
+      <h2>${needsIdentity ? "Open your dashboard" : `Open ${htmlEscape(customerLabel)}`}</h2>
+      <p>${needsIdentity ? "Enter the email from checkout and your FantasyIQ access code." : "Enter the dashboard access code from your FantasyIQ setup email."}</p>
+      <label ${needsIdentity ? "" : "hidden"}>
+        Email or dashboard slug
+        <input id="customer-login-identity" type="text" autocomplete="username" ${needsIdentity ? "required" : ""} />
+      </label>
       <label>
         Access code
         <input id="customer-access-code" type="password" autocomplete="off" required />
@@ -504,26 +509,44 @@ function showCustomerAccessGate(message = "") {
     </form>
   `;
   document.body.appendChild(gate);
+  const identityInput = gate.querySelector("#customer-login-identity");
   const input = gate.querySelector("#customer-access-code");
   const output = gate.querySelector(".access-message");
-  input?.focus();
+  (needsIdentity ? identityInput : input)?.focus();
   gate.querySelector("form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const code = input.value.trim();
+    const identity = needsIdentity ? identityInput.value.trim() : appConfig.loadoutKey;
     if (!code) return;
+    if (needsIdentity && !identity) {
+      output.textContent = "Enter the email from checkout or your dashboard slug.";
+      return;
+    }
     output.textContent = "Checking access...";
     try {
-      const response = await fetch(apiUrl("/api/customer-status", { v: Date.now() }), {
+      const response = await fetch("/api/customer-login", {
+        method: "POST",
         cache: "no-store",
-        headers: { "x-fantasyiq-access-code": code },
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer: identity,
+          accessCode: code,
+          league: appConfig.leagueKey || "",
+        }),
       });
       const payload = await response.json();
       if (!response.ok || !payload.ok || payload.authenticated === false) {
         output.textContent = payload.message || "That access code did not work.";
         return;
       }
+      if (payload.customer?.customerSlug) {
+        appConfig.loadoutKey = payload.customer.customerSlug;
+      }
+      applyServerCustomerContext(payload.customer);
       setCustomerAccessCode(code);
       removeCustomerAccessGate();
+      ensureCustomerUrlContext();
+      applyAppConfig();
       updateAccountControl();
       loadBoards();
       startLiveSync();
@@ -556,8 +579,8 @@ function updateAccountControl() {
   if (accountLabel) accountLabel.textContent = requiresCustomerAccess() ? customerLabel : "Public Demo";
   if (accountState) accountState.textContent = requiresCustomerAccess() ? (savedCustomerAccessCode() ? "Signed In" : "Signed Out") : "Preview";
   if (accountAction) {
-    accountAction.textContent = requiresCustomerAccess() ? (savedCustomerAccessCode() ? "Sign Out" : "Sign In") : "Demo";
-    accountAction.disabled = !requiresCustomerAccess();
+    accountAction.textContent = requiresCustomerAccess() ? (savedCustomerAccessCode() ? "Sign Out" : "Sign In") : "Sign In";
+    accountAction.disabled = false;
   }
   accountCard.classList.toggle("signed-in", requiresCustomerAccess() && Boolean(savedCustomerAccessCode()));
   accountCard.classList.toggle("signed-out", requiresCustomerAccess() && !savedCustomerAccessCode());
@@ -888,7 +911,7 @@ function leagueSlotText(count = configuredLeagueCount()) {
 }
 
 function accountStatusText() {
-  if (!requiresCustomerAccess()) return "Public demo preview. Subscribe to create a customer account.";
+  if (!requiresCustomerAccess()) return "Public demo preview. Sign in with your checkout email and access code to open your account.";
   if (savedCustomerAccessCode()) return "Signed in. Refresh will keep this dashboard unlocked on this device.";
   return "Signed out. Enter your dashboard access code to unlock saved leagues.";
 }
@@ -935,7 +958,8 @@ function renderAccountPanel() {
         },
       ];
 
-  accountLeagueList.innerHTML = leagues
+  const statusSteps = renderAccountProgress(count, limit);
+  accountLeagueList.innerHTML = `${statusSteps}${leagues
     .map((league) => {
       const settings = mergeLeagueSettings(appConfig.baseLeagueSettings || DEFAULT_LEAGUE_SETTINGS, league.leagueSettings || {});
       const isActive = active?.key === league.key || (!active && league.key === appConfig.leagueKey);
@@ -951,11 +975,33 @@ function renderAccountPanel() {
         </div>
       </article>`;
     })
-    .join("");
+    .join("")}`;
 
   accountLeagueList.querySelectorAll("[data-account-switch]").forEach((button) => {
     button.addEventListener("click", () => setActiveLeague(button.dataset.accountSwitch));
   });
+}
+
+function renderAccountProgress(count, limit) {
+  const signedIn = requiresCustomerAccess() && Boolean(savedCustomerAccessCode());
+  const hasLeague = count > 0 && (appConfig.leagueId || currentLeagueOptions().length || appConfig.customerTeamName);
+  const hasIncludedRoom = count < limit;
+  const steps = [
+    ["Account access", signedIn ? "Ready" : "Needs sign in", signedIn],
+    ["League profiles", hasLeague ? `${count} connected` : "Setup needed", hasLeague],
+    ["Included slots", hasIncludedRoom ? `${limit - count} open` : "Included slots full", hasIncludedRoom],
+    ["Draft room", hasLeague && signedIn ? "Personalized" : "Demo mode", hasLeague && signedIn],
+  ];
+  return `<section class="account-progress" aria-label="Account setup progress">
+    ${steps
+      .map(
+        ([label, value, complete]) => `<article class="${complete ? "complete" : "pending"}">
+          <span>${htmlEscape(label)}</span>
+          <strong>${htmlEscape(value)}</strong>
+        </article>`,
+      )
+      .join("")}
+  </section>`;
 }
 
 function addLeagueActionTitle(count = configuredLeagueCount()) {
@@ -989,6 +1035,8 @@ function applyServerCustomerContext(customer = {}) {
   if (!customer || typeof customer !== "object") return;
   const serverLeagues = normalizeLeagueProfiles(customer.leagues || []);
   if (serverLeagues.length) appConfig.leagues = serverLeagues;
+  if (customer.customerSlug) appConfig.loadoutKey = normalizeDashboardSlug(customer.customerSlug);
+  if (customer.customerName) appConfig.customerName = customer.customerName;
   if (customer.leagueKey) appConfig.leagueKey = normalizeDashboardSlug(customer.leagueKey);
   if (customer.leagueId) appConfig.leagueId = String(customer.leagueId);
   if (customer.leagueName) appConfig.leagueName = customer.leagueName;
@@ -1109,15 +1157,33 @@ function openAddLeagueDialog() {
   }
   if (primary) {
     primary.textContent = needsPayment ? "Buy Extra League" : "Open Setup Page";
-    primary.onclick = () => {
-      if (needsPayment) {
-        window.open(additionalLeaguePaymentUrl(), "_blank", "noopener");
-      } else {
-        const setupUrl = new URL("../setup.html", window.location.href);
-        if (appConfig.loadoutKey && appConfig.loadoutKey !== "default") {
-          setupUrl.searchParams.set("customer", appConfig.loadoutKey);
+    primary.onclick = async () => {
+      if (!requiresCustomerAccess()) {
+        closeAddLeagueDialog();
+        showCustomerAccessGate("Sign in first, then FantasyIQ can attach the new league to your account.");
+        return;
+      }
+      if (!savedCustomerAccessCode()) {
+        closeAddLeagueDialog();
+        showCustomerAccessGate("Sign in before adding another league.");
+        return;
+      }
+      primary.disabled = true;
+      primary.textContent = "Preparing...";
+      try {
+        const response = await fetch(apiUrl("/api/add-league-checkout", { v: Date.now() }), {
+          cache: "no-store",
+          headers: apiHeaders(),
+        });
+        const payload = await jsonOrAccessError(response, "Could not prepare add-league checkout.");
+        if (payload?.url) {
+          window.location.href = payload.url;
         }
-        window.location.href = `${setupUrl.pathname}${setupUrl.search}`;
+      } catch (error) {
+        if (message) message.textContent = error.message || "Could not prepare add-league checkout.";
+        primary.disabled = false;
+        primary.textContent = needsPayment ? "Buy Extra League" : "Open Setup Page";
+        return;
       }
       closeAddLeagueDialog();
     };
@@ -3847,7 +3913,6 @@ liveSyncToggle?.addEventListener("change", () => {
 });
 
 accountAction?.addEventListener("click", () => {
-  if (!requiresCustomerAccess()) return;
   if (savedCustomerAccessCode()) {
     signOutCustomer();
   } else {

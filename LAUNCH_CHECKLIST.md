@@ -7,11 +7,12 @@
 - Done: Use the live Stripe Season Pass payment link: `https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01`.
 - Done: Create the additional league add-on link: `https://buy.stripe.com/dRmcN5aAV1GX0Cc7X3efC02`.
 - Done: Configure the Stripe Season Pass link fields and branded after-payment success page.
+- Done: Route dashboard add-on league purchases through authenticated customer checkout.
 - Done: Use `fantasyiq-paid` as the Vercel project name.
 - Done: Set Vercel Build Command to `node scripts/build_static.js`.
 - Done: Set Vercel Output Directory to `dist`.
-- For v1: Keep customer records in `customers.csv`; move to persistent storage before relying on automatic webhook fulfillment.
-- Confirm the Vercel customer registry includes every paid customer's league profiles.
+- Done: Store paid customer records and league profiles in Neon/Postgres when `DATABASE_URL` is connected.
+- Confirm the database customer registry includes every paid customer's league profiles.
 - Done: Configure Katelyn as the first real customer using her public ESPN league.
 - Next: Test the public demo dashboard after redeploying the public sales config.
 - Use `https://myfantasyiq.com/FantasyIQ/` as Stripe's business website.

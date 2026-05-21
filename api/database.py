@@ -578,6 +578,28 @@ def reset_customer_access_code(slug: str) -> dict[str, Any] | None:
             return fetch_one_dict(cursor)
 
 
+def increment_additional_league_count(slug_or_email: str, amount: int = 1) -> dict[str, Any] | None:
+    if not database_enabled():
+        raise DatabaseUnavailable("Database is not enabled.")
+    lookup = slugify(slug_or_email)
+    clean = str(slug_or_email or "").strip()
+    safe_amount = max(1, int_value(amount, 1) or 1)
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE fantasyiq_customers
+                   SET additional_league_count = additional_league_count + %s,
+                       updated_at = now()
+                 WHERE slug = %s OR lower(email) = lower(%s)
+             RETURNING slug, customer_name, email, access_code, status,
+                       included_league_limit, additional_league_count, default_league_key
+                """,
+                (safe_amount, lookup, clean),
+            )
+            return fetch_one_dict(cursor)
+
+
 def delete_smoke_customer(slug: str) -> bool:
     if not database_enabled():
         return False

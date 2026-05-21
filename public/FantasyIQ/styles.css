@@ -3086,6 +3086,48 @@ body.access-locked .topbar {
   gap: 10px;
 }
 
+.account-progress {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.account-progress article {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid rgba(18, 63, 52, 0.14);
+  border-radius: 8px;
+  background: #fffdf7;
+  padding: 14px;
+  box-shadow: 0 8px 18px rgba(6, 18, 15, 0.07);
+}
+
+.account-progress article.complete {
+  border-color: rgba(28, 122, 72, 0.22);
+  background: #f3fbf6;
+}
+
+.account-progress article.pending {
+  border-color: rgba(199, 154, 59, 0.26);
+  background: #fff8e8;
+}
+
+.account-progress span {
+  color: #7d734f;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.account-progress strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #071d18;
+  font-size: 16px;
+}
+
 .account-league-list article {
   display: flex;
   justify-content: space-between;
@@ -3724,6 +3766,7 @@ textarea,
   .command-hero,
   .live-panel,
   .account-grid,
+  .account-progress,
   .account-league-list article,
   .trade-card,
   .trade-verdict {
@@ -3733,6 +3776,10 @@ textarea,
   }
 
   .account-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .account-progress {
     grid-template-columns: 1fr;
   }
 

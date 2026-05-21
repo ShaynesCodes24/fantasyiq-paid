@@ -178,6 +178,15 @@ def main() -> int:
             raise RuntimeError(f"Customer status failed: {customer_payload}")
         print("PASS customer-status reads database customer")
 
+        login_status, login_payload = request_json(
+            f"{SITE_URL}/api/customer-login",
+            method="POST",
+            payload={"customer": f"{slug}@example.com", "accessCode": access_code, "league": league_key},
+        )
+        if login_status != 200 or not login_payload.get("authenticated") or (login_payload.get("customer") or {}).get("customerSlug") != slug:
+            raise RuntimeError(f"Customer login failed: {login_payload}")
+        print("PASS customer-login resolves email and access code")
+
         live_status, live_payload = request_json(
             f"{SITE_URL}/api/live-draft?customer={slug}&league={league_key}",
             headers={"x-fantasyiq-access-code": access_code},
@@ -185,6 +194,48 @@ def main() -> int:
         if live_status != 200 or not live_payload.get("ok") or (live_payload.get("customer") or {}).get("source") != "database":
             raise RuntimeError(f"Live draft failed: {live_payload}")
         print("PASS live-draft reads database league")
+
+        checkout_status, checkout_payload = request_json(
+            f"{SITE_URL}/api/add-league-checkout?customer={slug}&league={league_key}",
+            headers={"x-fantasyiq-access-code": access_code},
+        )
+        if checkout_status != 200 or checkout_payload.get("needsPayment"):
+            raise RuntimeError(f"Included add-league checkout failed: {checkout_payload}")
+        print("PASS add-league checkout routes included slot to setup")
+
+        add_on_event_id = f"evt_{slug.replace('-', '_')}_addon"
+        add_on_event = {
+            "id": add_on_event_id,
+            "type": "checkout.session.completed",
+            "data": {
+                "object": {
+                    "id": f"cs_{slug.replace('-', '_')}_addon",
+                    "created": timestamp,
+                    "customer": "cus_self_serve_smoke",
+                    "client_reference_id": slug,
+                    "payment_status": "paid",
+                    "amount_total": 500,
+                    "currency": "usd",
+                    "metadata": {"product": "additional_league"},
+                    "customer_details": {"name": "FantasyIQ Smoke Customer", "email": f"{slug}@example.com"},
+                    "custom_fields": [],
+                }
+            },
+        }
+        add_on_body = json.dumps(add_on_event, separators=(",", ":")).encode("utf-8")
+        request = urllib.request.Request(
+            f"{SITE_URL}/api/stripe-webhook",
+            data=add_on_body,
+            headers=signed_stripe_headers(secret, add_on_body, timestamp),
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=45) as response:
+            add_on_payload = json.loads(response.read().decode("utf-8"))
+            add_on_status = response.status
+        add_on_database = ((add_on_payload.get("result") or {}).get("database") or {})
+        if add_on_status != 200 or (add_on_payload.get("result") or {}).get("action") != "additional_league_paid" or not add_on_database.get("persistedDatabase"):
+            raise RuntimeError(f"Add-on webhook failed: {add_on_payload}")
+        print("PASS add-on webhook credits additional league")
     finally:
         if created_customer:
             cleanup = admin_action("delete_smoke_customer", slug)

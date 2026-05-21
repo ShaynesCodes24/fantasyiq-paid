@@ -21,6 +21,7 @@ class CustomerContext:
     league_id: int | None
     season: int
     customer_name: str = ""
+    email: str = ""
     league_key: str = ""
     customer_team_id: int | None = None
     customer_team_name: str = ""
@@ -231,6 +232,7 @@ def normalize_customer_entry(slug: str, entry: dict[str, Any], selected_league: 
         league_id=league_id,
         season=season or DEFAULT_SEASON,
         customer_name=str(entry_value(entry, "customer_name", "customerName", "name", default="")).strip(),
+        email=str(entry_value(entry, "email", default="")).strip(),
         league_key=league_key,
         customer_team_id=team_id,
         customer_team_name=str(active_value("team_name", "teamName", "customerTeamName", default="")).strip(),
@@ -297,6 +299,7 @@ def fallback_context(slug: str = "default", selected_league: str = "") -> Custom
         entry = {
             "slug": env("FANTASY_IQ_CUSTOMER_SLUG", slug),
             "customerName": env("FANTASY_IQ_CUSTOMER_NAME"),
+            "email": env("FANTASY_IQ_CUSTOMER_EMAIL"),
             "status": env("FANTASY_IQ_CUSTOMER_STATUS", "configured"),
             "accessCode": env("FANTASY_IQ_CUSTOMER_ACCESS_CODE"),
             "defaultLeague": env("FANTASY_IQ_DEFAULT_LEAGUE"),
@@ -309,6 +312,7 @@ def fallback_context(slug: str = "default", selected_league: str = "") -> Custom
             league_id=context.league_id,
             season=context.season,
             customer_name=context.customer_name,
+            email=context.email,
             league_key=context.league_key,
             customer_team_id=context.customer_team_id,
             customer_team_name=context.customer_team_name,
@@ -332,6 +336,7 @@ def fallback_context(slug: str = "default", selected_league: str = "") -> Custom
         league_id=league_id,
         season=season,
         customer_name=env("FANTASY_IQ_CUSTOMER_NAME"),
+        email=env("FANTASY_IQ_CUSTOMER_EMAIL"),
         league_key=slugify(env("FANTASY_IQ_DEFAULT_LEAGUE")) if env("FANTASY_IQ_DEFAULT_LEAGUE") else "",
         customer_team_id=team_id,
         customer_team_name=env("FANTASY_IQ_CUSTOMER_TEAM_NAME"),
@@ -397,6 +402,7 @@ def resolve_customer_context(path: str = "") -> CustomerContext:
             league_id=context.league_id,
             season=context.season,
             customer_name=context.customer_name,
+            email=context.email,
             league_key=context.league_key,
             customer_team_id=context.customer_team_id,
             customer_team_name=context.customer_team_name,

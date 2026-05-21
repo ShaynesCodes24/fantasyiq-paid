@@ -1,6 +1,7 @@
 # Payment Setup
 
-Use a simple payment link for v1. Do not build self-serve provisioning yet.
+Use Stripe Payment Links for v1 checkout while FantasyIQ handles customer
+records, setup, and add-on league fulfillment through the webhook.
 
 Current payment link:
 
@@ -153,3 +154,8 @@ league add-on link:
 ```text
 https://buy.stripe.com/dRmcN5aAV1GX0Cc7X3efC02
 ```
+
+The dashboard routes add-on purchases through `/api/add-league-checkout`. When
+the included slots are full, that endpoint appends `client_reference_id` to the
+Stripe Payment Link so `/api/stripe-webhook` can credit the correct customer
+after `checkout.session.completed`.
