@@ -235,6 +235,43 @@ def admin_action(raw: dict[str, Any]) -> dict[str, Any]:
             "syncedAt": utc_now(),
         }
 
+    if action == "send_test_setup_email":
+        to = str(raw.get("email") or raw.get("to") or "").strip()
+        if "@" not in to:
+            raise ConfigError("Enter a valid test email address.")
+        try:
+            try:
+                from email_service import customer_setup_email, send_email
+            except ImportError:
+                from api.email_service import customer_setup_email, send_email
+            message = customer_setup_email(
+                customer_name=str(raw.get("customerName") or "FantasyIQ preview"),
+                email=to,
+                customer_slug=str(raw.get("customer") or "test-preview"),
+                access_code="TEST-CODE-ONLY",
+            )
+            html = (
+                '<p style="font-family:Arial,sans-serif;color:#8a4f24;font-weight:700;">'
+                "TEST EMAIL ONLY - fake access code for layout review.</p>"
+                + message["html"]
+            )
+            text = "TEST EMAIL ONLY - fake access code for layout review.\n\n" + message["text"]
+            email_result = send_email(
+                to=message["to"],
+                subject=f"[TEST] {message['subject']}",
+                html=html,
+                text=text,
+                idempotency_key=f"fantasyiq-admin-test-setup-{int(datetime.now(timezone.utc).timestamp())}",
+            )
+        except Exception as exc:
+            email_result = {"sent": False, "reason": str(exc)}
+        return {
+            "ok": True,
+            "action": action,
+            "email": email_result,
+            "syncedAt": utc_now(),
+        }
+
     if action == "delete_smoke_customer":
         try:
             try:
