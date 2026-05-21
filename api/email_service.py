@@ -116,7 +116,14 @@ Next step:
 Open the setup page and validate each public ESPN league you want connected. FantasyIQ auto-detects scoring, team count, flex, superflex, bench, and draft rounds from ESPN:
 {setup}
 
-Need help finding your ESPN league ID or team ID?
+How to find your ESPN IDs:
+1. Open your ESPN fantasy league in a web browser, not the mobile app.
+2. Copy the number after leagueId= in the address bar. That is your league ID.
+3. Open your team page or roster page.
+4. Copy the number after teamId= in the address bar. That is your team ID.
+5. If the URL has seasonId=, make sure it matches the season you are setting up.
+
+Need more help finding your ESPN league ID or team ID?
 {help_page}
 
 Support:
@@ -135,6 +142,16 @@ Support:
       <p><a href="{escape(dashboard)}" style="color:#0f3a30; font-weight:700;">Open your dashboard</a></p>
       <p><strong>Next step:</strong><br />Validate each public ESPN league you want connected. FantasyIQ auto-detects scoring, team count, flex, superflex, bench, and draft rounds from ESPN.</p>
       <p><a href="{escape(setup)}" style="color:#0f3a30; font-weight:700;">Open setup page</a></p>
+      <div style="background:#fbf6e8; border:1px solid #e3c875; border-radius:8px; padding:14px; margin:18px 0;">
+        <p style="margin:0 0 8px 0;"><strong>How to find your ESPN IDs</strong></p>
+        <ol style="margin:0; padding-left:20px;">
+          <li>Open your ESPN fantasy league in a web browser, not the mobile app.</li>
+          <li>Copy the number after <strong>leagueId=</strong> in the address bar. That is your league ID.</li>
+          <li>Open your team page or roster page.</li>
+          <li>Copy the number after <strong>teamId=</strong> in the address bar. That is your team ID.</li>
+          <li>If the URL has <strong>seasonId=</strong>, make sure it matches the season you are setting up.</li>
+        </ol>
+      </div>
       <p><a href="{escape(help_page)}" style="color:#0f3a30; font-weight:700;">Setup help and Q&amp;A</a></p>
       <p>Support: <a href="mailto:{escape(support)}">{escape(support)}</a></p>
     </div>
