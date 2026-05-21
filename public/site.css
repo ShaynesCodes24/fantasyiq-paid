@@ -495,21 +495,6 @@ button.secondary {
   color: var(--ink);
 }
 
-.result-panel pre,
-.setup-packet {
-  max-height: 260px;
-  margin: 12px 0 0;
-  overflow: auto;
-  border: 1px solid rgba(15, 58, 48, 0.14);
-  border-radius: 8px;
-  background: #fffdf8;
-  padding: 12px;
-  color: var(--ink);
-  font-size: 12px;
-  line-height: 1.45;
-  white-space: pre-wrap;
-}
-
 .setup-actions {
   margin: 12px 0;
 }

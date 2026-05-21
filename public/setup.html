@@ -25,7 +25,7 @@
         <h1>Validate ESPN league details</h1>
         <p>
           Use the same ESPN league ID, team ID, and season from checkout. The validator confirms the public ESPN league can be reached,
-          checks that the team ID belongs to that league, and builds the setup packet FantasyIQ needs.
+          checks that the team ID belongs to that league, and saves the league profile to your FantasyIQ account.
         </p>
 
         <form class="tool-card" id="setup-form">
@@ -217,15 +217,6 @@
         localStorage.setItem("fantasy-dashboard:last-loadout", customer);
       }
 
-      async function copyPacket(button, packet) {
-        try {
-          await navigator.clipboard.writeText(JSON.stringify(packet, null, 2));
-          button.textContent = "Copied setup packet";
-        } catch (error) {
-          button.textContent = "Copy failed";
-        }
-      }
-
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         result.innerHTML = "<strong>Checking ESPN...</strong>";
@@ -251,23 +242,17 @@
               rememberAccessCode(packet.customer, accessCode);
             }
             localStorage.setItem(setupStorageKey, JSON.stringify(packet));
-            const packetJson = escapeHtml(JSON.stringify(packet, null, 2));
             const saveNote = payload.saved
               ? "This league profile was saved to the customer account."
-              : payload.saveMessage || "The setup packet is ready for manual fulfillment.";
+              : payload.saveMessage || "The league details were validated.";
             result.innerHTML = `
               <strong>Ready: ${escapeHtml(payload.leagueName)} / ${escapeHtml(payload.teamName)}</strong>
               <p>Team ID ${escapeHtml(payload.teamId)} was found for the ${escapeHtml(payload.season)} season. ${escapeHtml(saveNote)}</p>
               <div class="button-row setup-actions">
                 <a class="primary dark" href="${escapeHtml(previewUrl(packet))}">${payload.saved ? "Open saved dashboard" : "Preview dashboard settings"}</a>
-                <button class="primary" id="copy-setup-packet" type="button">Copy setup packet</button>
               </div>
-              <pre class="setup-packet">${packetJson}</pre>
               ${renderTeams(payload.teams)}
             `;
-            result.querySelector("#copy-setup-packet")?.addEventListener("click", (copyEvent) => {
-              copyPacket(copyEvent.currentTarget, packet);
-            });
             return;
           }
           result.innerHTML = `
