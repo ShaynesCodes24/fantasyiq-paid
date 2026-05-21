@@ -39,6 +39,14 @@ const cheatcodeAvoid = document.querySelector("#cheatcode-avoid");
 const cheatcodeRoom = document.querySelector("#cheatcode-room");
 const boardCount = document.querySelector("#board-count");
 const liveSyncStatus = document.querySelector("#live-sync-status");
+const alphaCommandSignal = document.querySelector("#alpha-command-signal");
+const alphaCommandMeta = document.querySelector("#alpha-command-meta");
+const alphaCommandLeverage = document.querySelector("#alpha-command-leverage");
+const alphaSignal = document.querySelector("#alpha-signal");
+const alphaScarcity = document.querySelector("#alpha-scarcity");
+const alphaMarket = document.querySelector("#alpha-market");
+const alphaBuild = document.querySelector("#alpha-build");
+const alphaLeverage = document.querySelector("#alpha-leverage");
 const liveStatus = document.querySelector("#live-status");
 const liveSyncToggle = document.querySelector("#live-sync-toggle");
 const manualSync = document.querySelector("#manual-sync");
@@ -2986,6 +2994,89 @@ function cheatcodeTierCliffs() {
     .slice(0, 4);
 }
 
+function strongestRoomRun(limit = Math.min(12, leagueTeamTotal())) {
+  const recent = recentDraftedPicks(limit);
+  const counts = recentPositionCounts(limit);
+  const [pos = "", count = 0] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0] || [];
+  return { pos, count, recent: recent.length };
+}
+
+function alphaRosterBuild(counts = emptyPositionCounts()) {
+  const starters = starterTargetCounts();
+  const rbWr = Number(counts.RB || 0) + Number(counts.WR || 0);
+  const starterNeeds = ["QB", "RB", "WR", "TE"].filter((pos) => Number(counts[pos] || 0) < Number(starters[pos] || 0));
+  if (starterNeeds.length) return { label: "Fill starters", detail: `${starterNeeds.join(", ")} still open` };
+  if (rbWr < 5 && currentRound() >= 6) return { label: "Build depth", detail: "RB/WR bench needs more weekly outs" };
+  if (Number(counts.QB || 0) > 1 && !activeLeagueSettings().lineupSlots?.SUPERFLEX) {
+    return { label: "Too much QB", detail: "Move capital back to RB/WR upside" };
+  }
+  return { label: "Balanced", detail: `RB/WR ${rbWr}, QB ${counts.QB || 0}, TE ${counts.TE || 0}` };
+}
+
+function alphaRead(counts = emptyPositionCounts(), picks = {}) {
+  const cliffs = cheatcodeTierCliffs();
+  const cliff = cliffs[0];
+  const roomRun = strongestRoomRun();
+  const build = alphaRosterBuild(counts);
+  const best = picks.bestNow?.row || picks.bestValue?.row || picks.safe?.row || availableRows()[0];
+  const survival = best ? survivalProjection(best, recommendationTargetPick()) : null;
+  const decision = best ? recommendationDecision(best, counts) : null;
+  const scarcityLabel = cliff ? `${cliff.pos}: ${cliff.count} left` : "No cliff";
+  const marketLabel = roomRun.recent && roomRun.count >= 3 ? `${roomRun.pos} run` : "Balanced room";
+  const pressure =
+    (cliff?.count || 99) <= 2 || (roomRun.count >= 4 && cliff?.pos === roomRun.pos) || survival?.pct < 35;
+  const leverage = pressure
+    ? "Attack"
+    : decision?.label === "Can wait" || survival?.pct >= 70
+      ? "Wait"
+      : build.label === "Fill starters"
+        ? "Stabilize"
+        : "Exploit value";
+  return {
+    signal: best ? `${best.Player}` : "Loading",
+    signalMeta: best
+      ? `${decision?.label || "Board value"} / ${best.Pos} / ${best["Pos Tier"] || best.Category || "Tier"}`
+      : "Waiting for board data",
+    scarcity: scarcityLabel,
+    scarcityMeta: cliff ? `${cliff.tier}` : "No urgent tier pressure",
+    market: marketLabel,
+    marketMeta: roomRun.recent ? `${roomRun.count || 0} of last ${roomRun.recent} picks` : "Draft not moving yet",
+    build: build.label,
+    buildMeta: build.detail,
+    leverage,
+  };
+}
+
+function setAlphaText(node, value) {
+  if (node) node.textContent = value;
+}
+
+function renderAlphaLayer(counts = emptyPositionCounts(), picks = {}) {
+  const alpha = boardData ? alphaRead(counts, picks) : {
+    signal: "Loading",
+    signalMeta: "Waiting for board data",
+    scarcity: "Loading",
+    scarcityMeta: "Tier pressure",
+    market: "Loading",
+    marketMeta: "Room behavior",
+    build: "Loading",
+    buildMeta: "Roster posture",
+    leverage: "Calibrating",
+  };
+  setAlphaText(alphaCommandSignal, alpha.signal);
+  setAlphaText(alphaCommandMeta, alpha.signalMeta);
+  setAlphaText(alphaCommandLeverage, alpha.leverage);
+  setAlphaText(alphaSignal, alpha.signal);
+  setAlphaText(alphaSignal?.nextElementSibling, alpha.signalMeta);
+  setAlphaText(alphaScarcity, alpha.scarcity);
+  setAlphaText(alphaScarcity?.nextElementSibling, alpha.scarcityMeta);
+  setAlphaText(alphaMarket, alpha.market);
+  setAlphaText(alphaMarket?.nextElementSibling, alpha.marketMeta);
+  setAlphaText(alphaBuild, alpha.build);
+  setAlphaText(alphaBuild?.nextElementSibling, alpha.buildMeta);
+  setAlphaText(alphaLeverage, alpha.leverage);
+}
+
 function renderCheatcodeMode() {
   if (!cheatcodeStatus) return;
   if (!boardData) {
@@ -2995,6 +3086,7 @@ function renderCheatcodeMode() {
       .forEach((node) => {
         node.textContent = "Waiting for board data.";
       });
+    renderAlphaLayer();
     return;
   }
 
@@ -3004,6 +3096,7 @@ function renderCheatcodeMode() {
   const nextPick = teamId ? nextMyPick(teamId) : null;
   const until = nextPick ? picksUntil(nextPick) : null;
   const { bestNow, bestValue, safe, upside, ranked } = bestCheatcodeRows(counts);
+  renderAlphaLayer(counts, { bestNow, bestValue, safe, upside });
   const nowDecision = bestNow ? recommendationDecision(bestNow.row, counts) : null;
   const bestPlayer = bestNow?.row || bestValue?.row || safe?.row || availableRows()[0];
   const heroState = !teamId

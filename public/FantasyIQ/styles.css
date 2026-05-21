@@ -1007,6 +1007,96 @@ textarea {
   color: var(--muted);
 }
 
+.command-tile-premium {
+  border-color: rgba(42, 111, 121, 0.28);
+  background:
+    linear-gradient(135deg, rgba(7, 29, 24, 0.98), rgba(18, 63, 52, 0.94) 58%, rgba(42, 111, 121, 0.88)),
+    var(--field);
+  color: var(--logo-cream);
+}
+
+.command-tile-premium::before {
+  background: linear-gradient(var(--logo-gold), #2a6f79);
+}
+
+.command-tile-premium span,
+.command-tile-premium small {
+  color: rgba(255, 241, 189, 0.78);
+}
+
+.command-tile-premium strong {
+  color: var(--logo-gold);
+}
+
+.alpha-strip {
+  display: grid;
+  grid-template-columns: 1.35fr repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.alpha-strip article {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  border: 1px solid rgba(18, 63, 52, 0.14);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, #fffefb, #f6f1e7),
+    var(--panel-bg);
+  padding: 14px;
+  box-shadow: var(--shadow-soft);
+}
+
+.alpha-strip article:first-child {
+  border-color: rgba(243, 208, 113, 0.34);
+  background:
+    linear-gradient(135deg, rgba(7, 29, 24, 0.98), rgba(18, 63, 52, 0.94) 62%, rgba(42, 111, 121, 0.86)),
+    var(--field);
+  color: var(--logo-cream);
+}
+
+.alpha-strip article::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--logo-gold), #2a6f79);
+}
+
+.alpha-strip span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.alpha-strip article:first-child span,
+.alpha-strip article:first-child small {
+  color: rgba(255, 241, 189, 0.78);
+}
+
+.alpha-strip strong {
+  display: block;
+  min-width: 0;
+  margin: 6px 0 4px;
+  overflow-wrap: anywhere;
+  color: var(--accent);
+  font-size: clamp(17px, 2vw, 24px);
+  line-height: 1.05;
+}
+
+.alpha-strip article:first-child strong {
+  color: var(--logo-gold);
+}
+
+.alpha-strip small {
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .split {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2729,6 +2819,7 @@ code {
   .cheat-grid,
   .sim-layout,
   .cheatcode-hero,
+  .alpha-strip,
   .cheatcode-grid,
   .cheatcode-grid.secondary,
   .sim-tools,

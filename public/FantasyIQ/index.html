@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>FantasyIQ</title>
-    <link rel="stylesheet" href="./styles.css?v=20260520_self_serve_os_21" />
+    <link rel="stylesheet" href="./styles.css?v=20260521_alpha_os_22" />
   </head>
   <body>
     <div class="field-overlay" aria-hidden="true">
@@ -175,9 +175,14 @@
               <small>FantasyPros backbone, ESPN/RotoWire checks, PFF/DraftSharks signals</small>
             </article>
             <article class="command-tile">
-              <span>Draft Room Cheatcode</span>
-              <strong>Best move</strong>
-              <small>Clear next-pick reads from board value, tiers, risk, and roster context</small>
+              <span>Alpha Signal</span>
+              <strong id="alpha-command-signal">Loading</strong>
+              <small id="alpha-command-meta">Best move, scarcity, and room pressure in one read</small>
+            </article>
+            <article class="command-tile command-tile-premium">
+              <span>Leverage Mode</span>
+              <strong id="alpha-command-leverage">Calibrating</strong>
+              <small>Draft posture adjusts to live tiers, roster shape, and pick timing</small>
             </article>
           </div>
 
@@ -309,6 +314,34 @@
 
           <div class="league-room-note" id="league-room-note">
             League profile is loading.
+          </div>
+
+          <div class="alpha-strip" aria-label="FantasyIQ alpha signals">
+            <article>
+              <span>Alpha Signal</span>
+              <strong id="alpha-signal">Loading</strong>
+              <small>Best current edge</small>
+            </article>
+            <article>
+              <span>Scarcity</span>
+              <strong id="alpha-scarcity">Loading</strong>
+              <small>Tier pressure</small>
+            </article>
+            <article>
+              <span>Market</span>
+              <strong id="alpha-market">Loading</strong>
+              <small>Room behavior</small>
+            </article>
+            <article>
+              <span>Build</span>
+              <strong id="alpha-build">Loading</strong>
+              <small>Roster posture</small>
+            </article>
+            <article>
+              <span>Leverage</span>
+              <strong id="alpha-leverage">Loading</strong>
+              <small>Action mode</small>
+            </article>
           </div>
 
           <div class="draft-room-cheatcode">
@@ -852,6 +885,10 @@
               <p>Cheatcode is the shortcut read. It turns board value, player risk, tier scarcity, roster shape, and room behavior into a simpler answer: best move now, safe pick, upside pick, value edge, wait list, and avoid list.</p>
             </details>
             <details>
+              <summary>What is the Alpha Signal?</summary>
+              <p>Alpha Signal is the highest-level read in Draft Room. It blends best available player, tier scarcity, room pressure, roster needs, and survival odds into one draft posture: attack, wait, stabilize, or exploit value.</p>
+            </details>
+            <details>
               <summary>Why do I need to choose my ESPN team?</summary>
               <p>FantasyIQ needs your team to know when your picks are coming, which players are already on your roster, and what positions you can wait on. Without that, the room can still show the board, but the personalized reads are limited.</p>
             </details>
@@ -896,7 +933,7 @@
       </section>
     </main>
 
-    <script src="./config.js?v=20260520_customer_ops_19"></script>
-    <script src="./app.js?v=20260520_self_serve_os_21"></script>
+    <script src="./config.js?v=20260521_alpha_os_22"></script>
+    <script src="./app.js?v=20260521_alpha_os_22"></script>
   </body>
 </html>
