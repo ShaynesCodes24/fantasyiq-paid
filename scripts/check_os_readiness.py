@@ -34,6 +34,12 @@ REQUIRED_DOCS = {
         "Release Gate",
         "Production Smoke Test",
     ],
+    "ops/PRODUCTION_MONITORING.md": [
+        "Monitoring Cadence",
+        "Required Checks",
+        "Severity Rules",
+        "Incident Workflow",
+    ],
     "ops/DESIGN_SYSTEM.md": [
         "Product Feel",
         "Layout Rules",
@@ -67,6 +73,7 @@ REQUIRED_DOCS = {
 
 REQUIRED_SCRIPTS = [
     "scripts/check_product_readiness.py",
+    "scripts/check_production_monitoring.py",
     "scripts/check_security_setup.py",
     "scripts/apply_database_schema.py",
     "scripts/check_os_readiness.py",
@@ -74,6 +81,7 @@ REQUIRED_SCRIPTS = [
 
 REQUIRED_STANDARD_COMMANDS = [
     "scripts/check_product_readiness.py",
+    "scripts/check_production_monitoring.py",
     "scripts/check_security_setup.py",
     "scripts/check_os_readiness.py",
 ]

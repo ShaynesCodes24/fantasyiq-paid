@@ -137,6 +137,7 @@ selling the platform:
 - `ops/FANTASYIQ_OS.md`: internal command center, cadence, plugin roles, and definition of done.
 - `ops/ROADMAP.md`: now/next/later roadmap and backlog priority rules.
 - `ops/QA_PLAYBOOK.md`: pre-deploy checks, manual browser QA, release gates, and production smoke tests.
+- `ops/PRODUCTION_MONITORING.md`: post-deploy monitoring cadence, severity rules, incident workflow, and triage paths.
 - `ops/DESIGN_SYSTEM.md`: dashboard design principles, navigation rules, layout rules, and quality bar.
 - `ops/SUPPORT_PLAYBOOK.md`: support triage, repeated customer issues, and escalation rules.
 - `ops/REVENUE_OPERATIONS.md`: pricing, Stripe, database fulfillment, add-on leagues, renewals, and refunds.
@@ -160,6 +161,7 @@ python .\scripts\check_os_readiness.py
 - `scripts/configure_vercel_env.py`: sets customer ESPN league env vars through the Vercel API.
 - `scripts/fulfill_latest_stripe_order.py`: fetches the latest paid Stripe checkout and updates `customers.csv`.
 - `scripts/check_product_readiness.py`: checks the live website, dashboard, Stripe link, and API.
+- `scripts/check_production_monitoring.py`: checks production pages, core APIs, webhook boundaries, admin auth boundaries, and protected ops events when an admin token is available.
 - `scripts/check_security_setup.py`: checks tracked files, deploy ignores, and public Vercel config for secure setup.
 - `scripts/check_os_readiness.py`: checks that the FantasyIQ OS docs and operating scripts are present.
 - `scripts/check_email_delivery.py`: confirms Resend email readiness and can send an admin setup-email test.

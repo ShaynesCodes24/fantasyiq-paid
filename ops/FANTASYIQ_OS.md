@@ -34,6 +34,7 @@ Build days:
 Release day:
 - Run security, product readiness, and OS readiness checks.
 - Verify Vercel production.
+- Run production monitoring and review ops events.
 - Update customer-facing docs or emails if behavior changed.
 - Log follow-up issues in Linear or the roadmap.
 
@@ -78,6 +79,7 @@ OpenAI Developers:
 
 - Roadmap: `ops/ROADMAP.md`
 - QA and release gates: `ops/QA_PLAYBOOK.md`
+- Production monitoring: `ops/PRODUCTION_MONITORING.md`
 - Design system: `ops/DESIGN_SYSTEM.md`
 - Customer support: `ops/SUPPORT_PLAYBOOK.md`
 - Revenue and self-serve: `ops/REVENUE_OPERATIONS.md`
@@ -106,6 +108,7 @@ node --check FantasyIQ\app.js
 node scripts\build_static.js
 python scripts\check_security_setup.py
 python scripts\check_product_readiness.py
+python scripts\check_production_monitoring.py
 python scripts\check_os_readiness.py
 ```
 

@@ -31,7 +31,6 @@ These make the platform feel more premium after self-serve is stable.
 
 - Add better empty states for leagues before draft day.
 - Add visual polish pass for dashboard spacing, forms, account card, and mobile drawer.
-- Add production monitoring notes or Vercel Observability plan.
 - Add customer renewal workflow and renewal status display.
 
 ## Recently Shipped
@@ -44,6 +43,7 @@ These make the platform feel more premium after self-serve is stable.
 - Admin ops visibility shows setup, login, live sync, email, Stripe, and admin events with filters and payload details.
 - Mock Simulator opponents use competitive manager profiles and stricter grading.
 - Player cards use plain-English Daily Player Synopsis and FantasyIQ Read sections.
+- Production monitoring runbook and script cover public pages, core APIs, webhook boundaries, admin auth boundaries, and ops event review.
 
 ## Later
 

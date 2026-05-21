@@ -19,6 +19,7 @@ Run this after production deploy:
 
 ```powershell
 python scripts\check_product_readiness.py
+python scripts\check_production_monitoring.py
 python scripts\test_self_serve_flow.py
 ```
 
@@ -79,6 +80,7 @@ Admin:
 - Database status displays when database is connected.
 - Ops event console filters setup, login, live sync, email, Stripe, and admin events by severity, type, customer, source, and search text.
 - Ops event payload details are hidden behind expandable details, not shown by default.
+- Production monitoring confirms admin auth boundaries and protected ops event access.
 
 ## Mobile Checks
 
@@ -131,4 +133,5 @@ After deploy, confirm:
 - Live boards endpoint works.
 - Stripe webhook endpoint rejects unsigned POSTs.
 - No-charge self-serve dry run creates, saves, reads, and cleans up a temporary customer.
+- Production monitoring script checks public pages, core APIs, webhook boundary, admin auth boundary, and ops events when an admin token is available.
 - Readiness check has `0 failed`.
