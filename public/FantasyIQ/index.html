@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>FantasyIQ</title>
-    <link rel="stylesheet" href="./styles.css?v=20260521_login_resilience_37" />
+    <link rel="stylesheet" href="./styles.css?v=20260521_plain_reads_42" />
   </head>
   <body>
     <div class="field-overlay" aria-hidden="true">
@@ -122,6 +122,38 @@
             <strong>League engine active</strong>
             <span>Draft Room, Mock Simulator, Big Board values, and Trade Calculator are using this league profile.</span>
           </div>
+
+          <section class="league-health-panel" id="league-health-panel" aria-label="League health check">
+            <div class="league-health-head">
+              <div>
+                <p class="eyebrow">League Health</p>
+                <h3 id="league-health-title">Checking setup</h3>
+              </div>
+              <strong id="league-health-score">Pending</strong>
+            </div>
+            <div class="league-health-grid" id="league-health-grid">
+              <article>
+                <span>Account</span>
+                <strong>Checking</strong>
+                <small>Customer access state</small>
+              </article>
+              <article>
+                <span>ESPN Sync</span>
+                <strong>Checking</strong>
+                <small>Public league connection</small>
+              </article>
+              <article>
+                <span>Team Match</span>
+                <strong>Checking</strong>
+                <small>Selected ESPN team</small>
+              </article>
+              <article>
+                <span>Scoring</span>
+                <strong>Checking</strong>
+                <small>League settings</small>
+              </article>
+            </div>
+          </section>
 
           <div class="first-run-guide" aria-label="First run checklist">
             <article>
@@ -909,6 +941,6 @@
     </main>
 
     <script src="./config.js?v=20260521_readability_32"></script>
-    <script src="./app.js?v=20260521_draft_intel_38"></script>
+    <script src="./app.js?v=20260521_plain_reads_42"></script>
   </body>
 </html>

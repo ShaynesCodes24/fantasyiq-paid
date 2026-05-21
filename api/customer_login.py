@@ -42,6 +42,27 @@ def dashboard_url(customer_slug: str, league_key: str = "") -> str:
     return f"/FantasyIQ/?{urlencode(query)}"
 
 
+def log_login_event(event_type: str, message: str, raw: dict[str, Any], severity: str = "info") -> None:
+    try:
+        customer_slug = slugify(str(raw.get("customer") or raw.get("dashboard") or raw.get("email") or ""))
+        league_key = slugify(str(raw.get("league") or raw.get("leagueKey") or ""))
+        try:
+            from database import record_ops_event
+        except ImportError:
+            from api.database import record_ops_event
+        record_ops_event(
+            event_type=event_type,
+            severity=severity,
+            source="customer_login",
+            customer_slug=customer_slug,
+            league_key=league_key,
+            message=message[:500],
+            payload={"authMode": "password" if raw.get("password") else "accessCode"},
+        )
+    except Exception:
+        return
+
+
 def login_payload(raw: dict[str, Any], headers: Any | None = None) -> tuple[dict[str, Any], list[tuple[str, str]]]:
     identity = str(raw.get("customer") or raw.get("email") or raw.get("dashboard") or "").strip()
     access_code = str(raw.get("accessCode") or raw.get("access_code") or raw.get("code") or "").strip()
@@ -133,12 +154,17 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_POST(self) -> None:
+        raw: dict[str, Any] = {}
         try:
-            payload, extra_headers = login_payload(parse_body(self), self.headers)
+            raw = parse_body(self)
+            payload, extra_headers = login_payload(raw, self.headers)
+            log_login_event("login.succeeded", "Customer dashboard login succeeded.", raw)
             self.send_json(payload, extra_headers=extra_headers)
         except (PermissionError, ConfigError, json.JSONDecodeError) as exc:
+            log_login_event("login.failed", str(exc), raw, "warning")
             self.send_json({"ok": False, "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.UNAUTHORIZED)
         except Exception:
+            log_login_event("login.error", "Could not verify that account right now.", raw, "warning")
             self.send_json({"ok": False, "message": "Could not verify that account right now.", "syncedAt": utc_now()}, HTTPStatus.BAD_GATEWAY)
 
     def do_GET(self) -> None:

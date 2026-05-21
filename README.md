@@ -109,6 +109,24 @@ Recommended checkout/onboarding flow:
 5. Customer switches active leagues from the dashboard.
 6. Owner uses `/admin.html` for customer detail, setup email resend, and access-code reset.
 
+## Current Dashboard Experience
+
+The dashboard now includes a customer-confidence layer and stronger draft
+practice loop:
+
+- League Health summarizes account access, ESPN sync, team match, scoring, and
+  draft state at the top of the command center.
+- Draft recommendations include compact `Based on` proof lines so customers can
+  see the league settings and draft state behind a recommendation.
+- Setup success routes saved customers directly back into the active dashboard
+  and league.
+- Mock Simulator opponents use distinct manager profiles for value, scarcity,
+  market momentum, upside, floor, and roster construction.
+- Mock grades are stricter and include roster-shape notes for reaches, early
+  risk, thin RB/WR depth, starter gaps, and early DST/K picks.
+- Player cards use plain-English Daily Player Synopsis and FantasyIQ Read
+  sections instead of dense source-data paragraphs.
+
 ## FantasyIQ OS
 
 Use the operating system docs when planning, building, testing, supporting, or

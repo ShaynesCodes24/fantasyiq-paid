@@ -22,22 +22,28 @@ These are the highest-leverage upgrades for the next build cycle.
 - Connect Neon/Postgres and run `database/schema.sql`.
 - Verify Stripe webhook creates durable customer records in production.
 - Add transactional access-code/setup emails after checkout.
-- Make setup success route customers directly into the correct dashboard and active league.
 - Add database-backed additional league fulfillment after Stripe add-on checkout.
-- Create a customer-visible Q&A/help page linked from dashboard and setup.
 - Add admin controls for customer status, access-code reset, and league archive.
+- Add admin ops visibility for setup failures, login failures, live sync failures, email events, and Stripe events.
 
 ## Next
 
 These make the platform feel more premium after self-serve is stable.
 
-- Add richer dashboard onboarding for first-time customers.
 - Add better empty states for leagues before draft day.
-- Add league health checks: public/private, draft status, team match, scoring match.
 - Add visual polish pass for dashboard spacing, forms, account card, and mobile drawer.
-- Add event logging for setup attempts, login failures, and live sync failures.
 - Add production monitoring notes or Vercel Observability plan.
 - Add customer renewal workflow and renewal status display.
+
+## Recently Shipped
+
+- Setup success routes saved customers directly into the correct dashboard and active league.
+- Customer-visible Q&A/help page is linked from dashboard and setup.
+- League Health checks account access, ESPN sync, team match, scoring, and draft state.
+- Draft recommendations include compact proof lines for league settings, roster context, and draft state.
+- Login success/failure events are recorded through the ops event system when the database is connected.
+- Mock Simulator opponents use competitive manager profiles and stricter grading.
+- Player cards use plain-English Daily Player Synopsis and FantasyIQ Read sections.
 
 ## Later
 

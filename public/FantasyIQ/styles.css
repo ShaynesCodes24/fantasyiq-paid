@@ -981,6 +981,114 @@ textarea {
   min-width: 0;
 }
 
+.league-health-panel {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 18px;
+  border: 1px solid rgba(18, 63, 52, 0.16);
+  border-radius: 8px;
+  background: #fffdf6;
+  padding: 14px;
+  box-shadow: var(--shadow-soft);
+}
+
+.league-health-panel[data-state="good"] {
+  border-color: rgba(45, 126, 87, 0.26);
+}
+
+.league-health-panel[data-state="warn"] {
+  border-color: rgba(184, 135, 53, 0.35);
+}
+
+.league-health-panel[data-state="danger"] {
+  border-color: rgba(156, 57, 43, 0.32);
+}
+
+.league-health-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.league-health-head h3 {
+  margin: 2px 0 0;
+  font-size: 18px;
+}
+
+.league-health-head > strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  border-radius: 999px;
+  background: #e5f2ee;
+  color: var(--accent);
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.league-health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.league-health-grid article {
+  min-width: 0;
+  border: 1px solid rgba(216, 195, 146, 0.68);
+  border-radius: 8px;
+  background: #fffaf0;
+  padding: 12px;
+}
+
+.league-health-grid article.good {
+  border-color: rgba(45, 126, 87, 0.25);
+  background: #f0f8f4;
+}
+
+.league-health-grid article.warn {
+  border-color: rgba(184, 135, 53, 0.3);
+  background: #fff8e8;
+}
+
+.league-health-grid article.danger {
+  border-color: rgba(156, 57, 43, 0.3);
+  background: #fff1ed;
+}
+
+.league-health-grid span,
+.league-health-grid small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.league-health-grid span {
+  text-transform: uppercase;
+}
+
+.league-health-grid strong {
+  display: block;
+  margin: 4px 0;
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.15;
+}
+
+.recommendation-proof {
+  border-top: 1px solid rgba(18, 63, 52, 0.1);
+  color: #355d52;
+  padding-top: 8px;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
 .command-tile {
   position: relative;
   overflow: hidden;
@@ -2118,6 +2226,23 @@ code {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.player-synopsis-details,
+.player-read-copy {
+  display: grid;
+  gap: 7px;
+}
+
+.player-synopsis-details p,
+.player-read-copy p {
+  margin: 0;
+}
+
+.player-synopsis-details p strong,
+.player-read-copy p strong {
+  color: var(--ink);
+  font-size: inherit;
 }
 
 .player-synopsis.compact {

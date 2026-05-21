@@ -125,6 +125,10 @@ const leagueDraftRounds = document.querySelector("#league-draft-rounds");
 const leagueDraftNote = document.querySelector("#league-draft-note");
 const leagueProfileStrip = document.querySelector("#league-profile-strip");
 const leagueRoomNote = document.querySelector("#league-room-note");
+const leagueHealthPanel = document.querySelector("#league-health-panel");
+const leagueHealthTitle = document.querySelector("#league-health-title");
+const leagueHealthScore = document.querySelector("#league-health-score");
+const leagueHealthGrid = document.querySelector("#league-health-grid");
 const boardMethodNote = document.querySelector("#board-method-note");
 const accountAddLeague = document.querySelector("#account-add-league");
 const accountDashboardName = document.querySelector("#account-dashboard-name");
@@ -318,6 +322,7 @@ let activePlayerAutocomplete = null;
 let fullBoardLoadStarted = false;
 let customerPasswordSession = false;
 let customerBootStarted = false;
+let lastLiveDraftRenderSignature = "";
 
 function rememberedCustomerLoadout(loadouts) {
   try {
@@ -1186,6 +1191,7 @@ function renderLeagueProfile() {
       ? "Source-backed raw-stat board with league-native scoring and live market signals"
       : "Source-backed board with league-profile adjustments";
   }
+  renderLeagueHealth();
   document.querySelectorAll(".superflex-toggle").forEach((button) => {
     button.hidden = Number(slots.SUPERFLEX || 0) === 0;
   });
@@ -1220,6 +1226,82 @@ function activeLeagueOption() {
 
 function hasPrimaryLeagueProfile() {
   return Boolean(appConfig.leagueId || appConfig.customerTeamName);
+}
+
+function leagueHealthItems() {
+  const settings = activeLeagueSettings();
+  const teamId = String(appConfig.customerTeamId || "");
+  const liveTeams = liveDraft?.teams || [];
+  const matchedTeam = teamId ? liveTeams.find((team) => String(team.teamId) === teamId) : null;
+  const publicSyncDetail = liveDraft?.staleError
+    ? `Stale fallback: ${liveDraft.staleError}`
+    : liveDraft
+      ? `${liveDraft.demoMode ? "Demo league" : "Public ESPN league"} synced ${formatSyncTime(liveDraft.syncedAt)}`
+      : appConfig.leagueId
+        ? "Waiting for first ESPN sync"
+        : requiresCustomerAccess()
+          ? "League setup is still needed"
+          : "Demo league will connect automatically";
+  const draftState = liveDraft?.inProgress ? "Draft live" : liveDraft?.drafted ? "Draft complete" : liveDraft ? "Board loaded" : "Pending";
+  return [
+    {
+      label: "Account",
+      value: requiresCustomerAccess() ? (hasCustomerAccess() ? "Signed in" : "Sign in needed") : "Demo preview",
+      detail: requiresCustomerAccess() ? (hasCustomerAccess() ? "Dashboard access is active on this device." : "Unlock to save and read paid league profiles.") : "Public preview with sample data.",
+      state: requiresCustomerAccess() && !hasCustomerAccess() ? "warn" : "good",
+    },
+    {
+      label: "ESPN Sync",
+      value: liveDraft?.staleError ? "Needs review" : liveDraft ? "Connected" : appConfig.leagueId ? "Pending" : requiresCustomerAccess() ? "Setup needed" : "Demo pending",
+      detail: publicSyncDetail,
+      state: liveDraft?.staleError ? "danger" : liveDraft ? "good" : "warn",
+    },
+    {
+      label: "Team Match",
+      value: matchedTeam ? "Matched" : teamId ? "Configured" : "Select team",
+      detail: matchedTeam
+        ? `${matchedTeam.teamName || appConfig.customerTeamName || `Team ${teamId}`} is tied to recommendations.`
+        : teamId
+          ? `${appConfig.customerTeamName || `Team ${teamId}`} will match once ESPN teams load.`
+          : "Choose your ESPN team for roster and next-pick pressure.",
+      state: matchedTeam || teamId ? "good" : "warn",
+    },
+    {
+      label: "Scoring",
+      value: settings.scoringLabel || SCORING_LABELS[settings.scoringType] || "Custom",
+      detail: `${leagueTeamTotal()} teams, ${lineupSummary(settings)}, ${draftRoundTotal(settings)} rounds.`,
+      state: "good",
+    },
+    {
+      label: "Draft State",
+      value: draftState,
+      detail: liveDraft ? `${Number(liveDraft.completedPicks || 0)}/${Number(liveDraft.totalPicks || 0) || leagueTeamTotal() * draftRoundTotal(settings)} picks complete.` : "Sync once before draft day.",
+      state: liveDraft ? "good" : "warn",
+    },
+  ];
+}
+
+function renderLeagueHealth() {
+  if (!leagueHealthGrid) return;
+  const items = leagueHealthItems();
+  const dangerCount = items.filter((item) => item.state === "danger").length;
+  const warnCount = items.filter((item) => item.state === "warn").length;
+  const title = dangerCount ? "Needs attention" : warnCount ? "Ready with checks" : "Ready for draft day";
+  const score = dangerCount ? "Review" : warnCount ? `${items.length - warnCount}/${items.length} ready` : "All clear";
+  if (leagueHealthTitle) leagueHealthTitle.textContent = title;
+  if (leagueHealthScore) leagueHealthScore.textContent = score;
+  if (leagueHealthPanel) {
+    leagueHealthPanel.dataset.state = dangerCount ? "danger" : warnCount ? "warn" : "good";
+  }
+  leagueHealthGrid.innerHTML = items
+    .map(
+      (item) => `<article class="${item.state}">
+        <span>${htmlEscape(item.label)}</span>
+        <strong>${htmlEscape(item.value)}</strong>
+        <small>${htmlEscape(item.detail)}</small>
+      </article>`,
+    )
+    .join("");
 }
 
 function configuredLeagueCount(options = currentLeagueOptions()) {
@@ -1453,6 +1535,7 @@ function setActiveLeague(leagueKey) {
   params.set("league", next.key);
   history.replaceState(null, "", `${window.location.pathname}?${params.toString()}${window.location.hash}`);
   liveDraft = null;
+  lastLiveDraftRenderSignature = "";
   boardData = null;
   mockSim = null;
   selectedBoardPlayerKey = null;
@@ -1780,8 +1863,80 @@ function compactText(value, limit = 170) {
   return `${text.slice(0, limit - 1).replace(/\s+\S*$/, "")}.`;
 }
 
+function riskPlainText(row) {
+  const risk = Number(row?.Risk || 0);
+  if (!risk) return "Risk is not scored yet.";
+  if (risk >= 7) return `High risk (${risk}/10). Draft only when the upside fits your roster.`;
+  if (risk >= 5) return `Medium risk (${risk}/10). Pair him with safer picks.`;
+  if (risk <= 3) return `Lower risk (${risk}/10). Useful when you need stability.`;
+  return `Manageable risk (${risk}/10).`;
+}
+
+function actionPlainText(row) {
+  const action = String(row?.Action || row?.["Draft Action"] || "").trim();
+  const lower = action.toLowerCase();
+  if (!action) return "Use him as a tiebreaker against players in the same tier.";
+  if (lower.includes("anchor")) return "Draft him at this tier if the position fits your build. Do not reach far above the tier.";
+  if (lower.includes("discount")) return "Only draft him if he falls below the usual price.";
+  if (lower.includes("wait")) return "Wait for the room to discount him before clicking.";
+  if (lower.includes("golden-zone")) return "He has upside, but make sure your roster already has enough safe starters.";
+  if (lower.includes("under-adp")) return "Target him when he is cheaper than the room expects.";
+  if (lower.includes("value")) return "Treat him as a value target, not a must-pick.";
+  if (lower.includes("upside")) return "Draft for upside after your core starters are protected.";
+  return action;
+}
+
+function playerSynopsisParts(row) {
+  if (!row) {
+    return {
+      bottomLine: "No player synopsis is available yet.",
+      why: "FantasyIQ needs a board row before it can explain the player.",
+      risk: "Risk is not scored yet.",
+      move: "Check back after the board refreshes.",
+    };
+  }
+  const rank = row.Rank ? `#${row.Rank} overall` : "unranked";
+  const posRank = row["Pos Rank"] ? `${row.Pos}${row["Pos Rank"]}` : row.Pos || "player";
+  const tier = row["Pos Tier"] || row.Category || "current tier";
+  const projection = projectionDisplay(row);
+  const lastYear = lastYearValue(row);
+  const market = playerMarketMomentum(row);
+  const bottomLine = `${row.Player} is a ${tier} ${row.Pos} for ${row.Team}. FantasyIQ has him ${rank} and ${posRank}.`;
+  const why = `${scoringProjectionLabel()} ${projection}; last year: ${lastYear}. ${market.hasSleeperSignal ? market.label : "No strong live market move yet"}.`;
+  return {
+    bottomLine,
+    why,
+    risk: riskPlainText(row),
+    move: actionPlainText(row),
+  };
+}
+
 function playerSynopsisText(row) {
-  return row?.["Daily Synopsis"] || row?.["Player Outlook"] || row?.Analysis || "No player synopsis is available yet.";
+  const parts = playerSynopsisParts(row);
+  return `${parts.bottomLine} ${parts.why} ${parts.risk} ${parts.move}`;
+}
+
+function playerSynopsisHtml(row, compact = false) {
+  const parts = playerSynopsisParts(row);
+  if (compact) return `<p>${htmlEscape(compactText(`${parts.bottomLine} ${parts.move}`, 155))}</p>`;
+  return `<div class="player-synopsis-details">
+    <p><strong>Bottom line:</strong> ${htmlEscape(parts.bottomLine)}</p>
+    <p><strong>Why it matters:</strong> ${htmlEscape(parts.why)}</p>
+    <p><strong>Risk:</strong> ${htmlEscape(parts.risk)}</p>
+    <p><strong>Draft move:</strong> ${htmlEscape(parts.move)}</p>
+  </div>`;
+}
+
+function fantasyIqReadHtml(row, decision = null) {
+  const parts = playerSynopsisParts(row);
+  const verdict = decision?.label ? `${decision.label}: ${decision.reason}` : parts.move;
+  const fit = row ? `${row.Pos} in ${row["Pos Tier"] || row.Category || "current tier"} with league value ${valueDisplay(row)}.` : "No player fit available yet.";
+  return `<div class="player-read-copy">
+    <p><strong>Move:</strong> ${htmlEscape(verdict)}</p>
+    <p><strong>Fit:</strong> ${htmlEscape(fit)}</p>
+    <p><strong>Risk:</strong> ${htmlEscape(parts.risk)}</p>
+    <p><strong>Plain English:</strong> ${htmlEscape(parts.why)}</p>
+  </div>`;
 }
 
 function playerSynopsisBlock(row, options = {}) {
@@ -1792,7 +1947,7 @@ function playerSynopsisBlock(row, options = {}) {
   return `<article class="player-synopsis${compact}">
     <span>Daily Player Synopsis</span>
     <strong>Updated ${htmlEscape(refreshed)} / Latest note: ${htmlEscape(latest)}</strong>
-    <p>${htmlEscape(options.compact ? compactText(playerSynopsisText(row)) : playerSynopsisText(row))}</p>
+    ${playerSynopsisHtml(row, Boolean(options.compact))}
     ${options.compact ? "" : `<small>${htmlEscape(source)}</small>`}
   </article>`;
 }
@@ -2206,7 +2361,8 @@ function showAnalysis(row) {
     }</p>
     ${row["Prior Year Source"] ? `<p><strong>Prior-year source:</strong> ${htmlEscape(row["Prior Year Source"])}</p>` : ""}
     ${row["Risk Notes"] ? `<p><strong>Risk read:</strong> ${htmlEscape(row["Risk Notes"])}</p>` : ""}
-    <p>${row.Analysis}</p>
+    <h3>FantasyIQ Read</h3>
+    ${fantasyIqReadHtml(row)}
   `;
 }
 
@@ -2234,7 +2390,8 @@ function showTrendAnalysis(row) {
     <p><strong>Source signal:</strong> ${htmlEscape(row["Source Signal"])}</p>
     ${row["External Signal"] ? `<p><strong>Live market:</strong> ${htmlEscape(row["External Signal"])}</p>` : ""}
     <p><strong>Catalyst:</strong> ${htmlEscape(row.Catalyst)}</p>
-    <p>${htmlEscape(row["Why Rising/Falling"])}</p>
+    <h3>FantasyIQ Read</h3>
+    ${fantasyIqReadHtml(row)}
   `;
 }
 
@@ -2298,8 +2455,7 @@ function openPlayerDrawer(playerName) {
       ${playerSynopsisBlock(row)}
       <div class="player-drawer-copy">
         <h3>FantasyIQ Read</h3>
-        <p>${htmlEscape(row.Action || decision.reason)}</p>
-        <p>${htmlEscape(row.Analysis || playerSynopsisText(row))}</p>
+        ${fantasyIqReadHtml(row, decision)}
       </div>
       <div class="player-drawer-actions">
         <button class="primary-action" type="button" data-player-focus-board="${htmlEscape(row.Player)}">Open In Big Board</button>
@@ -3752,6 +3908,13 @@ function renderRecommendationCard(row, counts, index = 0) {
   const momentum = playerMarketMomentum(row);
   const priority = decision.label === "Pick now" || index < 3 ? "priority" : "";
   const survivalText = decision.survival.label === "Select team" ? "team needed" : `${decision.survival.pct}% back`;
+  const proof = [
+    scoringProjectionLabel(),
+    `${leagueTeamTotal()} teams`,
+    lineupSummary(),
+    selectedTeamId() ? "selected roster" : "board value",
+    liveDraft?.draftedNames?.length ? `${liveDraft.draftedNames.length} drafted filtered` : "draft board state",
+  ];
   return `<div class="pick-card recommendation ${priority} ${decision.className}">
     <span>#${row.Rank} / ${row.Pos} / ${row.Team}</span>
     ${playerFocusButton(row)}
@@ -3762,6 +3925,7 @@ function renderRecommendationCard(row, counts, index = 0) {
       <b>${row["Pos Tier"] || row.Category}</b>
     </div>
     <small>${decision.reason} ${scoringProjectionLabel()}: ${projectionDisplay(row)}. League value: ${valueDisplay(row)}. ${decision.survival.detail} ${momentum.hasSleeperSignal ? htmlEscape(momentum.detail) : ""}</small>
+    <div class="recommendation-proof">Based on: ${proof.map(htmlEscape).join(" / ")}</div>
     ${playerSynopsisBlock(row, { compact: true })}
   </div>`;
 }
@@ -4435,17 +4599,37 @@ function renderDraftOrder() {
     .join("");
 }
 
-function renderLiveDraft() {
+function liveDraftRenderSignature(data = liveDraft) {
+  if (!data) return "";
+  const current = data.currentPick || {};
+  const recent = data.recentPicks || [];
+  const next = data.nextPicks || [];
+  const draftOrder = data.draftOrder || [];
+  return JSON.stringify({
+    completed: Number(data.completedPicks || 0),
+    total: Number(data.totalPicks || 0),
+    drafted: Boolean(data.drafted),
+    inProgress: Boolean(data.inProgress),
+    currentOverall: Number(current.overall || 0),
+    currentTeam: current.fantasyTeam || "",
+    currentManager: current.manager || "",
+    draftedCount: (data.draftedNames || []).length,
+    teams: (data.teams || []).length,
+    teamNames: (data.teams || []).map((team) => team.name || team.fantasyTeam || "").join("|"),
+    recent: recent.map((pick) => `${pick.overall || ""}:${pick.player || pick.playerName || ""}`).join("|"),
+    next: next.map((pick) => `${pick.overall || ""}:${pick.fantasyTeam || ""}`).join("|"),
+    draftOrder: draftOrder.map((pick) => `${pick.overall || ""}:${pick.roundPick || ""}:${pick.fantasyTeam || ""}`).join("|"),
+    staleError: data.staleError || "",
+  });
+}
+
+function renderLiveDraftSummary() {
   if (!liveStatus) return;
   if (!liveDraft) {
     liveStatus.textContent = "Connecting to ESPN public draft sync...";
     return;
   }
 
-  applyServerCustomerContext(liveDraft.customer);
-  renderTeamOptions();
-  applyEspnLeagueBranding();
-  renderLeagueProfile();
   const current = liveDraft.currentPick;
   const completed = Number(liveDraft.completedPicks || 0);
   const total = Number(liveDraft.totalPicks || 0);
@@ -4474,6 +4658,23 @@ function renderLiveDraft() {
   if (liveProgressBar) liveProgressBar.style.width = `${pct}%`;
   if (liveLastSync) liveLastSync.textContent = formatSyncTime(liveDraft.syncedAt);
   if (liveSource) liveSource.textContent = liveDraft.demoMode ? "ESPN public demo league" : liveDraft.source || "ESPN public league API";
+  renderLeagueHealth();
+}
+
+function renderLiveDraft(options = {}) {
+  if (!liveStatus) return;
+  if (!liveDraft) {
+    renderLiveDraftSummary();
+    return;
+  }
+
+  renderLiveDraftSummary();
+  if (options.full === false) return;
+
+  applyServerCustomerContext(liveDraft.customer);
+  renderTeamOptions();
+  applyEspnLeagueBranding();
+  renderLeagueProfile();
 
   renderRecommendations();
   renderMyRoster();
@@ -4488,6 +4689,7 @@ function renderLiveDraft() {
   renderLiveTierBoard();
   renderDraftOrder();
   renderBoard();
+  lastLiveDraftRenderSignature = liveDraftRenderSignature();
 }
 
 function htmlEscape(value) {
@@ -4539,6 +4741,19 @@ function simRecentPositionCounts(limit = Math.min(10, leagueTeamTotal())) {
   return counts;
 }
 
+const SIM_MANAGER_PERSONAS = [
+  { name: "Value Hawk", rank: 7.2, need: 1.05, value: 1.45, scarcity: 0.9, market: 1.0, upside: 0.7, riskPenalty: 0.9 },
+  { name: "Roster Architect", rank: 6.2, need: 1.45, value: 1.05, scarcity: 0.75, market: 0.65, upside: 0.55, riskPenalty: 1.0 },
+  { name: "Tier Bully", rank: 6.6, need: 1.05, value: 1.0, scarcity: 1.55, market: 0.8, upside: 0.75, riskPenalty: 0.85 },
+  { name: "Market Chaser", rank: 6.4, need: 1.0, value: 0.95, scarcity: 0.95, market: 1.65, upside: 0.9, riskPenalty: 0.7 },
+  { name: "Upside Drafter", rank: 6.0, need: 0.95, value: 0.85, scarcity: 0.95, market: 1.05, upside: 1.6, riskPenalty: 0.55 },
+  { name: "Floor Manager", rank: 7.0, need: 1.2, value: 1.15, scarcity: 0.75, market: 0.65, upside: 0.45, riskPenalty: 1.55 },
+];
+
+function simManagerProfile(slot) {
+  return mockSim?.profiles?.[slot] || SIM_MANAGER_PERSONAS[(slot - 1) % SIM_MANAGER_PERSONAS.length];
+}
+
 function simFutureUserPicks() {
   if (!mockSim) return [];
   const picks = [];
@@ -4546,6 +4761,15 @@ function simFutureUserPicks() {
     if (simSlotFromOverall(overall) === mockSim.userSlot) {
       picks.push(overall);
     }
+  }
+  return picks;
+}
+
+function simFuturePicksForSlot(slot, fromOverall = mockSim?.currentOverall || 1) {
+  if (!mockSim) return [];
+  const picks = [];
+  for (let overall = fromOverall; overall <= simTotalPicks(); overall += 1) {
+    if (simSlotFromOverall(overall) === slot) picks.push(overall);
   }
   return picks;
 }
@@ -4661,12 +4885,50 @@ function simRecommendationScore(row, counts) {
   return score;
 }
 
+function simBotSurvivalPressure(row, slot) {
+  const upcoming = simFuturePicksForSlot(slot, (mockSim?.currentOverall || 1) + 1);
+  const next = upcoming[0];
+  if (!next) return 0;
+  const gap = Number(row.Rank || 999) - next;
+  if (gap <= -24) return 95;
+  if (gap <= -12) return 60;
+  if (gap <= 0) return 35;
+  if (gap >= 18) return -25;
+  return 8;
+}
+
+function simBotRunPressure(row) {
+  const recent = simRecentPositionCounts(Math.min(10, leagueTeamTotal()));
+  const count = Number(recent[row.Pos] || 0);
+  if (count >= 5) return 65;
+  if (count >= 3) return 34;
+  return 0;
+}
+
 function simBotScore(row, counts, slot) {
   const round = simRound();
-  let score = 1800 - Number(row.Rank || 999) * 6 + leagueValueScore(row);
-  score += rosterNeedScoreAdjustment(row, counts, round);
-  if (positionClosed(row, counts)) score -= 700;
-  const wobble = Math.sin((mockSim.currentOverall + 1) * (slot + 3) * (Number(row.Rank || 1) + 11)) * 18;
+  const profile = simManagerProfile(slot);
+  const momentum = playerMarketMomentum(row);
+  const tier = simTopTierInfo(row.Pos);
+  const rank = Number(row.Rank || 999);
+  const value = leagueValueScore(row);
+  const upside = Number(row.Upside || row.Ceiling || 0);
+  const risk = Number(row.Risk || 0);
+  const needScore = rosterNeedScoreAdjustment(row, counts, round);
+  let score = 1900 - rank * profile.rank + value * 8 * profile.value;
+
+  score += needScore * profile.need;
+  score += clampNumber(momentum.score * 7 * profile.market, -120, 145);
+  score += simBotSurvivalPressure(row, slot) * profile.scarcity;
+  score += simBotRunPressure(row) * profile.scarcity;
+  if (tier.count <= 2 && (row["Pos Tier"] || row.Category) === tier.tier && !["DST", "K"].includes(row.Pos)) score += 56 * profile.scarcity;
+  if (["RB", "WR", "TE"].includes(row.Pos)) score += clampNumber((upside - 55) * 2.8 * profile.upside, -25, 95);
+  if (risk >= 6 && round <= 8) score -= 24 * profile.riskPenalty;
+  if (momentum.score <= -12 && risk >= 5) score -= 30 * profile.riskPenalty;
+  if (positionClosed(row, counts)) score -= 950;
+  if (shouldWaitOnSpecialTeams(row.Pos, round)) score -= 560;
+  if (row.Pos === "QB" && !activeLineupSlots().SUPERFLEX && counts.QB && round < 10) score -= 210;
+  const wobble = Math.sin((mockSim.currentOverall + 1) * (slot + 3) * (rank + 11)) * 7;
   return score + wobble;
 }
 
@@ -4695,7 +4957,7 @@ function simOpponentPick() {
   if (!mockSim || mockSim.currentOverall > simTotalPicks()) return;
   const slot = simSlotFromOverall(mockSim.currentOverall);
   const team = simTeam(slot);
-  const candidates = simAvailableRows().slice(0, 90);
+  const candidates = simAvailableRows().slice(0, Math.min(140, Math.max(70, leagueTeamTotal() * 11)));
   const row = candidates.sort((a, b) => simBotScore(b, team.counts, slot) - simBotScore(a, team.counts, slot))[0];
   if (!row) {
     mockSim.currentOverall = simTotalPicks() + 1;
@@ -4720,8 +4982,10 @@ function simStartDraft() {
   const teamCount = leagueTeamTotal();
   const slot = selectedSlot === "random" ? Math.floor(Math.random() * teamCount) + 1 : Number(selectedSlot || 1);
   const teams = {};
+  const profiles = {};
   for (let teamSlot = 1; teamSlot <= teamCount; teamSlot += 1) {
     teams[teamSlot] = { counts: emptyPositionCounts(), picks: [] };
+    profiles[teamSlot] = SIM_MANAGER_PERSONAS[(teamSlot + slot - 2) % SIM_MANAGER_PERSONAS.length];
   }
   mockSim = {
     active: true,
@@ -4730,6 +4994,7 @@ function simStartDraft() {
     drafted: new Set(),
     picks: [],
     teams,
+    profiles,
   };
   localStorage.setItem(loadoutStorageKey("sim-slot"), selectedSlot);
   simAdvanceToUserPick();
@@ -4751,51 +5016,127 @@ function simDraftPlayer(playerKey) {
   renderMockSimulator();
 }
 
+function simGradePenaltyWindow(deadlineRound) {
+  if (!mockSim) return 0;
+  const round = Math.min(draftRoundTotal(), simRound(Math.min(mockSim.currentOverall, simTotalPicks())));
+  if (round < deadlineRound) return 0;
+  return round >= draftRoundTotal() ? 1 : 0.55;
+}
+
 function simGradeRoster() {
   if (!mockSim) return { grade: "Pending", detail: "Start a mock." };
   const team = simTeam(mockSim.userSlot);
   const counts = team.counts;
   const targets = draftTargetCounts();
   const starters = starterTargetCounts();
+  const slots = activeLineupSlots();
   let score = 100;
   const notes = [];
+  const pickCount = team.picks.length;
+  const complete = mockSim.currentOverall > simTotalPicks();
+  const completion = Math.min(1, pickCount / Math.max(1, draftRoundTotal()));
+  const pickGrades = team.picks.map((pick) => ({ ...gradePick(pick.round, pick.overall, pick.row), pick }));
+  const reaches = pickGrades.filter((item) => item.label === "Reach");
+  const majorReaches = reaches.filter((item) => Number(item.pick.overall || 0) + 16 < expectedPickFor(item.pick.row));
+  const steals = pickGrades.filter((item) => item.label === "Steal" || item.label === "Good value");
+  const skillRows = team.picks.filter((pick) => ["QB", "RB", "WR", "TE"].includes(pick.row.Pos)).map((pick) => pick.row);
+  const avgRisk = skillRows.length ? skillRows.reduce((sum, row) => sum + Number(row.Risk || 0), 0) / skillRows.length : 0;
+  const highRiskEarly = team.picks.filter((pick) => pick.round <= 7 && Number(pick.row.Risk || 0) >= 7).length;
+  const rbWr = Number(counts.RB || 0) + Number(counts.WR || 0);
+  const flexEligible = flexEligibleCount(counts);
+  const starterMissing = {
+    QB: Math.max(0, Number(starters.QB || 0) - Number(counts.QB || 0)),
+    RB: Math.max(0, Number(starters.RB || 0) - Number(counts.RB || 0)),
+    WR: Math.max(0, Number(starters.WR || 0) - Number(counts.WR || 0)),
+    TE: Math.max(0, Number(starters.TE || 0) - Number(counts.TE || 0)),
+  };
 
   if (counts.RB < Math.min(targets.RB, starters.RB + 2)) {
-    score -= 12;
+    score -= Math.round(18 * Math.max(0.35, completion));
     notes.push("RB depth thin");
   }
   if (counts.WR < Math.min(targets.WR, starters.WR + 3)) {
-    score -= 12;
+    score -= Math.round(18 * Math.max(0.35, completion));
     notes.push("WR depth thin");
   }
+  if (starterMissing.RB && simGradePenaltyWindow(4)) {
+    score -= Math.round(14 * starterMissing.RB * simGradePenaltyWindow(4));
+    notes.push("starting RB not solved");
+  }
+  if (starterMissing.WR && simGradePenaltyWindow(5)) {
+    score -= Math.round(14 * starterMissing.WR * simGradePenaltyWindow(5));
+    notes.push("starting WR not solved");
+  }
+  if (starterMissing.QB && simGradePenaltyWindow(slots.SUPERFLEX ? 7 : 10)) {
+    score -= Math.round((slots.SUPERFLEX ? 18 : 10) * starterMissing.QB * simGradePenaltyWindow(slots.SUPERFLEX ? 7 : 10));
+    notes.push(slots.SUPERFLEX ? "superflex QB pressure" : "QB slot open late");
+  }
+  if (starterMissing.TE && simGradePenaltyWindow(10)) {
+    score -= Math.round(9 * starterMissing.TE * simGradePenaltyWindow(10));
+    notes.push("TE slot open late");
+  }
+  if (flexEligible < flexStarterTarget() && simGradePenaltyWindow(7)) {
+    score -= Math.round(10 * simGradePenaltyWindow(7));
+    notes.push("FLEX starter thin");
+  }
   if (counts.QB > targets.QB) {
-    score -= 8;
+    score -= 12;
     notes.push("extra QB");
   }
   if (counts.TE > targets.TE) {
-    score -= 8;
+    score -= 10;
     notes.push("extra TE");
   }
   if (counts.DST > targets.DST || counts.K > targets.K) {
-    score -= 8;
+    score -= 10;
     notes.push("extra DST/K");
   }
   const dstPick = team.picks.find((pick) => pick.row.Pos === "DST");
   const kPick = team.picks.find((pick) => pick.row.Pos === "K");
   if (dstPick && dstPick.round < dstTargetRound()) {
-    score -= 6;
+    score -= 10;
     notes.push("early DST");
   }
   if (kPick && kPick.round < kickerTargetRound()) {
-    score -= 6;
+    score -= 12;
     notes.push("early K");
   }
+  if (reaches.length) {
+    score -= reaches.length * 4 + majorReaches.length * 4;
+    notes.push(`${reaches.length} reach${reaches.length === 1 ? "" : "es"}`);
+  }
+  if (steals.length >= 2) {
+    score += Math.min(8, steals.length * 2);
+    notes.push(`${steals.length} value pick${steals.length === 1 ? "" : "s"}`);
+  }
+  if (highRiskEarly) {
+    score -= highRiskEarly * 5;
+    notes.push("early risk stack");
+  }
+  if (avgRisk >= 6 && pickCount >= 5) {
+    score -= 7;
+    notes.push("volatile build");
+  }
+  if (rbWr < Math.min(7, Math.round(draftRoundTotal() * 0.45)) && completion >= 0.75) {
+    score -= 10;
+    notes.push("RB/WR volume low");
+  }
+  if (team.picks.slice(0, 6).filter((pick) => ["RB", "WR"].includes(pick.row.Pos)).length < 4 && pickCount >= 6) {
+    score -= 8;
+    notes.push("foundation light on RB/WR");
+  }
 
-  score = Math.max(0, score);
-  const grade = score >= 90 ? "A" : score >= 80 ? "B" : score >= 70 ? "C" : score >= 60 ? "D" : "F";
+  score = Math.round(clampNumber(score, 0, 100));
+  const grade = score >= 93 ? "A" : score >= 86 ? "B+" : score >= 80 ? "B" : score >= 73 ? "C+" : score >= 67 ? "C" : score >= 58 ? "D" : "F";
   return {
-    grade: team.picks.length ? `${grade} (${score})` : "Pending",
-    detail: notes.length ? notes.join(", ") : team.picks.length ? "Shape is clean so far." : "Grade appears after picks.",
+    grade: pickCount ? `${grade} (${score})` : "Pending",
+    detail: notes.length
+      ? notes.slice(0, 5).join(", ")
+      : pickCount
+        ? complete
+          ? "Clean build with value discipline."
+          : "Shape is clean so far."
+        : "Grade appears after picks.",
   };
 }
 
@@ -4959,12 +5300,14 @@ function renderMockSimulator() {
   const userPick = active && mockSim.currentOverall <= totalPicks && simSlotFromOverall(mockSim.currentOverall) === mockSim.userSlot;
   const grade = simGradeRoster();
   const team = active ? simTeam(mockSim.userSlot) : { counts: emptyPositionCounts(), picks: [] };
+  const currentSlot = active && mockSim.currentOverall <= totalPicks ? simSlotFromOverall(mockSim.currentOverall) : null;
+  const currentManager = currentSlot ? simManagerProfile(currentSlot) : null;
 
   simStatus.innerHTML = active
-    ? `<strong>${userPick ? "You are on the clock." : "Mock in progress."}</strong> Slot ${mockSim.userSlot}, ${completed}/${totalPicks} picks complete.`
+    ? `<strong>${userPick ? "You are on the clock." : "Mock in progress."}</strong> Slot ${mockSim.userSlot}, ${completed}/${totalPicks} picks complete. CPU managers now draft with value, scarcity, market, and roster-build profiles.`
     : "Start a mock, then practice making picks while the room auto-drafts around you.";
   if (simCurrentPick) simCurrentPick.textContent = active && mockSim.currentOverall <= totalPicks ? `Round ${simRound()}, Pick ${simRoundPick(mockSim.currentOverall)}` : active ? "Mock complete" : "No mock started";
-  if (simCurrentTeam) simCurrentTeam.textContent = active && mockSim.currentOverall <= totalPicks ? `Overall ${mockSim.currentOverall}: Team ${simSlotFromOverall(mockSim.currentOverall)}${userPick ? " (you)" : ""}` : "Choose a slot and start.";
+  if (simCurrentTeam) simCurrentTeam.textContent = active && mockSim.currentOverall <= totalPicks ? `Overall ${mockSim.currentOverall}: Team ${currentSlot}${userPick ? " (you)" : currentManager ? ` / ${currentManager.name}` : ""}` : "Choose a slot and start.";
   if (simCompleted) simCompleted.textContent = String(completed);
   if (simTotal) simTotal.textContent = `of ${totalPicks}`;
   if (simProgressBar) simProgressBar.style.width = `${pct}%`;
@@ -5005,6 +5348,7 @@ function liveServerHelp(error) {
     `;
   }
   if (liveSyncStatus) liveSyncStatus.textContent = "Sync unavailable";
+  renderLeagueHealth();
 }
 
 function loadLiveDraft(force = false) {
@@ -5021,7 +5365,9 @@ function loadLiveDraft(force = false) {
       } else {
         throw new Error(data.error || "ESPN returned no draft data");
       }
-      renderLiveDraft();
+      const nextSignature = liveDraftRenderSignature(liveDraft);
+      const unchanged = !force && lastLiveDraftRenderSignature && nextSignature === lastLiveDraftRenderSignature;
+      renderLiveDraft({ full: !unchanged });
     })
     .catch((error) => {
       liveServerHelp(error.message);

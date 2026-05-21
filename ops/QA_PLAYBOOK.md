@@ -38,12 +38,15 @@ Dashboard:
 - Sign out locks the customer dashboard again.
 - Refresh keeps signed-in customer dashboards signed in.
 - League switcher opens when multiple leagues exist.
+- League Health shows account access, ESPN sync, team match, scoring, and draft state.
+- Draft recommendations show compact proof lines for why the player is recommended.
 - Add-league button opens the setup/add-on flow.
 
 Setup:
 - `/setup.html` loads on mobile and desktop.
 - ESPN public league validation succeeds for known demo test data.
 - Invalid league/team IDs show a useful error.
+- Successful authenticated setup routes back into the saved dashboard and league.
 - Customer setup save falls back gracefully when database is disconnected.
 - Customer setup save writes to database when `DATABASE_URL` is connected.
 
@@ -57,6 +60,13 @@ Mock Simulator:
 - Team count and draft rounds follow active league settings.
 - Superflex toggles appear only when the league uses superflex.
 - Mock grading appears inside the simulator flow.
+- CPU managers draft competitively with varied value, scarcity, market, upside, floor, and roster-build profiles.
+- Mock grade notes flag reaches, early risk, thin RB/WR depth, starter gaps, and early DST/K picks.
+
+Player Cards:
+- Daily Player Synopsis uses plain-English Bottom line, Why it matters, Risk, and Draft move sections.
+- FantasyIQ Read uses Move, Fit, Risk, and Plain English sections.
+- Player drawers do not show dense raw source-line paragraphs.
 
 Trade Calculator:
 - Current-season trade analysis remains.

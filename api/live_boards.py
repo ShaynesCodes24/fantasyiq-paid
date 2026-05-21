@@ -847,15 +847,12 @@ def analysis_for(row: dict[str, Any], ownership: dict[str, Any]) -> str:
     started = float(ownership.get("percentStarted") or 0.0)
     scoring_label = row.get("Scoring Label") or "league"
     external_signal = str(row.get("External Signal") or "").strip()
-    external_text = f" Sleeper market signal: {external_signal}" if external_signal else ""
+    market = f" Sleeper market: {external_signal}." if external_signal else " No strong Sleeper add/drop signal yet."
     return (
-        f"Live ESPN feed ranks {row['Player']} #{row['Rank']} overall and {row['Pos']}{row['Pos Rank']}. "
-        f"Current ADP is {adp_text}, native {scoring_label} projection is {row['Proj PPR Pts']}, "
-        f"last-year {scoring_label} scoring is {row['Last Year PPR']}, ownership is {owned:.1f}%, "
-        f"and start rate is {started:.1f}%. FantasyIQ value is recalculated from ESPN rank, ADP, raw-stat projection, "
-        f"prior-year raw-stat production, volatility, ownership, injury flags, and live add/drop pressure whenever the live board refreshes. "
-        f"{external_text} "
-        f"Risk read: {row['Risk Notes']}."
+        f"{row['Player']} is {row['Pos']}{row['Pos Rank']} and #{row['Rank']} overall. "
+        f"Projection: {row['Proj PPR Pts']} {scoring_label}. ADP: {adp_text}. "
+        f"Last year: {row['Last Year PPR']}. Rostered in {owned:.1f}% of ESPN leagues and started in {started:.1f}%. "
+        f"Draft move: {row['Action']}. Risk: {row['Risk']}/10. {row['Risk Notes']}.{market}"
     )
 
 
@@ -871,20 +868,14 @@ def daily_synopsis_for(row: dict[str, Any], seed: dict[str, Any], season: int) -
         if last_year != "N/A"
         else f"No {year_label(season)} NFL {scoring_label} sample"
     )
-    status_parts = [
-        f"{row['Pos']}{row['Pos Rank']} / rank #{row['Rank']}",
-        f"projected {row['Proj PPR Pts']} {scoring_label}",
-        last_year_text,
-        f"risk {row['Risk']}/10",
-    ]
-    if row.get("External Signal"):
-        status_parts.append(str(row.get("External Signal")))
+    market = str(row.get("External Signal") or "No strong live market move yet")
     fallback = (
-        f"{row['Player']} is a {row['Pos']} for {row['Team']} with {', '.join(status_parts)}. "
-        f"FantasyIQ's current action is: {row['Action']}. Risk read: {row['Risk Notes']}."
+        f"Bottom line: {row['Player']} is a {row['Pos']} for {row['Team']}, ranked #{row['Rank']} overall and {row['Pos']}{row['Pos Rank']}. "
+        f"Why it matters: projected {row['Proj PPR Pts']} {scoring_label}; {last_year_text}; {market}. "
+        f"Risk: {row['Risk']}/10. {row['Risk Notes']} Draft move: {row['Action']}."
     )
     body = outlook or fallback
-    headline = f"Daily FantasyIQ read: {', '.join(status_parts)}."
+    headline = f"Daily FantasyIQ read: #{row['Rank']} overall, {row['Pos']}{row['Pos Rank']}, {row['Proj PPR Pts']} projected {scoring_label}, risk {row['Risk']}/10."
     news_status = (
         f"Latest ESPN player note is dated {news_date}; synopsis refreshed from the live board on {today}."
         if news_date

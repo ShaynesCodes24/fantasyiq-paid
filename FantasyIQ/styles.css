@@ -347,6 +347,18 @@ h3 {
   line-height: 1;
 }
 
+.league-switcher.needs-setup .league-switcher-actions {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.league-switcher.needs-setup .league-switcher-actions button {
+  width: auto;
+  min-width: 74px;
+  padding: 0 12px;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
 .league-switcher-actions button:hover {
   filter: brightness(1.05);
 }
@@ -967,6 +979,114 @@ textarea {
 .league-profile-strip span,
 .league-room-note span {
   min-width: 0;
+}
+
+.league-health-panel {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 18px;
+  border: 1px solid rgba(18, 63, 52, 0.16);
+  border-radius: 8px;
+  background: #fffdf6;
+  padding: 14px;
+  box-shadow: var(--shadow-soft);
+}
+
+.league-health-panel[data-state="good"] {
+  border-color: rgba(45, 126, 87, 0.26);
+}
+
+.league-health-panel[data-state="warn"] {
+  border-color: rgba(184, 135, 53, 0.35);
+}
+
+.league-health-panel[data-state="danger"] {
+  border-color: rgba(156, 57, 43, 0.32);
+}
+
+.league-health-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.league-health-head h3 {
+  margin: 2px 0 0;
+  font-size: 18px;
+}
+
+.league-health-head > strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  border-radius: 999px;
+  background: #e5f2ee;
+  color: var(--accent);
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.league-health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.league-health-grid article {
+  min-width: 0;
+  border: 1px solid rgba(216, 195, 146, 0.68);
+  border-radius: 8px;
+  background: #fffaf0;
+  padding: 12px;
+}
+
+.league-health-grid article.good {
+  border-color: rgba(45, 126, 87, 0.25);
+  background: #f0f8f4;
+}
+
+.league-health-grid article.warn {
+  border-color: rgba(184, 135, 53, 0.3);
+  background: #fff8e8;
+}
+
+.league-health-grid article.danger {
+  border-color: rgba(156, 57, 43, 0.3);
+  background: #fff1ed;
+}
+
+.league-health-grid span,
+.league-health-grid small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.league-health-grid span {
+  text-transform: uppercase;
+}
+
+.league-health-grid strong {
+  display: block;
+  margin: 4px 0;
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.15;
+}
+
+.recommendation-proof {
+  border-top: 1px solid rgba(18, 63, 52, 0.1);
+  color: #355d52;
+  padding-top: 8px;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.35;
 }
 
 .command-tile {
@@ -1646,6 +1766,72 @@ li + li {
   text-transform: none;
 }
 
+.trade-lane-summary.waiver-summary strong {
+  font-size: 18px;
+}
+
+.trade-idea-list {
+  display: grid;
+  gap: 12px;
+}
+
+.trade-idea-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(18, 63, 52, 0.12);
+  border-radius: 8px;
+  background: #fffef9;
+  padding: 13px;
+}
+
+.trade-idea-head {
+  display: grid;
+  gap: 4px;
+}
+
+.trade-idea-head span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.trade-idea-head strong {
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.12;
+}
+
+.trade-idea-head small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.trade-idea-flow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.trade-idea-flow section {
+  min-width: 0;
+}
+
+.trade-idea-flow h4 {
+  margin: 0 0 7px;
+  color: var(--ink);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.trade-idea-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
 .waiver-list {
   display: grid;
   gap: 8px;
@@ -2040,6 +2226,23 @@ code {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.player-synopsis-details,
+.player-read-copy {
+  display: grid;
+  gap: 7px;
+}
+
+.player-synopsis-details p,
+.player-read-copy p {
+  margin: 0;
+}
+
+.player-synopsis-details p strong,
+.player-read-copy p strong {
+  color: var(--ink);
+  font-size: inherit;
 }
 
 .player-synopsis.compact {
@@ -3482,6 +3685,8 @@ body.access-locked .topbar {
 
 .access-card {
   width: min(560px, 100%);
+  max-height: calc(100vh - 44px);
+  overflow: auto;
   border: 1px solid rgba(247, 205, 101, 0.55);
   border-radius: 8px;
   padding: 28px;
@@ -3530,6 +3735,52 @@ body.access-locked .topbar {
   justify-content: center;
 }
 
+.access-forgot {
+  width: auto !important;
+  min-height: 34px;
+  margin: -4px 0 14px auto;
+  border: 0;
+  background: transparent;
+  color: #0f3a30;
+  padding: 0;
+  text-align: right;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  box-shadow: none;
+  font-weight: 900;
+}
+
+.access-forgot:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.access-card button:disabled {
+  cursor: wait;
+  opacity: 0.64;
+}
+
+.access-recovery {
+  margin-top: 16px;
+  border: 1px solid rgba(18, 63, 52, 0.16);
+  border-radius: 8px;
+  background: rgba(248, 239, 216, 0.56);
+  padding: 0 14px;
+}
+
+.access-recovery summary {
+  min-height: 46px;
+  cursor: pointer;
+  color: #082217;
+  display: grid;
+  align-items: center;
+  font-weight: 900;
+}
+
+.access-recovery[open] {
+  padding-bottom: 14px;
+}
+
 .access-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3563,10 +3814,31 @@ body.access-locked .topbar {
 }
 
 .access-message {
-  min-height: 24px;
+  min-height: 44px;
   margin-top: 12px;
-  color: #8a4a0b;
-  font-weight: 800;
+  border: 1px solid rgba(180, 127, 23, 0.32);
+  border-radius: 8px;
+  background: #fff6dc;
+  padding: 12px;
+  color: #7a3e06;
+  font-weight: 900;
+  line-height: 1.45;
+}
+
+.access-message:empty {
+  display: none;
+}
+
+.access-message[data-state="error"] {
+  border-color: rgba(138, 74, 11, 0.45);
+  background: #fff0d0;
+  color: #7a3300;
+}
+
+.access-message[data-state="info"] {
+  border-color: rgba(15, 58, 48, 0.2);
+  background: #edf7f2;
+  color: #0f3a30;
 }
 
 .access-card small {
@@ -4401,6 +4673,34 @@ textarea,
   .player-drawer-panel {
     padding: 22px 16px;
   }
+
+  .access-gate {
+    align-items: start;
+    padding: 12px;
+    overflow: auto;
+  }
+
+  .access-card {
+    max-height: none;
+    padding: 18px;
+  }
+
+  .access-card h2 {
+    font-size: clamp(25px, 8vw, 31px);
+  }
+
+  .access-card label {
+    margin: 14px 0 10px;
+  }
+
+  .access-card input {
+    min-height: 48px;
+  }
+
+  .access-forgot {
+    margin-left: 0;
+    text-align: left;
+  }
 }
 
 /* Premium product polish pass */
@@ -4468,7 +4768,8 @@ body {
 .account-card span,
 .league-switcher span,
 .league-switcher small {
-  color: rgba(255, 241, 189, 0.74);
+  color: rgba(255, 241, 189, 0.86);
+  font-weight: 850;
 }
 
 .draft-card strong,
@@ -4553,7 +4854,21 @@ body {
 }
 
 .command-hero p {
-  color: rgba(255, 247, 221, 0.82);
+  color: rgba(255, 247, 221, 0.9);
+  font-weight: 700;
+}
+
+.panel p,
+.metric small,
+.command-tile small,
+.pick-card small,
+.intel-card small,
+.live-stat small,
+.live-clock small,
+.account-league-list p,
+.support-panel p {
+  color: rgba(19, 43, 36, 0.78);
+  font-weight: 700;
 }
 
 .metric,
@@ -4761,7 +5076,8 @@ small,
   .post-draft-hero,
   .post-draft-grid,
   .trade-intelligence-grid,
-  .trade-finder-grid {
+  .trade-finder-grid,
+  .trade-idea-flow {
     grid-template-columns: 1fr;
   }
 

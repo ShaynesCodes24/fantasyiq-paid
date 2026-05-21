@@ -125,6 +125,10 @@ const leagueDraftRounds = document.querySelector("#league-draft-rounds");
 const leagueDraftNote = document.querySelector("#league-draft-note");
 const leagueProfileStrip = document.querySelector("#league-profile-strip");
 const leagueRoomNote = document.querySelector("#league-room-note");
+const leagueHealthPanel = document.querySelector("#league-health-panel");
+const leagueHealthTitle = document.querySelector("#league-health-title");
+const leagueHealthScore = document.querySelector("#league-health-score");
+const leagueHealthGrid = document.querySelector("#league-health-grid");
 const boardMethodNote = document.querySelector("#board-method-note");
 const accountAddLeague = document.querySelector("#account-add-league");
 const accountDashboardName = document.querySelector("#account-dashboard-name");
@@ -318,6 +322,7 @@ let activePlayerAutocomplete = null;
 let fullBoardLoadStarted = false;
 let customerPasswordSession = false;
 let customerBootStarted = false;
+let lastLiveDraftRenderSignature = "";
 
 function rememberedCustomerLoadout(loadouts) {
   try {
@@ -427,6 +432,11 @@ function requiresCustomerAccess() {
   return Boolean(appConfig.loadoutKey && appConfig.loadoutKey !== "default");
 }
 
+function loginRequested() {
+  const params = new URLSearchParams(window.location.search);
+  return params.has("login") || params.get("auth") === "login";
+}
+
 function savedCustomerAccessCode() {
   const key = loadoutStorageKey("access-code");
   const raw = localStorage.getItem(key) || "";
@@ -467,6 +477,30 @@ function clearCustomerAccessCode() {
 
 function hasCustomerAccess() {
   return Boolean(savedCustomerAccessCode() || customerPasswordSession);
+}
+
+function rememberCustomerDashboard(customer = {}) {
+  const slug = normalizeDashboardSlug(customer.customerSlug || appConfig.loadoutKey || "");
+  const leagueKey = normalizeDashboardSlug(customer.leagueKey || appConfig.leagueKey || "");
+  if (!slug || slug === "default") return;
+  try {
+    localStorage.setItem("fantasy-dashboard:last-loadout", slug);
+    localStorage.setItem(`fantasy-dashboard:${slug}:password-session`, "true");
+    if (leagueKey) {
+      localStorage.setItem(`fantasy-dashboard:${slug}:last-league`, leagueKey);
+    }
+  } catch (error) {
+    // Local storage is a convenience only; auth still works from the session cookie.
+  }
+}
+
+function rememberedPasswordSession() {
+  try {
+    const slug = normalizeDashboardSlug(localStorage.getItem("fantasy-dashboard:last-loadout") || "");
+    return Boolean(slug && localStorage.getItem(`fantasy-dashboard:${slug}:password-session`));
+  } catch (error) {
+    return false;
+  }
 }
 
 function apiUrl(path, params = {}) {
@@ -510,6 +544,7 @@ function finishCustomerSignIn(payload, accessCode = "") {
   }
   customerPasswordSession = true;
   applyServerCustomerContext(payload.customer);
+  rememberCustomerDashboard(payload.customer);
   if (accessCode) setCustomerAccessCode(accessCode);
   removeCustomerAccessGate();
   ensureCustomerUrlContext();
@@ -530,8 +565,8 @@ function showCustomerAccessGate(message = "") {
   gate.innerHTML = `
     <form class="access-card">
       <p class="eyebrow">Customer Login</p>
-      <h2>${needsIdentity ? "Open your dashboard" : `Open ${htmlEscape(customerLabel)}`}</h2>
-      <p>${needsIdentity ? "Sign in with the email from checkout." : "Sign in with your FantasyIQ password. First time here? Create one with your setup access code."}</p>
+      <h2>${needsIdentity ? "Log in to your dashboard" : `Open ${htmlEscape(customerLabel)}`}</h2>
+      <p>${needsIdentity ? "Use the email from checkout and your FantasyIQ password." : "Use your FantasyIQ password to open your saved leagues."}</p>
       <label ${needsIdentity ? "" : "hidden"}>
         Email or dashboard slug
         <input id="customer-login-identity" type="text" autocomplete="username" ${needsIdentity ? "required" : ""} />
@@ -540,27 +575,31 @@ function showCustomerAccessGate(message = "") {
         Password
         <input id="customer-login-password" type="password" autocomplete="current-password" />
       </label>
-      <button type="submit" class="primary-action">Sign In</button>
-      <div class="access-divider"><span>Setup or recovery</span></div>
-      <label>
-        Access code
-        <input id="customer-access-code" type="password" autocomplete="off" />
-      </label>
-      <div class="access-grid">
+      <button type="button" class="access-forgot" id="customer-forgot-password">Forgot password?</button>
+      <button type="submit" class="primary-action" id="customer-password-signin">Log in</button>
+      <details class="access-recovery" ${message ? "open" : ""}>
+        <summary>Setup code or password reset</summary>
         <label>
-          New password
-          <input id="customer-new-password" type="password" autocomplete="new-password" />
+          Access code
+          <input id="customer-access-code" type="password" autocomplete="off" />
         </label>
-        <label>
-          Confirm
-          <input id="customer-confirm-password" type="password" autocomplete="new-password" />
-        </label>
-      </div>
-      <div class="access-actions">
-        <button type="button" id="customer-code-unlock">Unlock With Code</button>
-        <button type="button" id="customer-create-password">Create Password</button>
-      </div>
-      <div class="access-message">${message ? htmlEscape(message) : ""}</div>
+        <div class="access-grid">
+          <label>
+            New password
+            <input id="customer-new-password" type="password" autocomplete="new-password" />
+          </label>
+          <label>
+            Confirm
+            <input id="customer-confirm-password" type="password" autocomplete="new-password" />
+          </label>
+        </div>
+        <div class="access-actions">
+          <button type="button" id="customer-code-unlock">Unlock With Code</button>
+          <button type="button" id="customer-create-password">Create / Reset Password</button>
+          <button type="button" id="customer-email-reset">Send Reset Email</button>
+        </div>
+      </details>
+      <div class="access-message" role="status" aria-live="polite" data-state="${message ? "info" : "idle"}">${message ? htmlEscape(message) : ""}</div>
       <small>Need help? Email ${htmlEscape(appConfig.supportEmail || "support")}.</small>
     </form>
   `;
@@ -570,8 +609,67 @@ function showCustomerAccessGate(message = "") {
   const codeInput = gate.querySelector("#customer-access-code");
   const newPasswordInput = gate.querySelector("#customer-new-password");
   const confirmPasswordInput = gate.querySelector("#customer-confirm-password");
+  const recoveryPanel = gate.querySelector(".access-recovery");
   const output = gate.querySelector(".access-message");
+  const authButtons = Array.from(gate.querySelectorAll("button"));
   const identityValue = () => (needsIdentity ? identityInput.value.trim() : appConfig.loadoutKey);
+  const passwordSetupMessage =
+    "This account does not have a saved password yet. Use the access code from the setup email below, enter the password twice, then click Create / Reset Password. You can also click Unlock With Code for one-time access.";
+  const friendlyAuthMessage = (message = "") => {
+    if (/failed to fetch|networkerror|load failed|abort/i.test(message)) {
+      return "Could not reach the FantasyIQ login service. Check your connection and try again.";
+    }
+    if (/create a password/i.test(message)) return passwordSetupMessage;
+    if (/customer account was not found/i.test(message)) {
+      return "We could not find that customer account. Use the exact email from checkout, or open the dashboard link from the setup email.";
+    }
+    if (/email or password/i.test(message)) return "That email and password did not match. Try again, or use your setup access code below to reset/create the password.";
+    return message || "Could not sign in. Refresh and try again.";
+  };
+  const fetchJsonWithRetry = async (path, body, fallbackMessage, attempts = 2) => {
+    let lastError = null;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 20000);
+      try {
+        const response = await fetch(path, {
+          method: "POST",
+          cache: "no-store",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.ok || payload.authenticated === false) {
+          throw new Error(payload.message || fallbackMessage);
+        }
+        return payload;
+      } catch (error) {
+        lastError = error;
+        const message = String(error?.message || "");
+        if (attempt >= attempts || !/failed to fetch|networkerror|load failed|abort/i.test(message)) {
+          throw error;
+        }
+        showAuthMessage("Retrying the login service...", "info");
+        await new Promise((resolve) => window.setTimeout(resolve, 900));
+      } finally {
+        window.clearTimeout(timeout);
+      }
+    }
+    throw lastError || new Error(fallbackMessage);
+  };
+  const setAuthBusy = (busy) => {
+    authButtons.forEach((button) => {
+      button.disabled = busy;
+      button.setAttribute("aria-busy", busy ? "true" : "false");
+    });
+  };
+  const showAuthMessage = (text, state = "info") => {
+    output.textContent = text;
+    output.dataset.state = state;
+    if (text) output.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  };
   const customerBody = (extra = {}) => ({
     customer: identityValue(),
     league: appConfig.leagueKey || "",
@@ -579,51 +677,72 @@ function showCustomerAccessGate(message = "") {
   });
   const requireIdentity = () => {
     if (!needsIdentity || identityValue()) return true;
-    output.textContent = "Enter the email from checkout or your dashboard slug.";
+    showAuthMessage("Enter the email from checkout or your dashboard slug.", "error");
     return false;
   };
   const postAuth = async (path, body) => {
-    const response = await fetch(path, {
-      method: "POST",
-      cache: "no-store",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const payload = await response.json();
-    if (!response.ok || !payload.ok || payload.authenticated === false) {
-      throw new Error(payload.message || "That sign in did not work.");
+    return fetchJsonWithRetry(path, body, "That sign in did not work.");
+  };
+  const sendPasswordReset = async () => {
+    if (!requireIdentity()) return;
+    showAuthMessage("Sending reset email...", "info");
+    setAuthBusy(true);
+    const progressTimer = window.setTimeout(() => {
+      showAuthMessage("Still checking that account. Keep this window open for a moment.", "info");
+    }, 8000);
+    try {
+      const payload = await fetchJsonWithRetry(
+        "/api/customer-password-reset",
+        customerBody(),
+        "Could not send reset email.",
+      );
+      showAuthMessage(payload.message || "If that account exists, a password reset email is on the way.", "info");
+    } catch (error) {
+      showAuthMessage(friendlyAuthMessage(error.message || "Could not send reset email right now."), "error");
+    } finally {
+      window.clearTimeout(progressTimer);
+      setAuthBusy(false);
     }
-    return payload;
   };
   (needsIdentity ? identityInput : passwordInput)?.focus();
   gate.querySelector("form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const password = passwordInput.value.trim();
     if (!password) {
-      output.textContent = "Enter your password or use the setup access code below.";
+      showAuthMessage("Enter your password, or use the setup access code below to create one.", "error");
       return;
     }
     if (!requireIdentity()) return;
-    output.textContent = "Signing in...";
+    showAuthMessage("Signing in...", "info");
+    setAuthBusy(true);
     try {
       finishCustomerSignIn(await postAuth("/api/customer-login", customerBody({ password })));
     } catch (error) {
-      output.textContent = error.message || "Could not sign in. Refresh and try again.";
+      const messageText = friendlyAuthMessage(error.message);
+      showAuthMessage(messageText, "error");
+      if (messageText === passwordSetupMessage) {
+        recoveryPanel.open = true;
+        codeInput.focus();
+      }
+    } finally {
+      setAuthBusy(false);
     }
   });
   gate.querySelector("#customer-code-unlock")?.addEventListener("click", async () => {
     const code = codeInput.value.trim();
     if (!code) {
-      output.textContent = "Enter your FantasyIQ access code.";
+      showAuthMessage("Enter your FantasyIQ access code.", "error");
       return;
     }
     if (!requireIdentity()) return;
-    output.textContent = "Checking access...";
+    showAuthMessage("Checking access...", "info");
+    setAuthBusy(true);
     try {
       finishCustomerSignIn(await postAuth("/api/customer-login", customerBody({ accessCode: code })), code);
     } catch (error) {
-      output.textContent = error.message || "Could not verify the code. Refresh and try again.";
+      showAuthMessage(friendlyAuthMessage(error.message || "Could not verify the code. Refresh and try again."), "error");
+    } finally {
+      setAuthBusy(false);
     }
   });
   gate.querySelector("#customer-create-password")?.addEventListener("click", async () => {
@@ -631,21 +750,26 @@ function showCustomerAccessGate(message = "") {
     const password = newPasswordInput.value.trim();
     const confirm = confirmPasswordInput.value.trim();
     if (!code) {
-      output.textContent = "Enter your setup access code first.";
+      showAuthMessage("Enter your setup access code first.", "error");
       return;
     }
     if (password !== confirm) {
-      output.textContent = "Those passwords do not match.";
+      showAuthMessage("Those passwords do not match.", "error");
       return;
     }
     if (!requireIdentity()) return;
-    output.textContent = "Creating password...";
+    showAuthMessage("Creating password...", "info");
+    setAuthBusy(true);
     try {
       finishCustomerSignIn(await postAuth("/api/customer-password", customerBody({ accessCode: code, password })));
     } catch (error) {
-      output.textContent = error.message || "Could not create that password right now.";
+      showAuthMessage(friendlyAuthMessage(error.message || "Could not create that password right now."), "error");
+    } finally {
+      setAuthBusy(false);
     }
   });
+  gate.querySelector("#customer-forgot-password")?.addEventListener("click", sendPasswordReset);
+  gate.querySelector("#customer-email-reset")?.addEventListener("click", sendPasswordReset);
 }
 
 function ensureCustomerAccess() {
@@ -667,11 +791,15 @@ function handleCustomerAccessFailure(message = "Enter the current customer acces
 }
 
 async function restoreCustomerSession() {
-  if (!requiresCustomerAccess() || hasCustomerAccess()) return false;
+  if (hasCustomerAccess()) return false;
+  if (!(requiresCustomerAccess() || loginRequested() || rememberedPasswordSession())) return false;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 3500);
   try {
     const response = await fetch(apiUrl("/api/customer-session", { v: Date.now() }), {
       cache: "no-store",
       credentials: "same-origin",
+      signal: controller.signal,
     });
     const payload = await response.json();
     if (!response.ok || !payload.ok || payload.authenticated === false || !payload.customer) {
@@ -679,6 +807,7 @@ async function restoreCustomerSession() {
     }
     customerPasswordSession = true;
     applyServerCustomerContext(payload.customer);
+    rememberCustomerDashboard(payload.customer);
     removeCustomerAccessGate();
     ensureCustomerUrlContext();
     applyAppConfig();
@@ -686,13 +815,21 @@ async function restoreCustomerSession() {
     return true;
   } catch (error) {
     return false;
+  } finally {
+    window.clearTimeout(timeout);
   }
 }
 
 async function bootCustomerDashboard() {
   if (customerBootStarted) return;
   customerBootStarted = true;
+  if (loginRequested() && !hasCustomerAccess()) {
+    showCustomerAccessGate();
+  }
   await restoreCustomerSession();
+  if (loginRequested() && !hasCustomerAccess()) {
+    showCustomerAccessGate();
+  }
   loadBoards();
   startLiveSync();
 }
@@ -942,6 +1079,8 @@ function leagueValueScore(row) {
   if (slots.FLEX >= 2 && row.Pos === "TE") score += 1.5;
   if (teamCount >= 14 && ["RB", "WR"].includes(row.Pos)) score += 3;
   if (teamCount <= 10 && Number(row.Upside || row.Ceiling || 0) >= 65) score += 2;
+  score += clampNumber(externalTrendScore(row) * 0.25, -5, 5);
+  if ((row.Category === "Rookie" || row["Rookie Signal"]) && externalTrendScore(row) >= 7 && Number(row.Rank || 999) > 55) score += 2;
   if (!slots.K && row.Pos === "K") score -= 25;
   if (!slots.DST && row.Pos === "DST") score -= 25;
   return Math.round(score * 10) / 10;
@@ -949,6 +1088,75 @@ function leagueValueScore(row) {
 
 function valueDisplay(row) {
   return leagueValueScore(row).toFixed(1);
+}
+
+function formatMarketCount(value) {
+  const number = Number(value || 0);
+  if (!Number.isFinite(number)) return "0";
+  return number.toLocaleString();
+}
+
+function externalTrendScore(row) {
+  const score = Number(row?.["External Trend Score"] || 0);
+  return Number.isFinite(score) ? score : 0;
+}
+
+function sleeperMarketCounts(row) {
+  const adds = Number(row?.["Sleeper Add Count"] || 0);
+  const drops = Number(row?.["Sleeper Drop Count"] || 0);
+  const net = Number(row?.["Sleeper Net Adds"] || adds - drops || 0);
+  return {
+    adds: Number.isFinite(adds) ? adds : 0,
+    drops: Number.isFinite(drops) ? drops : 0,
+    net: Number.isFinite(net) ? net : 0,
+  };
+}
+
+function playerMarketMomentum(row) {
+  const { adds, drops, net } = sleeperMarketCounts(row);
+  const score = externalTrendScore(row);
+  const hasSleeperSignal = adds > 0 || drops > 0;
+  const rookie = row?.Category === "Rookie" || Boolean(row?.["Rookie Signal"]);
+  if (hasSleeperSignal && (net >= 250 || score >= 7)) {
+    return {
+      label: `Market up ${formatMarketCount(net)}`,
+      detail: `Sleeper add/drop pressure is positive: ${formatMarketCount(adds)} adds, ${formatMarketCount(drops)} drops.`,
+      className: "good",
+      score,
+      rookie,
+      hasSleeperSignal,
+    };
+  }
+  if (hasSleeperSignal && (net <= -250 || score <= -7)) {
+    return {
+      label: `Market down ${formatMarketCount(Math.abs(net))}`,
+      detail: `Sleeper add/drop pressure is negative: ${formatMarketCount(adds)} adds, ${formatMarketCount(drops)} drops.`,
+      className: "danger",
+      score,
+      rookie,
+      hasSleeperSignal,
+    };
+  }
+  if (rookie && hasSleeperSignal) {
+    return {
+      label: "Rookie signal",
+      detail: `Rookie profile with live Sleeper activity: net ${formatMarketCount(net)} over the lookback.`,
+      className: score >= 0 ? "watch" : "danger",
+      score,
+      rookie,
+      hasSleeperSignal,
+    };
+  }
+  return {
+    label: rookie ? "Rookie watch" : "Neutral signal",
+    detail: hasSleeperSignal
+      ? `Sleeper net ${formatMarketCount(net)} from ${formatMarketCount(adds)} adds and ${formatMarketCount(drops)} drops.`
+      : "No live Sleeper add/drop signal matched yet.",
+    className: score < 0 ? "danger" : "watch",
+    score,
+    rookie,
+    hasSleeperSignal,
+  };
 }
 
 function renderLeagueProfile() {
@@ -980,9 +1188,10 @@ function renderLeagueProfile() {
   }
   if (boardMethodNote) {
     boardMethodNote.textContent = boardData?.scoringProfile
-      ? "Source-backed raw-stat board with league-native scoring"
+      ? "Source-backed raw-stat board with league-native scoring and live market signals"
       : "Source-backed board with league-profile adjustments";
   }
+  renderLeagueHealth();
   document.querySelectorAll(".superflex-toggle").forEach((button) => {
     button.hidden = Number(slots.SUPERFLEX || 0) === 0;
   });
@@ -1015,9 +1224,88 @@ function activeLeagueOption() {
   return options.find((league) => league.key === appConfig.leagueKey) || options[0] || null;
 }
 
+function hasPrimaryLeagueProfile() {
+  return Boolean(appConfig.leagueId || appConfig.customerTeamName);
+}
+
+function leagueHealthItems() {
+  const settings = activeLeagueSettings();
+  const teamId = String(appConfig.customerTeamId || "");
+  const liveTeams = liveDraft?.teams || [];
+  const matchedTeam = teamId ? liveTeams.find((team) => String(team.teamId) === teamId) : null;
+  const publicSyncDetail = liveDraft?.staleError
+    ? `Stale fallback: ${liveDraft.staleError}`
+    : liveDraft
+      ? `${liveDraft.demoMode ? "Demo league" : "Public ESPN league"} synced ${formatSyncTime(liveDraft.syncedAt)}`
+      : appConfig.leagueId
+        ? "Waiting for first ESPN sync"
+        : requiresCustomerAccess()
+          ? "League setup is still needed"
+          : "Demo league will connect automatically";
+  const draftState = liveDraft?.inProgress ? "Draft live" : liveDraft?.drafted ? "Draft complete" : liveDraft ? "Board loaded" : "Pending";
+  return [
+    {
+      label: "Account",
+      value: requiresCustomerAccess() ? (hasCustomerAccess() ? "Signed in" : "Sign in needed") : "Demo preview",
+      detail: requiresCustomerAccess() ? (hasCustomerAccess() ? "Dashboard access is active on this device." : "Unlock to save and read paid league profiles.") : "Public preview with sample data.",
+      state: requiresCustomerAccess() && !hasCustomerAccess() ? "warn" : "good",
+    },
+    {
+      label: "ESPN Sync",
+      value: liveDraft?.staleError ? "Needs review" : liveDraft ? "Connected" : appConfig.leagueId ? "Pending" : requiresCustomerAccess() ? "Setup needed" : "Demo pending",
+      detail: publicSyncDetail,
+      state: liveDraft?.staleError ? "danger" : liveDraft ? "good" : "warn",
+    },
+    {
+      label: "Team Match",
+      value: matchedTeam ? "Matched" : teamId ? "Configured" : "Select team",
+      detail: matchedTeam
+        ? `${matchedTeam.teamName || appConfig.customerTeamName || `Team ${teamId}`} is tied to recommendations.`
+        : teamId
+          ? `${appConfig.customerTeamName || `Team ${teamId}`} will match once ESPN teams load.`
+          : "Choose your ESPN team for roster and next-pick pressure.",
+      state: matchedTeam || teamId ? "good" : "warn",
+    },
+    {
+      label: "Scoring",
+      value: settings.scoringLabel || SCORING_LABELS[settings.scoringType] || "Custom",
+      detail: `${leagueTeamTotal()} teams, ${lineupSummary(settings)}, ${draftRoundTotal(settings)} rounds.`,
+      state: "good",
+    },
+    {
+      label: "Draft State",
+      value: draftState,
+      detail: liveDraft ? `${Number(liveDraft.completedPicks || 0)}/${Number(liveDraft.totalPicks || 0) || leagueTeamTotal() * draftRoundTotal(settings)} picks complete.` : "Sync once before draft day.",
+      state: liveDraft ? "good" : "warn",
+    },
+  ];
+}
+
+function renderLeagueHealth() {
+  if (!leagueHealthGrid) return;
+  const items = leagueHealthItems();
+  const dangerCount = items.filter((item) => item.state === "danger").length;
+  const warnCount = items.filter((item) => item.state === "warn").length;
+  const title = dangerCount ? "Needs attention" : warnCount ? "Ready with checks" : "Ready for draft day";
+  const score = dangerCount ? "Review" : warnCount ? `${items.length - warnCount}/${items.length} ready` : "All clear";
+  if (leagueHealthTitle) leagueHealthTitle.textContent = title;
+  if (leagueHealthScore) leagueHealthScore.textContent = score;
+  if (leagueHealthPanel) {
+    leagueHealthPanel.dataset.state = dangerCount ? "danger" : warnCount ? "warn" : "good";
+  }
+  leagueHealthGrid.innerHTML = items
+    .map(
+      (item) => `<article class="${item.state}">
+        <span>${htmlEscape(item.label)}</span>
+        <strong>${htmlEscape(item.value)}</strong>
+        <small>${htmlEscape(item.detail)}</small>
+      </article>`,
+    )
+    .join("");
+}
+
 function configuredLeagueCount(options = currentLeagueOptions()) {
-  const hasPrimaryLeague = Boolean(appConfig.leagueId || appConfig.customerTeamName || requiresCustomerAccess());
-  return Math.max(options.length, hasPrimaryLeague ? 1 : 0);
+  return Math.max(options.length, hasPrimaryLeagueProfile() ? 1 : 0);
 }
 
 function includedLeagueLimit() {
@@ -1031,7 +1319,7 @@ function additionalLeaguePaymentUrl() {
 function leagueSlotText(count = configuredLeagueCount()) {
   const limit = includedLeagueLimit();
   const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
-  if (count < limit) return `${count || 1}/${limit} included leagues`;
+  if (count < limit) return `${count}/${limit} included leagues`;
   if (count === limit) return `${limit}/${limit} included / + extra ${price}`;
   return `${count} leagues / extras ${price} each`;
 }
@@ -1072,7 +1360,8 @@ function renderAccountPanel() {
 
   const leagues = options.length
     ? options
-    : [
+    : hasPrimaryLeagueProfile()
+      ? [
         {
           key: appConfig.leagueKey || "current",
           label: currentLeagueDisplayLabel(),
@@ -1082,14 +1371,16 @@ function renderAccountPanel() {
           teamName: appConfig.customerTeamName,
           leagueSettings: appConfig.leagueSettings,
         },
-      ];
+      ]
+      : [];
 
   const statusSteps = renderAccountProgress(count, limit);
-  accountLeagueList.innerHTML = `${statusSteps}${leagues
-    .map((league) => {
-      const settings = mergeLeagueSettings(appConfig.baseLeagueSettings || DEFAULT_LEAGUE_SETTINGS, league.leagueSettings || {});
-      const isActive = active?.key === league.key || (!active && league.key === appConfig.leagueKey);
-      return `<article class="${isActive ? "active" : ""}">
+  const leagueMarkup = leagues.length
+    ? leagues
+      .map((league) => {
+        const settings = mergeLeagueSettings(appConfig.baseLeagueSettings || DEFAULT_LEAGUE_SETTINGS, league.leagueSettings || {});
+        const isActive = active?.key === league.key || (!active && league.key === appConfig.leagueKey);
+        return `<article class="${isActive ? "active" : ""}">
         <div>
           <span>${isActive ? "Active league" : "League profile"}</span>
           <strong>${htmlEscape(league.label || league.leagueName || league.key)}</strong>
@@ -1100,8 +1391,27 @@ function renderAccountPanel() {
           <a href="${htmlEscape(leagueSetupUrl(league))}">Revalidate</a>
         </div>
       </article>`;
-    })
-    .join("")}`;
+      })
+      .join("")
+    : requiresCustomerAccess()
+    ? `<article class="setup-needed">
+        <div>
+          <span>League setup</span>
+          <strong>Connect your ESPN league</strong>
+          <p>Your account is active. Add your public ESPN league ID and team ID once so FantasyIQ can personalize every tool.</p>
+        </div>
+        <div class="account-league-actions">
+          <a href="${htmlEscape(leagueSetupUrl())}" data-open-setup>Open setup</a>
+        </div>
+      </article>`
+    : `<article>
+        <div>
+          <span>Preview mode</span>
+          <strong>Public demo league</strong>
+          <p>Subscribe to connect FantasyIQ to your own ESPN league profile.</p>
+        </div>
+      </article>`;
+  accountLeagueList.innerHTML = `${statusSteps}${leagueMarkup}`;
 
   accountLeagueList.querySelectorAll("[data-account-switch]").forEach((button) => {
     button.addEventListener("click", () => setActiveLeague(button.dataset.accountSwitch));
@@ -1133,6 +1443,7 @@ function renderAccountProgress(count, limit) {
 function addLeagueActionTitle(count = configuredLeagueCount()) {
   const limit = includedLeagueLimit();
   const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
+  if (requiresCustomerAccess() && count <= 0) return "Finish league setup";
   return count < limit ? "Add included league" : `Add extra league (${price})`;
 }
 
@@ -1142,7 +1453,7 @@ function currentLeagueDisplayLabel() {
   if (requiresCustomerAccess()) {
     if (appConfig.customerTeamName) return appConfig.customerTeamName;
     if (appConfig.leagueName && appConfig.leagueName !== "Public Demo League") return appConfig.leagueName;
-    return "Current league";
+    return "Finish league setup";
   }
   return appConfig.leagueName || "Public demo";
 }
@@ -1160,7 +1471,7 @@ function applyLeagueOption(option) {
 function applyServerCustomerContext(customer = {}) {
   if (!customer || typeof customer !== "object") return;
   const serverLeagues = normalizeLeagueProfiles(customer.leagues || []);
-  if (serverLeagues.length) appConfig.leagues = serverLeagues;
+  appConfig.leagues = serverLeagues;
   if (customer.customerSlug) appConfig.loadoutKey = normalizeDashboardSlug(customer.customerSlug);
   if (customer.customerName) appConfig.customerName = customer.customerName;
   if (customer.leagueKey) appConfig.leagueKey = normalizeDashboardSlug(customer.leagueKey);
@@ -1171,6 +1482,13 @@ function applyServerCustomerContext(customer = {}) {
   if (customer.includedLeagueLimit) appConfig.includedLeagueLimit = Number(customer.includedLeagueLimit);
   if (customer.additionalLeagueCount !== undefined) appConfig.additionalLeagueCount = Number(customer.additionalLeagueCount || 0);
   if (customer.leagueSettings) appConfig.leagueSettings = mergeLeagueSettings(appConfig.leagueSettings, customer.leagueSettings);
+  if (!serverLeagues.length && !customer.leagueId) {
+    appConfig.leagueId = "";
+    appConfig.leagueKey = "";
+    appConfig.customerTeamId = "";
+    appConfig.customerTeamName = "";
+    if (appConfig.leagueName === "Public Demo League") appConfig.leagueName = "";
+  }
   applyLeagueOption(activeLeagueOption());
 }
 
@@ -1184,8 +1502,10 @@ function renderLeagueSwitcher() {
   const count = configuredLeagueCount(options);
   if (leagueSlotNote) leagueSlotNote.textContent = leagueSlotText(count);
   if (addLeagueAction) {
+    addLeagueAction.textContent = requiresCustomerAccess() && count <= 0 ? "Set up" : "+";
     addLeagueAction.title = addLeagueActionTitle(count);
   }
+  leagueSwitcher.classList.toggle("needs-setup", requiresCustomerAccess() && count <= 0);
   if (options.length <= 1) {
     leagueSelect.innerHTML = "";
     leagueSelect.hidden = true;
@@ -1215,6 +1535,7 @@ function setActiveLeague(leagueKey) {
   params.set("league", next.key);
   history.replaceState(null, "", `${window.location.pathname}?${params.toString()}${window.location.hash}`);
   liveDraft = null;
+  lastLiveDraftRenderSignature = "";
   boardData = null;
   mockSim = null;
   selectedBoardPlayerKey = null;
@@ -1264,21 +1585,24 @@ function openAddLeagueDialog() {
   const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
   const includedRemaining = Math.max(0, limit - count);
   const needsPayment = count >= limit;
+  const needsInitialSetup = requiresCustomerAccess() && count <= 0;
   const title = dialog.querySelector("#add-league-title");
   const message = dialog.querySelector("#add-league-message");
   const summary = dialog.querySelector("#add-league-summary");
   const primary = dialog.querySelector("#add-league-primary");
 
-  if (title) title.textContent = needsPayment ? "Add Extra League" : "Add Included League";
+  if (title) title.textContent = needsInitialSetup ? "Finish League Setup" : needsPayment ? "Add Extra League" : "Add Included League";
   if (message) {
-    message.textContent = needsPayment
+    message.textContent = needsInitialSetup
+      ? "Your FantasyIQ account is active. Open setup once to save the ESPN league ID and team ID to this dashboard."
+      : needsPayment
       ? `Your Season Pass includes ${limit} leagues. Extra league profiles are ${price} each and can be added after checkout.`
       : `You have ${includedRemaining} included league ${includedRemaining === 1 ? "slot" : "slots"} left in your Season Pass. Open the setup validator to confirm the public ESPN league ID and team ID.`;
   }
   if (summary) {
     summary.innerHTML = `
       <span>${count}/${limit} included leagues configured</span>
-      <strong>${needsPayment ? `Extra league add-on: ${htmlEscape(price)}` : "No extra payment needed yet"}</strong>
+      <strong>${needsInitialSetup ? "Setup required before live sync" : needsPayment ? `Extra league add-on: ${htmlEscape(price)}` : "No extra payment needed yet"}</strong>
     `;
   }
   if (primary) {
@@ -1342,8 +1666,10 @@ const trendColumns = [
   "Last Year PPR",
   "Board Rank",
   "Trend Score",
+  "Sleeper Net Adds",
   "Confidence",
   "Draft Action",
+  "Market Signal",
 ];
 
 function normalizePlayerName(name) {
@@ -1408,6 +1734,14 @@ function ensureCustomerUrlContext() {
   if (!requiresCustomerAccess() || !hasCustomerAccess()) return;
   const params = new URLSearchParams(window.location.search);
   let changed = false;
+  if (params.has("login")) {
+    params.delete("login");
+    changed = true;
+  }
+  if (params.get("auth") === "login") {
+    params.delete("auth");
+    changed = true;
+  }
   if (!params.get("customer") && !params.get("loadout") && !params.get("dashboard")) {
     params.set("customer", appConfig.loadoutKey);
     changed = true;
@@ -1506,6 +1840,8 @@ function cellValue(row, key) {
   if (key === "Proj PPR Pts") return projectionDisplay(row);
   if (key === "Projection Edge") return projectionEdgeDisplay(row);
   if (key === "Value Score") return valueDisplay(row);
+  if (key === "Sleeper Net Adds") return formatMarketCount(row[key]);
+  if (key === "Market Signal") return compactText(row[key], 90);
   return row[key] ?? "";
 }
 
@@ -1527,8 +1863,80 @@ function compactText(value, limit = 170) {
   return `${text.slice(0, limit - 1).replace(/\s+\S*$/, "")}.`;
 }
 
+function riskPlainText(row) {
+  const risk = Number(row?.Risk || 0);
+  if (!risk) return "Risk is not scored yet.";
+  if (risk >= 7) return `High risk (${risk}/10). Draft only when the upside fits your roster.`;
+  if (risk >= 5) return `Medium risk (${risk}/10). Pair him with safer picks.`;
+  if (risk <= 3) return `Lower risk (${risk}/10). Useful when you need stability.`;
+  return `Manageable risk (${risk}/10).`;
+}
+
+function actionPlainText(row) {
+  const action = String(row?.Action || row?.["Draft Action"] || "").trim();
+  const lower = action.toLowerCase();
+  if (!action) return "Use him as a tiebreaker against players in the same tier.";
+  if (lower.includes("anchor")) return "Draft him at this tier if the position fits your build. Do not reach far above the tier.";
+  if (lower.includes("discount")) return "Only draft him if he falls below the usual price.";
+  if (lower.includes("wait")) return "Wait for the room to discount him before clicking.";
+  if (lower.includes("golden-zone")) return "He has upside, but make sure your roster already has enough safe starters.";
+  if (lower.includes("under-adp")) return "Target him when he is cheaper than the room expects.";
+  if (lower.includes("value")) return "Treat him as a value target, not a must-pick.";
+  if (lower.includes("upside")) return "Draft for upside after your core starters are protected.";
+  return action;
+}
+
+function playerSynopsisParts(row) {
+  if (!row) {
+    return {
+      bottomLine: "No player synopsis is available yet.",
+      why: "FantasyIQ needs a board row before it can explain the player.",
+      risk: "Risk is not scored yet.",
+      move: "Check back after the board refreshes.",
+    };
+  }
+  const rank = row.Rank ? `#${row.Rank} overall` : "unranked";
+  const posRank = row["Pos Rank"] ? `${row.Pos}${row["Pos Rank"]}` : row.Pos || "player";
+  const tier = row["Pos Tier"] || row.Category || "current tier";
+  const projection = projectionDisplay(row);
+  const lastYear = lastYearValue(row);
+  const market = playerMarketMomentum(row);
+  const bottomLine = `${row.Player} is a ${tier} ${row.Pos} for ${row.Team}. FantasyIQ has him ${rank} and ${posRank}.`;
+  const why = `${scoringProjectionLabel()} ${projection}; last year: ${lastYear}. ${market.hasSleeperSignal ? market.label : "No strong live market move yet"}.`;
+  return {
+    bottomLine,
+    why,
+    risk: riskPlainText(row),
+    move: actionPlainText(row),
+  };
+}
+
 function playerSynopsisText(row) {
-  return row?.["Daily Synopsis"] || row?.["Player Outlook"] || row?.Analysis || "No player synopsis is available yet.";
+  const parts = playerSynopsisParts(row);
+  return `${parts.bottomLine} ${parts.why} ${parts.risk} ${parts.move}`;
+}
+
+function playerSynopsisHtml(row, compact = false) {
+  const parts = playerSynopsisParts(row);
+  if (compact) return `<p>${htmlEscape(compactText(`${parts.bottomLine} ${parts.move}`, 155))}</p>`;
+  return `<div class="player-synopsis-details">
+    <p><strong>Bottom line:</strong> ${htmlEscape(parts.bottomLine)}</p>
+    <p><strong>Why it matters:</strong> ${htmlEscape(parts.why)}</p>
+    <p><strong>Risk:</strong> ${htmlEscape(parts.risk)}</p>
+    <p><strong>Draft move:</strong> ${htmlEscape(parts.move)}</p>
+  </div>`;
+}
+
+function fantasyIqReadHtml(row, decision = null) {
+  const parts = playerSynopsisParts(row);
+  const verdict = decision?.label ? `${decision.label}: ${decision.reason}` : parts.move;
+  const fit = row ? `${row.Pos} in ${row["Pos Tier"] || row.Category || "current tier"} with league value ${valueDisplay(row)}.` : "No player fit available yet.";
+  return `<div class="player-read-copy">
+    <p><strong>Move:</strong> ${htmlEscape(verdict)}</p>
+    <p><strong>Fit:</strong> ${htmlEscape(fit)}</p>
+    <p><strong>Risk:</strong> ${htmlEscape(parts.risk)}</p>
+    <p><strong>Plain English:</strong> ${htmlEscape(parts.why)}</p>
+  </div>`;
 }
 
 function playerSynopsisBlock(row, options = {}) {
@@ -1539,7 +1947,7 @@ function playerSynopsisBlock(row, options = {}) {
   return `<article class="player-synopsis${compact}">
     <span>Daily Player Synopsis</span>
     <strong>Updated ${htmlEscape(refreshed)} / Latest note: ${htmlEscape(latest)}</strong>
-    <p>${htmlEscape(options.compact ? compactText(playerSynopsisText(row)) : playerSynopsisText(row))}</p>
+    ${playerSynopsisHtml(row, Boolean(options.compact))}
     ${options.compact ? "" : `<small>${htmlEscape(source)}</small>`}
   </article>`;
 }
@@ -1550,6 +1958,14 @@ function playerFocusButton(row, className = "player-focus-button") {
 
 function marketSignal(row) {
   if (!row) return { label: "Waiting", detail: "No market read yet.", className: "watch" };
+  const momentum = playerMarketMomentum(row);
+  if (momentum.hasSleeperSignal && momentum.className !== "watch") {
+    return {
+      label: momentum.label,
+      detail: momentum.detail,
+      className: momentum.className,
+    };
+  }
   const rank = Number(row.Rank || 999);
   const espnAdp = Number(row["ESPN ADP"] || 0);
   const adpValue = Number(row["ADP Value"] || 0);
@@ -1618,7 +2034,7 @@ function filteredRows() {
   const drafted = liveDraftedKeys();
   return boardData.boards[activeBoard].rows.filter((row) => {
     const matchesPosition = !pos || (pos === "FLEX" ? ["RB", "WR", "TE"].includes(row.Pos) : row.Pos === pos);
-    const searchable = `${row.Player} ${row.Pos} ${row.Team} ${row.Category} ${row.Tier} ${row["Pos Tier"]} ${row.Action} ${row.Analysis} ${row["Projection Edge"]} ${row["Daily Synopsis"]} ${row["Player Outlook"]} ${row["Risk Notes"]} ${row.Trend} ${row["Source Signal"]} ${row.Catalyst} ${row["Why Rising/Falling"]} ${row["Draft Action"]}`.toLowerCase();
+    const searchable = `${row.Player} ${row.Pos} ${row.Team} ${row.Category} ${row.Tier} ${row["Pos Tier"]} ${row.Action} ${row.Analysis} ${row["Projection Edge"]} ${row["Daily Synopsis"]} ${row["Player Outlook"]} ${row["Risk Notes"]} ${row.Trend} ${row["Source Signal"]} ${row["External Signal"]} ${row.Catalyst} ${row["Why Rising/Falling"]} ${row["Draft Action"]}`.toLowerCase();
     const matchesDraftStatus = !hideDraftedEnabled() || !drafted.has(normalizePlayerName(row.Player));
     return matchesPosition && matchesDraftStatus && (!query || searchable.includes(query));
   });
@@ -1945,19 +2361,23 @@ function showAnalysis(row) {
     }</p>
     ${row["Prior Year Source"] ? `<p><strong>Prior-year source:</strong> ${htmlEscape(row["Prior Year Source"])}</p>` : ""}
     ${row["Risk Notes"] ? `<p><strong>Risk read:</strong> ${htmlEscape(row["Risk Notes"])}</p>` : ""}
-    <p>${row.Analysis}</p>
+    <h3>FantasyIQ Read</h3>
+    ${fantasyIqReadHtml(row)}
   `;
 }
 
 function showTrendAnalysis(row) {
   const trendClass = row.Trend === "Rising" ? "trend-riser" : row.Trend === "Falling" ? "trend-faller" : "watch";
   const trendLabel = row.Trend || "Watch";
+  const marketMomentum = playerMarketMomentum(row);
+  const sleeperCounts = sleeperMarketCounts(row);
   analysisPane.innerHTML = `
     <p class="eyebrow">${row.Pos || "Watch"} / ${row.Team || "TBD"} / ${trendLabel}</p>
     <h3>${row.Player}</h3>
     <div class="analysis-grid">
       <div class="analysis-chip ${trendClass}"><span>Trend</span><strong>${row.Trend}</strong></div>
       <div class="analysis-chip"><span>Trend Score</span><strong>${row["Trend Score"]}</strong></div>
+      <div class="analysis-chip ${marketMomentum.className}"><span>Sleeper Net</span><strong>${formatMarketCount(sleeperCounts.net)}</strong></div>
       <div class="analysis-chip"><span>Confidence</span><strong>${row.Confidence}</strong></div>
       <div class="analysis-chip"><span>Board Rank</span><strong>${row["Board Rank"] || "Watch"}</strong></div>
       <div class="analysis-chip"><span>Position Tier</span><strong>${row["Pos Tier"] || "Watch"}</strong></div>
@@ -1967,9 +2387,11 @@ function showTrendAnalysis(row) {
     </div>
     ${playerSynopsisBlock(row)}
     <p><strong>${row["Draft Action"]}</strong></p>
-    <p><strong>Source signal:</strong> ${row["Source Signal"]}</p>
-    <p><strong>Catalyst:</strong> ${row.Catalyst}</p>
-    <p>${row["Why Rising/Falling"]}</p>
+    <p><strong>Source signal:</strong> ${htmlEscape(row["Source Signal"])}</p>
+    ${row["External Signal"] ? `<p><strong>Live market:</strong> ${htmlEscape(row["External Signal"])}</p>` : ""}
+    <p><strong>Catalyst:</strong> ${htmlEscape(row.Catalyst)}</p>
+    <h3>FantasyIQ Read</h3>
+    ${fantasyIqReadHtml(row)}
   `;
 }
 
@@ -2033,8 +2455,7 @@ function openPlayerDrawer(playerName) {
       ${playerSynopsisBlock(row)}
       <div class="player-drawer-copy">
         <h3>FantasyIQ Read</h3>
-        <p>${htmlEscape(row.Action || decision.reason)}</p>
-        <p>${htmlEscape(row.Analysis || playerSynopsisText(row))}</p>
+        ${fantasyIqReadHtml(row, decision)}
       </div>
       <div class="player-drawer-actions">
         <button class="primary-action" type="button" data-player-focus-board="${htmlEscape(row.Player)}">Open In Big Board</button>
@@ -2443,20 +2864,108 @@ function pastedRosterSnapshot() {
   };
 }
 
+function combinedBoardRows() {
+  return boardData?.boards?.combined?.rows || [];
+}
+
+function liveLeagueTeams() {
+  return Array.isArray(liveDraft?.teams) ? liveDraft.teams : [];
+}
+
+function liveLeagueHasRosters() {
+  return liveLeagueTeams().some((team) => Array.isArray(team.roster) && team.roster.some((entry) => entry?.player));
+}
+
+function liveTeamById(teamId) {
+  return liveLeagueTeams().find((team) => String(team.teamId) === String(teamId)) || null;
+}
+
+function rosterEntriesForTeam(teamOrId) {
+  const team = typeof teamOrId === "object" ? teamOrId : liveTeamById(teamOrId);
+  return Array.isArray(team?.roster) ? team.roster.filter((entry) => entry?.player) : [];
+}
+
+function rosterItemsFromEntries(entries) {
+  return entries.map((entry) => {
+    const row = findPlayer(entry.player);
+    return {
+      name: entry.player,
+      row,
+      entry,
+      value: row ? leagueValueScore(row) : 0,
+      risk: row ? Number(row.Risk || 0) : 0,
+      projection: row ? projectionValue(row) : 0,
+    };
+  });
+}
+
+function countsFromRosterItems(items) {
+  const counts = emptyPositionCounts();
+  items.forEach((item) => {
+    const pos = item.row?.Pos || item.entry?.pos;
+    if (counts[pos] !== undefined) counts[pos] += 1;
+  });
+  return counts;
+}
+
+function draftRosterCountsFor(teamId) {
+  const counts = emptyPositionCounts();
+  const picks = (liveDraft?.picks || []).filter((pick) => String(pick.teamId) === String(teamId) && pick.status === "drafted");
+  picks.forEach((pick) => {
+    const row = pickBoardRow(pick);
+    const pos = row?.Pos || pick.pos;
+    if (counts[pos] !== undefined) counts[pos] += 1;
+  });
+  return { counts, picks, rows: picks.map((pick) => pickBoardRow(pick)).filter(Boolean), rosterEntries: [] };
+}
+
+function teamRosterSnapshot(teamOrId) {
+  if (!boardData) return emptyRosterSnapshot("loading");
+  const team = typeof teamOrId === "object" ? teamOrId : liveTeamById(teamOrId);
+  const teamId = team?.teamId || teamOrId || "";
+  const entries = rosterEntriesForTeam(team || teamId);
+  if (entries.length) {
+    const items = rosterItemsFromEntries(entries);
+    const rows = items.map((item) => item.row).filter(Boolean);
+    return {
+      source: "espn",
+      teamId: String(teamId),
+      teamName: team?.teamName || `Team ${teamId}`,
+      manager: team?.manager || "",
+      counts: countsFromRosterItems(items),
+      picks: [],
+      rows,
+      players: items.filter((item) => item.row),
+      rosterEntries: entries,
+      unmatched: items.filter((item) => !item.row),
+    };
+  }
+  const fallback = draftRosterCountsFor(teamId);
+  const players = fallback.rows.map((row) => ({
+    name: row.Player,
+    row,
+    value: leagueValueScore(row),
+    risk: Number(row.Risk || 0),
+    projection: projectionValue(row),
+  }));
+  return {
+    source: "espn",
+    teamId: String(teamId),
+    teamName: team?.teamName || `Team ${teamId}`,
+    manager: team?.manager || "",
+    counts: fallback.counts,
+    picks: fallback.picks,
+    rows: fallback.rows,
+    players,
+    rosterEntries: [],
+    unmatched: [],
+  };
+}
+
 function espnRosterSnapshot() {
   const teamId = selectedTeamId();
   if (!teamId) return null;
-  const roster = rosterCountsFor(teamId);
-  const rows = roster.picks.map((pick) => pickBoardRow(pick)).filter(Boolean);
-  const players = rows.map((row) => ({ name: row.Player, row, value: leagueValueScore(row), risk: Number(row.Risk || 0), projection: projectionValue(row) }));
-  return {
-    source: "espn",
-    teamId,
-    counts: roster.counts,
-    picks: roster.picks,
-    rows,
-    players,
-  };
+  return teamRosterSnapshot(teamId);
 }
 
 function activeRosterSnapshot({ preferPasted = false } = {}) {
@@ -2549,6 +3058,42 @@ function postDraftActions(snapshot) {
   return actions.slice(0, 4);
 }
 
+function leagueTeamSnapshots() {
+  return liveLeagueTeams()
+    .map((team) => teamRosterSnapshot(team))
+    .filter((snapshot) => snapshot.teamId && snapshot.rows.length);
+}
+
+function leagueRosteredKeys() {
+  const keys = new Set();
+  const addName = (name) => {
+    if (!name) return;
+    keys.add(normalizePlayerName(name));
+    const row = findPlayer(name);
+    if (row) keys.add(normalizePlayerName(row.Player));
+  };
+  (liveDraft?.rosteredNames || []).forEach(addName);
+  liveLeagueTeams().forEach((team) => {
+    rosterEntriesForTeam(team).forEach((entry) => addName(entry.player));
+  });
+  return keys;
+}
+
+function waiverPoolRows() {
+  if (!boardData) return [];
+  const rostered = leagueRosteredKeys();
+  if (rostered.size) {
+    return combinedBoardRows().filter((row) => !rostered.has(normalizePlayerName(row.Player)));
+  }
+  return availableRows();
+}
+
+function waiverPoolSourceLabel() {
+  if (liveLeagueHasRosters()) return "Filtered against active ESPN rosters.";
+  if (liveDraft?.draftedNames?.length) return "Filtered against the synced draft board.";
+  return "Using the league-adjusted player board.";
+}
+
 function waiverCandidates(snapshot, limit = 6) {
   if (!boardData) return [];
   const needs = rosterWeaknesses(snapshot);
@@ -2557,7 +3102,7 @@ function waiverCandidates(snapshot, limit = 6) {
     return map;
   }, {});
   const rostered = new Set(snapshot.rows.map((row) => normalizePlayerName(row.Player)));
-  return availableRows()
+  return waiverPoolRows()
     .filter((row) => !rostered.has(normalizePlayerName(row.Player)))
     .filter((row) => positionHasDraftSlot(row.Pos) && !["K", "DST"].includes(row.Pos))
     .map((row) => {
@@ -2572,6 +3117,153 @@ function waiverCandidates(snapshot, limit = 6) {
     .sort((a, b) => b.score - a.score || Number(a.row.Rank) - Number(b.row.Rank))
     .slice(0, limit)
     .map((item) => item.row);
+}
+
+function tradeCorePositions() {
+  return ["QB", "RB", "WR", "TE"].filter((pos) => positionHasDraftSlot(pos));
+}
+
+function tradeKeepCount(pos) {
+  const starters = starterTargetCounts();
+  const slots = activeLineupSlots();
+  let keep = Math.max(1, Number(starters[pos] || 0));
+  if (pos === "RB" || pos === "WR") keep += Number(slots.FLEX || 0) ? 1 : 0;
+  if (pos === "TE" && Number(slots.FLEX || 0) >= 2) keep += 1;
+  return keep;
+}
+
+function averageValue(rows) {
+  return rows.length ? rows.reduce((sum, row) => sum + leagueValueScore(row), 0) / rows.length : 0;
+}
+
+function tradeNeedProfiles(snapshot) {
+  const core = tradeCorePositions();
+  const weaknesses = rosterWeaknesses(snapshot)
+    .filter((item) => core.includes(item.pos))
+    .map((item) => ({
+      pos: item.pos,
+      weight: item.weight,
+      label: `${item.pos} need`,
+      detail: item.starterGap
+        ? `${item.starterGap} starter gap`
+        : `${item.depthGap} depth gap`,
+    }));
+  if (weaknesses.length) return weaknesses;
+
+  return core
+    .map((pos) => {
+      const rows = snapshot.rows
+        .filter((row) => row.Pos === pos)
+        .sort((a, b) => leagueValueScore(b) - leagueValueScore(a));
+      const starterRows = rows.slice(0, tradeKeepCount(pos));
+      const starterAvg = averageValue(starterRows);
+      const thinPenalty = Math.max(0, tradeKeepCount(pos) - rows.length) * 12;
+      return {
+        pos,
+        weight: Math.max(1, 76 - starterAvg + thinPenalty),
+        label: `${pos} upgrade`,
+        detail: starterRows.length ? `starter value ${starterAvg.toFixed(1)}` : "no matched starter",
+      };
+    })
+    .filter((item) => item.weight > 2)
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, 3);
+}
+
+function tradeStrengthProfiles(snapshot) {
+  return tradeCorePositions()
+    .map((pos) => {
+      const rows = snapshot.rows
+        .filter((row) => row.Pos === pos)
+        .sort((a, b) => leagueValueScore(b) - leagueValueScore(a));
+      const movableRows = rows.slice(tradeKeepCount(pos));
+      return {
+        pos,
+        rows: movableRows,
+        surplus: movableRows.length,
+        topValue: movableRows[0] ? leagueValueScore(movableRows[0]) : 0,
+        detail: movableRows.length ? `${movableRows.length} movable ${pos}` : "",
+      };
+    })
+    .filter((item) => item.rows.length)
+    .sort((a, b) => b.surplus - a.surplus || b.topValue - a.topValue);
+}
+
+function bestTradePair(giveRows, getRows) {
+  let best = null;
+  giveRows.slice(0, 5).forEach((give) => {
+    getRows.slice(0, 5).forEach((get) => {
+      const diff = leagueValueScore(get) - leagueValueScore(give);
+      if (diff > 16 || diff < -12) return;
+      const projectionDiff = projectionValue(get) - projectionValue(give);
+      const score =
+        50 -
+        Math.abs(diff) * 2 +
+        (diff >= -2 ? 5 : 0) +
+        Math.max(-4, Math.min(4, projectionDiff / 18));
+      if (!best || score > best.score) best = { give, get, diff, score };
+    });
+  });
+  return best;
+}
+
+function teamSnapshotLabel(snapshot) {
+  if (!snapshot) return "Team";
+  return `${snapshot.teamName || `Team ${snapshot.teamId}`}${snapshot.manager ? ` (${snapshot.manager})` : ""}`;
+}
+
+function leagueTradeIdeas(snapshot, limit = 6) {
+  if (!snapshot?.teamId || !liveLeagueHasRosters()) return [];
+  const myNeeds = tradeNeedProfiles(snapshot);
+  const myStrengths = tradeStrengthProfiles(snapshot);
+  if (!myNeeds.length || !myStrengths.length) return [];
+
+  const ideas = [];
+  leagueTeamSnapshots()
+    .filter((other) => String(other.teamId) !== String(snapshot.teamId))
+    .forEach((other) => {
+      const theirNeeds = tradeNeedProfiles(other);
+      const theirStrengths = tradeStrengthProfiles(other);
+      const giveMatches = myStrengths.filter((strength) => theirNeeds.some((need) => need.pos === strength.pos));
+      const getMatches = theirStrengths.filter((strength) => myNeeds.some((need) => need.pos === strength.pos));
+
+      giveMatches.forEach((giveStrength) => {
+        getMatches.forEach((getStrength) => {
+          if (giveStrength.pos === getStrength.pos) return;
+          const pair = bestTradePair(giveStrength.rows, getStrength.rows);
+          if (!pair) return;
+          const myNeed = myNeeds.find((need) => need.pos === getStrength.pos);
+          const theirNeed = theirNeeds.find((need) => need.pos === giveStrength.pos);
+          const score =
+            pair.score +
+            Number(myNeed?.weight || 0) * 0.7 +
+            Number(theirNeed?.weight || 0) * 0.55 +
+            Math.min(8, giveStrength.surplus + getStrength.surplus);
+          ideas.push({
+            team: other,
+            give: pair.give,
+            get: pair.get,
+            diff: pair.diff,
+            score,
+            yourNeed: myNeed,
+            theirNeed,
+            giveStrength,
+            getStrength,
+          });
+        });
+      });
+    });
+
+  const seen = new Set();
+  return ideas
+    .sort((a, b) => b.score - a.score)
+    .filter((idea) => {
+      const key = `${idea.team.teamId}-${normalizePlayerName(idea.give.Player)}-${normalizePlayerName(idea.get.Player)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, limit);
 }
 
 function tradeAwayCandidates(snapshot, limit = 3) {
@@ -2590,6 +3282,18 @@ function tradeTargetCandidates(snapshot, limit = 5) {
   const needs = rosterWeaknesses(snapshot);
   const needPositions = needs.length ? new Set(needs.slice(0, 3).map((item) => item.pos)) : new Set(["RB", "WR", "TE"]);
   const rostered = new Set(snapshot.rows.map((row) => normalizePlayerName(row.Player)));
+  const leagueTargets = leagueTeamSnapshots()
+    .filter((team) => String(team.teamId) !== String(snapshot.teamId))
+    .flatMap((team) =>
+      team.rows
+        .filter((row) => !rostered.has(normalizePlayerName(row.Player)) && needPositions.has(row.Pos))
+        .map((row) => ({ pick: null, row, fantasyTeam: teamSnapshotLabel(team) })),
+    );
+  if (leagueTargets.length) {
+    return leagueTargets
+      .sort((a, b) => leagueValueScore(b.row) - leagueValueScore(a.row) || Number(a.row.Rank) - Number(b.row.Rank))
+      .slice(0, limit);
+  }
   const draftedTargets = (liveDraft?.picks || [])
     .map((pick) => ({ pick, row: pickBoardRow(pick) }))
     .filter((item) => item.row && !rostered.has(normalizePlayerName(item.row.Player)) && needPositions.has(item.row.Pos));
@@ -2609,6 +3313,29 @@ function renderPlayerMiniCard(row, label = "") {
     <span>${htmlEscape(label || `${row.Pos}${row["Pos Rank"] || ""} / #${row.Rank}`)}</span>
     <small>Value ${valueDisplay(row)} / ${scoringProjectionLabel()} ${projectionDisplay(row)} / Risk ${row.Risk}/10</small>
   </div>`;
+}
+
+function renderTradeIdeaCard(idea) {
+  const diff = Number(idea.diff || 0);
+  const diffLabel = Math.abs(diff) < 1 ? "even value" : `${diff > 0 ? "+" : ""}${diff.toFixed(1)} value`;
+  return `<article class="trade-idea-card">
+    <div class="trade-idea-head">
+      <span>${htmlEscape(teamSnapshotLabel(idea.team))}</span>
+      <strong>Ask for ${htmlEscape(idea.get.Player)}</strong>
+      <small>${htmlEscape(diffLabel)} on the FantasyIQ board</small>
+    </div>
+    <div class="trade-idea-flow">
+      <section>
+        <h4>You offer</h4>
+        ${renderPlayerMiniCard(idea.give, `${idea.give.Pos} depth you can shop`)}
+      </section>
+      <section>
+        <h4>You target</h4>
+        ${renderPlayerMiniCard(idea.get, `${idea.get.Pos} fills your ${idea.yourNeed?.label || "need"}`)}
+      </section>
+    </div>
+    <p>${htmlEscape(`Why it fits: you need ${idea.get.Pos}, and ${teamSnapshotLabel(idea.team)} needs ${idea.give.Pos}. This turns your surplus into a cleaner starter/depth lane.`)}</p>
+  </article>`;
 }
 
 function renderPostDraftPlan(snapshot = activeRosterSnapshot()) {
@@ -2706,10 +3433,29 @@ function renderTradeFinder(snapshot = activeRosterSnapshot({ preferPasted: true 
   const targets = tradeTargetCandidates(snapshot);
   const needs = rosterWeaknesses(snapshot);
   const topNeed = needs[0]?.pos || "starter upgrade";
+  const leagueIdeas = snapshot.source === "espn" ? leagueTradeIdeas(snapshot) : [];
+  if (leagueIdeas.length) {
+    tradeFinder.innerHTML = `
+      <div class="trade-lane-summary">
+        <strong>${leagueIdeas.length} active-league trade idea${leagueIdeas.length === 1 ? "" : "s"}</strong>
+        <span>FantasyIQ compared your strengths and needs against every roster in this league.</span>
+      </div>
+      <div class="trade-idea-list">
+        ${leagueIdeas.map(renderTradeIdeaCard).join("")}
+      </div>
+    `;
+    return;
+  }
   tradeFinder.innerHTML = `
     <div class="trade-lane-summary">
       <strong>${away.length ? `Shop ${away[0].Pos} depth` : "Hold core"}</strong>
-      <span>${needs.length ? `Primary target lane: ${topNeed}` : "No forced target lane. Look for value discounts."}</span>
+      <span>${
+        liveLeagueHasRosters()
+          ? "No clean team-to-team match yet. Use the lanes below as negotiation filters."
+          : needs.length
+            ? `Primary target lane: ${topNeed}`
+            : "No forced target lane. Look for value discounts."
+      }</span>
     </div>
     <div class="trade-finder-grid">
       <section>
@@ -2718,7 +3464,7 @@ function renderTradeFinder(snapshot = activeRosterSnapshot({ preferPasted: true 
       </section>
       <section>
         <h4>Target</h4>
-        ${targets.length ? targets.map((item) => renderPlayerMiniCard(item.row, item.pick?.fantasyTeam ? `Rostered by ${item.pick.fantasyTeam}` : `${item.row.Pos} upgrade lane`)).join("") : "<p>No clean targets yet.</p>"}
+        ${targets.length ? targets.map((item) => renderPlayerMiniCard(item.row, item.fantasyTeam ? `Rostered by ${item.fantasyTeam}` : item.pick?.fantasyTeam ? `Rostered by ${item.pick.fantasyTeam}` : `${item.row.Pos} upgrade lane`)).join("") : "<p>No clean targets yet.</p>"}
       </section>
     </div>
   `;
@@ -2736,7 +3482,7 @@ function renderWaiverAssistant(snapshot = activeRosterSnapshot({ preferPasted: t
   }
   const candidates = waiverCandidates(snapshot);
   waiverAssistant.innerHTML = candidates.length
-    ? `<div class="waiver-list">${candidates.map((row) => renderPlayerMiniCard(row, leagueFitSignal(row, snapshot.counts).label)).join("")}</div>`
+    ? `<div class="trade-lane-summary waiver-summary"><strong>Best available adds</strong><span>${htmlEscape(waiverPoolSourceLabel())}</span></div><div class="waiver-list">${candidates.map((row) => renderPlayerMiniCard(row, leagueFitSignal(row, snapshot.counts).label)).join("")}</div>`
     : "<p>No strong waiver adds from the current board. Hold roster spots for news-driven role changes.</p>";
 }
 
@@ -2766,14 +3512,17 @@ function valueForPick(pick) {
 }
 
 function rosterCountsFor(teamId) {
-  const counts = { QB: 0, RB: 0, WR: 0, TE: 0, DST: 0, K: 0 };
-  const picks = (liveDraft?.picks || []).filter((pick) => String(pick.teamId) === String(teamId) && pick.status === "drafted");
-  picks.forEach((pick) => {
-    const row = pickBoardRow(pick);
-    const pos = row?.Pos || pick.pos;
-    if (counts[pos] !== undefined) counts[pos] += 1;
-  });
-  return { counts, picks };
+  const snapshot = teamRosterSnapshot(teamId);
+  if (snapshot.rosterEntries?.length || snapshot.rows.length) {
+    return {
+      counts: snapshot.counts,
+      picks: snapshot.picks || [],
+      rows: snapshot.rows || [],
+      rosterEntries: snapshot.rosterEntries || [],
+      teamName: snapshot.teamName || "",
+    };
+  }
+  return draftRosterCountsFor(teamId);
 }
 
 function selectedTeamId() {
@@ -2998,6 +3747,8 @@ function recommendationDecision(row, counts) {
   const targetPick = recommendationTargetPick();
   const survival = survivalProjection(row, targetPick);
   const need = rosterNeed(row, counts);
+  const momentum = playerMarketMomentum(row);
+  const marketScore = momentum.score;
 
   if (!targetPick) {
     return { label: "Board value", className: "target", survival, reason: recommendationReason(row, counts) };
@@ -3016,7 +3767,19 @@ function recommendationDecision(row, counts) {
     return { label: "Pick now", className: "smash", survival, reason: `${row.Pos} starter slot is still open and this player may not return.` };
   }
   if (survival.pct < 35) {
+    if (marketScore <= -12 && Number(row.Risk || 0) >= 5 && round <= 10) {
+      return { label: "Controlled risk", className: "watch", survival, reason: "He may not return, but live add/drop pressure is negative. Take only at a discount." };
+    }
     return { label: "Pick now", className: "smash", survival, reason: "Likely gone before your next pick." };
+  }
+  if (marketScore >= 12 && ["RB", "WR", "TE"].includes(row.Pos) && survival.pct < 60) {
+    return { label: "Pick now", className: "smash", survival, reason: "Live add/drop momentum is strong and the make-it-back window is thin." };
+  }
+  if (momentum.rookie && marketScore >= 8 && round >= 7 && survival.pct < 65) {
+    return { label: "Target", className: "target", survival, reason: "Rookie profile has positive live market momentum at a draftable stage." };
+  }
+  if (marketScore <= -14 && need !== "starter" && round <= 10) {
+    return { label: "Can wait", className: "wait", survival, reason: "Faller signal is active. Make the room discount him first." };
   }
   if (need === "luxury" && survival.pct > 50) {
     return { label: "Can wait", className: "wait", survival, reason: "Roster need is lower here; use this as a tiebreaker only." };
@@ -3036,14 +3799,19 @@ function adjustedRecommendationScore(row, counts) {
   const rank = Number(row.Rank || 999);
   const value = leagueValueScore(row);
   const hasTeamContext = Boolean(selectedTeamId());
+  const momentum = playerMarketMomentum(row);
+  const marketAdjustment = clampNumber(momentum.score * (round >= 7 ? 3.8 : 2.2), -85, 95);
   let score = 2000 - rank * 5 + value * 0.5;
 
   if (!hasTeamContext) {
-    return 2000 - rank * 10 + value * 0.1;
+    return 2000 - rank * 10 + value * 0.1 + clampNumber(momentum.score * 2.2, -55, 65);
   }
 
   if (positionClosed(row, counts)) score -= 900;
   score += rosterNeedScoreAdjustment(row, counts, round);
+  score += marketAdjustment;
+  if (momentum.rookie && momentum.score >= 8 && round >= 7) score += 28;
+  if (momentum.score <= -10 && Number(row.Risk || 0) >= 5) score -= 34;
   if (Number(row.Risk || 0) >= 6 && round <= 8) score -= 18;
   if (decision.survival.pct < 20) score += 80;
   else if (decision.survival.pct < 35) score += 45;
@@ -3056,10 +3824,14 @@ function adjustedRecommendationScore(row, counts) {
 
 function recommendationReason(row, counts) {
   const starters = starterTargetCounts();
+  const momentum = playerMarketMomentum(row);
   if (!positionHasDraftSlot(row.Pos)) return `${row.Pos} is not used in this league profile.`;
   if (shouldWaitOnSpecialTeams(row.Pos, currentRound())) return "Late only. Keep loading RB/WR upside first.";
   if (row.Pos === "DST" && counts.DST < starters.DST && currentRound() >= dstTargetRound()) return "Roster requirement. Take the best DST left.";
   if (row.Pos === "K" && counts.K < starters.K && currentRound() >= kickerTargetRound()) return "Roster requirement. Kicker should be last.";
+  if (momentum.score <= -12) return "Faller signal. Treat him as a discounted value, not an auto-click.";
+  if (momentum.rookie && momentum.score >= 8 && currentRound() >= 7) return "Rookie with live add/drop momentum and a draftable price.";
+  if (momentum.score >= 12) return "Live add/drop momentum is pushing him up the queue.";
   if (row.Pos === "RB" && counts.RB < starters.RB) return "Fills a starting RB slot.";
   if (row.Pos === "WR" && counts.WR < starters.WR) return "Fills a starting WR slot.";
   if (row.Pos === "TE" && counts.TE < starters.TE) return "Fills TE if value is real.";
@@ -3133,17 +3905,27 @@ function renderTieredRows(rows, pos, options = {}) {
 
 function renderRecommendationCard(row, counts, index = 0) {
   const decision = recommendationDecision(row, counts);
+  const momentum = playerMarketMomentum(row);
   const priority = decision.label === "Pick now" || index < 3 ? "priority" : "";
   const survivalText = decision.survival.label === "Select team" ? "team needed" : `${decision.survival.pct}% back`;
+  const proof = [
+    scoringProjectionLabel(),
+    `${leagueTeamTotal()} teams`,
+    lineupSummary(),
+    selectedTeamId() ? "selected roster" : "board value",
+    liveDraft?.draftedNames?.length ? `${liveDraft.draftedNames.length} drafted filtered` : "draft board state",
+  ];
   return `<div class="pick-card recommendation ${priority} ${decision.className}">
     <span>#${row.Rank} / ${row.Pos} / ${row.Team}</span>
     ${playerFocusButton(row)}
     <div class="rec-meta">
       <em>${decision.label}</em>
       <b class="${decision.survival.className}">${survivalText}</b>
+      ${momentum.hasSleeperSignal ? `<b class="${momentum.className}">${htmlEscape(momentum.label)}</b>` : ""}
       <b>${row["Pos Tier"] || row.Category}</b>
     </div>
-    <small>${decision.reason} ${scoringProjectionLabel()}: ${projectionDisplay(row)}. League value: ${valueDisplay(row)}. ${decision.survival.detail}</small>
+    <small>${decision.reason} ${scoringProjectionLabel()}: ${projectionDisplay(row)}. League value: ${valueDisplay(row)}. ${decision.survival.detail} ${momentum.hasSleeperSignal ? htmlEscape(momentum.detail) : ""}</small>
+    <div class="recommendation-proof">Based on: ${proof.map(htmlEscape).join(" / ")}</div>
     ${playerSynopsisBlock(row, { compact: true })}
   </div>`;
 }
@@ -3154,6 +3936,7 @@ function avoidRows(counts) {
       if (positionClosed(row, counts)) return true;
       if (shouldWaitOnSpecialTeams(row.Pos, currentRound())) return true;
       if (Number(row.Risk || 0) >= 7 && currentRound() <= 8) return true;
+      if (playerMarketMomentum(row).score <= -14 && currentRound() <= 10) return true;
       return rosterNeed(row, counts) === "luxury" && ["QB", "TE"].includes(row.Pos);
     })
     .sort((a, b) => Number(a.Rank) - Number(b.Rank))
@@ -3265,13 +4048,36 @@ function renderMyRoster() {
     liveMyRoster.textContent = "Select your ESPN team after the order appears.";
     return;
   }
-  const { counts, picks } = rosterCountsFor(teamId);
-  if (!picks.length) {
+  const roster = rosterCountsFor(teamId);
+  const { counts, picks } = roster;
+  const rosterEntries = roster.rosterEntries || [];
+  if (!picks.length && !rosterEntries.length) {
     liveMyRoster.innerHTML = `
       <div class="roster-counts">
         <span>QB ${counts.QB}</span><span>RB ${counts.RB}</span><span>WR ${counts.WR}</span><span>TE ${counts.TE}</span><span>DST ${counts.DST}</span><span>K ${counts.K}</span>
       </div>
       <p>No picks for your team yet.</p>
+    `;
+    return;
+  }
+  if (rosterEntries.length) {
+    liveMyRoster.innerHTML = `
+      <div class="roster-counts">
+        <span>QB ${counts.QB}</span><span>RB ${counts.RB}</span><span>WR ${counts.WR}</span><span>TE ${counts.TE}</span><span>DST ${counts.DST}</span><span>K ${counts.K}</span>
+      </div>
+      ${rosterEntries
+        .map((entry) => {
+          const row = findPlayer(entry.player);
+          const slot = entry.lineupSlot ? `${entry.lineupSlot} / ` : "";
+          return `<div class="pick-card made">
+            <span>${htmlEscape(slot)}${htmlEscape(row?.Pos || entry.pos || "Player")}</span>
+            ${row ? playerFocusButton(row) : `<strong>${htmlEscape(entry.player)}</strong>`}
+            <em>${htmlEscape(row ? `#${row.Rank}` : entry.proTeam || "Roster")}</em>
+            <small>${row ? `League value ${valueDisplay(row)}. ${row.Action}` : "Rostered in ESPN. No board match yet."}</small>
+            ${row ? playerSynopsisBlock(row, { compact: true }) : ""}
+          </div>`;
+        })
+        .join("")}
     `;
     return;
   }
@@ -3793,17 +4599,37 @@ function renderDraftOrder() {
     .join("");
 }
 
-function renderLiveDraft() {
+function liveDraftRenderSignature(data = liveDraft) {
+  if (!data) return "";
+  const current = data.currentPick || {};
+  const recent = data.recentPicks || [];
+  const next = data.nextPicks || [];
+  const draftOrder = data.draftOrder || [];
+  return JSON.stringify({
+    completed: Number(data.completedPicks || 0),
+    total: Number(data.totalPicks || 0),
+    drafted: Boolean(data.drafted),
+    inProgress: Boolean(data.inProgress),
+    currentOverall: Number(current.overall || 0),
+    currentTeam: current.fantasyTeam || "",
+    currentManager: current.manager || "",
+    draftedCount: (data.draftedNames || []).length,
+    teams: (data.teams || []).length,
+    teamNames: (data.teams || []).map((team) => team.name || team.fantasyTeam || "").join("|"),
+    recent: recent.map((pick) => `${pick.overall || ""}:${pick.player || pick.playerName || ""}`).join("|"),
+    next: next.map((pick) => `${pick.overall || ""}:${pick.fantasyTeam || ""}`).join("|"),
+    draftOrder: draftOrder.map((pick) => `${pick.overall || ""}:${pick.roundPick || ""}:${pick.fantasyTeam || ""}`).join("|"),
+    staleError: data.staleError || "",
+  });
+}
+
+function renderLiveDraftSummary() {
   if (!liveStatus) return;
   if (!liveDraft) {
     liveStatus.textContent = "Connecting to ESPN public draft sync...";
     return;
   }
 
-  applyServerCustomerContext(liveDraft.customer);
-  renderTeamOptions();
-  applyEspnLeagueBranding();
-  renderLeagueProfile();
   const current = liveDraft.currentPick;
   const completed = Number(liveDraft.completedPicks || 0);
   const total = Number(liveDraft.totalPicks || 0);
@@ -3832,6 +4658,23 @@ function renderLiveDraft() {
   if (liveProgressBar) liveProgressBar.style.width = `${pct}%`;
   if (liveLastSync) liveLastSync.textContent = formatSyncTime(liveDraft.syncedAt);
   if (liveSource) liveSource.textContent = liveDraft.demoMode ? "ESPN public demo league" : liveDraft.source || "ESPN public league API";
+  renderLeagueHealth();
+}
+
+function renderLiveDraft(options = {}) {
+  if (!liveStatus) return;
+  if (!liveDraft) {
+    renderLiveDraftSummary();
+    return;
+  }
+
+  renderLiveDraftSummary();
+  if (options.full === false) return;
+
+  applyServerCustomerContext(liveDraft.customer);
+  renderTeamOptions();
+  applyEspnLeagueBranding();
+  renderLeagueProfile();
 
   renderRecommendations();
   renderMyRoster();
@@ -3846,6 +4689,7 @@ function renderLiveDraft() {
   renderLiveTierBoard();
   renderDraftOrder();
   renderBoard();
+  lastLiveDraftRenderSignature = liveDraftRenderSignature();
 }
 
 function htmlEscape(value) {
@@ -3897,6 +4741,19 @@ function simRecentPositionCounts(limit = Math.min(10, leagueTeamTotal())) {
   return counts;
 }
 
+const SIM_MANAGER_PERSONAS = [
+  { name: "Value Hawk", rank: 7.2, need: 1.05, value: 1.45, scarcity: 0.9, market: 1.0, upside: 0.7, riskPenalty: 0.9 },
+  { name: "Roster Architect", rank: 6.2, need: 1.45, value: 1.05, scarcity: 0.75, market: 0.65, upside: 0.55, riskPenalty: 1.0 },
+  { name: "Tier Bully", rank: 6.6, need: 1.05, value: 1.0, scarcity: 1.55, market: 0.8, upside: 0.75, riskPenalty: 0.85 },
+  { name: "Market Chaser", rank: 6.4, need: 1.0, value: 0.95, scarcity: 0.95, market: 1.65, upside: 0.9, riskPenalty: 0.7 },
+  { name: "Upside Drafter", rank: 6.0, need: 0.95, value: 0.85, scarcity: 0.95, market: 1.05, upside: 1.6, riskPenalty: 0.55 },
+  { name: "Floor Manager", rank: 7.0, need: 1.2, value: 1.15, scarcity: 0.75, market: 0.65, upside: 0.45, riskPenalty: 1.55 },
+];
+
+function simManagerProfile(slot) {
+  return mockSim?.profiles?.[slot] || SIM_MANAGER_PERSONAS[(slot - 1) % SIM_MANAGER_PERSONAS.length];
+}
+
 function simFutureUserPicks() {
   if (!mockSim) return [];
   const picks = [];
@@ -3904,6 +4761,15 @@ function simFutureUserPicks() {
     if (simSlotFromOverall(overall) === mockSim.userSlot) {
       picks.push(overall);
     }
+  }
+  return picks;
+}
+
+function simFuturePicksForSlot(slot, fromOverall = mockSim?.currentOverall || 1) {
+  if (!mockSim) return [];
+  const picks = [];
+  for (let overall = fromOverall; overall <= simTotalPicks(); overall += 1) {
+    if (simSlotFromOverall(overall) === slot) picks.push(overall);
   }
   return picks;
 }
@@ -3955,6 +4821,7 @@ function simDecision(row, counts) {
   const round = simRound();
   const survival = simSurvivalProjection(row);
   const need = rosterNeed(row, counts);
+  const momentum = playerMarketMomentum(row);
 
   if (positionClosed(row, counts)) {
     const reason = positionHasDraftSlot(row.Pos)
@@ -3969,7 +4836,19 @@ function simDecision(row, counts) {
     return { label: "Pick now", className: "smash", survival, reason: `${row.Pos} starter slot is open and he may not return.` };
   }
   if (survival.pct < 35) {
+    if (momentum.score <= -12 && Number(row.Risk || 0) >= 5 && round <= 10) {
+      return { label: "Controlled risk", className: "watch", survival, reason: "He may not return, but the live market is fading." };
+    }
     return { label: "Pick now", className: "smash", survival, reason: "Likely gone before your next turn." };
+  }
+  if (momentum.score >= 12 && ["RB", "WR", "TE"].includes(row.Pos) && survival.pct < 60) {
+    return { label: "Pick now", className: "smash", survival, reason: "Live add/drop momentum is strong and the turn is thin." };
+  }
+  if (momentum.rookie && momentum.score >= 8 && round >= 7 && survival.pct < 65) {
+    return { label: "Target", className: "target", survival, reason: "Rookie profile has positive live market momentum." };
+  }
+  if (momentum.score <= -14 && need !== "starter" && round <= 10) {
+    return { label: "Can wait", className: "wait", survival, reason: "Faller signal is active. Let the room discount him." };
   }
   if (need === "luxury" && survival.pct > 50) {
     return { label: "Can wait", className: "wait", survival, reason: "Lower roster need. Use only as a tiebreaker." };
@@ -3988,10 +4867,14 @@ function simRecommendationScore(row, counts) {
   const decision = simDecision(row, counts);
   const rank = Number(row.Rank || 999);
   const value = leagueValueScore(row);
+  const momentum = playerMarketMomentum(row);
   let score = 2000 - rank * 5 + value * 0.5;
 
   if (positionClosed(row, counts)) score -= 900;
   score += rosterNeedScoreAdjustment(row, counts, round);
+  score += clampNumber(momentum.score * (round >= 7 ? 3.8 : 2.2), -85, 95);
+  if (momentum.rookie && momentum.score >= 8 && round >= 7) score += 28;
+  if (momentum.score <= -10 && Number(row.Risk || 0) >= 5) score -= 34;
   if (Number(row.Risk || 0) >= 6 && round <= 8) score -= 18;
   if (decision.survival.pct < 20) score += 80;
   else if (decision.survival.pct < 35) score += 45;
@@ -4002,12 +4885,50 @@ function simRecommendationScore(row, counts) {
   return score;
 }
 
+function simBotSurvivalPressure(row, slot) {
+  const upcoming = simFuturePicksForSlot(slot, (mockSim?.currentOverall || 1) + 1);
+  const next = upcoming[0];
+  if (!next) return 0;
+  const gap = Number(row.Rank || 999) - next;
+  if (gap <= -24) return 95;
+  if (gap <= -12) return 60;
+  if (gap <= 0) return 35;
+  if (gap >= 18) return -25;
+  return 8;
+}
+
+function simBotRunPressure(row) {
+  const recent = simRecentPositionCounts(Math.min(10, leagueTeamTotal()));
+  const count = Number(recent[row.Pos] || 0);
+  if (count >= 5) return 65;
+  if (count >= 3) return 34;
+  return 0;
+}
+
 function simBotScore(row, counts, slot) {
   const round = simRound();
-  let score = 1800 - Number(row.Rank || 999) * 6 + leagueValueScore(row);
-  score += rosterNeedScoreAdjustment(row, counts, round);
-  if (positionClosed(row, counts)) score -= 700;
-  const wobble = Math.sin((mockSim.currentOverall + 1) * (slot + 3) * (Number(row.Rank || 1) + 11)) * 18;
+  const profile = simManagerProfile(slot);
+  const momentum = playerMarketMomentum(row);
+  const tier = simTopTierInfo(row.Pos);
+  const rank = Number(row.Rank || 999);
+  const value = leagueValueScore(row);
+  const upside = Number(row.Upside || row.Ceiling || 0);
+  const risk = Number(row.Risk || 0);
+  const needScore = rosterNeedScoreAdjustment(row, counts, round);
+  let score = 1900 - rank * profile.rank + value * 8 * profile.value;
+
+  score += needScore * profile.need;
+  score += clampNumber(momentum.score * 7 * profile.market, -120, 145);
+  score += simBotSurvivalPressure(row, slot) * profile.scarcity;
+  score += simBotRunPressure(row) * profile.scarcity;
+  if (tier.count <= 2 && (row["Pos Tier"] || row.Category) === tier.tier && !["DST", "K"].includes(row.Pos)) score += 56 * profile.scarcity;
+  if (["RB", "WR", "TE"].includes(row.Pos)) score += clampNumber((upside - 55) * 2.8 * profile.upside, -25, 95);
+  if (risk >= 6 && round <= 8) score -= 24 * profile.riskPenalty;
+  if (momentum.score <= -12 && risk >= 5) score -= 30 * profile.riskPenalty;
+  if (positionClosed(row, counts)) score -= 950;
+  if (shouldWaitOnSpecialTeams(row.Pos, round)) score -= 560;
+  if (row.Pos === "QB" && !activeLineupSlots().SUPERFLEX && counts.QB && round < 10) score -= 210;
+  const wobble = Math.sin((mockSim.currentOverall + 1) * (slot + 3) * (rank + 11)) * 7;
   return score + wobble;
 }
 
@@ -4036,7 +4957,7 @@ function simOpponentPick() {
   if (!mockSim || mockSim.currentOverall > simTotalPicks()) return;
   const slot = simSlotFromOverall(mockSim.currentOverall);
   const team = simTeam(slot);
-  const candidates = simAvailableRows().slice(0, 90);
+  const candidates = simAvailableRows().slice(0, Math.min(140, Math.max(70, leagueTeamTotal() * 11)));
   const row = candidates.sort((a, b) => simBotScore(b, team.counts, slot) - simBotScore(a, team.counts, slot))[0];
   if (!row) {
     mockSim.currentOverall = simTotalPicks() + 1;
@@ -4061,8 +4982,10 @@ function simStartDraft() {
   const teamCount = leagueTeamTotal();
   const slot = selectedSlot === "random" ? Math.floor(Math.random() * teamCount) + 1 : Number(selectedSlot || 1);
   const teams = {};
+  const profiles = {};
   for (let teamSlot = 1; teamSlot <= teamCount; teamSlot += 1) {
     teams[teamSlot] = { counts: emptyPositionCounts(), picks: [] };
+    profiles[teamSlot] = SIM_MANAGER_PERSONAS[(teamSlot + slot - 2) % SIM_MANAGER_PERSONAS.length];
   }
   mockSim = {
     active: true,
@@ -4071,6 +4994,7 @@ function simStartDraft() {
     drafted: new Set(),
     picks: [],
     teams,
+    profiles,
   };
   localStorage.setItem(loadoutStorageKey("sim-slot"), selectedSlot);
   simAdvanceToUserPick();
@@ -4092,56 +5016,133 @@ function simDraftPlayer(playerKey) {
   renderMockSimulator();
 }
 
+function simGradePenaltyWindow(deadlineRound) {
+  if (!mockSim) return 0;
+  const round = Math.min(draftRoundTotal(), simRound(Math.min(mockSim.currentOverall, simTotalPicks())));
+  if (round < deadlineRound) return 0;
+  return round >= draftRoundTotal() ? 1 : 0.55;
+}
+
 function simGradeRoster() {
   if (!mockSim) return { grade: "Pending", detail: "Start a mock." };
   const team = simTeam(mockSim.userSlot);
   const counts = team.counts;
   const targets = draftTargetCounts();
   const starters = starterTargetCounts();
+  const slots = activeLineupSlots();
   let score = 100;
   const notes = [];
+  const pickCount = team.picks.length;
+  const complete = mockSim.currentOverall > simTotalPicks();
+  const completion = Math.min(1, pickCount / Math.max(1, draftRoundTotal()));
+  const pickGrades = team.picks.map((pick) => ({ ...gradePick(pick.round, pick.overall, pick.row), pick }));
+  const reaches = pickGrades.filter((item) => item.label === "Reach");
+  const majorReaches = reaches.filter((item) => Number(item.pick.overall || 0) + 16 < expectedPickFor(item.pick.row));
+  const steals = pickGrades.filter((item) => item.label === "Steal" || item.label === "Good value");
+  const skillRows = team.picks.filter((pick) => ["QB", "RB", "WR", "TE"].includes(pick.row.Pos)).map((pick) => pick.row);
+  const avgRisk = skillRows.length ? skillRows.reduce((sum, row) => sum + Number(row.Risk || 0), 0) / skillRows.length : 0;
+  const highRiskEarly = team.picks.filter((pick) => pick.round <= 7 && Number(pick.row.Risk || 0) >= 7).length;
+  const rbWr = Number(counts.RB || 0) + Number(counts.WR || 0);
+  const flexEligible = flexEligibleCount(counts);
+  const starterMissing = {
+    QB: Math.max(0, Number(starters.QB || 0) - Number(counts.QB || 0)),
+    RB: Math.max(0, Number(starters.RB || 0) - Number(counts.RB || 0)),
+    WR: Math.max(0, Number(starters.WR || 0) - Number(counts.WR || 0)),
+    TE: Math.max(0, Number(starters.TE || 0) - Number(counts.TE || 0)),
+  };
 
   if (counts.RB < Math.min(targets.RB, starters.RB + 2)) {
-    score -= 12;
+    score -= Math.round(18 * Math.max(0.35, completion));
     notes.push("RB depth thin");
   }
   if (counts.WR < Math.min(targets.WR, starters.WR + 3)) {
-    score -= 12;
+    score -= Math.round(18 * Math.max(0.35, completion));
     notes.push("WR depth thin");
   }
+  if (starterMissing.RB && simGradePenaltyWindow(4)) {
+    score -= Math.round(14 * starterMissing.RB * simGradePenaltyWindow(4));
+    notes.push("starting RB not solved");
+  }
+  if (starterMissing.WR && simGradePenaltyWindow(5)) {
+    score -= Math.round(14 * starterMissing.WR * simGradePenaltyWindow(5));
+    notes.push("starting WR not solved");
+  }
+  if (starterMissing.QB && simGradePenaltyWindow(slots.SUPERFLEX ? 7 : 10)) {
+    score -= Math.round((slots.SUPERFLEX ? 18 : 10) * starterMissing.QB * simGradePenaltyWindow(slots.SUPERFLEX ? 7 : 10));
+    notes.push(slots.SUPERFLEX ? "superflex QB pressure" : "QB slot open late");
+  }
+  if (starterMissing.TE && simGradePenaltyWindow(10)) {
+    score -= Math.round(9 * starterMissing.TE * simGradePenaltyWindow(10));
+    notes.push("TE slot open late");
+  }
+  if (flexEligible < flexStarterTarget() && simGradePenaltyWindow(7)) {
+    score -= Math.round(10 * simGradePenaltyWindow(7));
+    notes.push("FLEX starter thin");
+  }
   if (counts.QB > targets.QB) {
-    score -= 8;
+    score -= 12;
     notes.push("extra QB");
   }
   if (counts.TE > targets.TE) {
-    score -= 8;
+    score -= 10;
     notes.push("extra TE");
   }
   if (counts.DST > targets.DST || counts.K > targets.K) {
-    score -= 8;
+    score -= 10;
     notes.push("extra DST/K");
   }
   const dstPick = team.picks.find((pick) => pick.row.Pos === "DST");
   const kPick = team.picks.find((pick) => pick.row.Pos === "K");
   if (dstPick && dstPick.round < dstTargetRound()) {
-    score -= 6;
+    score -= 10;
     notes.push("early DST");
   }
   if (kPick && kPick.round < kickerTargetRound()) {
-    score -= 6;
+    score -= 12;
     notes.push("early K");
   }
+  if (reaches.length) {
+    score -= reaches.length * 4 + majorReaches.length * 4;
+    notes.push(`${reaches.length} reach${reaches.length === 1 ? "" : "es"}`);
+  }
+  if (steals.length >= 2) {
+    score += Math.min(8, steals.length * 2);
+    notes.push(`${steals.length} value pick${steals.length === 1 ? "" : "s"}`);
+  }
+  if (highRiskEarly) {
+    score -= highRiskEarly * 5;
+    notes.push("early risk stack");
+  }
+  if (avgRisk >= 6 && pickCount >= 5) {
+    score -= 7;
+    notes.push("volatile build");
+  }
+  if (rbWr < Math.min(7, Math.round(draftRoundTotal() * 0.45)) && completion >= 0.75) {
+    score -= 10;
+    notes.push("RB/WR volume low");
+  }
+  if (team.picks.slice(0, 6).filter((pick) => ["RB", "WR"].includes(pick.row.Pos)).length < 4 && pickCount >= 6) {
+    score -= 8;
+    notes.push("foundation light on RB/WR");
+  }
 
-  score = Math.max(0, score);
-  const grade = score >= 90 ? "A" : score >= 80 ? "B" : score >= 70 ? "C" : score >= 60 ? "D" : "F";
+  score = Math.round(clampNumber(score, 0, 100));
+  const grade = score >= 93 ? "A" : score >= 86 ? "B+" : score >= 80 ? "B" : score >= 73 ? "C+" : score >= 67 ? "C" : score >= 58 ? "D" : "F";
   return {
-    grade: team.picks.length ? `${grade} (${score})` : "Pending",
-    detail: notes.length ? notes.join(", ") : team.picks.length ? "Shape is clean so far." : "Grade appears after picks.",
+    grade: pickCount ? `${grade} (${score})` : "Pending",
+    detail: notes.length
+      ? notes.slice(0, 5).join(", ")
+      : pickCount
+        ? complete
+          ? "Clean build with value discipline."
+          : "Shape is clean so far."
+        : "Grade appears after picks.",
   };
 }
 
 function renderSimRecommendationCard(item, index = 0) {
   const { row, decision } = item;
+  const momentum = playerMarketMomentum(row);
   const survivalText = decision.survival.pct ? `${decision.survival.pct}% back` : "no turn";
   return `<div class="pick-card recommendation ${index < 3 ? "priority" : ""} ${decision.className}">
     <span>#${row.Rank} / ${row.Pos} / ${row.Team}</span>
@@ -4149,9 +5150,10 @@ function renderSimRecommendationCard(item, index = 0) {
     <div class="rec-meta">
       <em>${decision.label}</em>
       <b class="${decision.survival.className}">${survivalText}</b>
+      ${momentum.hasSleeperSignal ? `<b class="${momentum.className}">${htmlEscape(momentum.label)}</b>` : ""}
       <b>${htmlEscape(row["Pos Tier"] || row.Category)}</b>
     </div>
-    <small>${htmlEscape(decision.reason)} ${scoringProjectionLabel()}: ${projectionDisplay(row)}. League value: ${valueDisplay(row)}. ${htmlEscape(decision.survival.detail)}</small>
+    <small>${htmlEscape(decision.reason)} ${scoringProjectionLabel()}: ${projectionDisplay(row)}. League value: ${valueDisplay(row)}. ${htmlEscape(decision.survival.detail)} ${momentum.hasSleeperSignal ? htmlEscape(momentum.detail) : ""}</small>
     ${playerSynopsisBlock(row, { compact: true })}
     <button type="button" class="sim-draft-button" data-sim-player="${normalizePlayerName(row.Player)}">Draft</button>
   </div>`;
@@ -4175,7 +5177,7 @@ function renderSimRecommendations() {
   const waits = recommendations.filter((item) => item.decision.label === "Can wait").slice(0, 3);
   const pickNow = recommendations.filter((item) => !["Can wait", "Wait"].includes(item.decision.label)).slice(0, 5);
   const avoids = simAvailableRows()
-    .filter((row) => simDecision(row, simTeam(mockSim.userSlot).counts).label === "Avoid")
+    .filter((row) => simDecision(row, simTeam(mockSim.userSlot).counts).label === "Avoid" || (playerMarketMomentum(row).score <= -14 && simRound() <= 10))
     .sort((a, b) => Number(a.Rank) - Number(b.Rank))
     .slice(0, 3);
   simRecommendations.innerHTML = `
@@ -4298,12 +5300,14 @@ function renderMockSimulator() {
   const userPick = active && mockSim.currentOverall <= totalPicks && simSlotFromOverall(mockSim.currentOverall) === mockSim.userSlot;
   const grade = simGradeRoster();
   const team = active ? simTeam(mockSim.userSlot) : { counts: emptyPositionCounts(), picks: [] };
+  const currentSlot = active && mockSim.currentOverall <= totalPicks ? simSlotFromOverall(mockSim.currentOverall) : null;
+  const currentManager = currentSlot ? simManagerProfile(currentSlot) : null;
 
   simStatus.innerHTML = active
-    ? `<strong>${userPick ? "You are on the clock." : "Mock in progress."}</strong> Slot ${mockSim.userSlot}, ${completed}/${totalPicks} picks complete.`
+    ? `<strong>${userPick ? "You are on the clock." : "Mock in progress."}</strong> Slot ${mockSim.userSlot}, ${completed}/${totalPicks} picks complete. CPU managers now draft with value, scarcity, market, and roster-build profiles.`
     : "Start a mock, then practice making picks while the room auto-drafts around you.";
   if (simCurrentPick) simCurrentPick.textContent = active && mockSim.currentOverall <= totalPicks ? `Round ${simRound()}, Pick ${simRoundPick(mockSim.currentOverall)}` : active ? "Mock complete" : "No mock started";
-  if (simCurrentTeam) simCurrentTeam.textContent = active && mockSim.currentOverall <= totalPicks ? `Overall ${mockSim.currentOverall}: Team ${simSlotFromOverall(mockSim.currentOverall)}${userPick ? " (you)" : ""}` : "Choose a slot and start.";
+  if (simCurrentTeam) simCurrentTeam.textContent = active && mockSim.currentOverall <= totalPicks ? `Overall ${mockSim.currentOverall}: Team ${currentSlot}${userPick ? " (you)" : currentManager ? ` / ${currentManager.name}` : ""}` : "Choose a slot and start.";
   if (simCompleted) simCompleted.textContent = String(completed);
   if (simTotal) simTotal.textContent = `of ${totalPicks}`;
   if (simProgressBar) simProgressBar.style.width = `${pct}%`;
@@ -4344,6 +5348,7 @@ function liveServerHelp(error) {
     `;
   }
   if (liveSyncStatus) liveSyncStatus.textContent = "Sync unavailable";
+  renderLeagueHealth();
 }
 
 function loadLiveDraft(force = false) {
@@ -4360,7 +5365,9 @@ function loadLiveDraft(force = false) {
       } else {
         throw new Error(data.error || "ESPN returned no draft data");
       }
-      renderLiveDraft();
+      const nextSignature = liveDraftRenderSignature(liveDraft);
+      const unchanged = !force && lastLiveDraftRenderSignature && nextSignature === lastLiveDraftRenderSignature;
+      renderLiveDraft({ full: !unchanged });
     })
     .catch((error) => {
       liveServerHelp(error.message);

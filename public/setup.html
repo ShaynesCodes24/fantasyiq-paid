@@ -513,14 +513,20 @@
             const saveNote = payload.saved
               ? "This league profile was saved to the customer account."
               : payload.saveMessage || "The league details were validated.";
+            const nextUrl = previewUrl(packet);
             result.innerHTML = `
               <strong>Ready: ${escapeHtml(payload.leagueName)} / ${escapeHtml(payload.teamName)}</strong>
-              <p>Team ID ${escapeHtml(payload.teamId)} was found for the ${escapeHtml(payload.season)} season. ${escapeHtml(saveNote)}</p>
+              <p>Team ID ${escapeHtml(payload.teamId)} was found for the ${escapeHtml(payload.season)} season. ${escapeHtml(saveNote)}${payload.saved ? " Opening the saved dashboard now." : ""}</p>
               <div class="button-row setup-actions">
-                <a class="primary dark" href="${escapeHtml(previewUrl(packet))}">${payload.saved ? "Open saved dashboard" : "Preview dashboard settings"}</a>
+                <a class="primary dark" href="${escapeHtml(nextUrl)}">${payload.saved ? "Open saved dashboard" : "Preview dashboard settings"}</a>
               </div>
               ${renderTeams(payload.teams)}
             `;
+            if (payload.saved) {
+              window.setTimeout(() => {
+                window.location.href = nextUrl;
+              }, 900);
+            }
             return;
           }
           result.innerHTML = `
