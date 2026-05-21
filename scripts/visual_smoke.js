@@ -1,0 +1,168 @@
+const fs = require("node:fs/promises");
+const path = require("node:path");
+const { chromium } = require("playwright");
+
+const BASE_URL = (process.env.VISUAL_SMOKE_BASE_URL || "https://myfantasyiq.com").replace(/\/$/, "");
+const OUTPUT_DIR = process.env.VISUAL_SMOKE_OUTPUT_DIR || path.join("artifacts", "visual-smoke");
+const HEADLESS = process.env.VISUAL_SMOKE_HEADLESS !== "0";
+const VIEWPORTS = [
+  { name: "desktop", width: 1440, height: 1100 },
+  { name: "mobile", width: 390, height: 844 },
+];
+
+const consoleIssues = [];
+const pageErrors = [];
+const results = [];
+
+function urlFor(route) {
+  return `${BASE_URL}${route}`;
+}
+
+function cleanName(value) {
+  return value.replace(/[^a-z0-9-]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
+}
+
+async function ensureDir() {
+  await fs.mkdir(OUTPUT_DIR, { recursive: true });
+}
+
+async function screenshot(page, name) {
+  const file = path.join(OUTPUT_DIR, `${cleanName(name)}.png`);
+  await page.screenshot({ path: file, fullPage: true });
+  return file;
+}
+
+async function waitForQuietPage(page) {
+  await page.waitForLoadState("domcontentloaded", { timeout: 45000 });
+  await page.waitForLoadState("networkidle", { timeout: 20000 }).catch(() => {});
+}
+
+function record(name, details) {
+  results.push({ name, ...details });
+  console.log(`PASS ${name}: ${details.detail}`);
+}
+
+async function expectBodyText(page, text, label) {
+  const body = await page.locator("body").innerText({ timeout: 15000 });
+  if (!body.includes(text)) {
+    throw new Error(`${label} missing expected text: ${text}`);
+  }
+  return body;
+}
+
+async function newPage(browser, viewport) {
+  const page = await browser.newPage({
+    viewport: { width: viewport.width, height: viewport.height },
+  });
+  page.on("console", (message) => {
+    if (["error", "warning"].includes(message.type())) {
+      consoleIssues.push(`${viewport.name} ${message.type()}: ${message.text()}`);
+    }
+  });
+  page.on("pageerror", (error) => {
+    pageErrors.push(`${viewport.name}: ${error.message}`);
+  });
+  return page;
+}
+
+async function checkPublicPages(browser, viewport) {
+  const pages = [
+    { route: "/", name: "home", text: "FantasyIQ" },
+    { route: "/setup.html", name: "setup", text: "Set up FantasyIQ in two minutes" },
+    { route: "/success.html", name: "success", text: "Welcome to FantasyIQ" },
+    { route: "/admin.html", name: "admin", text: "Customer operations" },
+    { route: "/help.html", name: "help", text: "FantasyIQ Q&A" },
+  ];
+
+  for (const item of pages) {
+    const page = await newPage(browser, viewport);
+    const response = await page.goto(urlFor(item.route), { waitUntil: "domcontentloaded", timeout: 45000 });
+    await waitForQuietPage(page);
+    await expectBodyText(page, item.text, `${viewport.name} ${item.name}`);
+    const file = await screenshot(page, `${viewport.name}-${item.name}`);
+    record(`${viewport.name} ${item.name}`, {
+      detail: `HTTP ${response?.status() || "unknown"}, screenshot ${file}`,
+    });
+    await page.close();
+  }
+}
+
+async function activateDashboardSection(page, section) {
+  const nav = page.locator(`.nav-item[data-section="${section}"]`);
+  if ((await nav.count()) !== 1) {
+    throw new Error(`Could not find dashboard nav section ${section}`);
+  }
+  await nav.click();
+  await page.locator(`.panel#${section}.active`).waitFor({ state: "visible", timeout: 15000 });
+}
+
+async function checkDashboard(browser, viewport) {
+  const page = await newPage(browser, viewport);
+  const response = await page.goto(urlFor("/FantasyIQ/"), { waitUntil: "domcontentloaded", timeout: 45000 });
+  await waitForQuietPage(page);
+  await page.locator("#live-status").waitFor({ state: "attached", timeout: 30000 });
+  await expectBodyText(page, "FantasyIQ", `${viewport.name} dashboard`);
+
+  const navItems = await page.locator(".nav-item").count();
+  if (navItems < 7) throw new Error(`${viewport.name} dashboard expected at least 7 nav items, found ${navItems}`);
+
+  const boardRows = await page.locator("#board-table tbody tr").count();
+  if (boardRows < 50) throw new Error(`${viewport.name} dashboard expected board rows, found ${boardRows}`);
+
+  await screenshot(page, `${viewport.name}-dashboard-command`);
+
+  for (const section of ["draft", "live", "simulator", "trade", "workbooks", "account"]) {
+    await activateDashboardSection(page, section);
+    await screenshot(page, `${viewport.name}-dashboard-${section}`);
+  }
+
+  const tradeText = await page.locator("#trade-finder").innerText({ timeout: 10000 });
+  const waiverText = await page.locator("#waiver-assistant").innerText({ timeout: 10000 });
+  if (!tradeText || !waiverText) throw new Error(`${viewport.name} trade/waiver panels did not render text`);
+
+  const accountAction = page.locator("#account-action");
+  if ((await accountAction.count()) !== 1) throw new Error(`${viewport.name} account action is missing`);
+  await accountAction.click();
+  await page.locator("#customer-access-gate").waitFor({ state: "visible", timeout: 15000 });
+  await page.locator("#customer-login-password").waitFor({ state: "visible", timeout: 15000 });
+  await page.locator("#customer-access-code").waitFor({ state: "visible", timeout: 15000 });
+  await screenshot(page, `${viewport.name}-dashboard-sign-in`);
+
+  record(`${viewport.name} dashboard`, {
+    detail: `HTTP ${response?.status() || "unknown"}, ${boardRows} board rows, ${navItems} nav items`,
+  });
+  await page.close();
+}
+
+async function main() {
+  await ensureDir();
+  const browser = await chromium.launch({ headless: HEADLESS });
+  try {
+    for (const viewport of VIEWPORTS) {
+      await checkPublicPages(browser, viewport);
+      await checkDashboard(browser, viewport);
+    }
+  } finally {
+    await browser.close();
+  }
+
+  const hardConsoleErrors = consoleIssues.filter((issue) => issue.includes(" error:"));
+  if (pageErrors.length || hardConsoleErrors.length) {
+    console.error("Page errors:");
+    pageErrors.forEach((error) => console.error(`- ${error}`));
+    console.error("Console errors:");
+    hardConsoleErrors.forEach((error) => console.error(`- ${error}`));
+    process.exit(1);
+  }
+
+  await fs.writeFile(
+    path.join(OUTPUT_DIR, "summary.json"),
+    JSON.stringify({ baseUrl: BASE_URL, viewports: VIEWPORTS, results, consoleIssues, pageErrors }, null, 2),
+  );
+  console.log(`PASS visual smoke complete: ${results.length} checks, screenshots in ${OUTPUT_DIR}`);
+}
+
+main().catch((error) => {
+  console.error(`FAIL visual smoke: ${error.message}`);
+  process.exit(1);
+});

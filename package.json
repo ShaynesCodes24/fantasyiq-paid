@@ -1,0 +1,12 @@
+{
+  "name": "fantasyiq-paid",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build_static.js",
+    "test:visual": "node scripts/visual_smoke.js",
+    "test:readiness": "python scripts/check_product_readiness.py"
+  },
+  "devDependencies": {
+    "playwright": "^1.60.0"
+  }
+}
