@@ -432,6 +432,17 @@ def access_code_from(path: str, headers: Any | None = None) -> str:
 def verify_customer_access(context: CustomerContext, path: str = "", headers: Any | None = None) -> None:
     if context.demo_mode or not context.access_code:
         return
+    try:
+        try:
+            from auth_service import session_slug_from_headers
+        except ImportError:
+            from api.auth_service import session_slug_from_headers
+
+        session_slug = session_slug_from_headers(headers)
+        if session_slug and session_slug == context.slug:
+            return
+    except Exception:
+        pass
     if access_code_from(path, headers) != context.access_code:
         raise PermissionError("Valid customer access code required.")
 

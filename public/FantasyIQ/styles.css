@@ -3120,7 +3120,7 @@ body.access-locked .topbar {
 }
 
 .access-card {
-  width: min(460px, 100%);
+  width: min(560px, 100%);
   border: 1px solid rgba(247, 205, 101, 0.55);
   border-radius: 8px;
   padding: 28px;
@@ -3146,6 +3146,16 @@ body.access-locked .topbar {
   font-weight: 800;
 }
 
+.access-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.access-grid label {
+  margin: 0 0 12px;
+}
+
 .access-card input {
   min-height: 50px;
   border: 1px solid rgba(180, 127, 23, 0.45);
@@ -3157,6 +3167,38 @@ body.access-locked .topbar {
 .access-card button {
   width: 100%;
   justify-content: center;
+}
+
+.access-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.access-actions button {
+  min-height: 46px;
+  border: 1px solid rgba(18, 63, 52, 0.28);
+  background: #f8efd8;
+  color: #082217;
+}
+
+.access-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 2px;
+  color: #66736d;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.access-divider::before,
+.access-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: rgba(18, 63, 52, 0.18);
 }
 
 .access-message {
@@ -3973,7 +4015,9 @@ textarea,
 
   .hero-actions,
   .live-switches,
-  .add-league-actions {
+  .add-league-actions,
+  .access-grid,
+  .access-actions {
     display: grid;
     grid-template-columns: 1fr;
   }

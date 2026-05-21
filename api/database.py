@@ -210,6 +210,116 @@ def customer_entry(slug_or_email: str, selected_league: str = "") -> dict[str, A
     }
 
 
+def customer_auth_record(slug_or_email: str) -> dict[str, Any] | None:
+    lookup = slugify(slug_or_email)
+    if not lookup or not database_enabled():
+        return None
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT slug, customer_name, email, access_code, password_hash, status
+                  FROM fantasyiq_customers
+                 WHERE slug = %s OR lower(email) = lower(%s)
+                 LIMIT 1
+                """,
+                (lookup, str(slug_or_email or "").strip()),
+            )
+            return fetch_one_dict(cursor)
+
+
+def set_customer_password(slug: str, password_hash: str) -> dict[str, Any] | None:
+    if not database_enabled():
+        raise DatabaseUnavailable("Database is not enabled.")
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE fantasyiq_customers
+                   SET password_hash = %s,
+                       password_created_at = now(),
+                       updated_at = now()
+                 WHERE slug = %s
+             RETURNING slug, customer_name, email, status, password_created_at
+                """,
+                (password_hash, slugify(slug)),
+            )
+            return fetch_one_dict(cursor)
+
+
+def session_customer_slug(token_hash: str) -> str:
+    if not token_hash or not database_enabled():
+        return ""
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE fantasyiq_sessions
+                   SET last_seen_at = now()
+                 WHERE token_hash = %s
+                   AND revoked_at IS NULL
+                   AND expires_at > now()
+             RETURNING customer_slug
+                """,
+                (token_hash,),
+            )
+            row = fetch_one_dict(cursor)
+            return str((row or {}).get("customer_slug") or "")
+
+
+def create_customer_session(*, customer_slug: str, token_hash: str, expires_at: datetime, user_agent: str = "") -> None:
+    if not database_enabled():
+        raise DatabaseUnavailable("Database is not enabled.")
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO fantasyiq_sessions (
+                    customer_slug, token_hash, user_agent, created_at, last_seen_at, expires_at
+                )
+                VALUES (%s, %s, %s, now(), now(), %s)
+                ON CONFLICT (token_hash) DO UPDATE SET
+                    customer_slug = EXCLUDED.customer_slug,
+                    user_agent = EXCLUDED.user_agent,
+                    expires_at = EXCLUDED.expires_at,
+                    revoked_at = NULL,
+                    last_seen_at = now()
+                """,
+                (slugify(customer_slug), token_hash, user_agent[:500], expires_at),
+            )
+            cursor.execute(
+                """
+                UPDATE fantasyiq_customers
+                   SET last_login_at = now(),
+                       updated_at = now()
+                 WHERE slug = %s
+                """,
+                (slugify(customer_slug),),
+            )
+
+
+def revoke_customer_session(token_hash: str) -> None:
+    if not token_hash or not database_enabled():
+        return
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE fantasyiq_sessions
+                   SET revoked_at = now(),
+                       last_seen_at = now()
+                 WHERE token_hash = %s
+                   AND revoked_at IS NULL
+                """,
+                (token_hash,),
+            )
+
+
 def upsert_customer(
     *,
     slug: str = "",

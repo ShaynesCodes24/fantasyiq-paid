@@ -7,6 +7,9 @@ CREATE TABLE IF NOT EXISTS fantasyiq_customers (
     status TEXT NOT NULL DEFAULT 'paid_needs_setup',
     stripe_customer_id TEXT NOT NULL DEFAULT '',
     subscription_status TEXT NOT NULL DEFAULT '',
+    password_hash TEXT NOT NULL DEFAULT '',
+    password_created_at TIMESTAMPTZ,
+    last_login_at TIMESTAMPTZ,
     included_league_limit INTEGER NOT NULL DEFAULT 3,
     additional_league_count INTEGER NOT NULL DEFAULT 0,
     default_league_key TEXT NOT NULL DEFAULT '',
@@ -17,6 +20,33 @@ CREATE TABLE IF NOT EXISTS fantasyiq_customers (
 CREATE UNIQUE INDEX IF NOT EXISTS fantasyiq_customers_email_unique
     ON fantasyiq_customers (lower(email))
     WHERE email <> '';
+
+ALTER TABLE fantasyiq_customers
+    ADD COLUMN IF NOT EXISTS password_hash TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE fantasyiq_customers
+    ADD COLUMN IF NOT EXISTS password_created_at TIMESTAMPTZ;
+
+ALTER TABLE fantasyiq_customers
+    ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
+
+CREATE TABLE IF NOT EXISTS fantasyiq_sessions (
+    id BIGSERIAL PRIMARY KEY,
+    customer_slug TEXT NOT NULL REFERENCES fantasyiq_customers(slug) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL UNIQUE,
+    user_agent TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at TIMESTAMPTZ NOT NULL,
+    revoked_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS fantasyiq_sessions_customer_idx
+    ON fantasyiq_sessions (customer_slug, expires_at DESC);
+
+CREATE INDEX IF NOT EXISTS fantasyiq_sessions_active_idx
+    ON fantasyiq_sessions (token_hash, expires_at)
+    WHERE revoked_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS fantasyiq_leagues (
     id BIGSERIAL PRIMARY KEY,

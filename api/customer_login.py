@@ -9,8 +9,12 @@ from urllib.parse import parse_qs, urlparse
 
 try:
     from customer_context import ConfigError, all_customer_contexts, database_customer_context, slugify, verify_customer_access
+    from auth_service import make_session, password_policy_error, session_cookie, verify_password
+    from database import customer_auth_record
 except ModuleNotFoundError:
     from api.customer_context import ConfigError, all_customer_contexts, database_customer_context, slugify, verify_customer_access
+    from api.auth_service import make_session, password_policy_error, session_cookie, verify_password
+    from api.database import customer_auth_record
 
 
 def utc_now() -> str:
@@ -38,14 +42,46 @@ def dashboard_url(customer_slug: str, league_key: str = "") -> str:
     return f"/FantasyIQ/?{urlencode(query)}"
 
 
-def login_payload(raw: dict[str, Any]) -> dict[str, Any]:
+def login_payload(raw: dict[str, Any], headers: Any | None = None) -> tuple[dict[str, Any], list[tuple[str, str]]]:
     identity = str(raw.get("customer") or raw.get("email") or raw.get("dashboard") or "").strip()
     access_code = str(raw.get("accessCode") or raw.get("access_code") or raw.get("code") or "").strip()
+    password = str(raw.get("password") or "").strip()
     selected_league = str(raw.get("league") or raw.get("leagueKey") or "").strip()
     if not identity:
         raise PermissionError("Enter the email from checkout or your dashboard slug.")
+
+    if password:
+        policy_error = password_policy_error(password)
+        if policy_error:
+            raise PermissionError(policy_error)
+        record = customer_auth_record(identity)
+        if not record:
+            raise PermissionError("Customer account was not found.")
+        if not record.get("password_hash"):
+            raise PermissionError("Create a password with your access code first.")
+        if not verify_password(password, str(record.get("password_hash") or "")):
+            raise PermissionError("Email or password did not match.")
+        context = database_customer_context(str(record.get("slug") or identity), selected_league)
+        if context is None:
+            raise PermissionError("Customer account was not found.")
+        token, expires_at = make_session(context.slug, headers)
+        customer = context.public_dict()
+        customer["passwordConfigured"] = True
+        return (
+            {
+                "ok": True,
+                "authenticated": True,
+                "authMode": "password",
+                "customer": customer,
+                "dashboardUrl": dashboard_url(context.slug, context.league_key),
+                "expiresAt": expires_at.isoformat(timespec="seconds").replace("+00:00", "Z"),
+                "syncedAt": utc_now(),
+            },
+            [("Set-Cookie", session_cookie(token, headers, max_age=30 * 24 * 60 * 60))],
+        )
+
     if not access_code:
-        raise PermissionError("Enter your FantasyIQ access code.")
+        raise PermissionError("Enter your FantasyIQ access code or password.")
 
     context = database_customer_context(identity, selected_league)
     if context is None:
@@ -54,37 +90,59 @@ def login_payload(raw: dict[str, Any]) -> dict[str, Any]:
         raise PermissionError("Customer account was not found.")
     if not context.access_code:
         raise PermissionError("This customer account does not have an access code yet.")
+    if access_code != context.access_code:
+        raise PermissionError("Valid customer access code required.")
     verify_customer_access(context, "", {"x-fantasyiq-access-code": access_code})
     customer = context.public_dict()
-    return {
+    extra_headers: list[tuple[str, str]] = []
+    try:
+        token, expires_at = make_session(context.slug, headers)
+        extra_headers.append(("Set-Cookie", session_cookie(token, headers, max_age=30 * 24 * 60 * 60)))
+        customer["passwordConfigured"] = bool((customer_auth_record(context.slug) or {}).get("password_hash"))
+    except Exception:
+        expires_at = None
+        customer["passwordConfigured"] = False
+    payload = {
         "ok": True,
         "authenticated": True,
+        "authMode": "accessCode",
         "customer": customer,
         "dashboardUrl": dashboard_url(context.slug, context.league_key),
         "syncedAt": utc_now(),
     }
+    if expires_at:
+        payload["expiresAt"] = expires_at.isoformat(timespec="seconds").replace("+00:00", "Z")
+    return payload, extra_headers
 
 
 class handler(BaseHTTPRequestHandler):
-    def send_json(self, payload: dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> None:
+    def send_json(
+        self,
+        payload: dict[str, Any],
+        status: HTTPStatus = HTTPStatus.OK,
+        extra_headers: list[tuple[str, str]] | None = None,
+    ) -> None:
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        for name, value in extra_headers or []:
+            self.send_header(name, value)
         self.end_headers()
         self.wfile.write(body)
 
     def do_POST(self) -> None:
         try:
-            self.send_json(login_payload(parse_body(self)))
+            payload, extra_headers = login_payload(parse_body(self), self.headers)
+            self.send_json(payload, extra_headers=extra_headers)
         except (PermissionError, ConfigError, json.JSONDecodeError) as exc:
             self.send_json({"ok": False, "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.UNAUTHORIZED)
         except Exception:
             self.send_json({"ok": False, "message": "Could not verify that account right now.", "syncedAt": utc_now()}, HTTPStatus.BAD_GATEWAY)
 
     def do_GET(self) -> None:
-        self.send_json({"ok": True, "message": "POST an email or customer slug with an access code to sign in."})
+        self.send_json({"ok": True, "message": "POST an email or customer slug with a password or access code to sign in."})
 
     def do_HEAD(self) -> None:
         self.send_response(HTTPStatus.OK)

@@ -7,8 +7,10 @@ from http.server import BaseHTTPRequestHandler
 
 try:
     from customer_context import ConfigError, access_code_from, resolve_customer_context, verify_customer_access
+    from auth_service import session_slug_from_headers
 except ModuleNotFoundError:
     from api.customer_context import ConfigError, access_code_from, resolve_customer_context, verify_customer_access
+    from api.auth_service import session_slug_from_headers
 
 
 def utc_now() -> str:
@@ -29,6 +31,8 @@ class handler(BaseHTTPRequestHandler):
         try:
             context = resolve_customer_context(self.path)
             authenticated = not bool(context.access_code)
+            if context.access_code and session_slug_from_headers(self.headers) == context.slug:
+                authenticated = True
             if access_code_from(self.path, self.headers):
                 verify_customer_access(context, self.path, self.headers)
                 authenticated = True

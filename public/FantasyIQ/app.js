@@ -303,6 +303,8 @@ const INITIAL_BOARD_LIMIT = 180;
 const CUSTOMER_SESSION_DAYS = 30;
 let activePlayerAutocomplete = null;
 let fullBoardLoadStarted = false;
+let customerPasswordSession = false;
+let customerBootStarted = false;
 
 function rememberedCustomerLoadout(loadouts) {
   try {
@@ -450,6 +452,10 @@ function clearCustomerAccessCode() {
   localStorage.removeItem(loadoutStorageKey("access-code"));
 }
 
+function hasCustomerAccess() {
+  return Boolean(savedCustomerAccessCode() || customerPasswordSession);
+}
+
 function apiUrl(path, params = {}) {
   const url = new URL(path, window.location.origin);
   if (appConfig.loadoutKey) {
@@ -485,6 +491,21 @@ function removeCustomerAccessGate() {
   updateAccountControl();
 }
 
+function finishCustomerSignIn(payload, accessCode = "") {
+  if (payload.customer?.customerSlug) {
+    appConfig.loadoutKey = payload.customer.customerSlug;
+  }
+  customerPasswordSession = true;
+  applyServerCustomerContext(payload.customer);
+  if (accessCode) setCustomerAccessCode(accessCode);
+  removeCustomerAccessGate();
+  ensureCustomerUrlContext();
+  applyAppConfig();
+  updateAccountControl();
+  loadBoards();
+  startLiveSync();
+}
+
 function showCustomerAccessGate(message = "") {
   if (customerAccessGate()) return;
   document.body.classList.add("access-locked");
@@ -497,71 +518,126 @@ function showCustomerAccessGate(message = "") {
     <form class="access-card">
       <p class="eyebrow">Customer Login</p>
       <h2>${needsIdentity ? "Open your dashboard" : `Open ${htmlEscape(customerLabel)}`}</h2>
-      <p>${needsIdentity ? "Enter the email from checkout and your FantasyIQ access code." : "Enter the dashboard access code from your FantasyIQ setup email."}</p>
+      <p>${needsIdentity ? "Sign in with the email from checkout." : "Sign in with your FantasyIQ password. First time here? Create one with your setup access code."}</p>
       <label ${needsIdentity ? "" : "hidden"}>
         Email or dashboard slug
         <input id="customer-login-identity" type="text" autocomplete="username" ${needsIdentity ? "required" : ""} />
       </label>
       <label>
-        Access code
-        <input id="customer-access-code" type="password" autocomplete="off" required />
+        Password
+        <input id="customer-login-password" type="password" autocomplete="current-password" />
       </label>
-      <button type="submit" class="primary-action">Unlock Dashboard</button>
+      <button type="submit" class="primary-action">Sign In</button>
+      <div class="access-divider"><span>Setup or recovery</span></div>
+      <label>
+        Access code
+        <input id="customer-access-code" type="password" autocomplete="off" />
+      </label>
+      <div class="access-grid">
+        <label>
+          New password
+          <input id="customer-new-password" type="password" autocomplete="new-password" />
+        </label>
+        <label>
+          Confirm
+          <input id="customer-confirm-password" type="password" autocomplete="new-password" />
+        </label>
+      </div>
+      <div class="access-actions">
+        <button type="button" id="customer-code-unlock">Unlock With Code</button>
+        <button type="button" id="customer-create-password">Create Password</button>
+      </div>
       <div class="access-message">${message ? htmlEscape(message) : ""}</div>
       <small>Need help? Email ${htmlEscape(appConfig.supportEmail || "support")}.</small>
     </form>
   `;
   document.body.appendChild(gate);
   const identityInput = gate.querySelector("#customer-login-identity");
-  const input = gate.querySelector("#customer-access-code");
+  const passwordInput = gate.querySelector("#customer-login-password");
+  const codeInput = gate.querySelector("#customer-access-code");
+  const newPasswordInput = gate.querySelector("#customer-new-password");
+  const confirmPasswordInput = gate.querySelector("#customer-confirm-password");
   const output = gate.querySelector(".access-message");
-  (needsIdentity ? identityInput : input)?.focus();
+  const identityValue = () => (needsIdentity ? identityInput.value.trim() : appConfig.loadoutKey);
+  const customerBody = (extra = {}) => ({
+    customer: identityValue(),
+    league: appConfig.leagueKey || "",
+    ...extra,
+  });
+  const requireIdentity = () => {
+    if (!needsIdentity || identityValue()) return true;
+    output.textContent = "Enter the email from checkout or your dashboard slug.";
+    return false;
+  };
+  const postAuth = async (path, body) => {
+    const response = await fetch(path, {
+      method: "POST",
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok || payload.authenticated === false) {
+      throw new Error(payload.message || "That sign in did not work.");
+    }
+    return payload;
+  };
+  (needsIdentity ? identityInput : passwordInput)?.focus();
   gate.querySelector("form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const code = input.value.trim();
-    const identity = needsIdentity ? identityInput.value.trim() : appConfig.loadoutKey;
-    if (!code) return;
-    if (needsIdentity && !identity) {
-      output.textContent = "Enter the email from checkout or your dashboard slug.";
+    const password = passwordInput.value.trim();
+    if (!password) {
+      output.textContent = "Enter your password or use the setup access code below.";
       return;
     }
+    if (!requireIdentity()) return;
+    output.textContent = "Signing in...";
+    try {
+      finishCustomerSignIn(await postAuth("/api/customer-login", customerBody({ password })));
+    } catch (error) {
+      output.textContent = error.message || "Could not sign in. Refresh and try again.";
+    }
+  });
+  gate.querySelector("#customer-code-unlock")?.addEventListener("click", async () => {
+    const code = codeInput.value.trim();
+    if (!code) {
+      output.textContent = "Enter your FantasyIQ access code.";
+      return;
+    }
+    if (!requireIdentity()) return;
     output.textContent = "Checking access...";
     try {
-      const response = await fetch("/api/customer-login", {
-        method: "POST",
-        cache: "no-store",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customer: identity,
-          accessCode: code,
-          league: appConfig.leagueKey || "",
-        }),
-      });
-      const payload = await response.json();
-      if (!response.ok || !payload.ok || payload.authenticated === false) {
-        output.textContent = payload.message || "That access code did not work.";
-        return;
-      }
-      if (payload.customer?.customerSlug) {
-        appConfig.loadoutKey = payload.customer.customerSlug;
-      }
-      applyServerCustomerContext(payload.customer);
-      setCustomerAccessCode(code);
-      removeCustomerAccessGate();
-      ensureCustomerUrlContext();
-      applyAppConfig();
-      updateAccountControl();
-      loadBoards();
-      startLiveSync();
+      finishCustomerSignIn(await postAuth("/api/customer-login", customerBody({ accessCode: code })), code);
     } catch (error) {
-      output.textContent = "Could not verify the code. Refresh and try again.";
+      output.textContent = error.message || "Could not verify the code. Refresh and try again.";
+    }
+  });
+  gate.querySelector("#customer-create-password")?.addEventListener("click", async () => {
+    const code = codeInput.value.trim();
+    const password = newPasswordInput.value.trim();
+    const confirm = confirmPasswordInput.value.trim();
+    if (!code) {
+      output.textContent = "Enter your setup access code first.";
+      return;
+    }
+    if (password !== confirm) {
+      output.textContent = "Those passwords do not match.";
+      return;
+    }
+    if (!requireIdentity()) return;
+    output.textContent = "Creating password...";
+    try {
+      finishCustomerSignIn(await postAuth("/api/customer-password", customerBody({ accessCode: code, password })));
+    } catch (error) {
+      output.textContent = error.message || "Could not create that password right now.";
     }
   });
 }
 
 function ensureCustomerAccess() {
   if (!requiresCustomerAccess()) return true;
-  if (savedCustomerAccessCode()) return true;
+  if (hasCustomerAccess()) return true;
   showCustomerAccessGate();
   return false;
 }
@@ -569,6 +645,7 @@ function ensureCustomerAccess() {
 function handleCustomerAccessFailure(message = "Enter the current customer access code.") {
   if (!requiresCustomerAccess()) return false;
   clearCustomerAccessCode();
+  customerPasswordSession = false;
   window.clearInterval(liveTimer);
   updateAccountControl();
   showCustomerAccessGate(message);
@@ -576,28 +653,61 @@ function handleCustomerAccessFailure(message = "Enter the current customer acces
   return true;
 }
 
+async function restoreCustomerSession() {
+  if (!requiresCustomerAccess() || hasCustomerAccess()) return false;
+  try {
+    const response = await fetch(apiUrl("/api/customer-session", { v: Date.now() }), {
+      cache: "no-store",
+      credentials: "same-origin",
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok || payload.authenticated === false || !payload.customer) {
+      return false;
+    }
+    customerPasswordSession = true;
+    applyServerCustomerContext(payload.customer);
+    removeCustomerAccessGate();
+    ensureCustomerUrlContext();
+    applyAppConfig();
+    updateAccountControl();
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+async function bootCustomerDashboard() {
+  if (customerBootStarted) return;
+  customerBootStarted = true;
+  await restoreCustomerSession();
+  loadBoards();
+  startLiveSync();
+}
+
 function updateAccountControl() {
   if (!accountCard) return;
   const customerLabel = appConfig.customerName || appConfig.customerTeamName || appConfig.loadoutKey || "Dashboard";
   if (accountLabel) accountLabel.textContent = requiresCustomerAccess() ? customerLabel : "Public Demo";
-  if (accountState) accountState.textContent = requiresCustomerAccess() ? (savedCustomerAccessCode() ? "Signed In" : "Signed Out") : "Preview";
+  if (accountState) accountState.textContent = requiresCustomerAccess() ? (hasCustomerAccess() ? "Signed In" : "Signed Out") : "Preview";
   if (accountAction) {
-    accountAction.textContent = requiresCustomerAccess() ? (savedCustomerAccessCode() ? "Sign Out" : "Sign In") : "Sign In";
+    accountAction.textContent = requiresCustomerAccess() ? (hasCustomerAccess() ? "Sign Out" : "Sign In") : "Sign In";
     accountAction.disabled = false;
   }
-  accountCard.classList.toggle("signed-in", requiresCustomerAccess() && Boolean(savedCustomerAccessCode()));
-  accountCard.classList.toggle("signed-out", requiresCustomerAccess() && !savedCustomerAccessCode());
+  accountCard.classList.toggle("signed-in", requiresCustomerAccess() && hasCustomerAccess());
+  accountCard.classList.toggle("signed-out", requiresCustomerAccess() && !hasCustomerAccess());
   renderAccountPanel();
 }
 
-function signOutCustomer() {
+async function signOutCustomer() {
   clearCustomerAccessCode();
+  customerPasswordSession = false;
+  fetch("/api/customer-session", { method: "DELETE", cache: "no-store", credentials: "same-origin" }).catch(() => {});
   window.clearInterval(liveTimer);
   liveTimer = null;
   updateAccountControl();
   if (requiresCustomerAccess()) {
     if (liveStatus) liveStatus.innerHTML = "<strong>Signed out.</strong> Sign in to reconnect live draft sync.";
-    showCustomerAccessGate("Signed out. Enter your access code to unlock the dashboard.");
+    showCustomerAccessGate("Signed out. Use your password or setup access code to unlock the dashboard.");
   }
 }
 
@@ -915,8 +1025,8 @@ function leagueSlotText(count = configuredLeagueCount()) {
 
 function accountStatusText() {
   if (!requiresCustomerAccess()) return "Public demo preview. Sign in with your checkout email and access code to open your account.";
-  if (savedCustomerAccessCode()) return "Signed in. Refresh will keep this dashboard unlocked on this device.";
-  return "Signed out. Enter your dashboard access code to unlock saved leagues.";
+  if (hasCustomerAccess()) return "Signed in. Refresh will keep this dashboard unlocked on this device.";
+  return "Signed out. Use your password or setup access code to unlock saved leagues.";
 }
 
 function leagueSetupUrl(league = null) {
@@ -986,7 +1096,7 @@ function renderAccountPanel() {
 }
 
 function renderAccountProgress(count, limit) {
-  const signedIn = requiresCustomerAccess() && Boolean(savedCustomerAccessCode());
+  const signedIn = requiresCustomerAccess() && hasCustomerAccess();
   const hasLeague = count > 0 && (appConfig.leagueId || currentLeagueOptions().length || appConfig.customerTeamName);
   const hasIncludedRoom = count < limit;
   const steps = [
@@ -1166,7 +1276,7 @@ function openAddLeagueDialog() {
         showCustomerAccessGate("Sign in first, then FantasyIQ can attach the new league to your account.");
         return;
       }
-      if (!savedCustomerAccessCode()) {
+      if (!hasCustomerAccess()) {
         closeAddLeagueDialog();
         showCustomerAccessGate("Sign in before adding another league.");
         return;
@@ -1282,7 +1392,7 @@ function dashboardUrlWithHash(hash = "") {
 }
 
 function ensureCustomerUrlContext() {
-  if (!requiresCustomerAccess() || !savedCustomerAccessCode()) return;
+  if (!requiresCustomerAccess() || !hasCustomerAccess()) return;
   const params = new URLSearchParams(window.location.search);
   let changed = false;
   if (!params.get("customer") && !params.get("loadout") && !params.get("dashboard")) {
@@ -3793,7 +3903,7 @@ function loadBoards() {
 }
 
 if (boardTable) {
-  loadBoards();
+  bootCustomerDashboard();
 }
 
 setupPlayerAutocomplete();
@@ -3898,7 +4008,7 @@ liveSyncToggle?.addEventListener("change", () => {
 });
 
 accountAction?.addEventListener("click", () => {
-  if (savedCustomerAccessCode()) {
+  if (hasCustomerAccess()) {
     signOutCustomer();
   } else {
     showCustomerAccessGate();
@@ -3912,5 +4022,4 @@ const savedAutoSync = localStorage.getItem(loadoutStorageKey("auto-sync"));
 if (liveSyncToggle && savedAutoSync !== null) {
   liveSyncToggle.checked = savedAutoSync === "true";
 }
-startLiveSync();
 
