@@ -18,7 +18,7 @@
   --warn: #a13f2f;
   --shadow: 0 24px 70px rgba(5, 17, 14, 0.25);
   --shadow-soft: 0 8px 24px rgba(5, 17, 14, 0.14);
-  --football-cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg transform='rotate(28 20 20)'%3E%3Cpath d='M4 20C8 10 32 10 36 20C32 30 8 30 4 20Z' fill='%238a4f24' stroke='%23201006' stroke-width='2.4' stroke-linejoin='round'/%3E%3Cpath d='M8 20C14 16 26 16 32 20' fill='none' stroke='%23fff3cf' stroke-width='2.2' stroke-linecap='round'/%3E%3Cpath d='M17 15.5v8M20 15v9M23 15.5v8' stroke='%23fff3cf' stroke-width='1.8' stroke-linecap='round'/%3E%3Cpath d='M5 20h4M31 20h4' stroke='%23fff3cf' stroke-width='1.7' stroke-linecap='round' opacity='.68'/%3E%3C/g%3E%3C/svg%3E") 6 13, auto;
+  --football-cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ctext x='20' y='30' text-anchor='middle' font-size='30' font-family='Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif'%3E%F0%9F%8F%88%3C/text%3E%3C/svg%3E") 8 8, auto;
 }
 
 * {
