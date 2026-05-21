@@ -3530,6 +3530,11 @@ body.access-locked .topbar {
   justify-content: center;
 }
 
+.access-card button:disabled {
+  cursor: wait;
+  opacity: 0.64;
+}
+
 .access-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3563,10 +3568,31 @@ body.access-locked .topbar {
 }
 
 .access-message {
-  min-height: 24px;
+  min-height: 44px;
   margin-top: 12px;
-  color: #8a4a0b;
-  font-weight: 800;
+  border: 1px solid rgba(180, 127, 23, 0.32);
+  border-radius: 8px;
+  background: #fff6dc;
+  padding: 12px;
+  color: #7a3e06;
+  font-weight: 900;
+  line-height: 1.45;
+}
+
+.access-message:empty {
+  display: none;
+}
+
+.access-message[data-state="error"] {
+  border-color: rgba(138, 74, 11, 0.45);
+  background: #fff0d0;
+  color: #7a3300;
+}
+
+.access-message[data-state="info"] {
+  border-color: rgba(15, 58, 48, 0.2);
+  background: #edf7f2;
+  color: #0f3a30;
 }
 
 .access-card small {

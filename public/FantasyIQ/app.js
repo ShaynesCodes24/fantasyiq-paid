@@ -531,7 +531,7 @@ function showCustomerAccessGate(message = "") {
     <form class="access-card">
       <p class="eyebrow">Customer Login</p>
       <h2>${needsIdentity ? "Open your dashboard" : `Open ${htmlEscape(customerLabel)}`}</h2>
-      <p>${needsIdentity ? "Sign in with the email from checkout." : "Sign in with your FantasyIQ password. First time here? Create one with your setup access code."}</p>
+      <p>${needsIdentity ? "Sign in with the email from checkout." : "Sign in with your FantasyIQ password. First time here? Use your setup access code below to create one."}</p>
       <label ${needsIdentity ? "" : "hidden"}>
         Email or dashboard slug
         <input id="customer-login-identity" type="text" autocomplete="username" ${needsIdentity ? "required" : ""} />
@@ -540,7 +540,7 @@ function showCustomerAccessGate(message = "") {
         Password
         <input id="customer-login-password" type="password" autocomplete="current-password" />
       </label>
-      <button type="submit" class="primary-action">Sign In</button>
+      <button type="submit" class="primary-action" id="customer-password-signin">Sign In With Password</button>
       <div class="access-divider"><span>Setup or recovery</span></div>
       <label>
         Access code
@@ -560,7 +560,7 @@ function showCustomerAccessGate(message = "") {
         <button type="button" id="customer-code-unlock">Unlock With Code</button>
         <button type="button" id="customer-create-password">Create Password</button>
       </div>
-      <div class="access-message">${message ? htmlEscape(message) : ""}</div>
+      <div class="access-message" role="status" aria-live="polite" data-state="${message ? "info" : "idle"}">${message ? htmlEscape(message) : ""}</div>
       <small>Need help? Email ${htmlEscape(appConfig.supportEmail || "support")}.</small>
     </form>
   `;
@@ -571,7 +571,29 @@ function showCustomerAccessGate(message = "") {
   const newPasswordInput = gate.querySelector("#customer-new-password");
   const confirmPasswordInput = gate.querySelector("#customer-confirm-password");
   const output = gate.querySelector(".access-message");
+  const authButtons = Array.from(gate.querySelectorAll("button"));
   const identityValue = () => (needsIdentity ? identityInput.value.trim() : appConfig.loadoutKey);
+  const passwordSetupMessage =
+    "This account does not have a password yet. Use the access code from the setup email below, enter a new password twice, then click Create Password. You can also click Unlock With Code for one-time access.";
+  const friendlyAuthMessage = (message = "") => {
+    if (/create a password/i.test(message)) return passwordSetupMessage;
+    if (/customer account was not found/i.test(message)) {
+      return "We could not find that customer account. Use the exact email from checkout, or open the dashboard link from the setup email.";
+    }
+    if (/email or password/i.test(message)) return "That email and password did not match. Try again, or use your setup access code below to reset/create the password.";
+    return message || "Could not sign in. Refresh and try again.";
+  };
+  const setAuthBusy = (busy) => {
+    authButtons.forEach((button) => {
+      button.disabled = busy;
+      button.setAttribute("aria-busy", busy ? "true" : "false");
+    });
+  };
+  const showAuthMessage = (text, state = "info") => {
+    output.textContent = text;
+    output.dataset.state = state;
+    if (text) output.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  };
   const customerBody = (extra = {}) => ({
     customer: identityValue(),
     league: appConfig.leagueKey || "",
@@ -579,7 +601,7 @@ function showCustomerAccessGate(message = "") {
   });
   const requireIdentity = () => {
     if (!needsIdentity || identityValue()) return true;
-    output.textContent = "Enter the email from checkout or your dashboard slug.";
+    showAuthMessage("Enter the email from checkout or your dashboard slug.", "error");
     return false;
   };
   const postAuth = async (path, body) => {
@@ -590,7 +612,7 @@ function showCustomerAccessGate(message = "") {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    const payload = await response.json();
+    const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload.ok || payload.authenticated === false) {
       throw new Error(payload.message || "That sign in did not work.");
     }
@@ -601,29 +623,37 @@ function showCustomerAccessGate(message = "") {
     event.preventDefault();
     const password = passwordInput.value.trim();
     if (!password) {
-      output.textContent = "Enter your password or use the setup access code below.";
+      showAuthMessage("Enter your password, or use the setup access code below to create one.", "error");
       return;
     }
     if (!requireIdentity()) return;
-    output.textContent = "Signing in...";
+    showAuthMessage("Signing in...", "info");
+    setAuthBusy(true);
     try {
       finishCustomerSignIn(await postAuth("/api/customer-login", customerBody({ password })));
     } catch (error) {
-      output.textContent = error.message || "Could not sign in. Refresh and try again.";
+      const messageText = friendlyAuthMessage(error.message);
+      showAuthMessage(messageText, "error");
+      if (messageText === passwordSetupMessage) codeInput.focus();
+    } finally {
+      setAuthBusy(false);
     }
   });
   gate.querySelector("#customer-code-unlock")?.addEventListener("click", async () => {
     const code = codeInput.value.trim();
     if (!code) {
-      output.textContent = "Enter your FantasyIQ access code.";
+      showAuthMessage("Enter your FantasyIQ access code.", "error");
       return;
     }
     if (!requireIdentity()) return;
-    output.textContent = "Checking access...";
+    showAuthMessage("Checking access...", "info");
+    setAuthBusy(true);
     try {
       finishCustomerSignIn(await postAuth("/api/customer-login", customerBody({ accessCode: code })), code);
     } catch (error) {
-      output.textContent = error.message || "Could not verify the code. Refresh and try again.";
+      showAuthMessage(friendlyAuthMessage(error.message || "Could not verify the code. Refresh and try again."), "error");
+    } finally {
+      setAuthBusy(false);
     }
   });
   gate.querySelector("#customer-create-password")?.addEventListener("click", async () => {
@@ -631,19 +661,22 @@ function showCustomerAccessGate(message = "") {
     const password = newPasswordInput.value.trim();
     const confirm = confirmPasswordInput.value.trim();
     if (!code) {
-      output.textContent = "Enter your setup access code first.";
+      showAuthMessage("Enter your setup access code first.", "error");
       return;
     }
     if (password !== confirm) {
-      output.textContent = "Those passwords do not match.";
+      showAuthMessage("Those passwords do not match.", "error");
       return;
     }
     if (!requireIdentity()) return;
-    output.textContent = "Creating password...";
+    showAuthMessage("Creating password...", "info");
+    setAuthBusy(true);
     try {
       finishCustomerSignIn(await postAuth("/api/customer-password", customerBody({ accessCode: code, password })));
     } catch (error) {
-      output.textContent = error.message || "Could not create that password right now.";
+      showAuthMessage(friendlyAuthMessage(error.message || "Could not create that password right now."), "error");
+    } finally {
+      setAuthBusy(false);
     }
   });
 }
