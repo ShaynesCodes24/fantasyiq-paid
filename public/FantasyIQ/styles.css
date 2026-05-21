@@ -4709,6 +4709,49 @@ textarea,
   background: #eef7f2;
 }
 
+/* Readability pass: make small helper text clearer without changing headline weight. */
+:root {
+  --muted: #465247;
+}
+
+small,
+.tier-note,
+.command-tile small,
+.alpha-strip small,
+.trade-player-chip span,
+.trade-player-chip small,
+.trade-score-grid small,
+.post-draft-hero small,
+.post-draft-grid p,
+.trade-finder-grid p,
+.waiver-assistant p,
+.trade-rules p,
+.player-synopsis small,
+.player-drawer-grid small,
+.intel-card small,
+.pick-card small,
+.cheatcode-hero small,
+.tier-divider small,
+.sim-player-row small,
+.draft-order-grid small,
+.mini-table small,
+.league-switcher-actions small,
+.first-run-guide small,
+.access-card small {
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.live-clock small,
+.live-stat small,
+.war-room-main p,
+.war-room-secondary,
+.war-room-signals article small,
+.alpha-strip article:first-child small {
+  color: rgba(255, 247, 221, 0.9);
+  font-weight: 850;
+}
+
 @media (max-width: 860px) {
   .topbar,
   .sidebar {
