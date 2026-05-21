@@ -907,7 +907,7 @@ function renderAccountPanel() {
   const limit = includedLeagueLimit();
   const active = activeLeagueOption();
   const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
-  const support = appConfig.supportEmail || "shayneholladay@gmail.com";
+  const support = appConfig.supportEmail || "support@myfantasyiq.com";
 
   if (accountDashboardName) accountDashboardName.textContent = appConfig.customerName || appConfig.loadoutKey || "FantasyIQ";
   if (accountDashboardStatus) accountDashboardStatus.textContent = accountStatusText();

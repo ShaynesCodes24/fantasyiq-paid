@@ -3,7 +3,7 @@
 ## Before Selling
 
 - Done: Create a $30/year Season Pass payment link.
-- Done: Use `shayneholladay@gmail.com` as the customer support email.
+- Done: Use `support@myfantasyiq.com` as the customer support email.
 - Done: Use the live Stripe Season Pass payment link: `https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01`.
 - Done: Create the additional league add-on link: `https://buy.stripe.com/dRmcN5aAV1GX0Cc7X3efC02`.
 - Next: Configure the new Stripe Season Pass link fields and after-payment message.
@@ -14,7 +14,7 @@
 - Confirm the Vercel customer registry includes every paid customer's league profiles.
 - Done: Configure Katelyn as the first real customer using her public ESPN league.
 - Next: Test the public demo dashboard after redeploying the public sales config.
-- Use `https://fantasyiq-paid.vercel.app/FantasyIQ/` as Stripe's business website.
+- Use `https://myfantasyiq.com/FantasyIQ/` as Stripe's business website.
 - Done: Run `python .\scripts\check_product_readiness.py` before sharing the offer publicly.
 - Done: Run `python .\scripts\check_security_setup.py` before sharing the offer publicly.
 - Run `python .\scripts\check_os_readiness.py` before major product releases.

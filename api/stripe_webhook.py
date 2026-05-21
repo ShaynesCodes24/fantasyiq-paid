@@ -104,7 +104,7 @@ def checkout_row(session: dict[str, Any]) -> dict[str, str]:
     team_id = custom_field_value(session, "teamid")
     season = custom_field_value(session, "season") or str(DEFAULT_SEASON)
     league_name = custom_field_value(session, "leaguename")
-    dashboard_url = env("FANTASYIQ_DASHBOARD_URL", "https://fantasyiq-paid.vercel.app/FantasyIQ/")
+    dashboard_url = env("FANTASYIQ_DASHBOARD_URL", "https://myfantasyiq.com/FantasyIQ/")
     return {
         "customer_name": str(customer.get("name") or "").strip(),
         "email": str(customer.get("email") or "").strip(),

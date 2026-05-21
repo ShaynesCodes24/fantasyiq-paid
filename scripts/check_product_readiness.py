@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 
 
-SITE_URL = os.environ.get("FANTASYIQ_SITE_URL", "https://fantasyiq-paid.vercel.app/").rstrip("/")
+SITE_URL = os.environ.get("FANTASYIQ_SITE_URL", "https://myfantasyiq.com/").rstrip("/")
 ROOT_URL = f"{SITE_URL}/"
 DASHBOARD_URL = f"{SITE_URL}/FantasyIQ/"
 STRIPE_URL = os.environ.get(

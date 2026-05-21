@@ -36,7 +36,7 @@ Need help?
 Live draft sync currently requires a public ESPN league.
 
 Support email:
-shayneholladay@gmail.com
+support@myfantasyiq.com
 ```
 
 ## Public League Problem
@@ -73,7 +73,7 @@ you have more than one league, and confirm that each league name and team list
 loads correctly. If anything looks off, reply here and I will check the setup.
 
 Support email:
-shayneholladay@gmail.com
+support@myfantasyiq.com
 ```
 
 ## Renewal Reminder

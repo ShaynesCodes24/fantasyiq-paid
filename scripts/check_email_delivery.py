@@ -46,7 +46,7 @@ def main() -> int:
     args = parser.parse_args()
     load_local_env()
 
-    site_url = env("FANTASYIQ_SITE_URL") or "https://fantasyiq-paid.vercel.app"
+    site_url = env("FANTASYIQ_SITE_URL") or "https://myfantasyiq.com"
     token = env("FANTASYIQ_ADMIN_TOKEN")
     if not token:
         print("FANTASYIQ_ADMIN_TOKEN is missing from .env.local.")

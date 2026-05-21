@@ -36,13 +36,13 @@ fantasyiq-paid
 If Vercel accepts that name, the live website URL will be:
 
 ```text
-https://fantasyiq-paid.vercel.app/
+https://myfantasyiq.com/
 ```
 
 Stripe accepted business website URL:
 
 ```text
-https://fantasyiq-paid.vercel.app/FantasyIQ/
+https://myfantasyiq.com/FantasyIQ/
 ```
 
 Paid dashboard URL shape:
@@ -148,7 +148,7 @@ https://buy.stripe.com/dRmcN5aAV1GX0Cc7X3efC02
 
 ## Public Demo
 
-The live `fantasyiq-paid.vercel.app/FantasyIQ/` dashboard is a public demo
+The live `myfantasyiq.com/FantasyIQ/` dashboard is a public demo
 preview. When `FANTASY_IQ_LEAGUE_ID` is not set, `/api/live-draft` connects to
 a known public ESPN demo league so the product does not look broken during a
 first checkout test.
@@ -185,7 +185,7 @@ leagueSubtitle: "ESPN PPR Redraft",
 logoUrl: "./assets/league-logo.jpeg",
 draftCardValue: "$30 / year",
 draftCardNote: "Season Pass for up to 3 ESPN leagues",
-supportEmail: "shayneholladay@gmail.com",
+supportEmail: "support@myfantasyiq.com",
 leagueSettings: {
   teamCount: 12,
   scoringType: "ppr",

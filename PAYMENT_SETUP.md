@@ -63,7 +63,7 @@ it to the repo. The script creates:
 Product: FantasyIQ Season Pass
 Price: $30/year recurring
 Required checkout fields: primary ESPN league ID, primary ESPN team ID, ESPN season
-Support email metadata: shayneholladay@gmail.com
+Support email metadata: support@myfantasyiq.com
 ```
 
 ## Configure The Current Link

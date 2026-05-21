@@ -12,7 +12,7 @@ from local_env import load_local_env
 
 
 API_BASE = "https://api.stripe.com/v1"
-DEFAULT_WEBHOOK_URL = "https://fantasyiq-paid.vercel.app/api/stripe-webhook"
+DEFAULT_WEBHOOK_URL = "https://myfantasyiq.com/api/stripe-webhook"
 ENABLED_EVENTS = [
     "checkout.session.completed",
     "customer.subscription.created",

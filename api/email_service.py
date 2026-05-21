@@ -14,7 +14,7 @@ def env(name: str, default: str = "") -> str:
 
 
 def site_url() -> str:
-    return env("FANTASYIQ_SITE_URL", "https://fantasyiq-paid.vercel.app").rstrip("/")
+    return env("FANTASYIQ_SITE_URL", "https://myfantasyiq.com").rstrip("/")
 
 
 def dashboard_url(customer_slug: str = "", league_key: str = "") -> str:
@@ -37,7 +37,7 @@ def help_url() -> str:
 
 
 def support_email() -> str:
-    return env("FANTASYIQ_SUPPORT_EMAIL", "shayneholladay@gmail.com")
+    return env("FANTASYIQ_SUPPORT_EMAIL", "support@myfantasyiq.com")
 
 
 def email_from() -> str:

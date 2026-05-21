@@ -20,7 +20,7 @@ from local_env import load_local_env  # noqa: E402
 
 load_local_env()
 
-SITE_URL = os.environ.get("FANTASYIQ_SITE_URL", "https://fantasyiq-paid.vercel.app").rstrip("/")
+SITE_URL = os.environ.get("FANTASYIQ_SITE_URL", "https://myfantasyiq.com").rstrip("/")
 TEST_LEAGUE_ID = "584856941"
 TEST_TEAM_ID = "5"
 TEST_SEASON = "2026"

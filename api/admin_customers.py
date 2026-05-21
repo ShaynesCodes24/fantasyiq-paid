@@ -36,7 +36,7 @@ def utc_now() -> str:
 
 
 def public_site_url() -> str:
-    return env("FANTASYIQ_SITE_URL", "https://fantasyiq-paid.vercel.app").rstrip("/")
+    return env("FANTASYIQ_SITE_URL", "https://myfantasyiq.com").rstrip("/")
 
 
 def dashboard_url(customer_slug: str) -> str:

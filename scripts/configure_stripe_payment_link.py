@@ -13,10 +13,10 @@ from local_env import load_local_env
 
 API_BASE = "https://api.stripe.com/v1"
 DEFAULT_PAYMENT_LINK_URL = "https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01"
-SUPPORT_EMAIL = "shayneholladay@gmail.com"
-WEBSITE_URL = "https://fantasyiq-paid.vercel.app/"
-DASHBOARD_URL = "https://fantasyiq-paid.vercel.app/FantasyIQ/"
-SETUP_URL = "https://fantasyiq-paid.vercel.app/setup.html"
+SUPPORT_EMAIL = "support@myfantasyiq.com"
+WEBSITE_URL = "https://myfantasyiq.com/"
+DASHBOARD_URL = "https://myfantasyiq.com/FantasyIQ/"
+SETUP_URL = "https://myfantasyiq.com/setup.html"
 
 CONFIRMATION_MESSAGE = (
     "Thanks for subscribing to FantasyIQ. If any checkout field was missed, "

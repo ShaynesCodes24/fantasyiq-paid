@@ -16,7 +16,7 @@ window.FANTASY_IQ_CONFIG = {
   includedLeagueLimit: 3,
   additionalLeaguePriceLabel: "$5 / year",
   showSubscribeButton: true,
-  supportEmail: "shayneholladay@gmail.com",
+  supportEmail: "support@myfantasyiq.com",
   liveBoardUrl: "/api/live-boards",
   isDemoPreview: true,
   demoLabel: "Public demo preview",

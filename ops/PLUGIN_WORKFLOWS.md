@@ -13,7 +13,7 @@ GitHub:
 Vercel:
 - Deploy production after verified changes.
 - Inspect failed deployments and build logs.
-- Confirm aliases point to `https://fantasyiq-paid.vercel.app`.
+- Confirm aliases point to `https://myfantasyiq.com`.
 - Use Vercel docs/tools for env, deployment, storage, and function questions.
 
 Browser or Chrome:

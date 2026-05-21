@@ -16,7 +16,7 @@ PRODUCT_NAME = "FantasyIQ Season Pass"
 PRODUCT_DESCRIPTION = "One manually configured dashboard account for up to three public ESPN fantasy football leagues."
 UNIT_AMOUNT_CENTS = 3000
 CURRENCY = "usd"
-SUPPORT_EMAIL = "shayneholladay@gmail.com"
+SUPPORT_EMAIL = "support@myfantasyiq.com"
 CONFIRMATION_MESSAGE = (
     "Thanks for subscribing to FantasyIQ. If any checkout field was missed, "
     f"email {SUPPORT_EMAIL}. To find IDs in ESPN, open each league in a browser: "

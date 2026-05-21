@@ -15,12 +15,12 @@ Season: 2026
 Checkout session: cs_live_a1dFa5qV8Kbccz0TZx9j1Mxf9RcHkutClazb3BSs1TffjYLUhlFCBoKu6q
 Paid at: 2026-05-19
 Renewal date: 2027-05-19
-Dashboard verified: https://fantasyiq-paid.vercel.app/FantasyIQ/?customer=katelyn
+Dashboard verified: https://myfantasyiq.com/FantasyIQ/?customer=katelyn
 ```
 
 ## Tester Steps
 
-1. Done: Open `https://fantasyiq-paid.vercel.app/`.
+1. Done: Open `https://myfantasyiq.com/`.
 2. Done: Click `Start setup` or `Subscribe`.
 3. Done: Complete Stripe checkout with a real email.
 4. Done: Fill in ESPN league ID, ESPN team ID, and ESPN season.
