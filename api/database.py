@@ -526,10 +526,12 @@ def list_customers() -> list[dict[str, Any]]:
                 """
                 SELECT c.slug, c.customer_name, c.email, c.status, c.subscription_status,
                        c.included_league_limit, c.additional_league_count, c.default_league_key,
-                       c.created_at, c.updated_at,
+                       c.created_at, c.updated_at, c.last_login_at,
                        NULLIF(c.password_hash, '') IS NOT NULL AS password_configured,
                        c.password_created_at,
                        COUNT(l.id) AS league_count,
+                       COUNT(l.id) FILTER (WHERE COALESCE(l.status, 'configured') IN ('configured', 'active')) AS configured_league_count,
+                       COUNT(l.id) FILTER (WHERE COALESCE(l.status, '') = 'pending_validation') AS pending_league_count,
                        MAX(l.updated_at) AS last_league_update,
                        BOOL_OR(NULLIF(c.access_code, '') IS NOT NULL) AS access_code_set
                   FROM fantasyiq_customers c
@@ -545,12 +547,81 @@ def list_customers() -> list[dict[str, Any]]:
     output = []
     for row in rows:
         clean = dict(row)
-        for key in ("created_at", "updated_at", "last_league_update", "password_created_at"):
+        for key in ("created_at", "updated_at", "last_login_at", "last_league_update", "password_created_at"):
             value = clean.get(key)
             if isinstance(value, (datetime, date)):
                 clean[key] = value.isoformat()
         output.append(clean)
     return output
+
+
+def archive_pending_duplicate_leagues(customer_slug: str = "") -> list[dict[str, Any]]:
+    if not database_enabled():
+        raise DatabaseUnavailable("Database is not enabled.")
+
+    lookup = slugify(customer_slug) if customer_slug else ""
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                WITH duplicate_pending AS (
+                    SELECT p.id
+                      FROM fantasyiq_leagues p
+                     WHERE COALESCE(p.status, '') = 'pending_validation'
+                       AND (%s = '' OR p.customer_slug = %s)
+                       AND EXISTS (
+                           SELECT 1
+                             FROM fantasyiq_leagues c
+                            WHERE c.customer_slug = p.customer_slug
+                              AND c.id <> p.id
+                              AND COALESCE(c.status, 'configured') IN ('configured', 'active')
+                              AND (
+                                  (p.league_id IS NOT NULL AND c.league_id = p.league_id)
+                                  OR (NULLIF(p.league_name, '') IS NOT NULL AND lower(c.league_name) = lower(p.league_name))
+                              )
+                       )
+                )
+                UPDATE fantasyiq_leagues l
+                   SET status = 'archived',
+                       source = COALESCE(NULLIF(l.source, ''), 'setup_validator') || ':duplicate_cleanup',
+                       updated_at = now()
+                  FROM duplicate_pending d
+                 WHERE l.id = d.id
+             RETURNING l.customer_slug, l.league_key, l.label, l.league_name, l.league_id, l.team_id, l.status
+                """,
+                (lookup, lookup),
+            )
+            archived = fetch_all_dicts(cursor)
+            cursor.execute(
+                """
+                WITH first_configured AS (
+                    SELECT customer_slug, league_key,
+                           ROW_NUMBER() OVER (PARTITION BY customer_slug ORDER BY created_at ASC, league_key ASC) AS rn
+                      FROM fantasyiq_leagues
+                     WHERE COALESCE(status, 'configured') IN ('configured', 'active')
+                       AND (%s = '' OR customer_slug = %s)
+                )
+                UPDATE fantasyiq_customers c
+                   SET default_league_key = f.league_key,
+                       updated_at = now()
+                  FROM first_configured f
+                 WHERE f.customer_slug = c.slug
+                   AND f.rn = 1
+                   AND (%s = '' OR c.slug = %s)
+                   AND (
+                        NULLIF(c.default_league_key, '') IS NULL
+                        OR NOT EXISTS (
+                            SELECT 1
+                              FROM fantasyiq_leagues l
+                             WHERE l.customer_slug = c.slug
+                               AND l.league_key = c.default_league_key
+                               AND COALESCE(l.status, 'configured') IN ('configured', 'active')
+                        )
+                   )
+                """,
+                (lookup, lookup, lookup, lookup),
+            )
+    return archived
 
 
 def record_ops_event(
@@ -589,9 +660,40 @@ def record_ops_event(
                         Jsonb(payload or {}),
                     ),
                 )
-                return cursor.fetchone() is not None
+                inserted = cursor.fetchone() is not None
+        if inserted and should_send_ops_alert(event_type, severity):
+            try:
+                try:
+                    from email_service import send_ops_alert
+                except ImportError:
+                    from api.email_service import send_ops_alert
+                send_ops_alert(
+                    event_type=event_type.strip(),
+                    severity=severity.strip() or "info",
+                    source=source.strip(),
+                    customer_slug=slugify(customer_slug) if customer_slug else "",
+                    league_key=slugify(league_key) if league_key else "",
+                    message=message.strip(),
+                )
+            except Exception:
+                pass
+        return inserted
     except Exception:
         return False
+
+
+def should_send_ops_alert(event_type: str, severity: str) -> bool:
+    if env("FANTASYIQ_DISABLE_OPS_ALERTS") == "1":
+        return False
+    clean_severity = str(severity or "").strip().lower()
+    clean_type = str(event_type or "").strip().lower()
+    if clean_type.startswith("email.ops_alert"):
+        return False
+    if clean_severity in {"error", "critical"}:
+        return True
+    if clean_severity == "warning" and clean_type.startswith(("checkout.", "setup.", "email.", "login.")):
+        return True
+    return False
 
 
 def list_ops_events(limit: int = 50) -> list[dict[str, Any]]:

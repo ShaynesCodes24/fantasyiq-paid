@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 
-def load_local_env(path: str = ".env.local") -> None:
+def load_local_env(path: str = ".env.local", *, override: bool = False) -> None:
     env_path = Path(path)
     if not env_path.exists():
         return
@@ -17,5 +17,5 @@ def load_local_env(path: str = ".env.local") -> None:
         key, value = line.split("=", 1)
         key = key.strip()
         value = value.strip().strip('"').strip("'")
-        if key and key not in os.environ:
+        if key and (override or key not in os.environ):
             os.environ[key] = value

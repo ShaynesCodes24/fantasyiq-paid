@@ -18,7 +18,10 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from local_env import load_local_env  # noqa: E402
 
 
-load_local_env()
+if os.environ.get("FANTASYIQ_ENV_FILE"):
+    load_local_env(os.environ["FANTASYIQ_ENV_FILE"], override=True)
+else:
+    load_local_env()
 
 SITE_URL = os.environ.get("FANTASYIQ_SITE_URL", "https://myfantasyiq.com").rstrip("/")
 TEST_LEAGUE_ID = "584856941"
@@ -95,14 +98,14 @@ def post_form(url: str, data: dict[str, str], headers: dict[str, str] | None = N
         return exc.code, data
 
 
-def admin_action(action: str, customer: str) -> dict[str, Any]:
+def admin_action(action: str, customer: str = "", **extra: Any) -> dict[str, Any]:
     token = env("FANTASYIQ_ADMIN_TOKEN")
     if not token:
         raise RuntimeError("FANTASYIQ_ADMIN_TOKEN is missing from .env.local.")
     status, data = request_json(
         f"{SITE_URL}/api/admin-customers",
         method="POST",
-        payload={"action": action, "customer": customer},
+        payload={"action": action, "customer": customer, **extra},
         headers={"x-fantasyiq-admin-token": token},
     )
     if status != 200 or not data.get("ok"):
@@ -112,9 +115,20 @@ def admin_action(action: str, customer: str) -> dict[str, Any]:
 
 def main() -> int:
     secret = env("STRIPE_WEBHOOK_SECRET")
-    if not secret:
-        print("STRIPE_WEBHOOK_SECRET is missing from .env.local.")
-        return 1
+    if not secret or env("FANTASYIQ_USE_ADMIN_SMOKE") == "1":
+        smoke = admin_action("self_serve_smoke_test")
+        if not smoke.get("ok"):
+            raise RuntimeError(f"Admin checkout smoke test failed: {smoke}")
+        if not smoke.get("persistedDatabase") or not smoke.get("autoSetupSaved") or not smoke.get("deleted"):
+            raise RuntimeError(f"Admin checkout smoke test incomplete: {smoke}")
+        print("PASS admin checkout smoke persisted customer")
+        print(f"PASS admin checkout smoke auto-configured league {smoke.get('leagueKey')}")
+        print("PASS admin checkout smoke cleaned up test customer")
+        if smoke.get("setupEmailSent"):
+            print("PASS admin checkout smoke sent setup email")
+        else:
+            print(f"WARN admin checkout smoke setup email not sent: {smoke.get('setupEmailReason') or 'unknown'}")
+        return 0
 
     timestamp = int(time.time())
     slug = f"self-serve-smoke-{timestamp}"

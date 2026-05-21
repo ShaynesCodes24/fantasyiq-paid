@@ -4506,7 +4506,8 @@ body {
 .account-card span,
 .league-switcher span,
 .league-switcher small {
-  color: rgba(255, 241, 189, 0.74);
+  color: rgba(255, 241, 189, 0.86);
+  font-weight: 850;
 }
 
 .draft-card strong,
@@ -4591,7 +4592,21 @@ body {
 }
 
 .command-hero p {
-  color: rgba(255, 247, 221, 0.82);
+  color: rgba(255, 247, 221, 0.9);
+  font-weight: 700;
+}
+
+.panel p,
+.metric small,
+.command-tile small,
+.pick-card small,
+.intel-card small,
+.live-stat small,
+.live-clock small,
+.account-league-list p,
+.support-panel p {
+  color: rgba(19, 43, 36, 0.78);
+  font-weight: 700;
 }
 
 .metric,

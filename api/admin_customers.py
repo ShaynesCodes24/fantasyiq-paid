@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import time
 import urllib.parse
 from datetime import date, datetime, timezone
 from http import HTTPStatus
@@ -175,9 +176,9 @@ def admin_action(raw: dict[str, Any]) -> dict[str, Any]:
     customer_slug = str(raw.get("customer") or raw.get("slug") or "").strip()
     try:
         try:
-            from database import admin_customer_detail, reset_customer_access_code
+            from database import admin_customer_detail, archive_pending_duplicate_leagues, reset_customer_access_code
         except ImportError:
-            from api.database import admin_customer_detail, reset_customer_access_code
+            from api.database import admin_customer_detail, archive_pending_duplicate_leagues, reset_customer_access_code
     except ImportError as exc:
         raise ConfigError("Database admin tools are unavailable.") from exc
 
@@ -236,6 +237,90 @@ def admin_action(raw: dict[str, Any]) -> dict[str, Any]:
             "syncedAt": utc_now(),
         }
 
+    if action == "send_password_reset_email":
+        detail = admin_customer_detail(customer_slug)
+        if not detail:
+            raise ConfigError("Customer was not found in the database.")
+        try:
+            try:
+                from email_service import send_customer_password_reset_email
+            except ImportError:
+                from api.email_service import send_customer_password_reset_email
+            email_result = send_customer_password_reset_email(
+                detail,
+                league_key=str(detail.get("default_league_key") or ""),
+                idempotency_key=f"fantasyiq-admin-reset-{detail['slug']}-{int(datetime.now(timezone.utc).timestamp())}",
+            )
+        except Exception as exc:
+            email_result = {"sent": False, "reason": str(exc)}
+        return {
+            "ok": True,
+            "action": action,
+            "customer": {
+                "slug": detail.get("slug"),
+                "customer_name": detail.get("customer_name"),
+                "email": detail.get("email"),
+            },
+            "email": email_result,
+            "syncedAt": utc_now(),
+        }
+
+    if action == "send_onboarding_email":
+        detail = admin_customer_detail(customer_slug)
+        if not detail:
+            raise ConfigError("Customer was not found in the database.")
+        stage = str(raw.get("stage") or "account").strip() or "account"
+        try:
+            try:
+                from email_service import send_customer_onboarding_email
+            except ImportError:
+                from api.email_service import send_customer_onboarding_email
+            email_result = send_customer_onboarding_email(
+                detail,
+                stage=stage,
+                league_key=str(detail.get("default_league_key") or ""),
+                idempotency_key=f"fantasyiq-admin-onboarding-{stage}-{detail['slug']}-{int(datetime.now(timezone.utc).timestamp())}",
+            )
+        except Exception as exc:
+            email_result = {"sent": False, "reason": str(exc)}
+        return {
+            "ok": True,
+            "action": action,
+            "stage": stage,
+            "customer": {
+                "slug": detail.get("slug"),
+                "customer_name": detail.get("customer_name"),
+                "email": detail.get("email"),
+            },
+            "email": email_result,
+            "syncedAt": utc_now(),
+        }
+
+    if action == "clean_pending_leagues":
+        archived = archive_pending_duplicate_leagues(customer_slug)
+        try:
+            try:
+                from database import record_ops_event
+            except ImportError:
+                from api.database import record_ops_event
+            record_ops_event(
+                event_type="admin.cleanup_pending_leagues",
+                severity="info",
+                source="admin_customers",
+                customer_slug=customer_slug,
+                message=f"Archived {len(archived)} duplicate pending league profile(s).",
+                payload={"archived": archived},
+            )
+        except Exception:
+            pass
+        return {
+            "ok": True,
+            "action": action,
+            "archivedCount": len(archived),
+            "archived": archived,
+            "syncedAt": utc_now(),
+        }
+
     if action == "send_test_setup_email":
         to = str(raw.get("email") or raw.get("to") or "").strip()
         if "@" not in to:
@@ -272,6 +357,76 @@ def admin_action(raw: dict[str, Any]) -> dict[str, Any]:
             "email": email_result,
             "syncedAt": utc_now(),
         }
+
+    if action == "self_serve_smoke_test":
+        timestamp = int(time.time())
+        slug = f"self-serve-smoke-{timestamp}"
+        test_email = f"delivered+{slug}@resend.dev"
+        event = {
+            "id": f"evt_{slug.replace('-', '_')}",
+            "type": "checkout.session.completed",
+            "data": {
+                "object": {
+                    "id": f"cs_{slug.replace('-', '_')}",
+                    "created": timestamp,
+                    "customer": "cus_self_serve_smoke",
+                    "payment_status": "paid",
+                    "amount_total": 3000,
+                    "currency": "usd",
+                    "metadata": {"customer_slug": slug},
+                    "customer_details": {"name": "FantasyIQ Smoke Customer", "email": test_email},
+                    "custom_fields": [
+                        {"key": "leagueid", "type": "text", "text": {"value": "584856941"}},
+                        {"key": "teamid", "type": "text", "text": {"value": "5"}},
+                        {"key": "season", "type": "text", "text": {"value": "2026"}},
+                        {"key": "leaguename", "type": "text", "text": {"value": "No Guts, No Glory"}},
+                    ],
+                }
+            },
+        }
+        deleted = False
+        try:
+            try:
+                from stripe_webhook import process_event
+                from database import delete_smoke_customer
+            except ImportError:
+                from api.stripe_webhook import process_event
+                from api.database import delete_smoke_customer
+            result = process_event(event)
+            database = result.get("database") or {}
+            auto_setup = database.get("autoSetup") or {}
+            email_result = database.get("setupEmail") or {}
+            ok = bool(database.get("persistedDatabase") and auto_setup.get("saved"))
+            deleted = delete_smoke_customer(slug)
+            return {
+                "ok": ok,
+                "action": action,
+                "customerSlug": slug,
+                "persistedDatabase": bool(database.get("persistedDatabase")),
+                "autoSetupSaved": bool(auto_setup.get("saved")),
+                "leagueKey": auto_setup.get("leagueKey") or "",
+                "setupEmailSent": bool(email_result.get("sent")),
+                "setupEmailReason": email_result.get("reason") or "",
+                "deleted": deleted,
+                "syncedAt": utc_now(),
+            }
+        except Exception as exc:
+            try:
+                try:
+                    from database import delete_smoke_customer
+                except ImportError:
+                    from api.database import delete_smoke_customer
+                deleted = delete_smoke_customer(slug)
+            except Exception:
+                deleted = False
+            return {
+                "ok": False,
+                "action": action,
+                "message": str(exc),
+                "customerSlug": slug,
+                "deleted": deleted,
+                "syncedAt": utc_now(),
+            }
 
     if action == "delete_smoke_customer":
         try:

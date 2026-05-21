@@ -26,6 +26,7 @@ SETUP_VALIDATE_URL = os.environ.get(
 CUSTOMER_STATUS_URL = os.environ.get("FANTASYIQ_CUSTOMER_STATUS_URL", f"{SITE_URL}/api/customer-status?customer=katelyn")
 WEBHOOK_URL = os.environ.get("FANTASYIQ_WEBHOOK_URL", f"{SITE_URL}/api/stripe-webhook")
 SUCCESS_URL = os.environ.get("FANTASYIQ_SUCCESS_URL", f"{SITE_URL}/success.html")
+PASSWORD_RESET_URL = os.environ.get("FANTASYIQ_PASSWORD_RESET_URL", f"{SITE_URL}/api/customer-password-reset")
 
 
 @dataclass
@@ -211,6 +212,17 @@ def customer_status_check() -> CheckResult:
     return CheckResult("Customer status API", "FAIL", f"{CUSTOMER_STATUS_URL} returned HTTP {status}: {payload.get('message', 'unknown error')}")
 
 
+def password_reset_check() -> CheckResult:
+    status, body = post_json(PASSWORD_RESET_URL, {"customer": "readiness-no-account@example.com"})
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError:
+        return CheckResult("Password reset API", "FAIL", f"{PASSWORD_RESET_URL} returned non-JSON HTTP {status}")
+    if status == 200 and payload.get("ok") is True and "password reset email" in str(payload.get("message", "")).lower():
+        return CheckResult("Password reset API", "PASS", "endpoint responds without exposing account existence")
+    return CheckResult("Password reset API", "FAIL", f"{PASSWORD_RESET_URL} returned HTTP {status}: {payload.get('message', 'unknown error')}")
+
+
 def webhook_install_check() -> CheckResult:
     status, body = fetch(WEBHOOK_URL)
     try:
@@ -255,6 +267,7 @@ def main() -> int:
         page_check("Admin page", f"{SITE_URL}/admin.html", ["Customer operations"]),
         setup_validate_check(),
         customer_status_check(),
+        password_reset_check(),
         webhook_install_check(),
     ]
 

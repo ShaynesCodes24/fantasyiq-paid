@@ -52,6 +52,10 @@
       "destination": "/api/customer_password"
     },
     {
+      "source": "/api/customer-password-reset",
+      "destination": "/api/customer_password_reset"
+    },
+    {
       "source": "/api/customer-session",
       "destination": "/api/customer_session"
     },

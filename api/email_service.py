@@ -40,6 +40,10 @@ def support_email() -> str:
     return env("FANTASYIQ_SUPPORT_EMAIL", "support@myfantasyiq.com")
 
 
+def alert_email() -> str:
+    return env("FANTASYIQ_ALERT_EMAIL", support_email())
+
+
 def email_from() -> str:
     return env("FANTASYIQ_EMAIL_FROM", "FantasyIQ <onboarding@resend.dev>")
 
@@ -54,6 +58,7 @@ def email_status() -> dict[str, Any]:
         "configured": bool(env("RESEND_API_KEY")),
         "from": email_from(),
         "supportEmail": support_email(),
+        "alertEmail": alert_email(),
         "dryRun": env("FANTASYIQ_EMAIL_DRY_RUN") == "1",
     }
 
@@ -205,6 +210,198 @@ def send_email(*, to: str, subject: str, html: str, text: str = "", idempotency_
         return {"sent": False, "provider": "resend", "status": exc.code, "reason": body[:500], "to": to, "subject": subject}
     except Exception as exc:
         return {"sent": False, "provider": "resend", "reason": str(exc), "to": to, "subject": subject}
+
+
+def send_ops_alert(
+    *,
+    event_type: str,
+    severity: str,
+    source: str = "",
+    customer_slug: str = "",
+    league_key: str = "",
+    message: str = "",
+) -> dict[str, Any]:
+    to = alert_email()
+    if not to or "@" not in to:
+        return {"sent": False, "reason": "alert_email_missing"}
+    subject = f"FantasyIQ alert: {severity or 'warning'} / {event_type or 'platform'}"
+    text = f"""FantasyIQ needs attention.
+
+Severity: {severity}
+Event: {event_type}
+Source: {source}
+Customer: {customer_slug or "platform"}
+League: {league_key or "n/a"}
+
+Message:
+{message or "No message supplied."}
+
+Admin:
+{site_url()}/admin.html
+"""
+    html = f"""
+    <div style="font-family:Arial,sans-serif;color:#151813;line-height:1.55;max-width:620px;">
+      <p style="color:#8a4f24;font-weight:700;text-transform:uppercase;font-size:12px;">FantasyIQ alert</p>
+      <h1 style="color:#0f3a30;">{escape(severity or "Warning")} / {escape(event_type or "platform")}</h1>
+      <p><strong>Source:</strong> {escape(source or "platform")}</p>
+      <p><strong>Customer:</strong> {escape(customer_slug or "platform")}</p>
+      <p><strong>League:</strong> {escape(league_key or "n/a")}</p>
+      <div style="background:#fbf6e8;border:1px solid #e3c875;border-radius:8px;padding:14px;margin:18px 0;">
+        {escape(message or "No message supplied.")}
+      </div>
+      <p><a href="{escape(site_url())}/admin.html" style="color:#0f3a30;font-weight:700;">Open admin dashboard</a></p>
+    </div>
+    """
+    return send_email(
+        to=to,
+        subject=subject,
+        html=html,
+        text=text,
+        idempotency_key=f"fantasyiq-alert-{event_type}-{customer_slug}-{league_key}-{severity}",
+    )
+
+
+def customer_password_reset_email(
+    *,
+    customer_name: str,
+    email: str,
+    customer_slug: str,
+    access_code: str,
+    league_key: str = "",
+) -> dict[str, str]:
+    name = customer_name or "FantasyIQ customer"
+    setup = setup_url(customer_slug)
+    dashboard = dashboard_url(customer_slug, league_key)
+    create_password = f"{setup}#create-password"
+    support = support_email()
+    subject = "Reset your FantasyIQ password"
+    text = f"""Use this link to reset your FantasyIQ password:
+{create_password}
+
+Access code:
+{access_code}
+
+Dashboard:
+{dashboard}
+
+If you did not request this, you can ignore this email.
+
+Support:
+{support}
+"""
+    html = f"""
+    <div style="font-family:Arial,sans-serif;color:#151813;line-height:1.55;max-width:620px;">
+      <p style="color:#8a4f24;font-weight:700;text-transform:uppercase;font-size:12px;">FantasyIQ account</p>
+      <h1 style="color:#0f3a30;">Reset your FantasyIQ password</h1>
+      <p>Hi {escape(name)}. Use the button below with your access code to create a new password.</p>
+      <p><strong>Access code:</strong><br />{escape(access_code)}</p>
+      <p><a href="{escape(create_password)}" style="display:inline-block;background:#0f3a30;color:#fff8e8;font-weight:700;padding:12px 16px;border-radius:8px;text-decoration:none;">Create / reset password</a></p>
+      <p><a href="{escape(dashboard)}" style="color:#0f3a30;font-weight:700;">Open dashboard</a></p>
+      <p>If you did not request this, you can ignore this email.</p>
+      <p>Support: <a href="mailto:{escape(support)}">{escape(support)}</a></p>
+    </div>
+    """
+    return {"to": email, "subject": subject, "text": text, "html": html}
+
+
+ONBOARDING_STAGES: dict[str, dict[str, str]] = {
+    "account": {
+        "subject": "Your FantasyIQ account is ready",
+        "title": "Your command center is ready",
+        "body": "Open your dashboard, confirm your active league, and create your password if you have not already.",
+        "cta": "Open dashboard",
+    },
+    "espn_ids": {
+        "subject": "How to find your ESPN league and team IDs",
+        "title": "Find your ESPN IDs in under a minute",
+        "body": "Open ESPN in a browser, enter your league, then copy leagueId and teamId from the address bar. FantasyIQ uses those to auto-detect scoring and roster settings.",
+        "cta": "Open setup",
+    },
+    "draft_room": {
+        "subject": "How to use your FantasyIQ Draft Room",
+        "title": "Use Draft Room as your draft-day command center",
+        "body": "Start with the top recommendation, check safe/upside/avoid notes, and let roster needs plus tier cliffs decide close calls.",
+        "cta": "Open dashboard",
+    },
+    "checklist": {
+        "subject": "Your FantasyIQ draft-day checklist",
+        "title": "Draft-day checklist",
+        "body": "Confirm your league is public, open the dashboard before the draft, turn on live sync, and keep your active league selected at the top.",
+        "cta": "Open dashboard",
+    },
+}
+
+
+def customer_onboarding_email(customer: dict[str, Any], stage: str = "account", league_key: str = "") -> dict[str, str]:
+    config = ONBOARDING_STAGES.get(stage) or ONBOARDING_STAGES["account"]
+    customer_slug = str(customer.get("slug") or customer.get("customerSlug") or "")
+    target_url = setup_url(customer_slug) if stage == "espn_ids" else dashboard_url(customer_slug, league_key)
+    support = support_email()
+    text = f"""{config["title"]}
+
+{config["body"]}
+
+{config["cta"]}:
+{target_url}
+
+Support:
+{support}
+"""
+    html = f"""
+    <div style="font-family:Arial,sans-serif;color:#151813;line-height:1.55;max-width:620px;">
+      <p style="color:#8a4f24;font-weight:700;text-transform:uppercase;font-size:12px;">FantasyIQ onboarding</p>
+      <h1 style="color:#0f3a30;">{escape(config["title"])}</h1>
+      <p>{escape(config["body"])}</p>
+      <p><a href="{escape(target_url)}" style="display:inline-block;background:#0f3a30;color:#fff8e8;font-weight:700;padding:12px 16px;border-radius:8px;text-decoration:none;">{escape(config["cta"])}</a></p>
+      <p>Support: <a href="mailto:{escape(support)}">{escape(support)}</a></p>
+    </div>
+    """
+    return {
+        "to": str(customer.get("email") or "").strip(),
+        "subject": config["subject"],
+        "text": text,
+        "html": html,
+    }
+
+
+def send_customer_password_reset_email(customer: dict[str, Any], league_key: str = "", idempotency_key: str = "") -> dict[str, Any]:
+    email = str(customer.get("email") or "").strip()
+    access_code = str(customer.get("access_code") or customer.get("accessCode") or "").strip()
+    if not email:
+        return {"sent": False, "reason": "customer_email_missing"}
+    if not access_code:
+        return {"sent": False, "reason": "customer_access_code_missing", "to": email}
+    message = customer_password_reset_email(
+        customer_name=str(customer.get("customer_name") or customer.get("customerName") or ""),
+        email=email,
+        customer_slug=str(customer.get("slug") or customer.get("customerSlug") or ""),
+        access_code=access_code,
+        league_key=league_key,
+    )
+    result = send_email(
+        to=message["to"],
+        subject=message["subject"],
+        html=message["html"],
+        text=message["text"],
+        idempotency_key=idempotency_key,
+    )
+    record_email_event({**customer, "leagueKey": league_key}, result, event_type="email.password_reset")
+    return result
+
+
+def send_customer_onboarding_email(customer: dict[str, Any], stage: str = "account", league_key: str = "", idempotency_key: str = "") -> dict[str, Any]:
+    message = customer_onboarding_email(customer, stage=stage, league_key=league_key)
+    if not message["to"]:
+        return {"sent": False, "reason": "customer_email_missing"}
+    result = send_email(
+        to=message["to"],
+        subject=message["subject"],
+        html=message["html"],
+        text=message["text"],
+        idempotency_key=idempotency_key,
+    )
+    record_email_event({**customer, "leagueKey": league_key}, result, event_type=f"email.onboarding.{stage}")
+    return result
 
 
 def send_customer_setup_email(customer: dict[str, Any], league_key: str = "", renewal_date: str = "", idempotency_key: str = "") -> dict[str, Any]:

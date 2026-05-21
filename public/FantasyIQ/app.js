@@ -559,6 +559,7 @@ function showCustomerAccessGate(message = "") {
       <div class="access-actions">
         <button type="button" id="customer-code-unlock">Unlock With Code</button>
         <button type="button" id="customer-create-password">Create / Reset Password</button>
+        <button type="button" id="customer-email-reset">Email Reset Link</button>
       </div>
       <div class="access-message" role="status" aria-live="polite" data-state="${message ? "info" : "idle"}">${message ? htmlEscape(message) : ""}</div>
       <small>Need help? Email ${htmlEscape(appConfig.supportEmail || "support")}.</small>
@@ -675,6 +676,27 @@ function showCustomerAccessGate(message = "") {
       finishCustomerSignIn(await postAuth("/api/customer-password", customerBody({ accessCode: code, password })));
     } catch (error) {
       showAuthMessage(friendlyAuthMessage(error.message || "Could not create that password right now."), "error");
+    } finally {
+      setAuthBusy(false);
+    }
+  });
+  gate.querySelector("#customer-email-reset")?.addEventListener("click", async () => {
+    if (!requireIdentity()) return;
+    showAuthMessage("Sending reset email...", "info");
+    setAuthBusy(true);
+    try {
+      const response = await fetch("/api/customer-password-reset", {
+        method: "POST",
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(customerBody()),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.ok) throw new Error(payload.message || "Could not send reset email.");
+      showAuthMessage(payload.message || "If that account exists, a password reset email is on the way.", "info");
+    } catch (error) {
+      showAuthMessage(friendlyAuthMessage(error.message || "Could not send reset email right now."), "error");
     } finally {
       setAuthBusy(false);
     }

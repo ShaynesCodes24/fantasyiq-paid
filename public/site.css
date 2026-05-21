@@ -575,6 +575,7 @@ button.secondary {
   color: var(--muted);
   line-height: 1.5;
   overflow-wrap: anywhere;
+  font-weight: 650;
 }
 
 .result-panel strong {
@@ -605,6 +606,7 @@ button.secondary {
 .mini-table span {
   color: var(--muted);
   font-size: 13px;
+  font-weight: 750;
 }
 
 .admin-actions {
@@ -623,6 +625,14 @@ button.secondary {
   font: inherit;
   font-size: 12px;
   font-weight: 800;
+}
+
+.policy-card p,
+.success-grid p,
+.success-support p,
+.setup-help p,
+.setup-help li {
+  font-weight: 650;
 }
 
 .success-page {
@@ -668,6 +678,36 @@ button.secondary {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin-top: 18px;
+}
+
+.success-status {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.success-status article {
+  min-width: 0;
+  border: 1px solid rgba(15, 58, 48, 0.14);
+  border-radius: 8px;
+  background: #fffdf8;
+  padding: 14px;
+}
+
+.success-status span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.success-status strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink);
+  font-size: 16px;
 }
 
 .success-grid article {
@@ -743,6 +783,7 @@ button.secondary {
   .admin-status-grid,
   .mini-table div,
   .mini-table div.has-actions,
+  .success-status,
   .success-grid {
     grid-template-columns: 1fr;
   }
