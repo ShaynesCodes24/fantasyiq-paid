@@ -74,8 +74,8 @@ The live payment link is already:
 https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01
 ```
 
-To update that existing link with required checkout fields and a hosted
-after-payment message, run:
+To update that existing link with required checkout fields and the branded
+after-payment redirect, run:
 
 ```powershell
 $env:STRIPE_SECRET_KEY="sk_live_your_key_here"
@@ -100,8 +100,8 @@ The script finds the matching Payment Link URL, then configures:
 
 ```text
 Required fields: primary ESPN league ID, primary ESPN team ID, ESPN season
-After-payment message: how to find leagueId/teamId plus support email
-Metadata: product, support email, website URL, dashboard URL
+After-payment redirect: https://myfantasyiq.com/success.html
+Metadata: product, support email, website URL, dashboard URL, setup URL, success URL
 ```
 
 If Stripe cannot find the link by URL, open the link in Stripe Dashboard, copy
@@ -138,10 +138,10 @@ If you cannot find teamId=, send the full ESPN league URL and your team name.
 
 ## After Payment
 
-1. Add the customer to `customers.example.csv` or your real tracker.
-2. Send the intake email from `CUSTOMER_EMAILS.md`.
-3. Complete the setup checklist in `CUSTOMER_ONBOARDING.md`.
-4. Send the delivery email.
+1. Stripe redirects the customer to `https://myfantasyiq.com/success.html`.
+2. The webhook creates or updates the customer record when `DATABASE_URL` is connected.
+3. Send or verify the setup email from `CUSTOMER_EMAILS.md`.
+4. Complete the setup checklist in `CUSTOMER_ONBOARDING.md` if manual attention is needed.
 5. Set a renewal reminder before the annual renewal date.
 
 ## Notes

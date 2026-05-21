@@ -25,6 +25,7 @@ SETUP_VALIDATE_URL = os.environ.get(
 )
 CUSTOMER_STATUS_URL = os.environ.get("FANTASYIQ_CUSTOMER_STATUS_URL", f"{SITE_URL}/api/customer-status?customer=katelyn")
 WEBHOOK_URL = os.environ.get("FANTASYIQ_WEBHOOK_URL", f"{SITE_URL}/api/stripe-webhook")
+SUCCESS_URL = os.environ.get("FANTASYIQ_SUCCESS_URL", f"{SITE_URL}/success.html")
 
 
 @dataclass
@@ -227,6 +228,7 @@ def main() -> int:
         page_check("Privacy", f"{SITE_URL}/privacy.html", ["Privacy"]),
         page_check("Refund policy", f"{SITE_URL}/refund-policy.html", ["Refund"]),
         page_check("Help", f"{SITE_URL}/help.html", ["FantasyIQ Q&A"]),
+        page_check("Checkout success page", SUCCESS_URL, ["Welcome to FantasyIQ", "Finish league setup"]),
         stripe_check(),
         api_check(),
         board_freshness_check(),

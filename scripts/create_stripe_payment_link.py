@@ -17,12 +17,10 @@ PRODUCT_DESCRIPTION = "One manually configured dashboard account for up to three
 UNIT_AMOUNT_CENTS = 3000
 CURRENCY = "usd"
 SUPPORT_EMAIL = "support@myfantasyiq.com"
-CONFIRMATION_MESSAGE = (
-    "Thanks for subscribing to FantasyIQ. If any checkout field was missed, "
-    f"email {SUPPORT_EMAIL}. To find IDs in ESPN, open each league in a browser: "
-    "leagueId is in the URL after leagueId=, and teamId appears after teamId= "
-    "when viewing your team page. Your Season Pass includes up to three leagues."
-)
+WEBSITE_URL = "https://myfantasyiq.com/"
+DASHBOARD_URL = "https://myfantasyiq.com/FantasyIQ/"
+SETUP_URL = "https://myfantasyiq.com/setup.html"
+SUCCESS_URL = "https://myfantasyiq.com/success.html"
 
 
 def stripe_key() -> str:
@@ -99,10 +97,14 @@ def create_payment_link() -> str:
             "custom_fields[2][label][custom]": "ESPN season",
             "custom_fields[2][type]": "numeric",
             "custom_fields[2][optional]": "false",
-            "after_completion[type]": "hosted_confirmation",
-            "after_completion[hosted_confirmation][custom_message]": CONFIRMATION_MESSAGE,
+            "after_completion[type]": "redirect",
+            "after_completion[redirect][url]": SUCCESS_URL,
             "metadata[product]": "fantasy_iq_concierge",
             "metadata[support_email]": SUPPORT_EMAIL,
+            "metadata[website_url]": WEBSITE_URL,
+            "metadata[dashboard_url]": DASHBOARD_URL,
+            "metadata[setup_url]": SETUP_URL,
+            "metadata[success_url]": SUCCESS_URL,
         },
         key,
     )

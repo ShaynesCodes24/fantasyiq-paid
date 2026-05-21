@@ -17,14 +17,7 @@ SUPPORT_EMAIL = "support@myfantasyiq.com"
 WEBSITE_URL = "https://myfantasyiq.com/"
 DASHBOARD_URL = "https://myfantasyiq.com/FantasyIQ/"
 SETUP_URL = "https://myfantasyiq.com/setup.html"
-
-CONFIRMATION_MESSAGE = (
-    "Thanks for subscribing to FantasyIQ. If any checkout field was missed, "
-    f"visit {SETUP_URL} or email {SUPPORT_EMAIL}. To find IDs in ESPN, open each league in a browser: "
-    "leagueId is in the URL after leagueId=, and teamId appears after teamId= "
-    "when viewing your team page. Your Season Pass includes up to three leagues."
-)
-
+SUCCESS_URL = "https://myfantasyiq.com/success.html"
 
 def env(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
@@ -128,13 +121,14 @@ def update_payment_link(key: str, link_id: str) -> dict[str, Any]:
             "custom_fields[2][label][custom]": "ESPN season",
             "custom_fields[2][type]": "numeric",
             "custom_fields[2][optional]": "false",
-            "after_completion[type]": "hosted_confirmation",
-            "after_completion[hosted_confirmation][custom_message]": CONFIRMATION_MESSAGE,
+            "after_completion[type]": "redirect",
+            "after_completion[redirect][url]": SUCCESS_URL,
             "metadata[product]": "fantasy_iq_concierge",
             "metadata[support_email]": SUPPORT_EMAIL,
             "metadata[website_url]": WEBSITE_URL,
             "metadata[dashboard_url]": DASHBOARD_URL,
             "metadata[setup_url]": SETUP_URL,
+            "metadata[success_url]": SUCCESS_URL,
         },
     )
 
@@ -148,7 +142,7 @@ def main() -> int:
     print(f"Updated Stripe Payment Link: {updated['url']}")
     print(f"Payment Link ID: {updated['id']}")
     print("Required checkout fields: primary ESPN league ID, primary ESPN team ID, ESPN season")
-    print("After-payment confirmation message is configured.")
+    print(f"After-payment redirect is configured: {SUCCESS_URL}")
     return 0
 
 

@@ -6,7 +6,7 @@
 - Done: Use `support@myfantasyiq.com` as the customer support email.
 - Done: Use the live Stripe Season Pass payment link: `https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01`.
 - Done: Create the additional league add-on link: `https://buy.stripe.com/dRmcN5aAV1GX0Cc7X3efC02`.
-- Next: Configure the new Stripe Season Pass link fields and after-payment message.
+- Done: Configure the Stripe Season Pass link fields and branded after-payment success page.
 - Done: Use `fantasyiq-paid` as the Vercel project name.
 - Done: Set Vercel Build Command to `node scripts/build_static.js`.
 - Done: Set Vercel Output Directory to `dist`.
@@ -46,5 +46,5 @@
 These should be resolved before advertising widely:
 
 - Done: Confirm the live Stripe payment link opens correctly.
-- Next: Configure the new Stripe Season Pass link fields and after-payment message.
+- Done: Configure the Stripe Season Pass link fields and branded after-payment success page.
 - Done: Verify at least one test customer deploy on Vercel with `FANTASY_IQ_LEAGUE_ID`.
