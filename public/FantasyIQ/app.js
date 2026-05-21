@@ -3,8 +3,6 @@ const panels = document.querySelectorAll(".panel");
 const tabs = document.querySelectorAll(".tab");
 const plans = document.querySelectorAll(".plan");
 const savedInputs = document.querySelectorAll("[data-save]");
-const mockForm = document.querySelector("#mock-form");
-const mockResult = document.querySelector("#mock-result");
 const boardTable = document.querySelector("#board-table");
 const boardSearch = document.querySelector("#board-search");
 const positionFilter = document.querySelector("#position-filter");
@@ -13,9 +11,6 @@ const analysisPane = document.querySelector("#analysis-pane");
 const boardStatus = document.querySelector("#board-status");
 const reloadBoards = document.querySelector("#reload-boards");
 const navJumps = document.querySelectorAll(".nav-jump");
-const mockPaste = document.querySelector("#mock-paste");
-const gradeMockPicks = document.querySelector("#grade-mock-picks");
-const mockPickOutput = document.querySelector("#mock-pick-output");
 const tradeGive = document.querySelector("#trade-give");
 const tradeGet = document.querySelector("#trade-get");
 const tradeRoster = document.querySelector("#trade-roster");
@@ -1384,68 +1379,6 @@ savedInputs.forEach((input) => {
   });
 });
 
-function numberValue(formData, key) {
-  return Number(formData.get(key) || 0);
-}
-
-mockForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const data = new FormData(mockForm);
-  const targets = draftTargetCounts();
-  const starters = starterTargetCounts();
-  const settings = activeLeagueSettings();
-  const counts = {
-    QB: numberValue(data, "QB"),
-    RB: numberValue(data, "RB"),
-    WR: numberValue(data, "WR"),
-    TE: numberValue(data, "TE"),
-    DST: numberValue(data, "DST"),
-    K: numberValue(data, "K"),
-  };
-  const qbRound = numberValue(data, "qbRound");
-  const teRound = numberValue(data, "teRound");
-  const notes = [];
-  let score = 100;
-
-  if (counts.RB < Math.min(targets.RB, starters.RB + 2)) {
-    score -= 10;
-    notes.push(`RB depth is thin for this format. Aim for at least ${Math.min(targets.RB, starters.RB + 2)}.`);
-  }
-  if (counts.WR < Math.min(targets.WR, starters.WR + 3)) {
-    score -= 10;
-    notes.push(`WR depth is thin for ${settings.scoringLabel}. Aim for at least ${Math.min(targets.WR, starters.WR + 3)}.`);
-  }
-  if (counts.QB > targets.QB) {
-    score -= 6;
-    notes.push("Extra QB is probably blocking RB/WR upside for this league setup.");
-  }
-  if (counts.TE > targets.TE + 1) {
-    score -= 6;
-    notes.push("Too many TEs can block RB/WR upside.");
-  }
-  if (counts.DST > targets.DST || counts.K > targets.K) {
-    score -= 8;
-    notes.push("Do not roster extra DST/K.");
-  }
-  if (!settings.lineupSlots.SUPERFLEX && qbRound > 0 && qbRound <= 4) {
-    score -= 8;
-    notes.push("Early QB needs to be a clear value, not a room panic pick.");
-  } else if (settings.lineupSlots.SUPERFLEX && qbRound > 0 && qbRound <= 3) {
-    notes.push("Early QB can be correct in superflex if the tier/value is real.");
-  }
-  if (teRound > 0 && teRound <= 3) {
-    notes.push("Early TE is fine only if RB/WR value stayed strong.");
-  }
-
-  const grade = score >= 90 ? "A" : score >= 80 ? "B" : score >= 70 ? "C" : score >= 60 ? "D" : "F";
-  mockResult.innerHTML = `
-    <strong>Shape Grade: ${grade} (${Math.max(score, 0)}/100)</strong>
-    <ul>${(notes.length ? notes : ["Clean shape. Now review player value and injury risk."])
-      .map((note) => `<li>${note}</li>`)
-      .join("")}</ul>
-  `;
-});
-
 function cellValue(row, key) {
   if (key === "Proj PPR Pts") return projectionDisplay(row);
   if (key === "Projection Edge") return projectionEdgeDisplay(row);
@@ -1750,7 +1683,6 @@ function setupPlayerAutocomplete() {
     { input: liveTierSearch, mode: "single", rows: "available" },
     { input: simSearch, mode: "single", rows: "sim" },
     { input: boardSearch, mode: "single" },
-    { input: mockPaste, mode: "mock-line" },
   ].filter((config) => config.input);
 
   configs.forEach((config) => {
@@ -1894,42 +1826,6 @@ function gradePick(round, pick, row) {
 
 function parseLines(text) {
   return text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-}
-
-function renderMockPickGrades() {
-  if (!mockPaste || !mockPickOutput) return;
-  const lines = parseLines(mockPaste.value);
-  if (!lines.length) {
-    mockPickOutput.textContent = "Paste round, pick, player.";
-    return;
-  }
-  const rows = lines.map((line) => {
-    const parts = line.split(",").map((part) => part.trim());
-    const round = Number(parts[0] || 0);
-    const pick = Number(parts[1] || 0);
-    const playerName = parts.slice(2).join(", ");
-    const row = findPlayer(playerName);
-    const grade = gradePick(round, pick, row);
-    return { round, pick, playerName, row, grade };
-  });
-  const reaches = rows.filter((row) => row.grade.label === "Reach").length;
-  const steals = rows.filter((row) => row.grade.label === "Steal").length;
-  mockPickOutput.innerHTML = `
-    <strong>${rows.length} picks graded: ${steals} steals, ${reaches} reaches.</strong>
-    <div class="mini-table">
-      ${rows
-        .map(
-          (item) => `<div>
-            <span>R${item.round} P${item.pick}</span>
-            <strong>${item.row?.Player || item.playerName}</strong>
-            <em>${item.grade.label}</em>
-            <small>${item.grade.detail}</small>
-          </div>`,
-        )
-        .join("")}
-    </div>
-  `;
-  localStorage.setItem(loadoutStorageKey("mock-picks"), mockPaste.value);
 }
 
 function tradeSideValue(text) {
@@ -3959,10 +3855,6 @@ simPositionButtons.forEach((button) => {
     renderSimAvailable();
   });
 });
-if (mockPaste) {
-  mockPaste.value = localStorage.getItem(loadoutStorageKey("mock-picks")) || "";
-}
-gradeMockPicks?.addEventListener("click", renderMockPickGrades);
 calculateTrade?.addEventListener("click", renderTradeCalc);
 tradeGive?.addEventListener("input", renderTradeCalc);
 tradeGet?.addEventListener("input", renderTradeCalc);

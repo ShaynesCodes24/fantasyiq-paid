@@ -2480,50 +2480,8 @@ code {
   padding: 8px;
 }
 
-.qa-list {
-  display: grid;
-  gap: 10px;
-}
-
-.qa-list details {
-  overflow: hidden;
-  border: 1px solid rgba(216, 195, 146, 0.74);
-  border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(255, 252, 241, 0.98), rgba(255, 248, 232, 0.95)),
-    var(--surface-2);
-  box-shadow: var(--shadow-soft);
-}
-
-.qa-list summary {
-  cursor: pointer;
-  list-style: none;
-  padding: 15px 16px;
-  color: var(--ink);
-  font-weight: 900;
-}
-
-.qa-list summary::-webkit-details-marker {
-  display: none;
-}
-
-.qa-list details[open] summary {
-  color: var(--accent);
-}
-
-.qa-list p {
-  margin: 0;
-  padding: 0 16px 16px;
-  color: var(--muted);
-  line-height: 1.5;
-}
-
 .sim-layout .live-panel {
   min-height: 260px;
-}
-
-.mock-import-panel {
-  margin-top: 14px;
 }
 
 .compact-head {
@@ -4192,7 +4150,6 @@ body {
 .table-wrap,
 .pick-card,
 .intel-card,
-.qa-list details,
 .account-league-list article,
 .support-panel {
   border-color: rgba(19, 43, 36, 0.11);

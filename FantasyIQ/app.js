@@ -3,8 +3,6 @@ const panels = document.querySelectorAll(".panel");
 const tabs = document.querySelectorAll(".tab");
 const plans = document.querySelectorAll(".plan");
 const savedInputs = document.querySelectorAll("[data-save]");
-const mockForm = document.querySelector("#mock-form");
-const mockResult = document.querySelector("#mock-result");
 const boardTable = document.querySelector("#board-table");
 const boardSearch = document.querySelector("#board-search");
 const positionFilter = document.querySelector("#position-filter");
@@ -13,9 +11,6 @@ const analysisPane = document.querySelector("#analysis-pane");
 const boardStatus = document.querySelector("#board-status");
 const reloadBoards = document.querySelector("#reload-boards");
 const navJumps = document.querySelectorAll(".nav-jump");
-const mockPaste = document.querySelector("#mock-paste");
-const gradeMockPicks = document.querySelector("#grade-mock-picks");
-const mockPickOutput = document.querySelector("#mock-pick-output");
 const tradeGive = document.querySelector("#trade-give");
 const tradeGet = document.querySelector("#trade-get");
 const tradeRoster = document.querySelector("#trade-roster");
@@ -39,6 +34,14 @@ const cheatcodeAvoid = document.querySelector("#cheatcode-avoid");
 const cheatcodeRoom = document.querySelector("#cheatcode-room");
 const boardCount = document.querySelector("#board-count");
 const liveSyncStatus = document.querySelector("#live-sync-status");
+const alphaCommandSignal = document.querySelector("#alpha-command-signal");
+const alphaCommandMeta = document.querySelector("#alpha-command-meta");
+const alphaCommandLeverage = document.querySelector("#alpha-command-leverage");
+const alphaSignal = document.querySelector("#alpha-signal");
+const alphaScarcity = document.querySelector("#alpha-scarcity");
+const alphaMarket = document.querySelector("#alpha-market");
+const alphaBuild = document.querySelector("#alpha-build");
+const alphaLeverage = document.querySelector("#alpha-leverage");
 const liveStatus = document.querySelector("#live-status");
 const liveSyncToggle = document.querySelector("#live-sync-toggle");
 const manualSync = document.querySelector("#manual-sync");
@@ -304,7 +307,7 @@ let fullBoardLoadStarted = false;
 function rememberedCustomerLoadout(loadouts) {
   try {
     const lastLoadout = localStorage.getItem("fantasy-dashboard:last-loadout") || "";
-    if (lastLoadout && loadouts[lastLoadout] && localStorage.getItem(`fantasy-dashboard:${lastLoadout}:access-code`)) {
+    if (lastLoadout && localStorage.getItem(`fantasy-dashboard:${lastLoadout}:access-code`)) {
       return lastLoadout;
     }
     const savedLoadouts = Object.keys(loadouts).filter((key) =>
@@ -483,17 +486,22 @@ function removeCustomerAccessGate() {
 }
 
 function showCustomerAccessGate(message = "") {
-  if (!requiresCustomerAccess() || customerAccessGate()) return;
+  if (customerAccessGate()) return;
   document.body.classList.add("access-locked");
   const customerLabel = appConfig.customerName || appConfig.customerTeamName || "your dashboard";
+  const needsIdentity = !requiresCustomerAccess();
   const gate = document.createElement("section");
   gate.id = "customer-access-gate";
   gate.className = "access-gate";
   gate.innerHTML = `
     <form class="access-card">
       <p class="eyebrow">Customer Login</p>
-      <h2>Open ${htmlEscape(customerLabel)}</h2>
-      <p>Enter the dashboard access code from your FantasyIQ setup email.</p>
+      <h2>${needsIdentity ? "Open your dashboard" : `Open ${htmlEscape(customerLabel)}`}</h2>
+      <p>${needsIdentity ? "Enter the email from checkout and your FantasyIQ access code." : "Enter the dashboard access code from your FantasyIQ setup email."}</p>
+      <label ${needsIdentity ? "" : "hidden"}>
+        Email or dashboard slug
+        <input id="customer-login-identity" type="text" autocomplete="username" ${needsIdentity ? "required" : ""} />
+      </label>
       <label>
         Access code
         <input id="customer-access-code" type="password" autocomplete="off" required />
@@ -504,26 +512,44 @@ function showCustomerAccessGate(message = "") {
     </form>
   `;
   document.body.appendChild(gate);
+  const identityInput = gate.querySelector("#customer-login-identity");
   const input = gate.querySelector("#customer-access-code");
   const output = gate.querySelector(".access-message");
-  input?.focus();
+  (needsIdentity ? identityInput : input)?.focus();
   gate.querySelector("form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const code = input.value.trim();
+    const identity = needsIdentity ? identityInput.value.trim() : appConfig.loadoutKey;
     if (!code) return;
+    if (needsIdentity && !identity) {
+      output.textContent = "Enter the email from checkout or your dashboard slug.";
+      return;
+    }
     output.textContent = "Checking access...";
     try {
-      const response = await fetch(apiUrl("/api/customer-status", { v: Date.now() }), {
+      const response = await fetch("/api/customer-login", {
+        method: "POST",
         cache: "no-store",
-        headers: { "x-fantasyiq-access-code": code },
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer: identity,
+          accessCode: code,
+          league: appConfig.leagueKey || "",
+        }),
       });
       const payload = await response.json();
       if (!response.ok || !payload.ok || payload.authenticated === false) {
         output.textContent = payload.message || "That access code did not work.";
         return;
       }
+      if (payload.customer?.customerSlug) {
+        appConfig.loadoutKey = payload.customer.customerSlug;
+      }
+      applyServerCustomerContext(payload.customer);
       setCustomerAccessCode(code);
       removeCustomerAccessGate();
+      ensureCustomerUrlContext();
+      applyAppConfig();
       updateAccountControl();
       loadBoards();
       startLiveSync();
@@ -556,8 +582,8 @@ function updateAccountControl() {
   if (accountLabel) accountLabel.textContent = requiresCustomerAccess() ? customerLabel : "Public Demo";
   if (accountState) accountState.textContent = requiresCustomerAccess() ? (savedCustomerAccessCode() ? "Signed In" : "Signed Out") : "Preview";
   if (accountAction) {
-    accountAction.textContent = requiresCustomerAccess() ? (savedCustomerAccessCode() ? "Sign Out" : "Sign In") : "Demo";
-    accountAction.disabled = !requiresCustomerAccess();
+    accountAction.textContent = requiresCustomerAccess() ? (savedCustomerAccessCode() ? "Sign Out" : "Sign In") : "Sign In";
+    accountAction.disabled = false;
   }
   accountCard.classList.toggle("signed-in", requiresCustomerAccess() && Boolean(savedCustomerAccessCode()));
   accountCard.classList.toggle("signed-out", requiresCustomerAccess() && !savedCustomerAccessCode());
@@ -888,7 +914,7 @@ function leagueSlotText(count = configuredLeagueCount()) {
 }
 
 function accountStatusText() {
-  if (!requiresCustomerAccess()) return "Public demo preview. Subscribe to create a customer account.";
+  if (!requiresCustomerAccess()) return "Public demo preview. Sign in with your checkout email and access code to open your account.";
   if (savedCustomerAccessCode()) return "Signed in. Refresh will keep this dashboard unlocked on this device.";
   return "Signed out. Enter your dashboard access code to unlock saved leagues.";
 }
@@ -935,7 +961,8 @@ function renderAccountPanel() {
         },
       ];
 
-  accountLeagueList.innerHTML = leagues
+  const statusSteps = renderAccountProgress(count, limit);
+  accountLeagueList.innerHTML = `${statusSteps}${leagues
     .map((league) => {
       const settings = mergeLeagueSettings(appConfig.baseLeagueSettings || DEFAULT_LEAGUE_SETTINGS, league.leagueSettings || {});
       const isActive = active?.key === league.key || (!active && league.key === appConfig.leagueKey);
@@ -951,11 +978,33 @@ function renderAccountPanel() {
         </div>
       </article>`;
     })
-    .join("");
+    .join("")}`;
 
   accountLeagueList.querySelectorAll("[data-account-switch]").forEach((button) => {
     button.addEventListener("click", () => setActiveLeague(button.dataset.accountSwitch));
   });
+}
+
+function renderAccountProgress(count, limit) {
+  const signedIn = requiresCustomerAccess() && Boolean(savedCustomerAccessCode());
+  const hasLeague = count > 0 && (appConfig.leagueId || currentLeagueOptions().length || appConfig.customerTeamName);
+  const hasIncludedRoom = count < limit;
+  const steps = [
+    ["Account access", signedIn ? "Ready" : "Needs sign in", signedIn],
+    ["League profiles", hasLeague ? `${count} connected` : "Setup needed", hasLeague],
+    ["Included slots", hasIncludedRoom ? `${limit - count} open` : "Included slots full", hasIncludedRoom],
+    ["Draft room", hasLeague && signedIn ? "Personalized" : "Demo mode", hasLeague && signedIn],
+  ];
+  return `<section class="account-progress" aria-label="Account setup progress">
+    ${steps
+      .map(
+        ([label, value, complete]) => `<article class="${complete ? "complete" : "pending"}">
+          <span>${htmlEscape(label)}</span>
+          <strong>${htmlEscape(value)}</strong>
+        </article>`,
+      )
+      .join("")}
+  </section>`;
 }
 
 function addLeagueActionTitle(count = configuredLeagueCount()) {
@@ -989,6 +1038,8 @@ function applyServerCustomerContext(customer = {}) {
   if (!customer || typeof customer !== "object") return;
   const serverLeagues = normalizeLeagueProfiles(customer.leagues || []);
   if (serverLeagues.length) appConfig.leagues = serverLeagues;
+  if (customer.customerSlug) appConfig.loadoutKey = normalizeDashboardSlug(customer.customerSlug);
+  if (customer.customerName) appConfig.customerName = customer.customerName;
   if (customer.leagueKey) appConfig.leagueKey = normalizeDashboardSlug(customer.leagueKey);
   if (customer.leagueId) appConfig.leagueId = String(customer.leagueId);
   if (customer.leagueName) appConfig.leagueName = customer.leagueName;
@@ -1109,15 +1160,33 @@ function openAddLeagueDialog() {
   }
   if (primary) {
     primary.textContent = needsPayment ? "Buy Extra League" : "Open Setup Page";
-    primary.onclick = () => {
-      if (needsPayment) {
-        window.open(additionalLeaguePaymentUrl(), "_blank", "noopener");
-      } else {
-        const setupUrl = new URL("../setup.html", window.location.href);
-        if (appConfig.loadoutKey && appConfig.loadoutKey !== "default") {
-          setupUrl.searchParams.set("customer", appConfig.loadoutKey);
+    primary.onclick = async () => {
+      if (!requiresCustomerAccess()) {
+        closeAddLeagueDialog();
+        showCustomerAccessGate("Sign in first, then FantasyIQ can attach the new league to your account.");
+        return;
+      }
+      if (!savedCustomerAccessCode()) {
+        closeAddLeagueDialog();
+        showCustomerAccessGate("Sign in before adding another league.");
+        return;
+      }
+      primary.disabled = true;
+      primary.textContent = "Preparing...";
+      try {
+        const response = await fetch(apiUrl("/api/add-league-checkout", { v: Date.now() }), {
+          cache: "no-store",
+          headers: apiHeaders(),
+        });
+        const payload = await jsonOrAccessError(response, "Could not prepare add-league checkout.");
+        if (payload?.url) {
+          window.location.href = payload.url;
         }
-        window.location.href = `${setupUrl.pathname}${setupUrl.search}`;
+      } catch (error) {
+        if (message) message.textContent = error.message || "Could not prepare add-league checkout.";
+        primary.disabled = false;
+        primary.textContent = needsPayment ? "Buy Extra League" : "Open Setup Page";
+        return;
       }
       closeAddLeagueDialog();
     };
@@ -1308,68 +1377,6 @@ savedInputs.forEach((input) => {
   input.addEventListener("change", () => {
     localStorage.setItem(key, String(input.checked));
   });
-});
-
-function numberValue(formData, key) {
-  return Number(formData.get(key) || 0);
-}
-
-mockForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const data = new FormData(mockForm);
-  const targets = draftTargetCounts();
-  const starters = starterTargetCounts();
-  const settings = activeLeagueSettings();
-  const counts = {
-    QB: numberValue(data, "QB"),
-    RB: numberValue(data, "RB"),
-    WR: numberValue(data, "WR"),
-    TE: numberValue(data, "TE"),
-    DST: numberValue(data, "DST"),
-    K: numberValue(data, "K"),
-  };
-  const qbRound = numberValue(data, "qbRound");
-  const teRound = numberValue(data, "teRound");
-  const notes = [];
-  let score = 100;
-
-  if (counts.RB < Math.min(targets.RB, starters.RB + 2)) {
-    score -= 10;
-    notes.push(`RB depth is thin for this format. Aim for at least ${Math.min(targets.RB, starters.RB + 2)}.`);
-  }
-  if (counts.WR < Math.min(targets.WR, starters.WR + 3)) {
-    score -= 10;
-    notes.push(`WR depth is thin for ${settings.scoringLabel}. Aim for at least ${Math.min(targets.WR, starters.WR + 3)}.`);
-  }
-  if (counts.QB > targets.QB) {
-    score -= 6;
-    notes.push("Extra QB is probably blocking RB/WR upside for this league setup.");
-  }
-  if (counts.TE > targets.TE + 1) {
-    score -= 6;
-    notes.push("Too many TEs can block RB/WR upside.");
-  }
-  if (counts.DST > targets.DST || counts.K > targets.K) {
-    score -= 8;
-    notes.push("Do not roster extra DST/K.");
-  }
-  if (!settings.lineupSlots.SUPERFLEX && qbRound > 0 && qbRound <= 4) {
-    score -= 8;
-    notes.push("Early QB needs to be a clear value, not a room panic pick.");
-  } else if (settings.lineupSlots.SUPERFLEX && qbRound > 0 && qbRound <= 3) {
-    notes.push("Early QB can be correct in superflex if the tier/value is real.");
-  }
-  if (teRound > 0 && teRound <= 3) {
-    notes.push("Early TE is fine only if RB/WR value stayed strong.");
-  }
-
-  const grade = score >= 90 ? "A" : score >= 80 ? "B" : score >= 70 ? "C" : score >= 60 ? "D" : "F";
-  mockResult.innerHTML = `
-    <strong>Shape Grade: ${grade} (${Math.max(score, 0)}/100)</strong>
-    <ul>${(notes.length ? notes : ["Clean shape. Now review player value and injury risk."])
-      .map((note) => `<li>${note}</li>`)
-      .join("")}</ul>
-  `;
 });
 
 function cellValue(row, key) {
@@ -1676,7 +1683,6 @@ function setupPlayerAutocomplete() {
     { input: liveTierSearch, mode: "single", rows: "available" },
     { input: simSearch, mode: "single", rows: "sim" },
     { input: boardSearch, mode: "single" },
-    { input: mockPaste, mode: "mock-line" },
   ].filter((config) => config.input);
 
   configs.forEach((config) => {
@@ -1820,42 +1826,6 @@ function gradePick(round, pick, row) {
 
 function parseLines(text) {
   return text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-}
-
-function renderMockPickGrades() {
-  if (!mockPaste || !mockPickOutput) return;
-  const lines = parseLines(mockPaste.value);
-  if (!lines.length) {
-    mockPickOutput.textContent = "Paste round, pick, player.";
-    return;
-  }
-  const rows = lines.map((line) => {
-    const parts = line.split(",").map((part) => part.trim());
-    const round = Number(parts[0] || 0);
-    const pick = Number(parts[1] || 0);
-    const playerName = parts.slice(2).join(", ");
-    const row = findPlayer(playerName);
-    const grade = gradePick(round, pick, row);
-    return { round, pick, playerName, row, grade };
-  });
-  const reaches = rows.filter((row) => row.grade.label === "Reach").length;
-  const steals = rows.filter((row) => row.grade.label === "Steal").length;
-  mockPickOutput.innerHTML = `
-    <strong>${rows.length} picks graded: ${steals} steals, ${reaches} reaches.</strong>
-    <div class="mini-table">
-      ${rows
-        .map(
-          (item) => `<div>
-            <span>R${item.round} P${item.pick}</span>
-            <strong>${item.row?.Player || item.playerName}</strong>
-            <em>${item.grade.label}</em>
-            <small>${item.grade.detail}</small>
-          </div>`,
-        )
-        .join("")}
-    </div>
-  `;
-  localStorage.setItem(loadoutStorageKey("mock-picks"), mockPaste.value);
 }
 
 function tradeSideValue(text) {
@@ -2587,12 +2557,12 @@ function renderRecommendations() {
     .sort((a, b) => b.score - a.score)
     .map((item) => item.row);
   const pickNow = teamId
-    ? ranked.filter((row) => !["Wait", "Can wait", "Avoid"].includes(recommendationDecision(row, counts).label)).slice(0, 5)
-    : ranked.slice(0, 5);
+    ? ranked.filter((row) => !["Wait", "Can wait", "Avoid"].includes(recommendationDecision(row, counts).label)).slice(0, 3)
+    : ranked.slice(0, 3);
   const waitList = teamId
-    ? ranked.filter((row) => recommendationDecision(row, counts).label === "Can wait").slice(0, 3)
+    ? ranked.filter((row) => recommendationDecision(row, counts).label === "Can wait").slice(0, 2)
     : [];
-  const avoids = teamId ? avoidRows(counts) : [];
+  const avoids = teamId ? avoidRows(counts).slice(0, 2) : [];
 
   liveRecommendations.innerHTML = `
     <div class="recommendation-block">
@@ -2920,6 +2890,89 @@ function cheatcodeTierCliffs() {
     .slice(0, 4);
 }
 
+function strongestRoomRun(limit = Math.min(12, leagueTeamTotal())) {
+  const recent = recentDraftedPicks(limit);
+  const counts = recentPositionCounts(limit);
+  const [pos = "", count = 0] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0] || [];
+  return { pos, count, recent: recent.length };
+}
+
+function alphaRosterBuild(counts = emptyPositionCounts()) {
+  const starters = starterTargetCounts();
+  const rbWr = Number(counts.RB || 0) + Number(counts.WR || 0);
+  const starterNeeds = ["QB", "RB", "WR", "TE"].filter((pos) => Number(counts[pos] || 0) < Number(starters[pos] || 0));
+  if (starterNeeds.length) return { label: "Fill starters", detail: `${starterNeeds.join(", ")} still open` };
+  if (rbWr < 5 && currentRound() >= 6) return { label: "Build depth", detail: "RB/WR bench needs more weekly outs" };
+  if (Number(counts.QB || 0) > 1 && !activeLeagueSettings().lineupSlots?.SUPERFLEX) {
+    return { label: "Too much QB", detail: "Move capital back to RB/WR upside" };
+  }
+  return { label: "Balanced", detail: `RB/WR ${rbWr}, QB ${counts.QB || 0}, TE ${counts.TE || 0}` };
+}
+
+function alphaRead(counts = emptyPositionCounts(), picks = {}) {
+  const cliffs = cheatcodeTierCliffs();
+  const cliff = cliffs[0];
+  const roomRun = strongestRoomRun();
+  const build = alphaRosterBuild(counts);
+  const best = picks.bestNow?.row || picks.bestValue?.row || picks.safe?.row || availableRows()[0];
+  const survival = best ? survivalProjection(best, recommendationTargetPick()) : null;
+  const decision = best ? recommendationDecision(best, counts) : null;
+  const scarcityLabel = cliff ? `${cliff.pos}: ${cliff.count} left` : "No cliff";
+  const marketLabel = roomRun.recent && roomRun.count >= 3 ? `${roomRun.pos} run` : "Balanced room";
+  const pressure =
+    (cliff?.count || 99) <= 2 || (roomRun.count >= 4 && cliff?.pos === roomRun.pos) || survival?.pct < 35;
+  const leverage = pressure
+    ? "Attack"
+    : decision?.label === "Can wait" || survival?.pct >= 70
+      ? "Wait"
+      : build.label === "Fill starters"
+        ? "Stabilize"
+        : "Exploit value";
+  return {
+    signal: best ? `${best.Player}` : "Loading",
+    signalMeta: best
+      ? `${decision?.label || "Board value"} / ${best.Pos} / ${best["Pos Tier"] || best.Category || "Tier"}`
+      : "Waiting for board data",
+    scarcity: scarcityLabel,
+    scarcityMeta: cliff ? `${cliff.tier}` : "No urgent tier pressure",
+    market: marketLabel,
+    marketMeta: roomRun.recent ? `${roomRun.count || 0} of last ${roomRun.recent} picks` : "Draft not moving yet",
+    build: build.label,
+    buildMeta: build.detail,
+    leverage,
+  };
+}
+
+function setAlphaText(node, value) {
+  if (node) node.textContent = value;
+}
+
+function renderAlphaLayer(counts = emptyPositionCounts(), picks = {}) {
+  const alpha = boardData ? alphaRead(counts, picks) : {
+    signal: "Loading",
+    signalMeta: "Waiting for board data",
+    scarcity: "Loading",
+    scarcityMeta: "Tier pressure",
+    market: "Loading",
+    marketMeta: "Room behavior",
+    build: "Loading",
+    buildMeta: "Roster posture",
+    leverage: "Calibrating",
+  };
+  setAlphaText(alphaCommandSignal, alpha.signal);
+  setAlphaText(alphaCommandMeta, alpha.signalMeta);
+  setAlphaText(alphaCommandLeverage, alpha.leverage);
+  setAlphaText(alphaSignal, alpha.signal);
+  setAlphaText(alphaSignal?.nextElementSibling, alpha.signalMeta);
+  setAlphaText(alphaScarcity, alpha.scarcity);
+  setAlphaText(alphaScarcity?.nextElementSibling, alpha.scarcityMeta);
+  setAlphaText(alphaMarket, alpha.market);
+  setAlphaText(alphaMarket?.nextElementSibling, alpha.marketMeta);
+  setAlphaText(alphaBuild, alpha.build);
+  setAlphaText(alphaBuild?.nextElementSibling, alpha.buildMeta);
+  setAlphaText(alphaLeverage, alpha.leverage);
+}
+
 function renderCheatcodeMode() {
   if (!cheatcodeStatus) return;
   if (!boardData) {
@@ -2929,6 +2982,7 @@ function renderCheatcodeMode() {
       .forEach((node) => {
         node.textContent = "Waiting for board data.";
       });
+    renderAlphaLayer();
     return;
   }
 
@@ -2938,6 +2992,7 @@ function renderCheatcodeMode() {
   const nextPick = teamId ? nextMyPick(teamId) : null;
   const until = nextPick ? picksUntil(nextPick) : null;
   const { bestNow, bestValue, safe, upside, ranked } = bestCheatcodeRows(counts);
+  renderAlphaLayer(counts, { bestNow, bestValue, safe, upside });
   const nowDecision = bestNow ? recommendationDecision(bestNow.row, counts) : null;
   const bestPlayer = bestNow?.row || bestValue?.row || safe?.row || availableRows()[0];
   const heroState = !teamId
@@ -3800,10 +3855,6 @@ simPositionButtons.forEach((button) => {
     renderSimAvailable();
   });
 });
-if (mockPaste) {
-  mockPaste.value = localStorage.getItem(loadoutStorageKey("mock-picks")) || "";
-}
-gradeMockPicks?.addEventListener("click", renderMockPickGrades);
 calculateTrade?.addEventListener("click", renderTradeCalc);
 tradeGive?.addEventListener("input", renderTradeCalc);
 tradeGet?.addEventListener("input", renderTradeCalc);
@@ -3847,7 +3898,6 @@ liveSyncToggle?.addEventListener("change", () => {
 });
 
 accountAction?.addEventListener("click", () => {
-  if (!requiresCustomerAccess()) return;
   if (savedCustomerAccessCode()) {
     signOutCustomer();
   } else {

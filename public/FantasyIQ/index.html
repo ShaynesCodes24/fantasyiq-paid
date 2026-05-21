@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>FantasyIQ</title>
-    <link rel="stylesheet" href="./styles.css?v=20260521_emoji_cursor_25" />
+    <link rel="stylesheet" href="./styles.css?v=20260521_quality_cut_26" />
   </head>
   <body>
     <div class="field-overlay" aria-hidden="true">
@@ -75,7 +75,6 @@
         <button class="nav-item" data-section="trade">Trade Calculator</button>
         <button class="nav-item" data-section="workbooks">Big Board</button>
         <button class="nav-item" data-section="account">Account</button>
-        <button class="nav-item" data-section="qa">Q&A</button>
       </nav>
 
       <section class="content">
@@ -92,7 +91,6 @@
                 <button class="secondary-action nav-jump" type="button" data-jump="simulator">Mock Simulator</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="trade">Trade Calculator</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="account">Account</button>
-                <button class="secondary-action nav-jump" type="button" data-jump="qa">Q&A</button>
               </div>
             </div>
           </div>
@@ -667,34 +665,6 @@
             </section>
           </div>
 
-          <section class="live-panel mock-import-panel">
-            <div class="panel-head compact-head">
-              <div>
-                <p class="eyebrow">External Mock Import</p>
-                <h3>Grade pasted mock picks</h3>
-              </div>
-            </div>
-            <div class="result">
-              Paste picks from ESPN, FantasyPros, or Sleeper when you want a quick pick-by-pick value check outside the live simulator.
-            </div>
-            <form class="grader" id="mock-form">
-              <label>QB <input name="QB" type="number" min="0" max="4" value="1" /></label>
-              <label>RB <input name="RB" type="number" min="0" max="10" value="5" /></label>
-              <label>WR <input name="WR" type="number" min="0" max="10" value="6" /></label>
-              <label>TE <input name="TE" type="number" min="0" max="4" value="1" /></label>
-              <label>DST <input name="DST" type="number" min="0" max="3" value="1" /></label>
-              <label>K <input name="K" type="number" min="0" max="3" value="1" /></label>
-              <label>QB round <input name="qbRound" type="number" min="0" max="16" value="6" /></label>
-              <label>TE round <input name="teRound" type="number" min="0" max="16" value="8" /></label>
-              <button type="submit">Grade Shape</button>
-            </form>
-            <div class="result" id="mock-result" aria-live="polite">
-              Fill counts, then paste picks for pick-by-pick value checks.
-            </div>
-            <textarea id="mock-paste" class="paste-box" placeholder="Paste picks like:&#10;1,2,Ja'Marr Chase&#10;2,23,James Cook&#10;3,26,Trey McBride"></textarea>
-            <button id="grade-mock-picks" type="button" class="primary-action">Grade Mock Picks</button>
-            <div id="mock-pick-output" class="result">Paste round, pick, player. I will grade each as steal, good value, fair, or reach against the board.</div>
-          </section>
         </section>
 
         <section class="panel" id="trade">
@@ -836,7 +806,10 @@
               <p class="eyebrow">Account</p>
               <h2>Leagues and access</h2>
             </div>
-            <button class="secondary-action" id="account-add-league" type="button">Add League</button>
+            <div class="live-switches">
+              <a class="secondary-action" href="../help.html">Help Center</a>
+              <button class="secondary-action" id="account-add-league" type="button">Add League</button>
+            </div>
           </div>
 
           <div class="account-grid">
@@ -865,77 +838,10 @@
           </div>
         </section>
 
-        <section class="panel" id="qa">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Q&A</p>
-              <h2>Platform questions</h2>
-            </div>
-          </div>
-
-          <div class="qa-list">
-            <details open>
-              <summary>Where should I start when I log in?</summary>
-              <p>Start in Command for the status view, then use Draft Room when you are close to draft day. Big Board is for player research, Mock Simulator is for practice, and Trade Calculator is for checking deals after your roster exists.</p>
-            </details>
-            <details>
-              <summary>What is the difference between Big Board and Draft Room?</summary>
-              <p>Big Board is the full player database for sorting, filtering, and reading player notes. Draft Room is the live decision view that combines the board with ESPN draft state, your team, roster needs, tier cliffs, and pick timing.</p>
-            </details>
-            <details>
-              <summary>What does Cheatcode mean inside Draft Room?</summary>
-              <p>Cheatcode is the shortcut read. It turns board value, player risk, tier scarcity, roster shape, and room behavior into a simpler answer: best move now, safe pick, upside pick, value edge, wait list, and avoid list.</p>
-            </details>
-            <details>
-              <summary>What is the Alpha Signal?</summary>
-              <p>Alpha Signal is the highest-level read in Draft Room. It blends best available player, tier scarcity, room pressure, roster needs, and survival odds into one draft posture: attack, wait, stabilize, or exploit value.</p>
-            </details>
-            <details>
-              <summary>Why do I need to choose my ESPN team?</summary>
-              <p>FantasyIQ needs your team to know when your picks are coming, which players are already on your roster, and what positions you can wait on. Without that, the room can still show the board, but the personalized reads are limited.</p>
-            </details>
-            <details>
-              <summary>What if my league is half PPR, superflex, double flex, or not 12 teams?</summary>
-              <p>The league profile controls team count, scoring, lineup slots, draft rounds, bench, and playoffs. FantasyIQ uses that profile in Draft Room, Mock Simulator, Big Board value labels, and Trade Calculator so a superflex or double-flex league is treated differently from a 12-team full-PPR league.</p>
-            </details>
-            <details>
-              <summary>What should I do before draft day?</summary>
-              <p>Open Draft Room once, confirm the ESPN sync works, pick your team in the team selector, and run at least one mock from your likely slot. Then use Big Board to flag players you like in each tier.</p>
-            </details>
-            <details>
-              <summary>How should I use the Mock Simulator?</summary>
-              <p>Use it to practice decisions, not to memorize one perfect draft. Try different slots, use Auto To My Pick, and watch how your roster shape changes when you take safe value versus upside swings.</p>
-            </details>
-            <details>
-              <summary>How do I decide between the safe pick and the upside pick?</summary>
-              <p>Use the safe pick when your roster still needs reliable starters or a tier is about to dry up. Use the upside pick when your foundation is stable and you can afford a higher-variance player with league-winning potential.</p>
-            </details>
-            <details>
-              <summary>What does likely returns mean?</summary>
-              <p>Likely returns means FantasyIQ thinks that player or a similar option has a realistic chance to be available at your next pick. It is not a guarantee; it is a timing read based on board rank, positional demand, and current draft flow.</p>
-            </details>
-            <details>
-              <summary>What does avoid under clock mean?</summary>
-              <p>It means the player is not necessarily bad, but the current pick is probably too expensive, too risky, or poorly timed for your build. If that player falls later, the read can change.</p>
-            </details>
-            <details>
-              <summary>What if ESPN sync is not updating?</summary>
-              <p>Use Sync Now first. If the draft still does not update, refresh the page while staying on your customer dashboard link. If ESPN has not exposed the draft feed yet, Big Board and Mock Simulator still work as fallback tools.</p>
-            </details>
-            <details>
-              <summary>When should I use the Trade Calculator?</summary>
-              <p>Use it after the draft, before accepting or sending a trade. Enter the players you give and receive, then paste your roster if you want fit warnings for thin positions or deals that create a weekly starter problem.</p>
-            </details>
-            <details>
-              <summary>Should I follow FantasyIQ over my gut?</summary>
-              <p>Use FantasyIQ as the discipline layer. If your gut likes a player, check whether the board price, risk, role, and tier support it. The best picks usually happen when your conviction and the value read agree.</p>
-            </details>
-          </div>
-        </section>
       </section>
     </main>
 
-    <script src="./config.js?v=20260521_emoji_cursor_25"></script>
-    <script src="./app.js?v=20260521_emoji_cursor_25"></script>
+    <script src="./config.js?v=20260521_quality_cut_26"></script>
+    <script src="./app.js?v=20260521_quality_cut_26"></script>
   </body>
 </html>
