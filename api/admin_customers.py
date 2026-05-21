@@ -230,6 +230,7 @@ def admin_action(raw: dict[str, Any]) -> dict[str, Any]:
                 "slug": detail.get("slug"),
                 "customer_name": detail.get("customer_name"),
                 "email": detail.get("email"),
+                "passwordConfigured": bool(detail.get("password_configured")),
             },
             "email": email_result,
             "syncedAt": utc_now(),

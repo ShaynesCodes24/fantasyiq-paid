@@ -510,6 +510,8 @@ def list_customers() -> list[dict[str, Any]]:
                 SELECT c.slug, c.customer_name, c.email, c.status, c.subscription_status,
                        c.included_league_limit, c.additional_league_count, c.default_league_key,
                        c.created_at, c.updated_at,
+                       NULLIF(c.password_hash, '') IS NOT NULL AS password_configured,
+                       c.password_created_at,
                        COUNT(l.id) AS league_count,
                        MAX(l.updated_at) AS last_league_update,
                        BOOL_OR(NULLIF(c.access_code, '') IS NOT NULL) AS access_code_set
@@ -526,7 +528,7 @@ def list_customers() -> list[dict[str, Any]]:
     output = []
     for row in rows:
         clean = dict(row)
-        for key in ("created_at", "updated_at", "last_league_update"):
+        for key in ("created_at", "updated_at", "last_league_update", "password_created_at"):
             value = clean.get(key)
             if isinstance(value, (datetime, date)):
                 clean[key] = value.isoformat()
@@ -638,6 +640,8 @@ def admin_customer_detail(slug: str) -> dict[str, Any] | None:
                 """
                 SELECT slug, customer_name, email, access_code, status, subscription_status,
                        included_league_limit, additional_league_count, default_league_key,
+                       NULLIF(password_hash, '') IS NOT NULL AS password_configured,
+                       password_created_at,
                        created_at, updated_at
                   FROM fantasyiq_customers
                  WHERE slug = %s
@@ -659,7 +663,7 @@ def admin_customer_detail(slug: str) -> dict[str, Any] | None:
                 (lookup,),
             )
             leagues = fetch_all_dicts(cursor)
-    for key in ("created_at", "updated_at"):
+    for key in ("created_at", "updated_at", "password_created_at"):
         value = customer.get(key)
         if isinstance(value, (datetime, date)):
             customer[key] = value.isoformat()
