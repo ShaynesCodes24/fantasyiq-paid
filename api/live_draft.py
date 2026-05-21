@@ -115,7 +115,7 @@ def league_url(context: CustomerContext) -> str:
     return (
         "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/"
         f"seasons/{season}/segments/0/leagues/{league_id}"
-        "?view=mDraftDetail&view=mSettings&view=mTeam"
+        "?view=mDraftDetail&view=mRoster&view=mSettings&view=mTeam"
     )
 
 
@@ -182,8 +182,34 @@ def player_info(player_id: int, players: dict[int, dict[str, Any]]) -> dict[str,
     return {
         "playerId": player_id,
         "player": player.get("fullName"),
-        "pos": POSITION_BY_ID.get(player.get("defaultPositionId"), ""),
-        "proTeam": PRO_TEAM_BY_ID.get(player.get("proTeamId"), ""),
+        "pos": POSITION_BY_ID.get(int_setting(player.get("defaultPositionId"), -1), ""),
+        "proTeam": PRO_TEAM_BY_ID.get(int_setting(player.get("proTeamId"), -1), ""),
+    }
+
+
+def normalize_roster_entry(entry: dict[str, Any], players: dict[int, dict[str, Any]]) -> dict[str, Any]:
+    pool_entry = entry.get("playerPoolEntry") or {}
+    player = pool_entry.get("player") or {}
+    player_id = int_setting(
+        player.get("id")
+        or pool_entry.get("id")
+        or entry.get("playerId"),
+        -1,
+    )
+    info = player_info(player_id, players) if player_id > 0 else {}
+    default_position_id = int_setting(player.get("defaultPositionId"), -1)
+    pro_team_id = int_setting(player.get("proTeamId"), -1)
+    lineup_slot_id = int_setting(entry.get("lineupSlotId"), -1)
+    return {
+        "playerId": player_id,
+        "player": player.get("fullName") or info.get("player"),
+        "pos": POSITION_BY_ID.get(default_position_id, "") or info.get("pos", ""),
+        "proTeam": PRO_TEAM_BY_ID.get(pro_team_id, "") or info.get("proTeam", ""),
+        "lineupSlotId": lineup_slot_id,
+        "lineupSlot": ESPN_LINEUP_SLOT_MAP.get(lineup_slot_id, ""),
+        "injuryStatus": player.get("injuryStatus") or pool_entry.get("injuryStatus") or "",
+        "acquisitionType": entry.get("acquisitionType") or "",
+        "status": pool_entry.get("status") or "",
     }
 
 
@@ -339,11 +365,20 @@ def build_live_payload(request_path: str = "", headers: Any | None = None, force
     for team in league.get("teams", []):
         team_id = int(team.get("id") or 0)
         owner = team.get("primaryOwner")
+        roster_entries = [
+            normalized
+            for normalized in (
+                normalize_roster_entry(entry, players)
+                for entry in ((team.get("roster") or {}).get("entries") or [])
+            )
+            if normalized.get("player")
+        ]
         teams[team_id] = {
             "teamId": team_id,
             "teamName": team_name(team, members),
             "manager": members.get(owner, ""),
             "abbrev": team.get("abbrev", ""),
+            "roster": roster_entries,
         }
 
     draft_detail = league.get("draftDetail") or {}
@@ -357,6 +392,12 @@ def build_live_payload(request_path: str = "", headers: Any | None = None, force
     pending = [pick for pick in picks if pick["status"] != "drafted"]
     draft_order = [pick for pick in picks if pick.get("round") == 1]
     league_settings = extract_league_settings(settings, len(teams), raw_picks, context)
+    rostered_players = [
+        roster_player
+        for team in teams.values()
+        for roster_player in team.get("roster", [])
+        if roster_player.get("player")
+    ]
 
     payload = {
         "ok": True,
@@ -383,6 +424,8 @@ def build_live_payload(request_path: str = "", headers: Any | None = None, force
         "picks": picks,
         "draftedPlayerIds": [pick["playerId"] for pick in completed],
         "draftedNames": [pick["player"] for pick in completed if pick.get("player")],
+        "rosteredPlayerIds": [player["playerId"] for player in rostered_players if player.get("playerId")],
+        "rosteredNames": [player["player"] for player in rostered_players if player.get("player")],
     }
     _live_cache[context.cache_key] = {"data": payload, "ts": now}
     return payload

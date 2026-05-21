@@ -1658,6 +1658,72 @@ li + li {
   text-transform: none;
 }
 
+.trade-lane-summary.waiver-summary strong {
+  font-size: 18px;
+}
+
+.trade-idea-list {
+  display: grid;
+  gap: 12px;
+}
+
+.trade-idea-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(18, 63, 52, 0.12);
+  border-radius: 8px;
+  background: #fffef9;
+  padding: 13px;
+}
+
+.trade-idea-head {
+  display: grid;
+  gap: 4px;
+}
+
+.trade-idea-head span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.trade-idea-head strong {
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.12;
+}
+
+.trade-idea-head small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.trade-idea-flow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.trade-idea-flow section {
+  min-width: 0;
+}
+
+.trade-idea-flow h4 {
+  margin: 0 0 7px;
+  color: var(--ink);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.trade-idea-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
 .waiver-list {
   display: grid;
   gap: 8px;
@@ -4814,7 +4880,8 @@ small,
   .post-draft-hero,
   .post-draft-grid,
   .trade-intelligence-grid,
-  .trade-finder-grid {
+  .trade-finder-grid,
+  .trade-idea-flow {
     grid-template-columns: 1fr;
   }
 
