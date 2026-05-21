@@ -55,6 +55,26 @@ def signed_stripe_headers(secret: str, body: bytes, timestamp: int) -> dict[str,
     return {"Content-Type": "application/json", "Stripe-Signature": f"t={timestamp},v1={signature}"}
 
 
+def post_signed_stripe_event(event: dict[str, Any], secret: str, timestamp: int) -> tuple[int, dict[str, Any]]:
+    body = json.dumps(event, separators=(",", ":")).encode("utf-8")
+    request = urllib.request.Request(
+        f"{SITE_URL}/api/stripe-webhook",
+        data=body,
+        headers=signed_stripe_headers(secret, body, timestamp),
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=45) as response:
+            return response.status, json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        raw = exc.read().decode("utf-8", errors="replace")
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            data = {"message": raw}
+        return exc.code, data
+
+
 def post_form(url: str, data: dict[str, str], headers: dict[str, str] | None = None) -> tuple[int, dict[str, Any]]:
     body = urllib.parse.urlencode(data).encode("utf-8")
     request = urllib.request.Request(
@@ -122,18 +142,9 @@ def main() -> int:
             }
         },
     }
-    body = json.dumps(event, separators=(",", ":")).encode("utf-8")
     created_customer = False
     try:
-        request = urllib.request.Request(
-            f"{SITE_URL}/api/stripe-webhook",
-            data=body,
-            headers=signed_stripe_headers(secret, body, timestamp),
-            method="POST",
-        )
-        with urllib.request.urlopen(request, timeout=45) as response:
-            webhook = json.loads(response.read().decode("utf-8"))
-            status = response.status
+        status, webhook = post_signed_stripe_event(event, secret, timestamp)
         result = webhook.get("result") or {}
         database = result.get("database") or {}
         if status != 200 or not database.get("persistedDatabase"):
@@ -227,16 +238,7 @@ def main() -> int:
                 }
             },
         }
-        add_on_body = json.dumps(add_on_event, separators=(",", ":")).encode("utf-8")
-        request = urllib.request.Request(
-            f"{SITE_URL}/api/stripe-webhook",
-            data=add_on_body,
-            headers=signed_stripe_headers(secret, add_on_body, timestamp),
-            method="POST",
-        )
-        with urllib.request.urlopen(request, timeout=45) as response:
-            add_on_payload = json.loads(response.read().decode("utf-8"))
-            add_on_status = response.status
+        add_on_status, add_on_payload = post_signed_stripe_event(add_on_event, secret, timestamp)
         add_on_database = ((add_on_payload.get("result") or {}).get("database") or {})
         if add_on_status != 200 or (add_on_payload.get("result") or {}).get("action") != "additional_league_paid" or not add_on_database.get("persistedDatabase"):
             raise RuntimeError(f"Add-on webhook failed: {add_on_payload}")
