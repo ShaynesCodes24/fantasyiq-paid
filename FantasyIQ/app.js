@@ -5593,9 +5593,31 @@ function simTeam(slot) {
   return mockSim?.teams?.[slot];
 }
 
+function simCache() {
+  if (!mockSim) return null;
+  if (!mockSim.cache) {
+    mockSim.cache = {
+      availableRows: null,
+      tierInfo: {},
+      recentCounts: {},
+      futurePick: {},
+      recommendationTargetOverall: undefined,
+    };
+  }
+  return mockSim.cache;
+}
+
+function simInvalidateCache() {
+  if (mockSim) mockSim.cache = null;
+}
+
 function simAvailableRows() {
   if (!boardData || !mockSim) return [];
-  return (boardData.boards?.combined?.rows || []).filter((row) => !mockSim.drafted.has(normalizePlayerName(row.Player)));
+  const cache = simCache();
+  if (cache?.availableRows) return cache.availableRows;
+  const rows = (boardData.boards?.combined?.rows || []).filter((row) => !mockSim.drafted.has(normalizePlayerName(row.Player)));
+  if (cache) cache.availableRows = rows;
+  return rows;
 }
 
 function simRecentPicks(limit = Math.min(12, leagueTeamTotal())) {
@@ -5603,10 +5625,14 @@ function simRecentPicks(limit = Math.min(12, leagueTeamTotal())) {
 }
 
 function simRecentPositionCounts(limit = Math.min(10, leagueTeamTotal())) {
+  const cache = simCache();
+  const key = String(limit);
+  if (cache?.recentCounts?.[key]) return cache.recentCounts[key];
   const counts = {};
   simRecentPicks(limit).forEach((pick) => {
     counts[pick.row.Pos] = (counts[pick.row.Pos] || 0) + 1;
   });
+  if (cache) cache.recentCounts[key] = counts;
   return counts;
 }
 
@@ -5644,18 +5670,28 @@ function simFuturePicksForSlot(slot, fromOverall = mockSim?.currentOverall || 1)
 }
 
 function simRecommendationTargetOverall() {
+  const cache = simCache();
+  if (cache && cache.recommendationTargetOverall !== undefined) return cache.recommendationTargetOverall;
   const upcoming = simFutureUserPicks();
-  if (!upcoming.length) return null;
-  if (upcoming[0] === mockSim.currentOverall && upcoming[1]) return upcoming[1];
-  return upcoming[0];
+  const target = !upcoming.length ? null : upcoming[0] === mockSim.currentOverall && upcoming[1] ? upcoming[1] : upcoming[0];
+  if (cache) cache.recommendationTargetOverall = target;
+  return target;
 }
 
 function simTopTierInfo(pos) {
+  const cache = simCache();
+  if (cache?.tierInfo?.[pos]) return cache.tierInfo[pos];
   const rows = simAvailableRows().filter((row) => row.Pos === pos).sort((a, b) => Number(a.Rank) - Number(b.Rank));
-  if (!rows.length) return { pos, tier: "Empty", count: 0, rows: [] };
+  if (!rows.length) {
+    const empty = { pos, tier: "Empty", count: 0, rows: [] };
+    if (cache) cache.tierInfo[pos] = empty;
+    return empty;
+  }
   const tier = rows[0]["Pos Tier"] || rows[0].Category || "Top tier";
   const tierRows = rows.filter((row) => (row["Pos Tier"] || row.Category) === tier);
-  return { pos, tier, count: tierRows.length, rows: tierRows };
+  const info = { pos, tier, count: tierRows.length, rows: tierRows };
+  if (cache) cache.tierInfo[pos] = info;
+  return info;
 }
 
 function simSurvivalProjection(row, targetOverall = simRecommendationTargetOverall()) {
@@ -5731,9 +5767,8 @@ function simDecision(row, counts) {
   return { label: "Target", className: "target", survival, reason: recommendationReason(row, counts) };
 }
 
-function simRecommendationScore(row, counts) {
+function simRecommendationScore(row, counts, decision = simDecision(row, counts)) {
   const round = simRound();
-  const decision = simDecision(row, counts);
   const rank = Number(row.Rank || 999);
   const value = leagueValueScore(row);
   const momentum = playerMarketMomentum(row);
@@ -5755,8 +5790,14 @@ function simRecommendationScore(row, counts) {
 }
 
 function simBotSurvivalPressure(row, slot) {
-  const upcoming = simFuturePicksForSlot(slot, (mockSim?.currentOverall || 1) + 1);
-  const next = upcoming[0];
+  const fromOverall = (mockSim?.currentOverall || 1) + 1;
+  const cache = simCache();
+  const key = `${slot}:${fromOverall}`;
+  let next = cache?.futurePick?.[key];
+  if (next === undefined) {
+    next = simFuturePicksForSlot(slot, fromOverall)[0] || null;
+    if (cache) cache.futurePick[key] = next;
+  }
   if (!next) return 0;
   const gap = Number(row.Rank || 999) - next;
   if (gap <= -24) return 95;
@@ -5803,11 +5844,20 @@ function simBotScore(row, counts, slot) {
   return score + wobble;
 }
 
+function simRecommendationRows() {
+  const rows = simAvailableRows();
+  const horizon = mockSim ? mockSim.currentOverall + leagueTeamTotal() * 10 : 160;
+  return rows.slice(0, Math.min(rows.length, Math.max(140, horizon)));
+}
+
 function simTopRecommendations() {
   if (!mockSim) return [];
   const counts = simTeam(mockSim.userSlot).counts;
-  return simAvailableRows()
-    .map((row) => ({ row, score: simRecommendationScore(row, counts), decision: simDecision(row, counts) }))
+  return simRecommendationRows()
+    .map((row) => {
+      const decision = simDecision(row, counts);
+      return { row, score: simRecommendationScore(row, counts, decision), decision };
+    })
     .filter((item) => item.decision.label !== "Avoid")
     .sort((a, b) => b.score - a.score)
     .slice(0, 10);
@@ -5822,6 +5872,7 @@ function simAddPick(slot, row, pickedByUser = false) {
   mockSim.picks.push({ row, slot, overall, round: simRound(overall), roundPick: simRoundPick(overall), pickedByUser });
   mockSim.drafted.add(normalizePlayerName(row.Player));
   mockSim.currentOverall += 1;
+  simInvalidateCache();
 }
 
 function simOpponentPick() {
@@ -5861,7 +5912,7 @@ function simAdvanceChunk() {
   }
   const startedAt = performance.now();
   let picks = 0;
-  while (simNeedsAutoAdvance() && picks < 2 && performance.now() - startedAt < 18) {
+  while (simNeedsAutoAdvance() && picks < 6 && performance.now() - startedAt < 12) {
     const before = mockSim.currentOverall;
     simOpponentPick();
     picks += 1;
@@ -5917,6 +5968,7 @@ function simStartDraft() {
     picks: [],
     teams,
     profiles,
+    cache: null,
   };
   localStorage.setItem(loadoutStorageKey("sim-slot"), selectedSlot);
   simAdvanceToUserPick();
@@ -6104,7 +6156,7 @@ function renderSimRecommendations() {
   const recommendations = simTopRecommendations();
   const waits = recommendations.filter((item) => item.decision.label === "Can wait").slice(0, 3);
   const pickNow = recommendations.filter((item) => !["Can wait", "Wait"].includes(item.decision.label)).slice(0, 5);
-  const avoids = simAvailableRows()
+  const avoids = simRecommendationRows()
     .filter((row) => simDecision(row, simTeam(mockSim.userSlot).counts).label === "Avoid" || (playerMarketMomentum(row).score <= -14 && simRound() <= 10))
     .sort((a, b) => Number(a.Rank) - Number(b.Rank))
     .slice(0, 3);
