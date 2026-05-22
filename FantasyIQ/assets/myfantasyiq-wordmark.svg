@@ -65,7 +65,7 @@
   <g filter="url(#text-shadow)">
     <text x="460" y="236" textLength="620" lengthAdjust="spacingAndGlyphs" fill="url(#white-metal)" stroke="rgba(35,25,13,.42)" stroke-width="1.1" font-family="Arial Black, Inter, Arial, sans-serif" font-size="126" font-weight="900">MyFantasy</text>
     <text x="1062" y="236" fill="url(#iq-metal)" stroke="rgba(65,38,11,.5)" stroke-width="1.3" font-family="Arial Black, Inter, Arial, sans-serif" font-size="126" font-weight="900">IQ</text>
-    <path d="M466 300h136M1232 300h112" stroke="url(#gold)" stroke-width="3" opacity=".86"/>
-    <text x="650" y="311" fill="#d4a54e" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="800" letter-spacing="20">MYFANTASYIQ.COM</text>
+    <path d="M466 300h136M1208 300h136" stroke="url(#gold)" stroke-width="3" opacity=".86"/>
+    <text x="905" y="311" fill="#d4a54e" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="800" letter-spacing="20" text-anchor="middle">MYFANTASYIQ.COM</text>
   </g>
 </svg>

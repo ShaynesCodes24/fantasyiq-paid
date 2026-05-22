@@ -5322,3 +5322,11 @@ small,
     max-height: none;
   }
 }
+
+/* Final contrast guard: command hero copy sits on a dark premium panel. */
+.panel .command-hero p,
+.command-hero p {
+  color: rgba(255, 253, 247, 0.94);
+  font-weight: 850;
+  text-shadow: 0 2px 12px rgba(0, 8, 7, 0.42);
+}

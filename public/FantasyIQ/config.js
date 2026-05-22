@@ -6,7 +6,7 @@ window.FANTASY_IQ_CONFIG = {
   customerName: "",
   customerTeamName: "",
   customerTeamId: "",
-  logoUrl: "./assets/myfantasyiq-wordmark.svg?v=20260521-metallic-clear-com",
+  logoUrl: "./assets/myfantasyiq-wordmark.svg?v=20260522-centered-com-readable",
   logoAlt: "MyFantasyIQ league logo",
   draftCardLabel: "Subscription",
   draftCardValue: "$30 / year",
