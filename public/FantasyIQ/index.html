@@ -778,9 +778,21 @@
           <div class="panel-head">
             <div>
               <p class="eyebrow">Trade Calculator</p>
-              <h2>Make every trade make sense</h2>
+              <h2>Trade decision desk</h2>
             </div>
           </div>
+
+          <section class="trade-command-bar" aria-label="Trade decision mode">
+            <div>
+              <span>Decision Mode</span>
+              <div class="trade-mode-controls">
+                <button class="trade-mode-toggle active" type="button" data-trade-mode="balanced">Balanced</button>
+                <button class="trade-mode-toggle" type="button" data-trade-mode="win-now">Win now</button>
+                <button class="trade-mode-toggle" type="button" data-trade-mode="upside">Upside</button>
+              </div>
+            </div>
+            <button id="trade-save-note" class="secondary-action" type="button">Save trade note</button>
+          </section>
 
           <div class="trade-shell">
             <section class="trade-card trade-card-out">
@@ -837,6 +849,14 @@
               </div>
             </section>
           </div>
+
+          <section class="trade-card trade-history-card">
+            <div class="trade-card-head">
+              <span>Saved Trade Notes</span>
+              <strong>Local</strong>
+            </div>
+            <div id="trade-saved-notes" class="trade-saved-notes">No saved trade checks yet.</div>
+          </section>
 
           <div class="trade-rules">
             <article>

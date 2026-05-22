@@ -23,6 +23,9 @@ const tradeGetList = document.querySelector("#trade-get-list");
 const tradeRosterStatus = document.querySelector("#trade-roster-status");
 const tradeRosterPills = document.querySelector("#trade-roster-pills");
 const tradeFinder = document.querySelector("#trade-finder");
+const tradeModeButtons = document.querySelectorAll(".trade-mode-toggle");
+const tradeSaveNote = document.querySelector("#trade-save-note");
+const tradeSavedNotes = document.querySelector("#trade-saved-notes");
 const waiverAssistant = document.querySelector("#waiver-assistant");
 const cheatcodeStatus = document.querySelector("#cheatcode-status");
 const cheatcodeHero = document.querySelector("#cheatcode-hero");
@@ -2855,6 +2858,258 @@ function tradeFitWarnings(give, get, roster) {
   return warnings;
 }
 
+function tradeDeskStorageKey(key) {
+  return loadoutStorageKey(`trade-desk-${key}`);
+}
+
+function selectedTradeMode() {
+  return localStorage.getItem(tradeDeskStorageKey("mode")) || "balanced";
+}
+
+function tradeModeLabel(mode = selectedTradeMode()) {
+  if (mode === "win-now") return "Win now";
+  if (mode === "upside") return "Upside";
+  return "Balanced";
+}
+
+function rowListFromTradeItems(items) {
+  return items.map((item) => item.row).filter(Boolean);
+}
+
+function tradeAdjustedRosterRows(roster, give, get) {
+  const giveKeys = new Set(rowListFromTradeItems(give).map((row) => normalizePlayerName(row.Player)));
+  const before = rowListFromTradeItems(roster);
+  const after = before.filter((row) => !giveKeys.has(normalizePlayerName(row.Player))).concat(rowListFromTradeItems(get));
+  return { before, after };
+}
+
+function lineupSlotsForDisplay() {
+  const slots = activeLineupSlots();
+  const list = [];
+  ["QB", "RB", "WR", "TE"].forEach((pos) => {
+    const count = Number(slots[pos] || 0);
+    for (let index = 0; index < count; index += 1) list.push(pos);
+  });
+  for (let index = 0; index < Number(slots.FLEX || 0); index += 1) list.push("FLEX");
+  for (let index = 0; index < Number(slots.SUPERFLEX || 0); index += 1) list.push("SFLEX");
+  if (Number(slots.DST || 0)) list.push("DST");
+  if (Number(slots.K || 0)) list.push("K");
+  return list;
+}
+
+function fillLineup(rows) {
+  const used = new Set();
+  const sortedByPos = (posList) =>
+    rows
+      .filter((row) => posList.includes(row.Pos) && !used.has(normalizePlayerName(row.Player)))
+      .sort((a, b) => leagueValueScore(b) - leagueValueScore(a));
+  return lineupSlotsForDisplay().map((slot) => {
+    const eligible =
+      slot === "FLEX"
+        ? ["RB", "WR", "TE"]
+        : slot === "SFLEX"
+          ? ["QB", "RB", "WR", "TE"]
+          : [slot];
+    const row = sortedByPos(eligible)[0] || null;
+    if (row) used.add(normalizePlayerName(row.Player));
+    return { slot, row };
+  });
+}
+
+function lineupValue(lineup) {
+  return lineup.reduce((sum, item) => sum + (item.row ? leagueValueScore(item.row) : 0), 0);
+}
+
+function renderLineupComparison(roster, give, get) {
+  if (!roster.length) {
+    return `<div class="trade-lineup-card"><span>Before / After Lineup</span><strong>Roster needed</strong><p>Paste your roster or select your ESPN team to see who starts before and after the trade.</p></div>`;
+  }
+  const { before, after } = tradeAdjustedRosterRows(roster, give, get);
+  const beforeLineup = fillLineup(before);
+  const afterLineup = fillLineup(after);
+  const delta = lineupValue(afterLineup) - lineupValue(beforeLineup);
+  const renderSide = (label, lineup) => `<section><h4>${label}</h4>${lineup
+    .map((item) => `<div><span>${htmlEscape(item.slot)}</span><strong>${item.row ? htmlEscape(item.row.Player) : "Open slot"}</strong><small>${item.row ? `${item.row.Pos} / value ${valueDisplay(item.row)}` : "Needs player"}</small></div>`)
+    .join("")}</section>`;
+  return `<div class="trade-lineup-card">
+    <span>Before / After Lineup</span>
+    <strong>${delta >= 0 ? "+" : ""}${delta.toFixed(1)} starter value</strong>
+    <div class="trade-lineup-grid">${renderSide("Before", beforeLineup)}${renderSide("After", afterLineup)}</div>
+  </div>`;
+}
+
+function tradeRosterFitRead(give, get, roster) {
+  if (!roster.length) {
+    return { label: "Roster context pending", className: "watch", detail: "Paste your roster or use the ESPN team selector to unlock true roster-fit judgment.", score: 0 };
+  }
+  const { before, after } = tradeAdjustedRosterRows(roster, give, get);
+  const beforeSnapshot = {
+    counts: countsFromRosterItems(before.map((row) => ({ row }))),
+    rows: before,
+  };
+  const afterSnapshot = {
+    counts: countsFromRosterItems(after.map((row) => ({ row }))),
+    rows: after,
+  };
+  const beforeNeeds = rosterWeaknesses(beforeSnapshot);
+  const afterNeeds = rosterWeaknesses(afterSnapshot);
+  const beforeNeedScore = beforeNeeds.reduce((sum, item) => sum + item.weight, 0);
+  const afterNeedScore = afterNeeds.reduce((sum, item) => sum + item.weight, 0);
+  const lineupDelta = lineupValue(fillLineup(after)) - lineupValue(fillLineup(before));
+  const score = (beforeNeedScore - afterNeedScore) * 1.8 + lineupDelta * 0.65;
+  const mainNeed = afterNeeds[0]?.pos;
+  if (score >= 8) return { label: "Roster fit improves", className: "good", detail: `Starter/depth shape improves. ${mainNeed ? `Main remaining need: ${mainNeed}.` : "No obvious remaining hole."}`, score };
+  if (score <= -8) return { label: "Roster fit worsens", className: "danger", detail: `This creates or deepens a roster hole${mainNeed ? ` at ${mainNeed}` : ""}.`, score };
+  return { label: "Fit is neutral", className: "watch", detail: mainNeed ? `The deal is close. Your main remaining need is ${mainNeed}.` : "Roster shape stays mostly intact, so raw value and risk should decide.", score };
+}
+
+function tradeScoreBreakdown(giveTotals, getTotals, give, get, roster, warnings) {
+  const mode = selectedTradeMode();
+  const net = getTotals.value - giveTotals.value;
+  const projectionDelta = getTotals.projection - giveTotals.projection;
+  const bestDelta = (getTotals.best?.value || 0) - (giveTotals.best?.value || 0);
+  const fit = tradeRosterFitRead(give, get, roster);
+  const scarcity = rowListFromTradeItems(get).reduce((sum, row) => sum + (topTierInfo(row.Pos).count <= 3 ? 5 : 0), 0) -
+    rowListFromTradeItems(give).reduce((sum, row) => sum + (topTierInfo(row.Pos).count <= 3 ? 5 : 0), 0);
+  const riskDelta = getTotals.risk - giveTotals.risk;
+  const modeBias = mode === "win-now" ? projectionDelta * 0.08 - Math.max(0, riskDelta) * 2 : mode === "upside" ? Math.max(0, riskDelta) * 0.8 + rowListFromTradeItems(get).reduce((sum, row) => sum + Number(row.Upside || row.Ceiling || 0) * 0.04, 0) : 0;
+  const score = Math.round(clampNumber(50 + net * 1.15 + projectionDelta * 0.06 + bestDelta * 0.7 + fit.score + scarcity + modeBias - warnings.length * 4, 0, 100));
+  return {
+    score,
+    fit,
+    items: [
+      { label: "Raw value", value: `${net >= 0 ? "+" : ""}${net.toFixed(1)}`, className: net >= 4 ? "good" : net < -4 ? "danger" : "watch" },
+      { label: "Starter impact", value: `${projectionDelta >= 0 ? "+" : ""}${projectionDelta.toFixed(1)}`, className: projectionDelta >= 10 ? "good" : projectionDelta < -10 ? "danger" : "watch" },
+      { label: "Roster fit", value: fit.label, className: fit.className },
+      { label: "Scarcity", value: scarcity > 0 ? `+${scarcity}` : String(scarcity), className: scarcity > 0 ? "good" : scarcity < 0 ? "danger" : "watch" },
+      { label: "Risk", value: `${riskDelta >= 0 ? "+" : ""}${riskDelta.toFixed(1)}`, className: riskDelta <= -1 ? "good" : riskDelta >= 1.5 ? "danger" : "watch" },
+      { label: "Mode", value: tradeModeLabel(mode), className: "watch" },
+    ],
+  };
+}
+
+function fairnessLabel(score) {
+  if (score >= 68) return { label: "You win", className: "good" };
+  if (score >= 45) return { label: "Fair zone", className: "watch" };
+  return { label: "They win", className: "danger" };
+}
+
+function oneLineTradeVerdict(verdict, breakdown, warnings) {
+  if (verdict === "Enter both sides") return "Add both sides before making a decision.";
+  if (verdict === "Fix unknown players") return "Fix the unmatched player names before trusting the result.";
+  if (breakdown.fit.className === "danger") return "Reject or counter. The value may not cover the roster hole this creates.";
+  if (warnings.some((warning) => warning.includes("best player"))) return "Counter. You are giving up the best player and need a cleaner premium back.";
+  if (breakdown.score >= 70) return "Accept if the incoming players fit your weekly lineup.";
+  if (breakdown.score >= 50) return "Negotiate. This is close enough that one bench piece can swing it.";
+  return "Reject unless this solves an urgent lineup problem.";
+}
+
+function counterOfferIdeas(give, get, roster, breakdown) {
+  const needs = roster.length ? rosterWeaknesses({ rows: rowListFromTradeItems(roster), counts: positionCounts(roster) }) : [];
+  const topNeed = needs[0]?.pos || rowListFromTradeItems(give)[0]?.Pos || "RB/WR";
+  const incomingBest = tradeTotals(get).best;
+  const outgoingBest = tradeTotals(give).best;
+  const ideas = [];
+  if (breakdown.score < 55) ideas.push(`Ask for one more ${topNeed} depth piece or a safer starter before accepting.`);
+  if (outgoingBest?.value && incomingBest?.value && outgoingBest.value - incomingBest.value >= 8) ideas.push(`Keep ${outgoingBest.row?.Player || outgoingBest.name} unless ${incomingBest.row?.Player || incomingBest.name} comes with a meaningful add-on.`);
+  if (breakdown.fit.className === "danger") ideas.push(`Counter by replacing the outgoing ${topNeed} with a bench piece, or ask for ${topNeed} back.`);
+  if (!ideas.length) ideas.push("If you want to press, ask for a small bench upside player instead of changing the core.");
+  ideas.push("If they reject, remove your lowest-value outgoing piece before upgrading the incoming side.");
+  return ideas.slice(0, 3);
+}
+
+function partnerLens(give, get) {
+  const giveRows = rowListFromTradeItems(give);
+  const getRows = rowListFromTradeItems(get);
+  if (!giveRows.length || !getRows.length) return "Add both sides to estimate the other manager's incentive.";
+  const getPositions = new Set(getRows.map((row) => row.Pos));
+  const givePositions = new Set(giveRows.map((row) => row.Pos));
+  const teams = leagueTeamSnapshots()
+    .filter((snapshot) => String(snapshot.teamId) !== String(selectedTeamId()))
+    .map((snapshot) => {
+      const needs = tradeNeedProfiles(snapshot);
+      const wantsIncoming = needs.filter((need) => givePositions.has(need.pos)).reduce((sum, need) => sum + need.weight, 0);
+      const losingNeed = needs.filter((need) => getPositions.has(need.pos)).reduce((sum, need) => sum + need.weight, 0);
+      return { snapshot, score: wantsIncoming - losingNeed, needs };
+    })
+    .sort((a, b) => b.score - a.score);
+  const best = teams[0];
+  if (best && best.score > 0) {
+    return `${teamSnapshotLabel(best.snapshot)} is the best fit: they need ${best.needs.slice(0, 2).map((need) => need.pos).join("/")} and may value what you are sending.`;
+  }
+  return "Partner lens: sell the incoming manager on need, not raw value. This offer is more likely to work if their roster needs the position you send.";
+}
+
+function savedTradeNotes() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(tradeDeskStorageKey("notes")) || "[]");
+    return Array.isArray(parsed) ? parsed.slice(0, 12) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveTradeNotes(notes) {
+  localStorage.setItem(tradeDeskStorageKey("notes"), JSON.stringify(notes.slice(0, 12)));
+}
+
+function currentTradeNote() {
+  const give = tradeSideValue(tradeGive?.value || "");
+  const get = tradeSideValue(tradeGet?.value || "");
+  const giveTotals = tradeTotals(give);
+  const getTotals = tradeTotals(get);
+  return {
+    at: new Date().toISOString(),
+    mode: selectedTradeMode(),
+    give: parseLines(tradeGive?.value || ""),
+    get: parseLines(tradeGet?.value || ""),
+    net: Number((getTotals.value - giveTotals.value).toFixed(1)),
+  };
+}
+
+function renderSavedTradeNotes() {
+  if (!tradeSavedNotes) return;
+  const notes = savedTradeNotes();
+  if (!notes.length) {
+    tradeSavedNotes.textContent = "No saved trade checks yet.";
+    return;
+  }
+  tradeSavedNotes.innerHTML = notes
+    .map((note, index) => `<article>
+      <span>${htmlEscape(tradeModeLabel(note.mode))} / ${htmlEscape(new Date(note.at).toLocaleDateString())}</span>
+      <strong>${htmlEscape(note.give.join(", ") || "Nothing")} -> ${htmlEscape(note.get.join(", ") || "Nothing")}</strong>
+      <small>${note.net >= 0 ? "+" : ""}${Number(note.net || 0).toFixed(1)} net value</small>
+      <button type="button" data-load-trade-note="${index}">Load</button>
+      <button type="button" data-remove-trade-note="${index}">Remove</button>
+    </article>`)
+    .join("");
+  tradeSavedNotes.querySelectorAll("[data-load-trade-note]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const note = savedTradeNotes()[Number(button.dataset.loadTradeNote)];
+      if (!note) return;
+      if (tradeGive) tradeGive.value = (note.give || []).join("\n");
+      if (tradeGet) tradeGet.value = (note.get || []).join("\n");
+      localStorage.setItem(tradeDeskStorageKey("mode"), note.mode || "balanced");
+      renderTradeCalc();
+    });
+  });
+  tradeSavedNotes.querySelectorAll("[data-remove-trade-note]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const notes = savedTradeNotes();
+      notes.splice(Number(button.dataset.removeTradeNote), 1);
+      saveTradeNotes(notes);
+      renderSavedTradeNotes();
+    });
+  });
+}
+
+function saveCurrentTradeNote() {
+  const note = currentTradeNote();
+  if (!note.give.length && !note.get.length) return;
+  saveTradeNotes([note, ...savedTradeNotes()]);
+  renderSavedTradeNotes();
+}
+
 function renderTradeCalc() {
   if (!tradeOutput) return;
   if (!boardData) {
@@ -2867,7 +3122,17 @@ function renderTradeCalc() {
   }
   const give = tradeSideValue(tradeGive?.value || "");
   const get = tradeSideValue(tradeGet?.value || "");
-  const roster = tradeSideValue(tradeRoster?.value || "");
+  const pastedRoster = tradeSideValue(tradeRoster?.value || "");
+  const snapshotRoster = !pastedRoster.length
+    ? activeRosterSnapshot().rows.map((row) => ({
+        name: row.Player,
+        row,
+        value: leagueValueScore(row),
+        risk: Number(row.Risk || 0),
+        projection: projectionValue(row),
+      }))
+    : [];
+  const roster = pastedRoster.length ? pastedRoster : snapshotRoster;
   const giveTotals = tradeTotals(give);
   const getTotals = tradeTotals(get);
   const giveTotal = giveTotals.value;
@@ -2878,18 +3143,20 @@ function renderTradeCalc() {
   const warnings = tradeFitWarnings(give, get, roster);
   const riskRead = tradeRiskRead(giveTotals, getTotals, get);
   const dealShape = tradeDealShape(give, get, net, warnings, giveTotals, getTotals);
+  const breakdown = tradeScoreBreakdown(giveTotals, getTotals, give, get, roster, warnings);
+  const fairness = fairnessLabel(breakdown.score);
   const verdict =
     !give.length || !get.length
       ? "Enter both sides"
       : unknowns.length
         ? "Fix unknown players"
-        : net >= 10 && !warnings.length
+        : breakdown.score >= 72 && !warnings.length
           ? "Accept"
-          : net >= 4
+          : breakdown.score >= 60
             ? "Lean accept"
-            : net >= -3
+            : breakdown.score >= 45
               ? "Fair, negotiate"
-              : net >= -9
+              : breakdown.score >= 35
                 ? "Only for roster fit"
                 : "Reject or counter";
   const verdictClass =
@@ -2901,24 +3168,35 @@ function renderTradeCalc() {
   const summary =
     !give.length || !get.length
       ? "Type one player per line on each side. The calculator updates from the live ESPN board."
-      : `${net >= 0 ? "+" : ""}${net.toFixed(1)} net value, ${projectionDelta >= 0 ? "+" : ""}${projectionDelta.toFixed(1)} ${scoringProjectionLabel().toLowerCase()}. ${riskRead.label} incoming risk.`;
+      : oneLineTradeVerdict(verdict, breakdown, warnings);
 
   if (tradeGiveTotal) tradeGiveTotal.textContent = giveTotal.toFixed(1);
   if (tradeGetTotal) tradeGetTotal.textContent = getTotal.toFixed(1);
-  if (tradeRosterStatus) tradeRosterStatus.textContent = roster.length ? "Loaded" : "Optional";
+  if (tradeRosterStatus) tradeRosterStatus.textContent = pastedRoster.length ? "Pasted" : roster.length ? "ESPN" : "Optional";
   renderTradePlayers(tradeGiveList, give, "No outgoing players yet.");
   renderTradePlayers(tradeGetList, get, "No incoming players yet.");
   renderRosterPills(roster);
+  tradeModeButtons.forEach((button) => button.classList.toggle("active", (button.dataset.tradeMode || "balanced") === selectedTradeMode()));
+  renderSavedTradeNotes();
 
   tradeOutput.innerHTML = `
     <span class="trade-verdict-label">Trade verdict</span>
     <strong class="${verdictClass}">${verdict}</strong>
     <p>${htmlEscape(summary)}</p>
+    <div class="trade-fairness ${fairness.className}">
+      <span>Fairness Meter</span>
+      <strong>${htmlEscape(fairness.label)}</strong>
+      <div><i style="width:${breakdown.score}%"></i></div>
+      <small>${breakdown.score}/100 decision score in ${htmlEscape(tradeModeLabel())} mode</small>
+    </div>
     <div class="trade-score-grid">
       <div><span>Net Value</span><strong>${net >= 0 ? "+" : ""}${net.toFixed(1)}</strong></div>
       <div><span>${scoringProjectionLabel()}</span><strong>${projectionDelta >= 0 ? "+" : ""}${projectionDelta.toFixed(1)}</strong></div>
       <div><span>Incoming Risk</span><strong class="${riskRead.className}">${getTotals.risk.toFixed(1)}/10</strong><small>${htmlEscape(riskRead.label)}</small></div>
-      <div><span>Roster Fit</span><strong>${roster.length ? "Active" : "Pending"}</strong></div>
+      <div><span>Roster Fit</span><strong class="${breakdown.fit.className}">${htmlEscape(breakdown.fit.label)}</strong></div>
+    </div>
+    <div class="trade-breakdown-grid">
+      ${breakdown.items.map((item) => `<article><span>${htmlEscape(item.label)}</span><strong class="${item.className}">${htmlEscape(item.value)}</strong></article>`).join("")}
     </div>
     <div class="trade-detail-grid">
       <article class="trade-risk-read ${riskRead.className}">
@@ -2932,6 +3210,21 @@ function renderTradeCalc() {
         <strong>${htmlEscape(dealShape.label)}</strong>
         <p>${htmlEscape(dealShape.detail)}</p>
       </article>
+      <article class="${breakdown.fit.className}">
+        <span>Roster-fit read</span>
+        <strong>${htmlEscape(breakdown.fit.label)}</strong>
+        <p>${htmlEscape(breakdown.fit.detail)}</p>
+      </article>
+      <article>
+        <span>Trade partner lens</span>
+        <strong>Acceptance angle</strong>
+        <p>${htmlEscape(partnerLens(give, get))}</p>
+      </article>
+    </div>
+    ${renderLineupComparison(roster, give, get)}
+    <div class="trade-counteroffers">
+      <span>Counteroffer Generator</span>
+      <ul>${counterOfferIdeas(give, get, roster, breakdown).map((idea) => `<li>${htmlEscape(idea)}</li>`).join("")}</ul>
     </div>
     <p><strong>Positions:</strong> Send ${tradePositionSummary(give)}. Receive ${tradePositionSummary(get)}.</p>
     ${warnings.length ? `<div class="trade-warning-list">${warnings.map((warning) => `<span>${htmlEscape(warning)}</span>`).join("")}</div>` : ""}
@@ -6129,6 +6422,13 @@ calculateTrade?.addEventListener("click", renderTradeCalc);
 tradeGive?.addEventListener("input", renderTradeCalc);
 tradeGet?.addEventListener("input", renderTradeCalc);
 tradeRoster?.addEventListener("input", renderTradeCalc);
+tradeModeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    localStorage.setItem(tradeDeskStorageKey("mode"), button.dataset.tradeMode || "balanced");
+    renderTradeCalc();
+  });
+});
+tradeSaveNote?.addEventListener("click", saveCurrentTradeNote);
 
 const savedHideDrafted = localStorage.getItem(loadoutStorageKey("hide-drafted"));
 const initialHideDrafted = savedHideDrafted === null ? true : savedHideDrafted === "true";
