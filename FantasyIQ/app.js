@@ -126,6 +126,21 @@ const leagueDraftNote = document.querySelector("#league-draft-note");
 const leagueProfileStrip = document.querySelector("#league-profile-strip");
 const leagueRoomNote = document.querySelector("#league-room-note");
 const preDraftPanel = document.querySelector("#pre-draft-panel");
+const draftPrepScore = document.querySelector("#draft-prep-score");
+const draftPrepScoreNote = document.querySelector("#draft-prep-score-note");
+const draftPrepReadiness = document.querySelector("#draft-prep-readiness");
+const draftPrepSlot = document.querySelector("#draft-prep-slot");
+const draftPrepSettings = document.querySelector("#draft-prep-settings");
+const draftPrepTiers = document.querySelector("#draft-prep-tiers");
+const draftPrepValues = document.querySelector("#draft-prep-values");
+const draftBuildPlan = document.querySelector("#draft-build-plan");
+const draftPrepAvoid = document.querySelector("#draft-prep-avoid");
+const draftPrepBench = document.querySelector("#draft-prep-bench");
+const draftBuildButtons = document.querySelectorAll(".draft-build-toggle");
+const draftWatchlistType = document.querySelector("#draft-watchlist-type");
+const draftWatchlistInput = document.querySelector("#draft-watchlist-input");
+const draftWatchlistAdd = document.querySelector("#draft-watchlist-add");
+const draftWatchlistList = document.querySelector("#draft-watchlist-list");
 const leagueHealthPanel = document.querySelector("#league-health-panel");
 const leagueHealthTitle = document.querySelector("#league-health-title");
 const leagueHealthScore = document.querySelector("#league-health-score");
@@ -4072,6 +4087,260 @@ function topTierNames(pos, limit = 3) {
     .join(", ");
 }
 
+function draftPrepStorageKey(key) {
+  return loadoutStorageKey(`draft-prep-${key}`);
+}
+
+function selectedDraftBuild() {
+  return localStorage.getItem(draftPrepStorageKey("build")) || "balanced";
+}
+
+function draftWatchlistItems() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(draftPrepStorageKey("watchlist")) || "[]");
+    return Array.isArray(parsed) ? parsed.slice(0, 24) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveDraftWatchlist(items) {
+  localStorage.setItem(draftPrepStorageKey("watchlist"), JSON.stringify(items.slice(0, 24)));
+}
+
+function slotBand(firstPick) {
+  const pick = Number(firstPick?.roundPick || firstPick?.overall || 0);
+  if (!pick) return "unknown";
+  if (pick <= 4) return "early";
+  if (pick <= 8) return "middle";
+  return "late";
+}
+
+function slotPlan(firstPick) {
+  const band = slotBand(firstPick);
+  if (band === "early") {
+    return {
+      title: "Early slot: protect the anchor",
+      detail: "Take the clean elite player first, then use rounds 2-4 to balance RB/WR before chasing luxury edges.",
+      bullets: ["Do not pass a true tier-one player for uniqueness.", "Your return pick should solve roster structure, not force a stack.", "QB/TE only if the board creates a real discount."],
+    };
+  }
+  if (band === "middle") {
+    return {
+      title: "Middle slot: win the tier break",
+      detail: "Let the room choose first, then take the last player in a real tier before the next shelf drops.",
+      bullets: ["Stay open across RB/WR in round 1.", "Use round 2 to punish any slide from the early turn.", "Be ready to pivot if QB/TE value falls into round 5-7."],
+    };
+  }
+  if (band === "late") {
+    return {
+      title: "Late slot: build through the turn",
+      detail: "Pair two players with weekly ceiling and avoid spending both turn picks on fragile profiles.",
+      bullets: ["WR/WR or WR/RB is the default unless RB value is obvious.", "Do not leave the 3/4 turn with a luxury-heavy roster.", "Use the long wait to prioritize players unlikely to return."],
+    };
+  }
+  return {
+    title: "Pick slot needed",
+    detail: "Select your ESPN team in Draft Room so FantasyIQ can locate your first pick and return windows.",
+    bullets: ["Sync ESPN once before draft day.", "Confirm the draft order is published.", "Then practice that exact slot in Mock Simulator."],
+  };
+}
+
+function settingsDraftIntel(settings = activeLeagueSettings()) {
+  const slots = settings.lineupSlots || DEFAULT_LINEUP_SLOTS;
+  const notes = [];
+  if (settings.scoringType === "ppr") notes.push("Full PPR rewards target volume and pass-catching RBs.");
+  if (settings.scoringType === "half-ppr") notes.push("Half PPR keeps RB touchdown and carry equity closer to WR volume.");
+  if (settings.scoringType === "standard") notes.push("Standard scoring pushes TD equity and early-down RB roles up.");
+  if (Number(slots.SUPERFLEX || 0) > 0) notes.push("Superflex changes the board: QB becomes a premium starter slot.");
+  if (Number(slots.FLEX || 0) >= 2) notes.push("Extra flex depth makes WR/RB bench upside more valuable than backup comfort.");
+  if (Number(slots.BE || 0) >= 7) notes.push("Deep benches reward handcuff-plus RBs and breakout WRs.");
+  if (leagueTeamTotal() >= 14) notes.push("Larger rooms dry up QB/TE depth faster; do not assume streamers stay clean.");
+  return notes.slice(0, 4);
+}
+
+function tierPressureItems() {
+  return ["RB", "WR", "TE", "QB"]
+    .map((pos) => topTierInfo(pos))
+    .filter((info) => info.count)
+    .sort((a, b) => a.count - b.count)
+    .slice(0, 4);
+}
+
+function valuePocketRows() {
+  const rows = availableRows().filter((row) => ["QB", "RB", "WR", "TE"].includes(row.Pos));
+  const pockets = [
+    { label: "Rounds 1-2", min: 1, max: leagueTeamTotal() * 2 },
+    { label: "Rounds 3-5", min: leagueTeamTotal() * 2 + 1, max: leagueTeamTotal() * 5 },
+    { label: "Rounds 6-9", min: leagueTeamTotal() * 5 + 1, max: leagueTeamTotal() * 9 },
+    { label: "Rounds 10+", min: leagueTeamTotal() * 9 + 1, max: 999 },
+  ];
+  return pockets.map((pocket) => {
+    const pocketRows = rows
+      .filter((row) => Number(row.Rank || 999) >= pocket.min && Number(row.Rank || 999) <= pocket.max)
+      .sort((a, b) => Number(b["League Value"] || b.Value || 0) - Number(a["League Value"] || a.Value || 0))
+      .slice(0, 3);
+    const positions = [...new Set(pocketRows.map((row) => row.Pos))].join("/") || "RB/WR";
+    const names = pocketRows.map((row) => `${row.Player} (${row.Pos})`).join(", ") || "Board loading";
+    return { ...pocket, positions, names };
+  });
+}
+
+function buildPlan(build) {
+  const plans = {
+    balanced: {
+      title: "Balanced Hammer",
+      detail: "Open RB/WR flexible, then let value decide the first luxury position.",
+      rounds: ["Rounds 1-4: three RB/WR starters minimum.", "Rounds 5-8: one QB or TE edge only if the tier is discounted.", "Rounds 9+: upside bench, then DST/K late."],
+    },
+    "hero-rb": {
+      title: "Hero RB",
+      detail: "Anchor one premium RB, then flood WR and add contingent RB upside later.",
+      rounds: ["Round 1-2: one RB anchor.", "Rounds 3-7: WR target volume and one QB/TE value if it falls.", "Bench: handcuff-plus RBs with injury leverage."],
+    },
+    "wr-heavy": {
+      title: "WR Heavy",
+      detail: "Build weekly floor through target earners, then attack RB volatility after the room overpays.",
+      rounds: ["Rounds 1-4: at least three WR/FLEX-caliber players.", "Rounds 5-8: RB value pockets and one premium QB/TE if clean.", "Bench: prioritize RB paths to touches over safe low-ceiling WRs."],
+    },
+    "elite-edge": {
+      title: "Elite QB/TE Edge",
+      detail: "Take a true positional separator only when RB/WR tiers remain healthy.",
+      rounds: ["Do not take both elite QB and elite TE unless RB/WR value falls hard.", "After the edge pick, spend the next two picks repairing RB/WR depth.", "If the tier is gone, skip the position and stream value later."],
+    },
+  };
+  return plans[build] || plans.balanced;
+}
+
+function draftAvoidWindows() {
+  const round = currentRound();
+  const rows = avoidRows({ QB: 0, RB: 0, WR: 0, TE: 0, DST: 0, K: 0 }).slice(0, 3);
+  const playerLine = rows.length ? rows.map((row) => `${row.Player} (${row.Pos})`).join(", ") : "No board-specific fade is urgent yet.";
+  return [
+    `Before round ${Math.max(9, round)}: avoid K/DST unless your league is already in endgame.`,
+    "Before your RB/WR base is stable: do not buy backup QB or second TE.",
+    `Current board discipline: ${playerLine}`,
+  ];
+}
+
+function benchRules() {
+  const slots = activeLineupSlots();
+  const bench = Number(slots.BE || 0);
+  return [
+    bench >= 7 ? "Deep bench: chase upside, not floor. Handcuff-plus RBs and route-growth WRs matter." : "Short bench: avoid clogging spots with low-ceiling backups.",
+    Number(slots.FLEX || 0) >= 2 ? "Multiple flexes: WR/RB depth beats backup QB/TE comfort." : "Single flex: keep the bench liquid for waiver pivots.",
+    "Final rounds: DST only with early schedule value, kicker last.",
+  ];
+}
+
+function addDraftWatchlistItem() {
+  const name = (draftWatchlistInput?.value || "").trim();
+  if (!name) return;
+  const row = findPlayer(name) || availableRows().find((item) => item.Player.toLowerCase().includes(name.toLowerCase()));
+  const item = {
+    name: row?.Player || name,
+    pos: row?.Pos || "",
+    team: row?.Team || "",
+    rank: row?.Rank || "",
+    tier: row?.["Pos Tier"] || row?.Category || "",
+    type: draftWatchlistType?.value || "Target",
+  };
+  const items = draftWatchlistItems().filter((existing) => existing.name.toLowerCase() !== item.name.toLowerCase());
+  items.unshift(item);
+  saveDraftWatchlist(items);
+  if (draftWatchlistInput) draftWatchlistInput.value = "";
+  renderDraftPrep();
+}
+
+function renderWatchlist() {
+  if (!draftWatchlistList) return;
+  const items = draftWatchlistItems();
+  if (!items.length) {
+    draftWatchlistList.innerHTML = "<p>No saved watchlist yet. Add targets, fades, sleepers, or must-drafts before your room opens.</p>";
+    return;
+  }
+  draftWatchlistList.innerHTML = items
+    .map(
+      (item, index) => `<article>
+        <span>${htmlEscape(item.type)}</span>
+        <strong>${htmlEscape(item.name)}</strong>
+        <small>${htmlEscape([item.pos, item.team, item.rank ? `#${item.rank}` : "", item.tier].filter(Boolean).join(" / "))}</small>
+        <button type="button" data-watchlist-remove="${index}" aria-label="Remove ${htmlEscape(item.name)}">Remove</button>
+      </article>`,
+    )
+    .join("");
+  draftWatchlistList.querySelectorAll("[data-watchlist-remove]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const next = draftWatchlistItems();
+      next.splice(Number(button.dataset.watchlistRemove), 1);
+      saveDraftWatchlist(next);
+      renderDraftPrep();
+    });
+  });
+}
+
+function renderDraftPrep() {
+  if (!draftPrepScore) return;
+  const settings = activeLeagueSettings();
+  const teamId = selectedTeamId();
+  const firstPick = firstRoundPickForTeam(teamId);
+  const watchlist = draftWatchlistItems();
+  const boardReady = Boolean(boardData && availableRows().length);
+  const orderReady = Boolean((liveDraft?.draftOrder || []).length);
+  const checks = [
+    { label: "League", ok: Boolean(settings), value: `${leagueTeamTotal()} teams`, detail: `${settings.scoringLabel || "Custom"} / ${lineupSummary(settings)}` },
+    { label: "Board", ok: boardReady, value: boardReady ? `${availableRows().length} available` : "Loading", detail: boardReady ? "Tier and value data ready" : "Load Big Board data" },
+    { label: "Team", ok: Boolean(teamId && firstPick), value: firstPick ? `Pick ${firstPick.roundPick}` : teamId ? "No order" : "Select team", detail: firstPick ? `Overall ${firstPick.overall}` : "Use Draft Room team selector" },
+    { label: "Watchlist", ok: watchlist.length >= 3, value: `${watchlist.length} saved`, detail: watchlist.length >= 3 ? "Targets are staged" : "Save at least 3 names" },
+  ];
+  const score = Math.round((checks.filter((item) => item.ok).length / checks.length) * 100);
+  draftPrepScore.textContent = `${score}%`;
+  if (draftPrepScoreNote) {
+    draftPrepScoreNote.textContent = score >= 100 ? "Ready for draft day." : "Finish the watchlist and team slot before the room opens.";
+  }
+  if (draftPrepReadiness) {
+    draftPrepReadiness.innerHTML = checks
+      .map(
+        (item) => `<article class="${item.ok ? "good" : "watch"}">
+          <span>${htmlEscape(item.label)}</span>
+          <strong>${htmlEscape(item.value)}</strong>
+          <small>${htmlEscape(item.detail)}</small>
+        </article>`,
+      )
+      .join("");
+  }
+
+  const slot = slotPlan(firstPick);
+  if (draftPrepSlot) {
+    draftPrepSlot.innerHTML = `<p class="eyebrow">Pick Slot Strategy</p><h3>${htmlEscape(slot.title)}</h3><p>${htmlEscape(slot.detail)}</p><ul>${slot.bullets.map((item) => `<li>${htmlEscape(item)}</li>`).join("")}</ul>`;
+  }
+  if (draftPrepSettings) {
+    const notes = settingsDraftIntel(settings);
+    draftPrepSettings.innerHTML = `<p class="eyebrow">League Settings Intelligence</p><h3>${htmlEscape(settings.scoringLabel || "Custom format")}</h3><p>${htmlEscape(`${leagueTeamTotal()} teams / ${lineupSummary(settings)} / ${draftRoundTotal(settings)} rounds`)}</p><ul>${notes.map((item) => `<li>${htmlEscape(item)}</li>`).join("")}</ul>`;
+  }
+  if (draftPrepTiers) {
+    const tiers = tierPressureItems();
+    draftPrepTiers.innerHTML = `<p class="eyebrow">Tier Pressure</p><h3>${tiers.length ? "Current cliffs" : "Loading tiers"}</h3><div class="draft-chip-list">${tiers.map((info) => `<span>${htmlEscape(info.pos)}: ${info.count} in ${htmlEscape(info.tier)}</span>`).join("") || "<span>Board loading</span>"}</div>`;
+  }
+  if (draftPrepValues) {
+    draftPrepValues.innerHTML = `<p class="eyebrow">Value Pockets</p><h3>Round map</h3><div class="draft-pocket-list">${valuePocketRows().map((pocket) => `<article><strong>${htmlEscape(pocket.label)}: ${htmlEscape(pocket.positions)}</strong><small>${htmlEscape(pocket.names)}</small></article>`).join("")}</div>`;
+  }
+
+  const build = selectedDraftBuild();
+  draftBuildButtons.forEach((button) => button.classList.toggle("active", (button.dataset.draftBuild || "balanced") === build));
+  const plan = buildPlan(build);
+  if (draftBuildPlan) {
+    draftBuildPlan.innerHTML = `<p class="eyebrow">Roster Build Plan</p><h3>${htmlEscape(plan.title)}</h3><p>${htmlEscape(plan.detail)}</p><ul>${plan.rounds.map((item) => `<li>${htmlEscape(item)}</li>`).join("")}</ul>`;
+  }
+  if (draftPrepAvoid) {
+    draftPrepAvoid.innerHTML = `<p class="eyebrow">Do Not Draft Too Early</p><h3>Price discipline</h3><ul>${draftAvoidWindows().map((item) => `<li>${htmlEscape(item)}</li>`).join("")}</ul>`;
+  }
+  if (draftPrepBench) {
+    draftPrepBench.innerHTML = `<p class="eyebrow">Bench Strategy</p><h3>Upside over comfort</h3><ul>${benchRules().map((item) => `<li>${htmlEscape(item)}</li>`).join("")}</ul>`;
+  }
+  renderWatchlist();
+}
+
 function renderPreDraftPanel() {
   if (!preDraftPanel) return;
   if (!isPreDraftLeague()) {
@@ -4922,6 +5191,7 @@ function renderLiveDraftSummary() {
   if (!liveDraft) {
     liveStatus.textContent = "Connecting to ESPN public draft sync...";
     renderPreDraftPanel();
+    renderDraftPrep();
     return;
   }
 
@@ -4959,6 +5229,7 @@ function renderLiveDraftSummary() {
   if (liveLastSync) liveLastSync.textContent = formatSyncTime(liveDraft.syncedAt);
   if (liveSource) liveSource.textContent = liveDraft.demoMode ? "ESPN public demo league" : liveDraft.source || "ESPN public league API";
   renderPreDraftPanel();
+  renderDraftPrep();
   renderLeagueHealth();
 }
 
@@ -4976,6 +5247,7 @@ function renderLiveDraft(options = {}) {
   renderTeamOptions();
   applyEspnLeagueBranding();
   renderLeagueProfile();
+  renderDraftPrep();
 
   renderRecommendations();
   renderMyRoster();
@@ -5700,6 +5972,7 @@ function applyBoardPayload(data) {
   applyServerCustomerContext(data.customer);
   renderLeagueProfile();
   renderBoard();
+  renderDraftPrep();
   renderCheatcodeMode();
   renderLiveDraft();
   renderLiveTierBoard();
@@ -5798,6 +6071,20 @@ navJumps.forEach((button) => {
   button.addEventListener("click", () => activateSection(button.dataset.jump));
 });
 
+draftBuildButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    localStorage.setItem(draftPrepStorageKey("build"), button.dataset.draftBuild || "balanced");
+    renderDraftPrep();
+  });
+});
+draftWatchlistAdd?.addEventListener("click", addDraftWatchlistItem);
+draftWatchlistInput?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addDraftWatchlistItem();
+  }
+});
+
 liveTierSearch?.addEventListener("input", renderLiveTierBoard);
 liveTierButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -5867,6 +6154,7 @@ hideDrafted?.addEventListener("change", () => setHideDrafted(hideDrafted.checked
 hideDraftedBoard?.addEventListener("change", () => setHideDrafted(hideDraftedBoard.checked));
 myTeamSelect?.addEventListener("change", () => {
   localStorage.setItem(loadoutStorageKey("my-team"), myTeamSelect.value);
+  renderDraftPrep();
   renderLiveDraft();
   renderCheatcodeMode();
 });

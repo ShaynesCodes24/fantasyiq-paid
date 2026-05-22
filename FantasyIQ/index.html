@@ -243,68 +243,90 @@
           <div class="panel-head">
             <div>
               <p class="eyebrow">Draft Prep</p>
-              <h2>Flexible slot plans</h2>
+              <h2>Draft plan command board</h2>
             </div>
           </div>
 
-          <div class="tabs" role="tablist" aria-label="Draft slot ranges">
-            <button class="tab active" data-plan="early">Picks 1-4</button>
-            <button class="tab" data-plan="middle">Picks 5-8</button>
-            <button class="tab" data-plan="late">Picks 9-12</button>
+          <section class="draft-prep-command" aria-label="Draft prep command board">
+            <article class="draft-prep-scorecard">
+              <span>Readiness</span>
+              <strong id="draft-prep-score">Loading</strong>
+              <small id="draft-prep-score-note">Checking league, board, team, slot, and watchlist.</small>
+            </article>
+            <div class="draft-prep-grid" id="draft-prep-readiness">
+              <article><span>League</span><strong>Loading</strong><small>Settings profile</small></article>
+              <article><span>Board</span><strong>Loading</strong><small>Tier data</small></article>
+              <article><span>Team</span><strong>Loading</strong><small>ESPN slot</small></article>
+              <article><span>Watchlist</span><strong>Loading</strong><small>Saved targets</small></article>
+            </div>
+          </section>
+
+          <div class="draft-prep-dashboard">
+            <section class="draft-prep-panel" id="draft-prep-slot">
+              <p class="eyebrow">Pick Slot Strategy</p>
+              <h3>Waiting for room data</h3>
+              <p>Choose your ESPN team in Draft Room to personalize pick timing.</p>
+            </section>
+            <section class="draft-prep-panel" id="draft-prep-settings">
+              <p class="eyebrow">League Settings Intelligence</p>
+              <h3>Loading format</h3>
+              <p>FantasyIQ will translate scoring and roster rules into draft posture.</p>
+            </section>
+            <section class="draft-prep-panel" id="draft-prep-tiers">
+              <p class="eyebrow">Tier Pressure</p>
+              <h3>Loading tiers</h3>
+              <p>Tier cliffs appear after player values load.</p>
+            </section>
+            <section class="draft-prep-panel" id="draft-prep-values">
+              <p class="eyebrow">Value Pockets</p>
+              <h3>Loading round map</h3>
+              <p>Round-by-round pockets appear after the board loads.</p>
+            </section>
           </div>
 
-          <article class="plan active" id="early-plan">
-            <h3>Early Slot</h3>
-            <p>Secure a clean elite anchor. Do not get cute if you land a top-two pick.</p>
-            <ul>
-              <li>Round 1: elite WR/RB anchor.</li>
-              <li>Rounds 2-3: balance first pick and protect RB/WR foundation.</li>
-              <li>QB/TE: only if clear value falls.</li>
-            </ul>
-          </article>
+          <section class="draft-prep-workbench" aria-label="Draft build workbench">
+            <div class="draft-build-controls" aria-label="Roster build plans">
+              <button class="draft-build-toggle active" type="button" data-draft-build="balanced">Balanced</button>
+              <button class="draft-build-toggle" type="button" data-draft-build="hero-rb">Hero RB</button>
+              <button class="draft-build-toggle" type="button" data-draft-build="wr-heavy">WR Heavy</button>
+              <button class="draft-build-toggle" type="button" data-draft-build="elite-edge">Elite QB/TE</button>
+            </div>
+            <div class="draft-prep-workgrid">
+              <section class="draft-prep-panel" id="draft-build-plan">
+                <p class="eyebrow">Roster Build Plan</p>
+                <h3>Balanced</h3>
+                <p>Loading build guidance.</p>
+              </section>
+              <section class="draft-prep-panel" id="draft-prep-avoid">
+                <p class="eyebrow">Do Not Draft Too Early</p>
+                <h3>Price discipline</h3>
+                <p>Loading avoid windows.</p>
+              </section>
+              <section class="draft-prep-panel" id="draft-prep-bench">
+                <p class="eyebrow">Bench Strategy</p>
+                <h3>Upside over comfort</h3>
+                <p>Loading bench rules.</p>
+              </section>
+            </div>
+          </section>
 
-          <article class="plan" id="middle-plan">
-            <h3>Middle Slot</h3>
-            <p>Exploit the first tier break and let the room make the first mistake.</p>
-            <ul>
-              <li>Round 1: last elite player in the tier.</li>
-              <li>Rounds 2-3: stay flexible across WR/RB.</li>
-              <li>QB: usually Round 5-7.</li>
-            </ul>
-          </article>
-
-          <article class="plan" id="late-plan">
-            <h3>Late Slot</h3>
-            <p>Build a paired foundation at the turn and win through structure.</p>
-            <ul>
-              <li>Rounds 1-2: WR/WR or WR/RB unless RB value is obvious.</li>
-              <li>Rounds 3-4: avoid luxury overload.</li>
-              <li>Nico Collins is fair only at market value.</li>
-            </ul>
-          </article>
-
-          <div class="strategy-grid">
-            <article class="strategy-card">
-              <p class="eyebrow">Strategy A</p>
-              <h3>Hero RB</h3>
-              <p>One premium RB anchor, then attack WR value and upside RBs later.</p>
-            </article>
-            <article class="strategy-card">
-              <p class="eyebrow">Strategy B</p>
-              <h3>WR Avalanche</h3>
-              <p>Stack target earners early, then build RB through value pockets and contingent upside.</p>
-            </article>
-            <article class="strategy-card">
-              <p class="eyebrow">Strategy C</p>
-              <h3>Balanced Hammer</h3>
-              <p>RB/WR flexibility through six rounds, with one luxury position only when value falls.</p>
-            </article>
-            <article class="strategy-card">
-              <p class="eyebrow">Strategy D</p>
-              <h3>Elite TE Edge</h3>
-              <p>Take a true target-share TE edge, but only if RB/WR tiers stay healthy.</p>
-            </article>
-          </div>
+          <section class="draft-watchlist-panel" aria-label="Draft watchlist">
+            <div>
+              <p class="eyebrow">Custom Watchlist</p>
+              <h3>Targets, fades, sleepers, and must-drafts</h3>
+            </div>
+            <div class="draft-watchlist-controls">
+              <select id="draft-watchlist-type" aria-label="Watchlist label">
+                <option value="Target">Target</option>
+                <option value="Must draft">Must draft</option>
+                <option value="Sleeper">Sleeper</option>
+                <option value="Fade">Fade</option>
+              </select>
+              <input id="draft-watchlist-input" type="search" placeholder="Player name" aria-label="Add player to watchlist" />
+              <button id="draft-watchlist-add" class="secondary-action" type="button">Add</button>
+            </div>
+            <div id="draft-watchlist-list" class="draft-watchlist-list">No saved watchlist yet.</div>
+          </section>
 
           <h3>16-Round Draft Guide</h3>
           <div class="round-guide">
