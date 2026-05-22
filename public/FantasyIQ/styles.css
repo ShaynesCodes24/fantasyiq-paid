@@ -5234,3 +5234,91 @@ small,
     font-size: 22px;
   }
 }
+
+/* MyFantasyIQ crest refresh */
+:root {
+  --field: #043b34;
+  --field-dark: #00110f;
+  --logo-gold: #e7b95a;
+  --logo-cream: #f9f0dc;
+  --accent-2: #d8a047;
+}
+
+.brand-lockup img {
+  object-fit: contain;
+  border-radius: 18px;
+  background: #001715;
+  box-shadow: 0 18px 42px rgba(0, 8, 7, 0.42), 0 0 0 6px rgba(231, 185, 90, 0.1);
+}
+
+.brand-lockup h1 {
+  background: linear-gradient(120deg, #fffdf7, #e8dfcf 48%, #f2c85f 49%, #d39835 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.topbar {
+  background:
+    linear-gradient(90deg, transparent 0 49.5%, rgba(255, 232, 163, 0.14) 49.5% 50.5%, transparent 50.5%),
+    repeating-linear-gradient(90deg, rgba(255, 232, 163, 0.1) 0 1px, transparent 1px 92px),
+    linear-gradient(135deg, rgba(0, 17, 15, 0.98), rgba(4, 59, 52, 0.94));
+}
+
+/* MyFantasyIQ final dashboard polish */
+.brand-lockup h1 {
+  background: linear-gradient(120deg, #fffdf7 0%, #f3ead8 46%, #ffe28a 47%, #d69d38 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 10px 24px rgba(0, 8, 7, 0.5));
+}
+
+.brand-lockup img {
+  border-color: rgba(255, 232, 163, 0.74);
+}
+
+.draft-card,
+.league-switcher,
+.account-card {
+  background:
+    linear-gradient(145deg, rgba(255, 248, 232, 0.1), rgba(255, 248, 232, 0.035)),
+    rgba(0, 17, 15, 0.78);
+}
+
+.hero-panel {
+  background:
+    linear-gradient(118deg, rgba(0, 17, 15, 0.98), rgba(5, 77, 68, 0.78)),
+    var(--field-dark);
+}
+
+.brand-lockup {
+  gap: 0;
+}
+
+.brand-lockup img {
+  width: min(420px, 38vw);
+  height: auto;
+  max-height: 124px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.brand-lockup > div {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 860px) {
+  .brand-lockup img {
+    width: min(360px, 86vw);
+    max-height: none;
+  }
+}

@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1380 390" role="img" aria-labelledby="title desc">
+  <title id="title">MyFantasyIQ</title>
+  <desc id="desc">MyFantasyIQ premium fantasy football logo with gold crest, crown, shield, football, green chart bars, and metallic wordmark.</desc>
+  <defs>
+    <linearGradient id="gold" x1="62" x2="364" y1="38" y2="350" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff3ba"/>
+      <stop offset=".18" stop-color="#f7cd73"/>
+      <stop offset=".42" stop-color="#c98f35"/>
+      <stop offset=".62" stop-color="#ffdf91"/>
+      <stop offset=".8" stop-color="#b77a25"/>
+      <stop offset="1" stop-color="#ffe8a5"/>
+    </linearGradient>
+    <linearGradient id="gold-dark" x1="88" x2="285" y1="78" y2="302" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#83531e"/>
+      <stop offset=".42" stop-color="#f5c466"/>
+      <stop offset="1" stop-color="#7a4a18"/>
+    </linearGradient>
+    <linearGradient id="emerald" x1="112" x2="283" y1="106" y2="322" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0b6a5c"/>
+      <stop offset=".42" stop-color="#04392f"/>
+      <stop offset="1" stop-color="#011411"/>
+    </linearGradient>
+    <linearGradient id="bar-green" x1="162" x2="265" y1="292" y2="174" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#075c49"/>
+      <stop offset=".48" stop-color="#18a66d"/>
+      <stop offset="1" stop-color="#7bef99"/>
+    </linearGradient>
+    <linearGradient id="white-metal" x1="402" x2="980" y1="138" y2="238" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".3" stop-color="#f1eadc"/>
+      <stop offset=".58" stop-color="#c7c0b3"/>
+      <stop offset=".78" stop-color="#fffaf0"/>
+      <stop offset="1" stop-color="#e3dbcc"/>
+    </linearGradient>
+    <linearGradient id="iq-metal" x1="1020" x2="1260" y1="112" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff0ab"/>
+      <stop offset=".25" stop-color="#f4c362"/>
+      <stop offset=".56" stop-color="#b77b25"/>
+      <stop offset=".78" stop-color="#f8d579"/>
+      <stop offset="1" stop-color="#9b651f"/>
+    </linearGradient>
+    <filter id="logo-shadow" x="-10%" y="-18%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="7" flood-color="#000806" flood-opacity=".62"/>
+    </filter>
+    <filter id="text-shadow" x="-8%" y="-22%" width="116%" height="150%">
+      <feDropShadow dx="0" dy="9" stdDeviation="7" flood-color="#000806" flood-opacity=".58"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#logo-shadow)">
+    <path d="M153 77l34 21 27-48 28 48 34-21-12 70H164z" fill="url(#gold)" stroke="#3e250b" stroke-width="5"/>
+    <path d="M128 156c43-8 66-21 87-43 21 22 44 35 87 43v64c0 63-35 103-87 137-52-34-87-74-87-137z" fill="url(#emerald)" stroke="url(#gold)" stroke-width="12" stroke-linejoin="round"/>
+    <path d="M156 185c29-7 43-24 59-54 16 30 30 47 59 54v45c0 42-22 71-59 95-37-24-59-53-59-95z" fill="none" stroke="url(#gold)" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M104 151c-46 28-73 80-70 135" fill="none" stroke="url(#gold)" stroke-width="5" stroke-linecap="round"/>
+    <path d="M326 151c46 28 73 80 70 135" fill="none" stroke="url(#gold)" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="44" cy="226" r="15" fill="#001715" stroke="url(#gold)" stroke-width="8"/>
+    <circle cx="386" cy="226" r="15" fill="#001715" stroke="url(#gold)" stroke-width="8"/>
+    <path d="M215 158c31 22 49 50 49 83 0 31-17 59-49 82-32-23-49-51-49-82 0-33 18-61 49-83z" fill="#04221d" stroke="url(#gold)" stroke-width="8"/>
+    <path d="M215 179v73M194 212h42M197 229h36M201 246h28" stroke="#ffe9a4" stroke-width="7" stroke-linecap="round"/>
+    <path d="M148 284h34v42h-34zM193 255h34v85h-34zM238 215h34v98l-34 27z" fill="url(#bar-green)" stroke="#013629" stroke-width="2"/>
+    <path d="M132 133c41-5 62-14 83-30 21 16 42 25 83 30" fill="none" stroke="#ffedb2" stroke-width="7" stroke-linecap="round"/>
+    <path d="M138 151c39-3 59-10 77-23 18 13 38 20 77 23" fill="none" stroke="url(#gold-dark)" stroke-width="7" stroke-linecap="round"/>
+  </g>
+
+  <g filter="url(#text-shadow)">
+    <text x="460" y="236" textLength="620" lengthAdjust="spacingAndGlyphs" fill="url(#white-metal)" stroke="rgba(35,25,13,.42)" stroke-width="1.1" font-family="Arial Black, Inter, Arial, sans-serif" font-size="126" font-weight="900">MyFantasy</text>
+    <text x="1062" y="236" fill="url(#iq-metal)" stroke="rgba(65,38,11,.5)" stroke-width="1.3" font-family="Arial Black, Inter, Arial, sans-serif" font-size="126" font-weight="900">IQ</text>
+    <path d="M466 300h136M1232 300h112" stroke="url(#gold)" stroke-width="3" opacity=".86"/>
+    <text x="650" y="311" fill="#d4a54e" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="800" letter-spacing="20">MYFANTASYIQ.COM</text>
+  </g>
+</svg>

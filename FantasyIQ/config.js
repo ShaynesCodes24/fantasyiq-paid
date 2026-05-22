@@ -1,13 +1,13 @@
 window.FANTASY_IQ_CONFIG = {
-  siteName: "FantasyIQ",
+  siteName: "MyFantasyIQ",
   leagueName: "Public Demo League",
   leagueSubtitle: "ESPN public demo / season 2026",
   defaultLoadout: "",
   customerName: "",
   customerTeamName: "",
   customerTeamId: "",
-  logoUrl: "./assets/fantasy-iq-logo.svg",
-  logoAlt: "FantasyIQ league logo",
+  logoUrl: "./assets/myfantasyiq-wordmark.svg?v=20260521-metallic-clear-com",
+  logoAlt: "MyFantasyIQ league logo",
   draftCardLabel: "Subscription",
   draftCardValue: "$30 / year",
   draftCardNote: "Season Pass for up to 3 ESPN leagues",
@@ -46,7 +46,7 @@ window.FANTASY_IQ_CONFIG = {
     },
     draftRounds: 16,
     playoffTeams: 6,
-    source: "FantasyIQ default profile",
+    source: "MyFantasyIQ default profile",
   },
   loadouts: {
     katelyn: {

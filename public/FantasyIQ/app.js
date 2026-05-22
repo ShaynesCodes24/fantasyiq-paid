@@ -883,7 +883,7 @@ function customerBrandSubtitle(fallbackLeagueName) {
 }
 
 function applyAppConfig() {
-  const siteName = appConfig.siteName || "FantasyIQ";
+  const siteName = appConfig.siteName || "MyFantasyIQ";
   document.title = siteName;
 
   const brandTitle = document.querySelector(".brand-lockup h1");
@@ -1396,7 +1396,7 @@ function renderAccountPanel() {
   const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
   const support = appConfig.supportEmail || "support@myfantasyiq.com";
 
-  if (accountDashboardName) accountDashboardName.textContent = appConfig.customerName || appConfig.loadoutKey || "FantasyIQ";
+  if (accountDashboardName) accountDashboardName.textContent = appConfig.customerName || appConfig.loadoutKey || "MyFantasyIQ";
   if (accountDashboardStatus) accountDashboardStatus.textContent = accountStatusText();
   if (accountLeagueSlots) accountLeagueSlots.textContent = leagueSlotText(count);
   if (accountLeagueSlotDetail) {

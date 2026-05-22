@@ -1,23 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" role="img" aria-labelledby="title desc">
-  <title id="title">FantasyIQ</title>
-  <desc id="desc">FantasyIQ football shield logo</desc>
+  <title id="title">MyFantasyIQ crest</title>
+  <desc id="desc">Gold crown, shield, football, and rising bars for MyFantasyIQ.</desc>
   <defs>
-    <linearGradient id="field" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0" stop-color="#123f34"/>
-      <stop offset="1" stop-color="#061a15"/>
+    <linearGradient id="gold" x1="26" x2="184" y1="26" y2="192" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff4bd"/>
+      <stop offset=".28" stop-color="#f6cc70"/>
+      <stop offset=".58" stop-color="#c8953f"/>
+      <stop offset=".84" stop-color="#ffe49a"/>
+      <stop offset="1" stop-color="#a87527"/>
     </linearGradient>
-    <linearGradient id="gold" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0" stop-color="#fff1bd"/>
-      <stop offset="0.48" stop-color="#f3d071"/>
-      <stop offset="1" stop-color="#b88735"/>
+    <linearGradient id="emerald" x1="48" x2="168" y1="58" y2="182" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0d5c50"/>
+      <stop offset=".52" stop-color="#05362f"/>
+      <stop offset="1" stop-color="#011412"/>
     </linearGradient>
+    <linearGradient id="bars" x1="88" x2="150" y1="164" y2="94" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0e7658"/>
+      <stop offset="1" stop-color="#58d884"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="7" stdDeviation="5" flood-color="#000806" flood-opacity=".45"/>
+    </filter>
   </defs>
-  <circle cx="110" cy="110" r="104" fill="#fff1bd"/>
-  <circle cx="110" cy="110" r="96" fill="#071d18"/>
-  <path d="M110 24 184 54v58c0 44-29 73-74 93-45-20-74-49-74-93V54z" fill="url(#field)" stroke="url(#gold)" stroke-width="8"/>
-  <path d="M58 92h104M58 128h104" stroke="#fff1bd" stroke-width="2" opacity=".35"/>
-  <path d="M110 42c28 13 44 30 44 49s-16 36-44 49c-28-13-44-30-44-49s16-36 44-49z" fill="#8a4f24" stroke="#27130a" stroke-width="5"/>
-  <path d="M72 91h76M110 58v66M96 76v31M110 72v39M124 76v31" stroke="#fff1bd" stroke-width="5" stroke-linecap="round"/>
-  <text x="110" y="158" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="900" fill="url(#gold)" stroke="#3b2115" stroke-width="2">IQ</text>
-  <text x="110" y="184" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="900" fill="#fff1bd">FANTASY</text>
+  <rect width="220" height="220" rx="44" fill="#001715"/>
+  <circle cx="110" cy="116" r="82" fill="none" stroke="url(#gold)" stroke-width="4" opacity=".82"/>
+  <circle cx="30" cy="116" r="10" fill="#001715" stroke="url(#gold)" stroke-width="6"/>
+  <circle cx="190" cy="116" r="10" fill="#001715" stroke="url(#gold)" stroke-width="6"/>
+  <g filter="url(#shadow)">
+    <path d="M73 45l23 13 14-29 15 29 23-13-8 38H81z" fill="url(#gold)"/>
+    <path d="M80 91c28-6 43-6 61 0l-31 15z" fill="#fff1bb" opacity=".92"/>
+    <path d="M56 86c27-4 43-12 54-23 12 11 28 19 54 23v40c0 39-21 65-54 83-33-18-54-44-54-83z" fill="url(#emerald)" stroke="url(#gold)" stroke-width="8"/>
+    <path d="M75 105c20-5 27-15 35-31 9 16 16 26 35 31v27c0 26-13 44-35 57-22-13-35-31-35-57z" fill="none" stroke="url(#gold)" stroke-width="6"/>
+    <path d="M110 83c19 14 29 31 29 51s-10 36-29 50c-19-14-29-30-29-50s10-37 29-51z" fill="#061d19" stroke="#f5d072" stroke-width="5"/>
+    <path d="M110 99v50M96 121h28M98 133h24M101 145h18" stroke="#ffe8a3" stroke-width="5" stroke-linecap="round"/>
+    <path d="M77 160h20v25H77zM104 146h20v48h-20zM131 126h20v54l-20 14z" fill="url(#bars)"/>
+  </g>
 </svg>
