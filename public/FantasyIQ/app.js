@@ -333,6 +333,8 @@ let activeBoard = "combined";
 let liveDraft = null;
 let liveTimer = null;
 let mockSim = null;
+let simAutoAdvanceTimer = null;
+let simAutoAdvanceActive = false;
 let selectedBoardPlayerKey = null;
 const LIVE_SYNC_INTERVAL_MS = 8000;
 const INITIAL_BOARD_LIMIT = 180;
@@ -1605,6 +1607,7 @@ function setActiveLeague(leagueKey) {
   liveDraft = null;
   lastLiveDraftRenderSignature = "";
   boardData = null;
+  clearSimAutoAdvance();
   mockSim = null;
   selectedBoardPlayerKey = null;
   if (boardStatus) boardStatus.textContent = "Switching league profile...";
@@ -5826,7 +5829,13 @@ function simOpponentPick() {
   const slot = simSlotFromOverall(mockSim.currentOverall);
   const team = simTeam(slot);
   const candidates = simAvailableRows().slice(0, Math.min(140, Math.max(70, leagueTeamTotal() * 11)));
-  const row = candidates.sort((a, b) => simBotScore(b, team.counts, slot) - simBotScore(a, team.counts, slot))[0];
+  const row = candidates.reduce(
+    (best, candidate) => {
+      const score = simBotScore(candidate, team.counts, slot);
+      return !best || score > best.score ? { row: candidate, score } : best;
+    },
+    null
+  )?.row;
   if (!row) {
     mockSim.currentOverall = simTotalPicks() + 1;
     return;
@@ -5834,11 +5843,55 @@ function simOpponentPick() {
   simAddPick(slot, row, false);
 }
 
+function clearSimAutoAdvance() {
+  if (simAutoAdvanceTimer) window.clearTimeout(simAutoAdvanceTimer);
+  simAutoAdvanceTimer = null;
+  simAutoAdvanceActive = false;
+}
+
+function simNeedsAutoAdvance() {
+  return Boolean(mockSim && mockSim.currentOverall <= simTotalPicks() && simSlotFromOverall(mockSim.currentOverall) !== mockSim.userSlot);
+}
+
+function simAdvanceChunk() {
+  if (!mockSim) {
+    clearSimAutoAdvance();
+    renderMockSimulator();
+    return;
+  }
+  const startedAt = performance.now();
+  let picks = 0;
+  while (simNeedsAutoAdvance() && picks < 2 && performance.now() - startedAt < 18) {
+    const before = mockSim.currentOverall;
+    simOpponentPick();
+    picks += 1;
+    if (mockSim.currentOverall === before) {
+      mockSim.currentOverall = simTotalPicks() + 1;
+      break;
+    }
+  }
+
+  if (simNeedsAutoAdvance()) {
+    renderMockSimulator();
+    simAutoAdvanceTimer = window.setTimeout(simAdvanceChunk, 0);
+    return;
+  }
+
+  simAutoAdvanceTimer = null;
+  simAutoAdvanceActive = false;
+  renderMockSimulator();
+}
+
 function simAdvanceToUserPick() {
   if (!mockSim) return;
-  while (mockSim.currentOverall <= simTotalPicks() && simSlotFromOverall(mockSim.currentOverall) !== mockSim.userSlot) {
-    simOpponentPick();
+  if (!simNeedsAutoAdvance()) {
+    renderMockSimulator();
+    return;
   }
+  if (simAutoAdvanceTimer) window.clearTimeout(simAutoAdvanceTimer);
+  simAutoAdvanceActive = true;
+  renderMockSimulator();
+  simAutoAdvanceTimer = window.setTimeout(simAdvanceChunk, 0);
 }
 
 function simStartDraft() {
@@ -5846,6 +5899,7 @@ function simStartDraft() {
     if (simStatus) simStatus.innerHTML = "<strong>Board data is still loading.</strong> Try again in a second.";
     return;
   }
+  clearSimAutoAdvance();
   const selectedSlot = simSlot?.value || localStorage.getItem(loadoutStorageKey("sim-slot")) || "random";
   const teamCount = leagueTeamTotal();
   const slot = selectedSlot === "random" ? Math.floor(Math.random() * teamCount) + 1 : Number(selectedSlot || 1);
@@ -5870,11 +5924,13 @@ function simStartDraft() {
 }
 
 function simResetDraft() {
+  clearSimAutoAdvance();
   mockSim = null;
   renderMockSimulator();
 }
 
 function simDraftPlayer(playerKey) {
+  if (simAutoAdvanceActive) return;
   if (!mockSim || mockSim.currentOverall > simTotalPicks()) return;
   if (simSlotFromOverall(mockSim.currentOverall) !== mockSim.userSlot) return;
   const row = simAvailableRows().find((candidate) => normalizePlayerName(candidate.Player) === playerKey);
@@ -6023,7 +6079,7 @@ function renderSimRecommendationCard(item, index = 0) {
     </div>
     <small>${htmlEscape(decision.reason)} ${scoringProjectionLabel()}: ${projectionDisplay(row)}. League value: ${valueDisplay(row)}. ${htmlEscape(decision.survival.detail)} ${momentum.hasSleeperSignal ? htmlEscape(momentum.detail) : ""}</small>
     ${playerSynopsisBlock(row, { compact: true })}
-    <button type="button" class="sim-draft-button" data-sim-player="${normalizePlayerName(row.Player)}">Draft</button>
+    <button type="button" class="sim-draft-button" ${simAutoAdvanceActive ? "disabled" : ""} data-sim-player="${normalizePlayerName(row.Player)}">Draft</button>
   </div>`;
 }
 
@@ -6035,6 +6091,10 @@ function renderSimRecommendations() {
   }
   if (mockSim.currentOverall > simTotalPicks()) {
     simRecommendations.innerHTML = "<strong>Mock complete.</strong>";
+    return;
+  }
+  if (simAutoAdvanceActive) {
+    simRecommendations.textContent = "Auto-drafting the room to your next pick...";
     return;
   }
   if (simSlotFromOverall(mockSim.currentOverall) !== mockSim.userSlot) {
@@ -6073,6 +6133,10 @@ function renderSimAvailable() {
     simAvailable.textContent = "Start a mock to load players.";
     return;
   }
+  if (simAutoAdvanceActive) {
+    simAvailable.textContent = "Auto-drafting the room. Player buttons unlock when you are back on the clock.";
+    return;
+  }
   const query = (simSearch?.value || "").trim().toLowerCase();
   const pos = simPosition?.value || "";
   const isUserPick = simSlotFromOverall(mockSim.currentOverall) === mockSim.userSlot;
@@ -6083,7 +6147,7 @@ function renderSimAvailable() {
     .slice(0, pos ? 120 : 50);
   simAvailable.innerHTML = renderTieredRows(rows, pos, {
     showDraftButton: true,
-    canDraft: isUserPick,
+    canDraft: isUserPick && !simAutoAdvanceActive,
     emptyMessage: "No players match this search/filter.",
   });
   simAvailable.querySelectorAll("button[data-sim-player]").forEach((button) => {
@@ -6172,7 +6236,7 @@ function renderMockSimulator() {
   const currentManager = currentSlot ? simManagerProfile(currentSlot) : null;
 
   simStatus.innerHTML = active
-    ? `<strong>${userPick ? "You are on the clock." : "Mock in progress."}</strong> Slot ${mockSim.userSlot}, ${completed}/${totalPicks} picks complete. CPU managers now draft with value, scarcity, market${boardData?.externalSignals?.udk?.available ? ", expert alignment," : ","} and roster-build profiles.`
+    ? `<strong>${simAutoAdvanceActive ? "Auto-drafting to your next pick." : userPick ? "You are on the clock." : "Mock in progress."}</strong> Slot ${mockSim.userSlot}, ${completed}/${totalPicks} picks complete. CPU managers now draft with value, scarcity, market${boardData?.externalSignals?.udk?.available ? ", expert alignment," : ","} and roster-build profiles.`
     : "Start a mock, then practice making picks while the room auto-drafts around you.";
   if (simCurrentPick) simCurrentPick.textContent = active && mockSim.currentOverall <= totalPicks ? `Round ${simRound()}, Pick ${simRoundPick(mockSim.currentOverall)}` : active ? "Mock complete" : "No mock started";
   if (simCurrentTeam) simCurrentTeam.textContent = active && mockSim.currentOverall <= totalPicks ? `Overall ${mockSim.currentOverall}: Team ${currentSlot}${userPick ? " (you)" : currentManager ? ` / ${currentManager.name}` : ""}` : "Choose a slot and start.";
@@ -6183,7 +6247,13 @@ function renderMockSimulator() {
   if (simShapeDetail) simShapeDetail.textContent = `QB ${team.counts.QB} / RB ${team.counts.RB} / WR ${team.counts.WR} / TE ${team.counts.TE} / DST ${team.counts.DST} / K ${team.counts.K}`;
   if (simGrade) simGrade.textContent = grade.grade;
   if (simGradeDetail) simGradeDetail.textContent = grade.detail;
-  if (simAuto) simAuto.disabled = !active || mockSim.currentOverall > totalPicks || userPick;
+  if (simAuto) simAuto.disabled = !active || mockSim.currentOverall > totalPicks || userPick || simAutoAdvanceActive;
+
+  if (simAutoAdvanceActive) {
+    renderSimRecommendations();
+    renderSimAvailable();
+    return;
+  }
 
   renderSimIntel();
   renderSimRecommendations();
