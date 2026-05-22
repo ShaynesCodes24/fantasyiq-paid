@@ -94,7 +94,7 @@ def validate_setup(raw: dict[str, Any]) -> tuple[dict[str, Any], HTTPStatus]:
                 {
                     "ok": False,
                     "status": "private_or_blocked",
-                    "message": "ESPN blocked this league. Confirm the league is public or send setup details for concierge help.",
+                    "message": "ESPN blocked this league. Make the league public, then run the setup check again.",
                     "leagueId": league_id,
                     "teamId": team_id,
                     "season": season,
@@ -315,7 +315,7 @@ def save_setup_if_requested(raw: dict[str, Any], payload: dict[str, Any], header
             return payload
         if not status["enabled"]:
             payload["saved"] = False
-            payload["saveMessage"] = "Database is not connected yet; setup packet is available for manual fulfillment."
+            payload["saveMessage"] = "Database is not connected yet; setup can validate this league but cannot save it yet."
             return payload
 
         context = authorized_setup_customer(raw, headers)

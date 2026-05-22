@@ -3504,7 +3504,7 @@ function renderPostDraftPlan(snapshot = activeRosterSnapshot()) {
           <p>FantasyIQ uses the selected ESPN team first so the plan stays attached to the customer dashboard.</p>
         </section>
         <section>
-          <h4>Manual fallback</h4>
+          <h4>Backup setup</h4>
           <p>You can paste a roster in the Trade Calculator when ESPN data is not available yet.</p>
         </section>
       </div>
