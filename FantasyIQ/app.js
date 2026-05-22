@@ -108,6 +108,14 @@ const simPositionButtons = document.querySelectorAll(".sim-position-toggle");
 const simAvailable = document.querySelector("#sim-available");
 const simRoster = document.querySelector("#sim-roster");
 const simLog = document.querySelector("#sim-log");
+const externalMockPicks = document.querySelector("#external-mock-picks");
+const externalMockScoring = document.querySelector("#external-mock-scoring");
+const externalMockTeams = document.querySelector("#external-mock-teams");
+const externalMockSuperflex = document.querySelector("#external-mock-superflex");
+const externalMockDoubleFlex = document.querySelector("#external-mock-double-flex");
+const externalMockGrade = document.querySelector("#external-mock-grade");
+const externalMockClear = document.querySelector("#external-mock-clear");
+const externalMockOutput = document.querySelector("#external-mock-output");
 const accountCard = document.querySelector("#account-card");
 const accountLabel = document.querySelector("#account-label");
 const accountState = document.querySelector("#account-state");
@@ -6314,6 +6322,260 @@ function renderMockSimulator() {
   renderSimLog();
 }
 
+function externalMockSettings() {
+  const scoringType = normalizeScoringType(externalMockScoring?.value || "ppr");
+  const receptionPoints = scoringType === "standard" ? 0 : scoringType === "half-ppr" ? 0.5 : 1;
+  return {
+    teamCount: Number(externalMockTeams?.value || 12),
+    scoringType,
+    scoringLabel: SCORING_LABELS[scoringType] || "Full PPR",
+    receptionPoints,
+    lineupSlots: {
+      ...DEFAULT_LINEUP_SLOTS,
+      FLEX: externalMockDoubleFlex?.checked ? 2 : 1,
+      SUPERFLEX: externalMockSuperflex?.checked ? 1 : 0,
+    },
+  };
+}
+
+function externalProjectionValue(row, settings) {
+  const base = Number(row?.["Native Projection"] || row?.["Proj PPR Pts"] || 0);
+  if (!base) return 0;
+  if (rowUsesNativeScoring(row)) return Math.max(0, base);
+  const receptionDelta = Math.max(0, 1 - Number(settings.receptionPoints ?? 1));
+  return Math.max(0, base - estimatedReceptions(row) * receptionDelta);
+}
+
+function externalLeagueValueScore(row, settings) {
+  if (!row) return 0;
+  const slots = settings.lineupSlots || DEFAULT_LINEUP_SLOTS;
+  const teamCount = Number(settings.teamCount || 12);
+  const posRank = Number(row["Pos Rank"] || 99);
+  let score = Number(row["Value Score"] || 0);
+
+  if (!rowUsesNativeScoring(row)) {
+    if (settings.scoringType === "half-ppr") score -= Math.min(4, estimatedReceptions(row) / 24);
+    if (settings.scoringType === "standard") score -= Math.min(8, estimatedReceptions(row) / 12);
+  }
+  if (slots.SUPERFLEX && row.Pos === "QB") score += Math.max(10, 32 - posRank * 0.7);
+  if (!slots.SUPERFLEX && row.Pos === "QB" && teamCount <= 10) score -= 4;
+  if (slots.FLEX >= 2 && ["RB", "WR"].includes(row.Pos)) score += 4.5;
+  if (slots.FLEX >= 2 && row.Pos === "TE") score += 1.5;
+  if (teamCount >= 14 && ["RB", "WR"].includes(row.Pos)) score += 3;
+  score += clampNumber(externalTrendScore(row) * 0.22, -4, 4);
+  score += clampNumber(udkSignalScore(row), -3, 4);
+  if (!slots.K && row.Pos === "K") score -= 25;
+  if (!slots.DST && row.Pos === "DST") score -= 25;
+  return Math.round(score * 10) / 10;
+}
+
+function externalExpectedPickFor(row, settings) {
+  if (!row) return 999;
+  const posRank = Number(row["Pos Rank"] || 99);
+  let expected = Number(row.Rank || 999);
+  if (settings.lineupSlots.SUPERFLEX && row.Pos === "QB") expected -= Math.max(0, 30 - posRank) * 0.9;
+  if (!settings.lineupSlots.SUPERFLEX && row.Pos === "QB" && Number(settings.teamCount || 12) <= 10) expected += 10;
+  if (settings.lineupSlots.FLEX >= 2 && ["RB", "WR"].includes(row.Pos)) expected -= 4;
+  if (settings.scoringType === "standard" && ["WR", "TE"].includes(row.Pos)) expected += Math.min(8, estimatedReceptions(row) / 10);
+  if (settings.scoringType === "standard" && row.Pos === "RB") expected -= 2;
+  if (Number(settings.teamCount || 12) >= 14 && ["RB", "WR"].includes(row.Pos)) expected -= 3;
+  return Math.max(1, Math.round(expected));
+}
+
+function cleanExternalMockLine(line) {
+  return String(line || "")
+    .replace(/^\s*[-*]\s*/, "")
+    .replace(/^\s*(round|rd)\s*\d{1,2}\s*(pick|pk)?\s*\d{0,2}\s*[-:.)]?\s*/i, "")
+    .replace(/^\s*(pick|pk)\s*\d{1,3}\s*[-:.)]?\s*/i, "")
+    .replace(/^\s*(round|rd)?\s*\d{1,2}\s*(pick|pk)?\s*\d{0,2}\s*[:.)-]\s*/i, "")
+    .replace(/^\s*\d{1,2}\.\d{1,2}\s*[-.)]?\s*/i, "")
+    .replace(/^\s*\d{1,3}\s*[-.)]\s*/i, "")
+    .replace(/\s+\((QB|RB|WR|TE|DST|K)[^)]+\)$/i, "")
+    .replace(/\s+\b(QB|RB|WR|TE|DST|K)\b\s+[A-Z]{2,4}$/i, "")
+    .replace(/\s+\b(QB|RB|WR|TE|DST|K)\b$/i, "")
+    .trim();
+}
+
+function externalMockPickGrade(overall, row, settings) {
+  if (!row) return { label: "Unmatched", className: "watch", delta: 0, detail: "Player was not matched to the FantasyIQ board." };
+  const expected = externalExpectedPickFor(row, settings);
+  const delta = expected - overall;
+  if (delta >= 18) return { label: "Steal", className: "smash", delta, detail: `${row.Player} was ${delta} spots cheaper than format-adjusted rank.` };
+  if (delta >= 6) return { label: "Good value", className: "target", delta, detail: `${row.Player} beat format-adjusted board value by ${delta} spots.` };
+  if (delta >= -8) return { label: "Fair", className: "target", delta, detail: `${row.Player} was close to fair value for this format.` };
+  return { label: "Reach", className: "wait", delta, detail: `${row.Player} was ${Math.abs(delta)} spots ahead of adjusted board value.` };
+}
+
+function externalMockRosterTargets(settings) {
+  const slots = settings.lineupSlots || DEFAULT_LINEUP_SLOTS;
+  const starters = {
+    QB: 1 + Number(slots.SUPERFLEX || 0),
+    RB: Number(slots.RB || 2),
+    WR: Number(slots.WR || 2),
+    TE: Number(slots.TE || 1),
+    DST: Number(slots.DST || 1),
+    K: Number(slots.K || 1),
+  };
+  const flex = Number(slots.FLEX || 1);
+  return {
+    starters,
+    flex,
+    targets: {
+      QB: slots.SUPERFLEX ? 3 : Number(settings.teamCount || 12) <= 10 ? 1 : 2,
+      RB: 4 + flex,
+      WR: 4 + flex,
+      TE: 2,
+      DST: 1,
+      K: 1,
+    },
+  };
+}
+
+function externalMockLetter(score) {
+  if (score >= 93) return "A";
+  if (score >= 86) return "B+";
+  if (score >= 80) return "B";
+  if (score >= 73) return "C+";
+  if (score >= 67) return "C";
+  if (score >= 58) return "D";
+  return "F";
+}
+
+function gradeExternalMockDraft() {
+  if (!externalMockOutput) return;
+  if (!boardData) {
+    externalMockOutput.innerHTML = "<strong>Board data is still loading.</strong> Try again in a second.";
+    return;
+  }
+  const lines = parseLines(externalMockPicks?.value || "");
+  if (!lines.length) {
+    externalMockOutput.innerHTML = "Paste picks from an outside mock draft to get a format-aware grade, build notes, reaches, steals, and roster fixes.";
+    return;
+  }
+
+  const settings = externalMockSettings();
+  const plan = externalMockRosterTargets(settings);
+  const picks = lines.map((line, index) => {
+    const clean = cleanExternalMockLine(line);
+    const row = findPlayer(clean);
+    const overall = index + 1;
+    const grade = externalMockPickGrade(overall, row, settings);
+    return {
+      line,
+      clean,
+      row,
+      overall,
+      round: Math.floor(index / Number(settings.teamCount || 12)) + 1,
+      grade,
+      value: row ? externalLeagueValueScore(row, settings) : 0,
+      projection: row ? externalProjectionValue(row, settings) : 0,
+      risk: row ? Number(row.Risk || 0) : 0,
+    };
+  });
+  const matched = picks.filter((pick) => pick.row);
+  const unmatched = picks.filter((pick) => !pick.row);
+  const counts = positionCounts(matched);
+  const completion = Math.min(1, matched.length / Math.max(1, lines.length));
+  const flexEligible = Number(counts.RB || 0) + Number(counts.WR || 0) + Number(counts.TE || 0);
+  const avgRisk = matched.length ? matched.reduce((sum, pick) => sum + pick.risk, 0) / matched.length : 0;
+  let score = 82;
+  const notes = ["This grades an external mock only; it does not change your FantasyIQ live room or simulator draft."];
+
+  picks.forEach((pick) => {
+    if (!pick.row) {
+      score -= 2;
+      return;
+    }
+    if (pick.grade.label === "Steal") score += 3;
+    if (pick.grade.label === "Good value") score += 1.5;
+    if (pick.grade.label === "Reach") score += pick.grade.delta <= -24 ? -5 : -3;
+    if (["K", "DST"].includes(pick.row.Pos) && pick.round < Math.max(1, Math.ceil(lines.length / Number(settings.teamCount || 12)) - 1)) {
+      score -= 4;
+      notes.push(`${pick.row.Pos} came before the final rounds.`);
+    }
+  });
+
+  ["QB", "RB", "WR", "TE"].forEach((pos) => {
+    const needed = Number(plan.starters[pos] || 0);
+    const have = Number(counts[pos] || 0);
+    if (have < needed && completion >= 0.55) {
+      const penalty = pos === "QB" && settings.lineupSlots.SUPERFLEX ? 12 : 8;
+      score -= penalty * (needed - have);
+      notes.push(`${pos} starter slot is still thin for this format.`);
+    }
+  });
+  if (settings.lineupSlots.SUPERFLEX && Number(counts.QB || 0) < 2 && matched.length >= 5) {
+    score -= 10;
+    notes.push("Superflex builds need two playable QBs early enough to avoid chasing.");
+  }
+  if (flexEligible < Number(plan.starters.RB || 0) + Number(plan.starters.WR || 0) + Number(plan.flex || 0) && completion >= 0.65) {
+    score -= 8;
+    notes.push("RB/WR/TE volume is light for the flex spots.");
+  }
+  if (Number(counts.RB || 0) < Math.min(plan.targets.RB, 4) && matched.length >= 8) {
+    score -= 6;
+    notes.push("RB depth is behind the target build.");
+  }
+  if (Number(counts.WR || 0) < Math.min(plan.targets.WR, 4) && matched.length >= 8) {
+    score -= 6;
+    notes.push("WR depth is behind the target build.");
+  }
+  if (avgRisk >= 6 && matched.length >= 5) {
+    score -= 5;
+    notes.push("Risk stack is high; pair upside with safer volume.");
+  }
+  if (unmatched.length) notes.push(`${unmatched.length} pasted line${unmatched.length === 1 ? "" : "s"} did not match the FantasyIQ board.`);
+
+  score = Math.round(clampNumber(score, 0, 100));
+  const steals = picks.filter((pick) => pick.grade.label === "Steal").length;
+  const reaches = picks.filter((pick) => pick.grade.label === "Reach").length;
+  const best = matched.reduce((top, pick) => (!top || pick.value > top.value ? pick : top), null);
+  const formatParts = [
+    settings.scoringLabel,
+    `${settings.teamCount} teams`,
+    settings.lineupSlots.SUPERFLEX ? "Superflex" : "1QB",
+    settings.lineupSlots.FLEX >= 2 ? "Double flex" : "Single flex",
+  ];
+  const pickCards = picks.slice(0, 18).map((pick) => {
+    const title = pick.row ? `${pick.row.Player} / ${pick.row.Pos} / ${pick.row.Team}` : pick.clean || pick.line;
+    return `<div class="pick-card recommendation ${pick.grade.className}">
+      <span>Pick ${pick.overall} / Round ${pick.round}</span>
+      <strong>${htmlEscape(title)}</strong>
+      <em>${htmlEscape(pick.grade.label)}</em>
+      <small>${htmlEscape(pick.grade.detail)}${pick.row ? ` Value ${pick.value.toFixed(1)} / Projection ${pick.projection ? pick.projection.toFixed(1) : "TBD"}.` : ""}</small>
+    </div>`;
+  });
+
+  externalMockOutput.innerHTML = `
+    <div class="external-grade-summary">
+      <article>
+        <span>External Mock Grade</span>
+        <strong>${externalMockLetter(score)} (${score})</strong>
+        <small>${htmlEscape(formatParts.join(" / "))}</small>
+      </article>
+      <article>
+        <span>Value Hits</span>
+        <strong>${steals} steals</strong>
+        <small>${reaches} reach${reaches === 1 ? "" : "es"} flagged</small>
+      </article>
+      <article>
+        <span>Roster Shape</span>
+        <strong>QB ${counts.QB || 0} / RB ${counts.RB || 0} / WR ${counts.WR || 0} / TE ${counts.TE || 0}</strong>
+        <small>${best ? `Best value: ${best.row.Player}` : "No matched players yet."}</small>
+      </article>
+    </div>
+    <div class="external-grade-notes">
+      ${notes.slice(0, 6).map((note) => `<p>${htmlEscape(note)}</p>`).join("")}
+    </div>
+    <div class="external-grade-picks">${pickCards.join("")}</div>
+  `;
+}
+
+function clearExternalMockDraft() {
+  if (externalMockPicks) externalMockPicks.value = "";
+  gradeExternalMockDraft();
+}
+
 function liveServerHelp(error) {
   const subscribeUrl = appConfig.paymentLinkUrl || "https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01";
   if (error?.includes("FANTASY_IQ_LEAGUE_ID is not configured")) {
@@ -6392,6 +6654,7 @@ function applyBoardPayload(data) {
   renderLiveDraft();
   renderLiveTierBoard();
   renderMockSimulator();
+  gradeExternalMockDraft();
   renderTradeCalc();
   renderRosterEngines();
   refreshActivePlayerAutocomplete();
@@ -6526,6 +6789,14 @@ simAuto?.addEventListener("click", () => {
 });
 simReset?.addEventListener("click", simResetDraft);
 simSearch?.addEventListener("input", renderSimAvailable);
+externalMockGrade?.addEventListener("click", gradeExternalMockDraft);
+externalMockClear?.addEventListener("click", clearExternalMockDraft);
+externalMockPicks?.addEventListener("input", () => {
+  if ((externalMockPicks.value || "").trim()) gradeExternalMockDraft();
+});
+[externalMockScoring, externalMockTeams, externalMockSuperflex, externalMockDoubleFlex].forEach((control) => {
+  control?.addEventListener("change", gradeExternalMockDraft);
+});
 simPosition?.addEventListener("change", () => {
   simPositionButtons.forEach((button) => {
     button.classList.toggle("active", (button.dataset.simPos || "") === (simPosition.value || ""));

@@ -3706,6 +3706,173 @@ code {
   display: none;
 }
 
+.external-mock-grader {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.external-grader-head {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+}
+
+.external-grader-head h3 {
+  margin-bottom: 0;
+}
+
+.external-grader-head span {
+  max-width: 320px;
+  border: 1px solid rgba(184, 135, 53, 0.34);
+  border-radius: 8px;
+  background: #fff8e6;
+  color: var(--accent);
+  padding: 9px 10px;
+  font-size: 12px;
+  font-weight: 950;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.external-grader-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 1.2fr) minmax(260px, 0.8fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.external-grader-input,
+.external-grader-settings {
+  display: grid;
+  gap: 10px;
+}
+
+.external-grader-input label,
+.external-grader-settings label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.external-grader-input textarea {
+  min-height: 190px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffdf7;
+  color: var(--ink);
+  padding: 12px;
+  font: inherit;
+  line-height: 1.45;
+}
+
+.external-grader-settings {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid rgba(18, 63, 52, 0.14);
+  border-radius: 8px;
+  background: #f7faf8;
+  padding: 12px;
+}
+
+.external-grader-settings select {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  padding: 8px 10px;
+  font: inherit;
+}
+
+.external-grader-settings .compact-toggle {
+  align-content: center;
+  min-height: 42px;
+  border: 1px solid rgba(18, 63, 52, 0.12);
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px 10px;
+  text-transform: none;
+}
+
+.external-grader-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.external-grader-output {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(18, 63, 52, 0.14);
+  border-radius: 8px;
+  background: #fffdf7;
+  padding: 12px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.external-grade-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.external-grade-summary article {
+  min-width: 0;
+  border: 1px solid rgba(184, 135, 53, 0.22);
+  border-radius: 8px;
+  background: #fffaf0;
+  padding: 12px;
+}
+
+.external-grade-summary span {
+  display: block;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.external-grade-summary strong {
+  display: block;
+  margin: 5px 0;
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.external-grade-summary small,
+.external-grade-notes p {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.external-grade-notes {
+  display: grid;
+  gap: 6px;
+}
+
+.external-grade-notes p {
+  margin: 0;
+  border-left: 4px solid var(--accent-2);
+  background: #f7faf8;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.external-grade-picks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .sim-position-tabs,
 .draft-position-tabs {
   margin-bottom: 10px;
@@ -4047,6 +4214,10 @@ code {
   .cheatcode-grid,
   .cheatcode-grid.secondary,
   .sim-tools,
+  .external-grader-grid,
+  .external-grader-settings,
+  .external-grade-summary,
+  .external-grade-picks,
   .tier-board-tools,
   .sim-player-row,
   .intel-subgrid,
@@ -4078,6 +4249,14 @@ code {
   .brand-lockup img {
     width: 72px;
     height: 72px;
+  }
+
+  .external-grader-head {
+    display: grid;
+  }
+
+  .external-grader-head span {
+    max-width: none;
   }
 
   .layout {

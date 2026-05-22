@@ -772,6 +772,57 @@
             </section>
           </div>
 
+          <section class="live-panel external-mock-grader" aria-label="External mock draft grader">
+            <div class="external-grader-head">
+              <div>
+                <p class="eyebrow">External Mock Draft Grader</p>
+                <h3>Grade mocks from ESPN, Sleeper, Yahoo, or another draft room</h3>
+              </div>
+              <span>This is for other mock drafts separate from FantasyIQ.</span>
+            </div>
+            <div class="external-grader-grid">
+              <div class="external-grader-input">
+                <label for="external-mock-picks">Paste your drafted players in pick order</label>
+                <textarea id="external-mock-picks" placeholder="One pick per line&#10;Example:&#10;1.01 Christian McCaffrey&#10;2.12 Garrett Wilson&#10;3.01 Josh Allen"></textarea>
+                <div class="external-grader-actions">
+                  <button id="external-mock-grade" type="button">Grade External Mock</button>
+                  <button id="external-mock-clear" class="secondary-action" type="button">Clear</button>
+                </div>
+              </div>
+              <div class="external-grader-settings">
+                <label>
+                  Scoring
+                  <select id="external-mock-scoring">
+                    <option value="ppr">Full PPR</option>
+                    <option value="half-ppr">Half PPR</option>
+                    <option value="standard">Standard</option>
+                  </select>
+                </label>
+                <label>
+                  Teams
+                  <select id="external-mock-teams">
+                    <option value="8">8 teams</option>
+                    <option value="10">10 teams</option>
+                    <option value="12" selected>12 teams</option>
+                    <option value="14">14 teams</option>
+                    <option value="16">16 teams</option>
+                  </select>
+                </label>
+                <label class="compact-toggle">
+                  <input id="external-mock-superflex" type="checkbox" />
+                  Superflex
+                </label>
+                <label class="compact-toggle">
+                  <input id="external-mock-double-flex" type="checkbox" />
+                  Double flex
+                </label>
+              </div>
+            </div>
+            <div id="external-mock-output" class="external-grader-output">
+              Paste picks from an outside mock draft to get a format-aware grade, build notes, reaches, steals, and roster fixes.
+            </div>
+          </section>
+
         </section>
 
         <section class="panel" id="trade">
