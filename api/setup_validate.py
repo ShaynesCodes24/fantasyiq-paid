@@ -380,16 +380,20 @@ def save_setup_if_requested(raw: dict[str, Any], payload: dict[str, Any], header
         try:
             from database import (
                 DatabaseUnavailable,
+                active_league_exists,
                 customer_slug_from_email,
                 database_status,
+                league_slot_usage,
                 upsert_customer,
                 upsert_league,
             )
         except ImportError:
             from api.database import (
                 DatabaseUnavailable,
+                active_league_exists,
                 customer_slug_from_email,
                 database_status,
+                league_slot_usage,
                 upsert_customer,
                 upsert_league,
             )
@@ -435,6 +439,15 @@ def save_setup_if_requested(raw: dict[str, Any], payload: dict[str, Any], header
 
         label = str(raw.get("leagueLabel") or payload.get("leagueName") or "ESPN league").strip()
         league_key = slugify(str(raw.get("leagueKey") or label))
+        usage = league_slot_usage(saved_customer.get("slug") or customer_slug)
+        if not active_league_exists(saved_customer.get("slug") or customer_slug, league_key) and usage["configured"] >= usage["allowed"]:
+            payload["saved"] = False
+            payload["saveMessage"] = (
+                f"This account already has {usage['configured']} saved league profile(s). "
+                "Add another league slot before saving this ESPN league."
+            )
+            payload["leagueSlotUsage"] = usage
+            return payload
         saved_league = upsert_league(
             customer_slug=saved_customer.get("slug") or customer_slug,
             league_key=league_key,

@@ -143,8 +143,8 @@ def clear_session_cookie(headers: Any | None = None) -> str:
 
 
 def password_policy_error(password: str) -> str:
-    if len(password or "") < 8:
-        return "Password must be at least 8 characters."
+    if len(password or "") < 15:
+        return "Password must be at least 15 characters."
     if len(password or "") > 128:
         return "Password must be 128 characters or fewer."
     return ""

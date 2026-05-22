@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
     <title>MyFantasyIQ Checkout Complete</title>
     <link rel="icon" type="image/svg+xml" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
     <link rel="shortcut icon" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
@@ -22,6 +23,7 @@
       <nav aria-label="Checkout navigation">
         <a href="./setup.html">Setup check</a>
         <a href="./help.html">Help</a>
+        <a href="./feedback.html">Feedback</a>
         <a href="mailto:support@myfantasyiq.com">Support</a>
         <a class="dashboard-link" href="./FantasyIQ/?login=1">Customer Login</a>
       </nav>
@@ -32,12 +34,14 @@
         <p class="eyebrow">Season Pass confirmed</p>
         <h1 id="success-title">Welcome to FantasyIQ</h1>
         <p>
-          Payment complete. Check your email for your FantasyIQ access code, then
-          create your password and connect each public ESPN league before draft day.
+          Payment complete. Once Stripe confirms the order to MyFantasyIQ, check your
+          email for your setup code, then create your password and connect each public
+          ESPN league before draft day.
         </p>
         <div class="actions">
           <a class="primary" id="success-setup-link" href="./setup.html">Finish league setup</a>
           <a class="secondary" id="success-dashboard-link" href="./FantasyIQ/?login=1">Customer login</a>
+          <a class="secondary" id="success-feedback-link" href="./feedback.html">Share feedback</a>
         </div>
       </section>
 
@@ -95,6 +99,7 @@
           <li>Your setup email was sent with an access code and setup link.</li>
           <li>You will need your ESPN league ID and ESPN team ID.</li>
           <li>Your ESPN league must be public for live FantasyIQ sync.</li>
+          <li>This is a software subscription only. It does not include league dues, prize pools, payouts, or winnings.</li>
           <li>Support is available at <a href="mailto:support@myfantasyiq.com">support@myfantasyiq.com</a>.</li>
         </ul>
       </section>
@@ -120,6 +125,7 @@
       const successParams = new URLSearchParams(window.location.search);
       const setupLink = document.querySelector("#success-setup-link");
       const dashboardLink = document.querySelector("#success-dashboard-link");
+      const feedbackLink = document.querySelector("#success-feedback-link");
 
       function successUrlWithParams(path) {
         const url = new URL(path, window.location.href);
@@ -133,6 +139,7 @@
 
       if (setupLink) setupLink.href = successUrlWithParams("./setup.html");
       if (dashboardLink) dashboardLink.href = successUrlWithParams("./FantasyIQ/");
+      if (feedbackLink) feedbackLink.href = successUrlWithParams("./feedback.html");
 
       try {
         if (["127.0.0.1", "localhost"].includes(window.location.hostname)) throw new Error("local preview");

@@ -52,8 +52,8 @@ def security_check() -> Step:
 
 def local_content_check() -> Step:
     checks = {
-        "public/index.html": ["Start setup", "Validate ESPN IDs", "Start Season Pass"],
-        "public/FantasyIQ/config.js": ["Public demo preview", "showSubscribeButton: true", "$30 / year"],
+        "public/index.html": ["Check ESPN compatibility", "setup.html?mode=precheck", "Software subscription only"],
+        "public/FantasyIQ/config.js": ["Demo Mode", "showSubscribeButton: true", "$30 / year"],
         "SECURITY_SETUP.md": ["Do not put admin tokens in URLs", "customers.csv", "excluded from Vercel deploys"],
     }
     missing: list[str] = []

@@ -10,12 +10,12 @@ from urllib.parse import parse_qs
 try:
     from auth_service import make_session, password_hash, password_policy_error, session_cookie
     from customer_context import ConfigError, CustomerContext, all_customer_contexts, database_customer_context, slugify
-    from database import customer_auth_record, record_ops_event, set_customer_password, upsert_customer, upsert_league
+    from database import consume_customer_access_code, customer_auth_record, record_ops_event, revoke_customer_sessions, set_customer_password, upsert_customer, upsert_league
     from rate_limit import check_rate_limit, rate_limit_payload
 except ModuleNotFoundError:
     from api.auth_service import make_session, password_hash, password_policy_error, session_cookie
     from api.customer_context import ConfigError, CustomerContext, all_customer_contexts, database_customer_context, slugify
-    from api.database import customer_auth_record, record_ops_event, set_customer_password, upsert_customer, upsert_league
+    from api.database import consume_customer_access_code, customer_auth_record, record_ops_event, revoke_customer_sessions, set_customer_password, upsert_customer, upsert_league
     from api.rate_limit import check_rate_limit, rate_limit_payload
 
 
@@ -132,9 +132,12 @@ def create_password_payload(raw: dict[str, Any], headers: Any | None = None) -> 
     saved = set_customer_password(context.slug, password_hash(password))
     if not saved:
         raise PermissionError("We could not update that password. Contact support if this keeps happening.")
+    revoke_customer_sessions(context.slug)
+    consume_customer_access_code(context.slug)
     token, expires_at = make_session(context.slug, headers)
     customer = context.public_dict()
     customer["passwordConfigured"] = True
+    customer["accessRequired"] = True
     return (
         {
             "ok": True,

@@ -437,7 +437,7 @@ function resolveAppConfig(config) {
     merged.draftCardValue = loadoutConfig.draftCardValue || "Active";
     merged.draftCardNote = loadoutConfig.draftCardNote || "Configured for this ESPN league";
     merged.demoLabel = loadoutConfig.demoLabel || "Customer dashboard";
-    merged.demoMessage = loadoutConfig.demoMessage || "Configured FantasyIQ command center.";
+    merged.demoMessage = loadoutConfig.demoMessage || "Signed-in customer league loaded.";
     merged.heroSubtitle =
       loadoutConfig.heroSubtitle ||
       "Your official FantasyIQ command center for live draft sync, player values, mock tracking, and trade discipline.";
@@ -1000,11 +1000,11 @@ function applyAppConfig() {
   } else if (demoBanner) {
     const label = demoBanner.querySelector("strong");
     const message = demoBanner.querySelector("span");
-    if (label) label.textContent = appConfig.demoLabel || "Public demo preview";
+    if (label) label.textContent = appConfig.demoLabel || "Demo Mode";
     if (message) {
       message.textContent =
         appConfig.demoMessage ||
-        "This dashboard is a working preview. Subscribe to get it configured for your ESPN league.";
+        "Sample league only. No customer account is loaded.";
     }
   }
   renderLeagueProfile();
@@ -1449,7 +1449,7 @@ function leagueSlotText(count = configuredLeagueCount()) {
 }
 
 function accountStatusText() {
-  if (!requiresCustomerAccess()) return "Public demo preview. Sign in with your checkout email and access code to open your account.";
+  if (!requiresCustomerAccess()) return "Demo Mode: sample league only. No customer account is loaded.";
   if (hasCustomerAccess()) return "Signed in. Refresh will keep this dashboard unlocked on this device.";
   return "Signed out. Use your password or setup access code to unlock saved leagues.";
 }
@@ -1531,7 +1531,7 @@ function renderAccountPanel() {
     : `<article>
         <div>
           <span>Preview mode</span>
-          <strong>Public demo league</strong>
+          <strong>Demo League</strong>
           <p>Subscribe to connect FantasyIQ to your own ESPN league profile.</p>
         </div>
       </article>`;
@@ -1579,7 +1579,7 @@ function currentLeagueDisplayLabel() {
     if (appConfig.leagueName && appConfig.leagueName !== "Public Demo League") return appConfig.leagueName;
     return "Finish league setup";
   }
-  return appConfig.leagueName || "Public demo";
+  return appConfig.leagueName || "Demo League";
 }
 
 function applyLeagueOption(option) {
@@ -4637,10 +4637,18 @@ function renderDraftPrep() {
   const watchlist = draftWatchlistItems();
   const boardReady = Boolean(boardData && availableRows().length);
   const orderReady = Boolean((liveDraft?.draftOrder || []).length);
+  const slots = settings.lineupSlots || {};
+  const rosterDetected = Object.values(slots).some((value) => Number(value) > 0);
   const checks = [
-    { label: "League", ok: Boolean(settings), value: `${leagueTeamTotal()} teams`, detail: `${settings.scoringLabel || "Custom"} / ${lineupSummary(settings)}` },
-    { label: "Board", ok: boardReady, value: boardReady ? `${availableRows().length} available` : "Loading", detail: boardReady ? "Tier and value data ready" : "Load Big Board data" },
-    { label: "Team", ok: Boolean(teamId && firstPick), value: firstPick ? `Pick ${firstPick.roundPick}` : teamId ? "No order" : "Select team", detail: firstPick ? `Overall ${firstPick.overall}` : "Use Draft Room team selector" },
+    { label: "League Public", ok: Boolean(liveDraft), value: liveDraft ? "Verified" : "Pending", detail: liveDraft ? "ESPN public sync reached this league" : "Run Sync Now before draft day" },
+    { label: "League IDs", ok: Boolean(appConfig.leagueId && (appConfig.customerTeamId || teamId)), value: appConfig.leagueId ? "Saved" : "Missing", detail: teamId ? `Team ${teamId}` : "Save ESPN league and team IDs" },
+    { label: "Draft Date", ok: Boolean(liveDraft), value: liveDraft?.drafted ? "Complete" : liveDraft?.inProgress ? "Live" : liveDraft ? "Detected" : "Pending", detail: liveDraft ? "Draft state is reachable from ESPN" : "Sync once after ESPN publishes the room" },
+    { label: "Scoring", ok: Boolean(settings.scoringType || settings.scoringLabel), value: settings.scoringLabel || settings.scoringType || "Missing", detail: settings.source || "ESPN scoring profile" },
+    { label: "Roster Slots", ok: rosterDetected, value: rosterDetected ? lineupSummary(settings) : "Missing", detail: rosterDetected ? "Lineup shape loaded" : "Open setup to detect roster slots" },
+    { label: "Draft Rounds", ok: Boolean(draftRoundTotal(settings)), value: `${draftRoundTotal(settings)} rounds`, detail: "Used for mock and live pick pacing" },
+    { label: "Board Loaded", ok: boardReady, value: boardReady ? `${availableRows().length} available` : "Loading", detail: boardReady ? "Tier and value data ready" : "Load Big Board data" },
+    { label: "ESPN Sync", ok: Boolean(liveDraft && !liveDraft.staleError), value: liveDraft?.staleError ? "Cached" : liveDraft ? "Live" : "Pending", detail: liveDraft?.staleError ? "Using cached board mode" : "Click Sync Now on draft day" },
+    { label: "Fallback Mode", ok: Boolean(boardReady), value: boardReady ? "Ready" : "Pending", detail: boardReady ? "Manual draft tracking can continue if ESPN lags" : "Board data must load first" },
     { label: "Watchlist", ok: watchlist.length >= 3, value: `${watchlist.length} saved`, detail: watchlist.length >= 3 ? "Targets are staged" : "Save at least 3 names" },
   ];
   const score = Math.round((checks.filter((item) => item.ok).length / checks.length) * 100);
@@ -5570,7 +5578,7 @@ function renderLiveDraftSummary() {
   const total = Number(liveDraft.totalPicks || 0);
   const totalFallback = leagueTeamTotal() * draftRoundTotal();
   const pct = total || totalFallback ? Math.round((completed / (total || totalFallback)) * 100) : 0;
-  const stale = liveDraft.staleError ? ` Stale fallback shown because ESPN sync errored: ${liveDraft.staleError}` : "";
+  const stale = liveDraft.staleError ? ` ESPN sync is delayed. FantasyIQ is using cached board mode. Click Sync Now or continue with manual draft tracking. ${liveDraft.staleError}` : "";
   const preDraft = isPreDraftLeague();
   const state = liveDraft.inProgress ? "Draft live" : liveDraft.drafted ? "Draft complete" : preDraft ? "Pre-draft board ready" : "Draft board loaded";
   const syncContext = liveDraft.demoMode

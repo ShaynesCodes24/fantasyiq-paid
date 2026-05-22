@@ -1,7 +1,8 @@
 # Payment Setup
 
 Use Stripe Payment Links for v1 checkout while FantasyIQ handles customer
-records, setup, and add-on league fulfillment through the webhook.
+records, setup, and add-on league fulfillment through the webhook. Public site
+CTAs should route through the ESPN compatibility check before exposing checkout.
 
 Current payment link:
 
@@ -18,6 +19,23 @@ Quantity: 1
 Description: One manually configured dashboard account for up to three public ESPN fantasy football leagues.
 Additional league add-on: $5/year for each league beyond the included three.
 ```
+
+## Current Stripe Products
+
+Verified in Stripe on 2026-05-22:
+
+```text
+Current Season Pass product: prod_UYMONg4fWFT0DJ
+Current Season Pass price: price_1TZFfKI9VpZIldH0dEAVPQOR / $30/year
+Additional League product: prod_UYMOnidLvyVwdO
+Additional League price: price_1TZFfVI9VpZIldH0HsLFXTH9 / $5/year
+Legacy product: prod_UXiy5YAhU8q1zW
+Legacy price: price_1TYdWHI9VpZIldH0HdnXeQYj / $25/year
+```
+
+The legacy $25 product has been archived/hidden from new buyer paths in Stripe.
+Keep any legacy subscriber access working as grandfathered access, and continue
+to grant new buyers only through the current $30/year Season Pass.
 
 ## Stripe Dashboard Steps
 

@@ -156,7 +156,8 @@ def customer_entry(slug_or_email: str, selected_league: str = "") -> dict[str, A
                 """
                 SELECT slug, customer_name, email, access_code, status, stripe_customer_id,
                        subscription_status, included_league_limit, additional_league_count,
-                       default_league_key, created_at, updated_at
+                       default_league_key, created_at, updated_at,
+                       NULLIF(password_hash, '') IS NOT NULL AS password_configured
                   FROM fantasyiq_customers
                  WHERE slug = %s OR lower(email) = lower(%s)
                  LIMIT 1
@@ -206,6 +207,7 @@ def customer_entry(slug_or_email: str, selected_league: str = "") -> dict[str, A
         "includedLeagueLimit": customer.get("included_league_limit") or 3,
         "additionalLeagueCount": customer.get("additional_league_count") or 0,
         "defaultLeague": active_key,
+        "passwordConfigured": bool(customer.get("password_configured")),
         "leagues": mapped_leagues,
     }
 
@@ -247,6 +249,23 @@ def set_customer_password(slug: str, password_hash: str) -> dict[str, Any] | Non
                 (password_hash, slugify(slug)),
             )
             return fetch_one_dict(cursor)
+
+
+def consume_customer_access_code(slug: str) -> None:
+    if not database_enabled():
+        raise DatabaseUnavailable("Database is not enabled.")
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE fantasyiq_customers
+                   SET access_code = '',
+                       updated_at = now()
+                 WHERE slug = %s
+                """,
+                (slugify(slug),),
+            )
 
 
 def session_customer_slug(token_hash: str) -> str:
@@ -317,6 +336,24 @@ def revoke_customer_session(token_hash: str) -> None:
                    AND revoked_at IS NULL
                 """,
                 (token_hash,),
+            )
+
+
+def revoke_customer_sessions(customer_slug: str) -> None:
+    if not customer_slug or not database_enabled():
+        return
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE fantasyiq_sessions
+                   SET revoked_at = now(),
+                       last_seen_at = now()
+                 WHERE customer_slug = %s
+                   AND revoked_at IS NULL
+                """,
+                (slugify(customer_slug),),
             )
 
 
@@ -909,6 +946,89 @@ def increment_additional_league_count(slug_or_email: str, amount: int = 1) -> di
                 (safe_amount, lookup, clean),
             )
             return fetch_one_dict(cursor)
+
+
+def update_customer_subscription_status(
+    *,
+    stripe_customer_id: str = "",
+    email: str = "",
+    subscription_status: str = "",
+    status: str = "",
+) -> dict[str, Any] | None:
+    if not database_enabled():
+        raise DatabaseUnavailable("Database is not enabled.")
+    clean_customer = str(stripe_customer_id or "").strip()
+    clean_email = str(email or "").strip().lower()
+    if not clean_customer and not clean_email:
+        return None
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE fantasyiq_customers
+                   SET subscription_status = COALESCE(NULLIF(%s, ''), subscription_status),
+                       status = CASE
+                           WHEN NULLIF(%s, '') IS NOT NULL THEN %s
+                           ELSE status
+                       END,
+                       updated_at = now()
+                 WHERE (%s <> '' AND stripe_customer_id = %s)
+                    OR (%s <> '' AND lower(email) = lower(%s))
+             RETURNING slug, customer_name, email, status, subscription_status
+                """,
+                (subscription_status.strip(), status.strip(), status.strip(), clean_customer, clean_customer, clean_email, clean_email),
+            )
+            return fetch_one_dict(cursor)
+
+
+def league_slot_usage(customer_slug: str) -> dict[str, int]:
+    if not database_enabled():
+        raise DatabaseUnavailable("Database is not enabled.")
+    lookup = slugify(customer_slug)
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT c.included_league_limit,
+                       c.additional_league_count,
+                       COUNT(l.id) FILTER (WHERE COALESCE(l.status, 'configured') IN ('configured', 'active')) AS configured_league_count
+                  FROM fantasyiq_customers c
+                  LEFT JOIN fantasyiq_leagues l
+                    ON l.customer_slug = c.slug
+                 WHERE c.slug = %s
+                 GROUP BY c.id
+                """,
+                (lookup,),
+            )
+            row = fetch_one_dict(cursor) or {}
+    included = int_value(row.get("included_league_limit"), 3) or 3
+    additional = int_value(row.get("additional_league_count"), 0) or 0
+    configured = int_value(row.get("configured_league_count"), 0) or 0
+    return {
+        "included": included,
+        "additional": additional,
+        "allowed": included + additional,
+        "configured": configured,
+    }
+
+
+def active_league_exists(customer_slug: str, league_key: str) -> bool:
+    if not database_enabled():
+        raise DatabaseUnavailable("Database is not enabled.")
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT 1
+                  FROM fantasyiq_leagues
+                 WHERE customer_slug = %s
+                   AND league_key = %s
+                   AND COALESCE(status, 'configured') IN ('configured', 'active')
+                 LIMIT 1
+                """,
+                (slugify(customer_slug), slugify(league_key)),
+            )
+            return cursor.fetchone() is not None
 
 
 def delete_smoke_customer(slug: str) -> bool:

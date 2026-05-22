@@ -9,12 +9,12 @@ from urllib.parse import parse_qs
 
 try:
     from customer_context import database_customer_context
-    from database import customer_auth_record, record_ops_event
+    from database import customer_auth_record, record_ops_event, reset_customer_access_code
     from email_service import send_customer_password_reset_email
     from rate_limit import check_rate_limit, rate_limit_payload
 except ModuleNotFoundError:
     from api.customer_context import database_customer_context
-    from api.database import customer_auth_record, record_ops_event
+    from api.database import customer_auth_record, record_ops_event, reset_customer_access_code
     from api.email_service import send_customer_password_reset_email
     from api.rate_limit import check_rate_limit, rate_limit_payload
 
@@ -48,10 +48,11 @@ def password_reset_payload(raw: dict[str, Any]) -> dict[str, Any]:
     try:
         record = customer_auth_record(identity)
         if record:
+            refreshed = reset_customer_access_code(str(record.get("slug") or identity)) or record
             context = database_customer_context(str(record.get("slug") or identity))
             league_key = getattr(context, "league_key", "") if context else ""
             result = send_customer_password_reset_email(
-                record,
+                {**record, **refreshed},
                 league_key=league_key,
                 idempotency_key=f"fantasyiq-password-reset-{record.get('slug')}-{int(datetime.now(timezone.utc).timestamp())}",
             )

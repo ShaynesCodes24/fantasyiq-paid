@@ -433,11 +433,15 @@ def build_live_payload(request_path: str = "", headers: Any | None = None, force
     return payload
 
 
-def error_payload(message: str, request_path: str = "") -> dict[str, Any]:
+def error_payload(message: str, request_path: str = "", include_fallback: bool = False) -> dict[str, Any]:
     try:
         context = resolve_customer_context(request_path)
     except ConfigError:
         context = None
+    fallback = None
+    if include_fallback and context:
+        cached = _live_cache.get(context.cache_key) or {}
+        fallback = cached.get("data")
     return {
         "ok": False,
         "source": "ESPN public league API",
@@ -446,7 +450,7 @@ def error_payload(message: str, request_path: str = "") -> dict[str, Any]:
         "demoMode": context.demo_mode if context else False,
         "syncedAt": utc_now(),
         "error": message,
-        "fallback": None,
+        "fallback": fallback,
     }
 
 
@@ -514,10 +518,10 @@ class handler(BaseHTTPRequestHandler):
             self.send_json(error_payload(str(exc), self.path), HTTPStatus.SERVICE_UNAVAILABLE)
         except EspnSyncError as exc:
             log_live_sync_error("live_draft.espn_error", str(exc), self.path)
-            self.send_json(error_payload(str(exc), self.path), HTTPStatus.BAD_GATEWAY)
+            self.send_json(error_payload(str(exc), self.path, include_fallback=True), HTTPStatus.BAD_GATEWAY)
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
             log_live_sync_error("live_draft.sync_error", str(exc), self.path)
-            self.send_json(error_payload(str(exc), self.path), HTTPStatus.BAD_GATEWAY)
+            self.send_json(error_payload(str(exc), self.path, include_fallback=True), HTTPStatus.BAD_GATEWAY)
 
     def do_HEAD(self) -> None:
         self.send_response(HTTPStatus.OK)

@@ -78,9 +78,9 @@ def dashboard_check() -> CheckResult:
         return CheckResult("Dashboard", "FAIL", f"{DASHBOARD_URL} returned HTTP {status}")
     if "FantasyIQ" not in body:
         return CheckResult("Dashboard", "FAIL", f"{DASHBOARD_URL} missing: FantasyIQ")
-    if "Public demo preview" in body and "Subscribe" in body and "buy.stripe.com" in body:
+    if "Demo Mode" in body and "No customer account is loaded" in body:
         return CheckResult("Dashboard", "PASS", f"{DASHBOARD_URL} is in public demo mode")
-    if "Active" in body and "Configured for" in body and "Public demo preview" not in body:
+    if "Active" in body and "Configured for" in body and "Demo Mode" not in body:
         return CheckResult("Dashboard", "PASS", f"{DASHBOARD_URL} is in paid customer mode")
     return CheckResult("Dashboard", "FAIL", f"{DASHBOARD_URL} is neither demo mode nor paid customer mode")
 
@@ -91,7 +91,7 @@ def root_check() -> CheckResult:
         return CheckResult("Root URL", "FAIL", f"{ROOT_URL} returned HTTP {status}")
     if "FantasyIQ" not in body:
         return CheckResult("Root URL", "FAIL", f"{ROOT_URL} missing: FantasyIQ")
-    if ("Start setup" in body or "Start Season Pass" in body or "Check ESPN compatibility" in body) and "buy.stripe.com" in body:
+    if ("Start setup" in body or "Start Season Pass" in body or "Check ESPN compatibility" in body) and "setup.html?mode=precheck" in body:
         return CheckResult("Root URL", "PASS", f"{ROOT_URL} is in public sales mode")
     if "Active" in body and "Configured for" in body:
         return CheckResult("Root URL", "PASS", f"{ROOT_URL} redirects to paid customer dashboard")

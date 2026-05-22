@@ -450,6 +450,34 @@ def persist_generic_stripe_event(event: dict[str, Any], data_object: dict[str, A
         return {"databaseEnabled": True, "persistedDatabase": False, "reason": "database_save_failed"}
 
 
+def persist_subscription_access_event(event: dict[str, Any], data_object: dict[str, Any], status: str = "") -> dict[str, Any]:
+    result = persist_generic_stripe_event(event, data_object, status)
+    try:
+        try:
+            from database import update_customer_subscription_status
+        except ImportError:
+            from api.database import update_customer_subscription_status
+
+        stripe_customer_id = str(data_object.get("customer") or "")
+        customer_email = str((data_object.get("customer_details") or {}).get("email") or data_object.get("customer_email") or "")
+        access_status = status or str(data_object.get("status") or "")
+        customer_status = ""
+        if access_status in {"canceled", "cancelled", "unpaid", "incomplete_expired"}:
+            customer_status = "suspended"
+        updated = update_customer_subscription_status(
+            stripe_customer_id=stripe_customer_id,
+            email=customer_email,
+            subscription_status=access_status,
+            status=customer_status,
+        )
+        result["customerUpdated"] = bool(updated)
+        if updated:
+            result["customerSlug"] = updated.get("slug") or ""
+    except Exception:
+        result["customerUpdated"] = False
+    return result
+
+
 def append_customer_locally(row: dict[str, str]) -> bool:
     path_value = env("FANTASYIQ_CUSTOMER_CSV_PATH")
     if not path_value:
@@ -524,19 +552,28 @@ def process_event(event: dict[str, Any]) -> dict[str, Any]:
             "nextStep": "Run setup validation. When DATABASE_URL is connected, this checkout creates the customer account record automatically.",
         }
     if event_type in {"customer.subscription.deleted", "invoice.payment_failed"}:
-        database_result = persist_generic_stripe_event(event, data_object, "needs_review")
+        access_status = "canceled" if event_type == "customer.subscription.deleted" else "past_due"
+        database_result = persist_subscription_access_event(event, data_object, access_status)
         return {
             "action": "subscription_attention_required",
-            "status": "needs_review",
+            "status": access_status,
             "stripeObjectId": data_object.get("id"),
             "database": database_result,
             "nextStep": "Review the subscription in Stripe and disable dashboard access if needed.",
         }
-    if event_type == "customer.subscription.updated":
-        database_result = persist_generic_stripe_event(event, data_object, str(data_object.get("status") or "updated"))
+    if event_type in {"customer.subscription.created", "customer.subscription.updated"}:
+        database_result = persist_subscription_access_event(event, data_object, str(data_object.get("status") or "updated"))
         return {
             "action": "subscription_updated",
             "status": data_object.get("status") or "updated",
+            "stripeObjectId": data_object.get("id"),
+            "database": database_result,
+        }
+    if event_type == "invoice.paid":
+        database_result = persist_subscription_access_event(event, data_object, "active")
+        return {
+            "action": "invoice_paid",
+            "status": "active",
             "stripeObjectId": data_object.get("id"),
             "database": database_result,
         }

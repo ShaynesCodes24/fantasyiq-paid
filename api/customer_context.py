@@ -33,6 +33,7 @@ class CustomerContext:
     included_league_limit: int = 3
     additional_league_count: int = 0
     access_code: str = ""
+    password_configured: bool = False
     demo_mode: bool = False
     source: str = "env"
 
@@ -56,7 +57,8 @@ class CustomerContext:
             "subscriptionStatus": self.subscription_status,
             "includedLeagueLimit": self.included_league_limit,
             "additionalLeagueCount": self.additional_league_count,
-            "accessRequired": bool(self.access_code),
+            "accessRequired": bool(self.access_code or self.password_configured),
+            "passwordConfigured": self.password_configured,
             "demoMode": self.demo_mode,
             "source": self.source,
         }
@@ -244,6 +246,7 @@ def normalize_customer_entry(slug: str, entry: dict[str, Any], selected_league: 
         included_league_limit=int_value(entry_value(entry, "included_league_limit", "includedLeagueLimit", default=3), "includedLeagueLimit", 3) or 3,
         additional_league_count=int_value(entry_value(entry, "additional_league_count", "additionalLeagueCount", default=0), "additionalLeagueCount", 0) or 0,
         access_code=str(entry_value(entry, "access_code", "accessCode", "customerAccessCode", "code", default="")).strip(),
+        password_configured=bool(entry_value(entry, "password_configured", "passwordConfigured", default=False)),
         demo_mode=False,
         source=source,
     )
@@ -324,6 +327,7 @@ def fallback_context(slug: str = "default", selected_league: str = "") -> Custom
             included_league_limit=context.included_league_limit,
             additional_league_count=context.additional_league_count,
             access_code=context.access_code,
+            password_configured=context.password_configured,
             demo_mode=not bool(context.league_id),
             source=context.source,
         )
@@ -345,6 +349,7 @@ def fallback_context(slug: str = "default", selected_league: str = "") -> Custom
         available_leagues=[],
         status=env("FANTASY_IQ_CUSTOMER_STATUS", "configured"),
         access_code=env("FANTASY_IQ_CUSTOMER_ACCESS_CODE"),
+        password_configured=bool(env("FANTASY_IQ_CUSTOMER_PASSWORD_CONFIGURED")),
         demo_mode=not bool(configured_league),
         source="env",
     )
@@ -381,6 +386,10 @@ def resolve_customer_context(path: str = "") -> CustomerContext:
         database_context = database_customer_context(requested, selected_league)
         if database_context:
             return database_context
+        configured_customers = customers_from_json(selected_league)
+        if requested in configured_customers:
+            return configured_customers[requested]
+        raise ConfigError("Customer dashboard was not found. Sign in with the checkout email or use the setup link from your email.")
 
     default_slug = slugify(env("FANTASY_IQ_DEFAULT_CUSTOMER", "default"))
     database_default = database_customer_context(default_slug, selected_league)
@@ -388,35 +397,11 @@ def resolve_customer_context(path: str = "") -> CustomerContext:
         return database_default
 
     customers = all_customer_contexts(selected_league)
-    if requested and requested in customers:
-        return customers[requested]
-
     if default_slug in customers:
         context = customers[default_slug]
     else:
         context = next(iter(customers.values()))
 
-    if requested:
-        return CustomerContext(
-            slug=requested,
-            league_id=context.league_id,
-            season=context.season,
-            customer_name=context.customer_name,
-            email=context.email,
-            league_key=context.league_key,
-            customer_team_id=context.customer_team_id,
-            customer_team_name=context.customer_team_name,
-            league_name=context.league_name,
-            league_settings=context.league_settings,
-            available_leagues=context.available_leagues,
-            status=context.status,
-            subscription_status=context.subscription_status,
-            included_league_limit=context.included_league_limit,
-            additional_league_count=context.additional_league_count,
-            access_code=context.access_code,
-            demo_mode=context.demo_mode,
-            source=context.source,
-        )
     return context
 
 
@@ -430,8 +415,11 @@ def access_code_from(path: str, headers: Any | None = None) -> str:
 
 
 def verify_customer_access(context: CustomerContext, path: str = "", headers: Any | None = None) -> None:
-    if context.demo_mode or not context.access_code:
+    if context.demo_mode:
         return
+    blocked_statuses = {"canceled", "cancelled", "expired", "suspended", "unpaid", "incomplete_expired"}
+    if str(context.status or "").strip().lower() in blocked_statuses or str(context.subscription_status or "").strip().lower() in blocked_statuses:
+        raise PermissionError("This FantasyIQ subscription is not active. Update billing or contact support.")
     try:
         try:
             from auth_service import session_slug_from_headers
@@ -443,8 +431,13 @@ def verify_customer_access(context: CustomerContext, path: str = "", headers: An
             return
     except Exception:
         pass
-    if access_code_from(path, headers) != context.access_code:
+    if context.access_code and access_code_from(path, headers) == context.access_code:
+        return
+    if context.password_configured and not context.access_code:
+        raise PermissionError("Sign in with your checkout email and FantasyIQ password to open this dashboard.")
+    if context.access_code:
         raise PermissionError("That access code does not match this customer dashboard. Check your setup email or contact support.")
+    raise PermissionError("Sign in with your checkout email and FantasyIQ password to open this dashboard.")
 
 
 def authorize_customer_context(path: str = "", headers: Any | None = None) -> CustomerContext:

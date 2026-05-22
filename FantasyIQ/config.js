@@ -11,7 +11,7 @@ window.FANTASY_IQ_CONFIG = {
   draftCardLabel: "Subscription",
   draftCardValue: "$30 / year",
   draftCardNote: "Season Pass for up to 3 ESPN leagues",
-  paymentLinkUrl: "https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01",
+  paymentLinkUrl: "../setup.html?mode=precheck",
   additionalLeaguePaymentLinkUrl: "https://buy.stripe.com/dRmcN5aAV1GX0Cc7X3efC02",
   includedLeagueLimit: 3,
   additionalLeaguePriceLabel: "$5 / year",
@@ -19,9 +19,9 @@ window.FANTASY_IQ_CONFIG = {
   supportEmail: "support@myfantasyiq.com",
   liveBoardUrl: "/api/live-boards",
   isDemoPreview: true,
-  demoLabel: "Public demo preview",
+  demoLabel: "Demo Mode",
   demoMessage:
-    "This dashboard is a working preview. Subscribe to get it configured for your ESPN league.",
+    "Sample league only. No customer account is loaded.",
   fieldLeftLabel: "Fantasy",
   fieldRightLabel: "IQ",
   heroTitle: "Draft smarter. Trade cleaner. Win your league.",
@@ -59,7 +59,7 @@ window.FANTASY_IQ_CONFIG = {
       draftCardValue: "Active",
       draftCardNote: "Katelyn Holladay / KatAttack",
       demoLabel: "Customer dashboard",
-      demoMessage: "Configured for No Guts, No Glory.",
+      demoMessage: "Signed-in customer league loaded.",
       leagueSettings: {
         teamCount: 12,
         scoringType: "ppr",
@@ -82,7 +82,7 @@ window.FANTASY_IQ_CONFIG = {
       draftCardValue: "Owner",
       draftCardNote: "Shayne Holladay / Gronk if you like TDs",
       demoLabel: "Owner dashboard",
-      demoMessage: "Shayne's owner loadout for No Guts, No Glory.",
+      demoMessage: "Signed-in owner league loaded.",
       leagueSettings: {
         teamCount: 12,
         scoringType: "ppr",

@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex,nofollow" />
     <title>MyFantasyIQ Setup</title>
     <link rel="icon" type="image/svg+xml" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
     <link rel="shortcut icon" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
@@ -68,7 +69,7 @@
               <input id="password-email" type="email" autocomplete="email" placeholder="you@example.com" />
             </label>
             <label>
-              New password
+              New password <span class="field-hint">15 characters minimum</span>
               <input id="setup-password" type="password" autocomplete="new-password" />
             </label>
             <label>
@@ -598,7 +599,7 @@
             const nextActions = payload.saved
               ? `<a class="primary dark" href="${escapeHtml(nextUrl)}">Open saved dashboard</a>`
               : precheckMode
-                ? `<a class="primary dark" href="${seasonPassPaymentLink}" data-checkout-link>Start Season Pass</a><a class="secondary dark-outline" href="${escapeHtml(nextUrl)}">Preview dashboard settings</a>`
+                ? `<a class="primary dark" href="${seasonPassPaymentLink}" data-checkout-link>Start Season Pass</a><a class="secondary dark-outline" href="${escapeHtml(nextUrl)}">Preview dashboard settings</a><p class="fine-print">Software subscription only. Does not include league buy-ins, prize pools, payouts, or winnings.</p>`
                 : `<a class="primary dark" href="${escapeHtml(nextUrl)}">Preview dashboard settings</a>`;
             result.innerHTML = `
               <strong>Ready: ${escapeHtml(payload.leagueName)} / ${escapeHtml(payload.teamName)}</strong>

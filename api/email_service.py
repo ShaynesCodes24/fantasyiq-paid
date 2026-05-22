@@ -36,6 +36,16 @@ def help_url() -> str:
     return f"{site_url()}/help.html"
 
 
+def feedback_url(customer_slug: str = "", league_key: str = "") -> str:
+    url = f"{site_url()}/feedback.html"
+    params = {}
+    if customer_slug:
+        params["customer"] = customer_slug
+    if league_key:
+        params["league"] = league_key
+    return f"{url}?{urllib.parse.urlencode(params)}" if params else url
+
+
 def support_email() -> str:
     return env("FANTASYIQ_SUPPORT_EMAIL", "support@myfantasyiq.com")
 
@@ -104,6 +114,7 @@ def customer_setup_email(
     setup = setup_url(customer_slug)
     create_password = f"{setup}#create-password"
     help_page = help_url()
+    feedback = feedback_url(customer_slug, league_key)
     support = support_email()
     subject = "Create your FantasyIQ password"
     text = f"""Thanks for grabbing FantasyIQ.
@@ -137,6 +148,9 @@ How to find your ESPN IDs:
 
 Need more help finding your ESPN league ID or team ID?
 {help_page}
+
+After your first setup or dashboard session, tell us what was confusing, useful, or missing:
+{feedback}
 
 Support:
 {support}
@@ -174,6 +188,7 @@ Support:
         </ol>
       </div>
       <p><a href="{escape(help_page)}" style="color:#0f3a30; font-weight:700;">Setup help and Q&amp;A</a></p>
+      <p><a href="{escape(feedback)}" style="color:#0f3a30; font-weight:700;">Share quick feedback after first use</a></p>
       <p>Support: <a href="mailto:{escape(support)}">{escape(support)}</a></p>
     </div>
     """

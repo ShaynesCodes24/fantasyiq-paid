@@ -126,6 +126,14 @@ p {
   margin-top: 0;
 }
 
+.field-hint,
+.fine-print {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 h1 {
   max-width: 680px;
   margin-bottom: 14px;
@@ -544,7 +552,9 @@ footer {
 
 .field-grid input,
 .field-grid select,
-.stacked-field input {
+.stacked-field input,
+.survey-email input,
+.survey-textarea textarea {
   width: 100%;
   min-width: 0;
   min-height: 44px;
@@ -553,6 +563,107 @@ footer {
   padding: 8px 10px;
   color: var(--ink);
   font: inherit;
+}
+
+.survey-form {
+  display: grid;
+  gap: 18px;
+}
+
+.survey-card {
+  max-width: 1040px;
+}
+
+.survey-email {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.survey-textarea textarea {
+  min-height: 108px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.likert-block,
+.rating-block {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  border: 1px solid rgba(15, 58, 48, 0.14);
+  border-radius: 8px;
+  background: #fffdf8;
+  padding: 16px;
+}
+
+.likert-block legend,
+.rating-block legend {
+  padding: 0 6px;
+  color: var(--field-dark);
+  font-weight: 950;
+}
+
+.likert-table {
+  display: grid;
+  gap: 8px;
+}
+
+.likert-head,
+.likert-row {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.7fr) repeat(5, minmax(96px, 1fr));
+  gap: 8px;
+  align-items: stretch;
+}
+
+.likert-head span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.likert-row {
+  border-top: 1px solid rgba(15, 58, 48, 0.1);
+  padding-top: 8px;
+}
+
+.likert-row p {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.likert-row label,
+.star-rating label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  border: 1px solid rgba(15, 58, 48, 0.12);
+  border-radius: 8px;
+  background: #fbf6e8;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  text-align: center;
+}
+
+.likert-row input,
+.star-rating input {
+  accent-color: var(--field);
+}
+
+.star-rating {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .button-row {
@@ -967,6 +1078,9 @@ button.secondary {
   }
 
   .field-grid,
+  .likert-head,
+  .likert-row,
+  .star-rating,
   .admin-filter-row,
   .admin-status-grid,
   .mini-table div,
@@ -978,6 +1092,16 @@ button.secondary {
 
   .success-support {
     display: grid;
+  }
+
+  .likert-head {
+    display: none;
+  }
+
+  .likert-row label {
+    justify-content: flex-start;
+    padding: 0 10px;
+    text-align: left;
   }
 
   .hero {

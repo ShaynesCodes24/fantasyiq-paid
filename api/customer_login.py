@@ -9,12 +9,12 @@ from urllib.parse import parse_qs, urlparse
 
 try:
     from customer_context import ConfigError, all_customer_contexts, database_customer_context, slugify, verify_customer_access
-    from auth_service import make_session, password_policy_error, session_cookie, verify_password
+    from auth_service import make_session, session_cookie, verify_password
     from database import customer_auth_record
     from rate_limit import check_rate_limit, rate_limit_payload
 except ModuleNotFoundError:
     from api.customer_context import ConfigError, all_customer_contexts, database_customer_context, slugify, verify_customer_access
-    from api.auth_service import make_session, password_policy_error, session_cookie, verify_password
+    from api.auth_service import make_session, session_cookie, verify_password
     from api.database import customer_auth_record
     from api.rate_limit import check_rate_limit, rate_limit_payload
 
@@ -74,9 +74,8 @@ def login_payload(raw: dict[str, Any], headers: Any | None = None) -> tuple[dict
         raise PermissionError("Enter the email from checkout or your dashboard slug.")
 
     if password:
-        policy_error = password_policy_error(password)
-        if policy_error:
-            raise PermissionError(policy_error)
+        if len(password) > 128:
+            raise PermissionError("Password must be 128 characters or fewer.")
         record = customer_auth_record(identity)
         if not record:
             raise PermissionError("We could not find that checkout email. Use the exact email from Stripe checkout or open the setup link from your email.")

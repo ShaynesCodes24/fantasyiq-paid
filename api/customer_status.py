@@ -49,7 +49,7 @@ class handler(BaseHTTPRequestHandler):
                     )
                     return
             context = resolve_customer_context(self.path)
-            authenticated = not bool(context.access_code)
+            authenticated = not bool(context.access_code or context.password_configured)
             if context.access_code and session_slug_from_headers(self.headers) == context.slug:
                 authenticated = True
             if access_code_from(self.path, self.headers):
