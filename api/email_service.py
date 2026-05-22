@@ -304,6 +304,7 @@ def customer_password_reset_email(
     setup = setup_url(customer_slug)
     dashboard = dashboard_url(customer_slug, league_key)
     create_password = f"{setup}#create-password"
+    feedback = feedback_url(customer_slug, league_key)
     support = support_email()
     subject = "Create or reset your FantasyIQ password"
     text = f"""Your FantasyIQ account now supports email and password login.
@@ -316,6 +317,9 @@ Access code:
 
 Dashboard:
 {dashboard}
+
+After your first dashboard session, quick feedback helps us improve FantasyIQ:
+{feedback}
 
 If you did not request this, you can ignore this email.
 
@@ -331,6 +335,7 @@ Support:
       <p><strong>Access code:</strong><br />{escape(access_code)}</p>
       <p><a href="{escape(create_password)}" style="display:inline-block;background:#0f3a30;color:#fff8e8;font-weight:700;padding:12px 16px;border-radius:8px;text-decoration:none;">Create / reset password</a></p>
       <p><a href="{escape(dashboard)}" style="color:#0f3a30;font-weight:700;">Open dashboard</a></p>
+      <p><a href="{escape(feedback)}" style="color:#0f3a30;font-weight:700;">Share quick feedback after first use</a></p>
       <p>If you did not request this, you can ignore this email.</p>
       <p>Support: <a href="mailto:{escape(support)}">{escape(support)}</a></p>
     </div>

@@ -20,6 +20,7 @@
         <a href="./setup.html">Setup validator</a>
         <a href="./help.html">Help</a>
         <a href="./FantasyIQ/" class="dashboard-link">Dashboard</a>
+        <button class="secondary admin-lock-button" id="admin-gate-logout" type="button">Lock Admin</button>
       </nav>
     </header>
 
@@ -28,8 +29,8 @@
         <p class="eyebrow">Owner Admin</p>
         <h1>Customer operations</h1>
         <p>
-          This view reads the protected admin endpoint. Set <strong>FANTASYIQ_ADMIN_TOKEN</strong> in Vercel, then enter it here
-          to review customer setup status.
+          This view requires the admin gate sign-in plus <strong>FANTASYIQ_ADMIN_TOKEN</strong>. Enter the admin token here
+          to review customer setup status after the gate unlocks.
         </p>
 
         <div class="tool-card">
@@ -104,6 +105,7 @@
       const cleanButton = document.querySelector("#clean-admin");
       const smokeButton = document.querySelector("#smoke-admin");
       const refreshOpsButton = document.querySelector("#refresh-ops");
+      const adminGateLogout = document.querySelector("#admin-gate-logout");
       const opsSearch = document.querySelector("#ops-search");
       const opsSeverityFilter = document.querySelector("#ops-severity-filter");
       const opsTypeFilter = document.querySelector("#ops-type-filter");
@@ -398,6 +400,16 @@
       }
 
       loadButton.addEventListener("click", loadAdmin);
+      adminGateLogout.addEventListener("click", async () => {
+        await fetch("/api/admin-gate", {
+          method: "POST",
+          cache: "no-store",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "logout" }),
+        });
+        window.location.href = "/admin-login.html";
+      });
       cleanButton.addEventListener("click", async () => {
         try {
           await runAdminAction("clean_pending_leagues");

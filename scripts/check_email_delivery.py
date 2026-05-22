@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import http.cookiejar
 import json
 import os
 import sys
@@ -19,17 +20,24 @@ def env(name: str) -> str:
     return os.environ.get(name, "").strip()
 
 
-def request_json(url: str, *, payload: dict[str, Any] | None = None, token: str) -> tuple[int, dict[str, Any]]:
+def request_json(
+    url: str,
+    *,
+    payload: dict[str, Any] | None = None,
+    token: str = "",
+    opener: urllib.request.OpenerDirector | None = None,
+) -> tuple[int, dict[str, Any]]:
     body = None
     method = "GET"
-    headers = {"x-fantasyiq-admin-token": token}
+    headers = {"x-fantasyiq-admin-token": token} if token else {}
     if payload is not None:
         body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
         headers["Content-Type"] = "application/json"
         method = "POST"
     request = urllib.request.Request(url, data=body, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        open_request = opener.open if opener else urllib.request.urlopen
+        with open_request(request, timeout=30) as response:
             return response.status, json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         raw = exc.read().decode("utf-8", errors="replace")
@@ -38,6 +46,21 @@ def request_json(url: str, *, payload: dict[str, Any] | None = None, token: str)
         except json.JSONDecodeError:
             data = {"message": raw}
         return exc.code, data
+
+
+def admin_opener(site_url: str) -> urllib.request.OpenerDirector:
+    gate_password = env("FANTASYIQ_ADMIN_GATE_PASSWORD")
+    if not gate_password:
+        raise RuntimeError("FANTASYIQ_ADMIN_GATE_PASSWORD is missing from .env.local.")
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+    status, payload = request_json(
+        f"{site_url.rstrip('/')}/api/admin-gate",
+        payload={"password": gate_password},
+        opener=opener,
+    )
+    if status != 200 or not payload.get("ok"):
+        raise RuntimeError(f"Admin gate sign-in failed: {payload.get('message') or status}")
+    return opener
 
 
 def main() -> int:
@@ -51,8 +74,13 @@ def main() -> int:
     if not token:
         print("FANTASYIQ_ADMIN_TOKEN is missing from .env.local.")
         return 1
+    try:
+        opener = admin_opener(site_url)
+    except RuntimeError as exc:
+        print(str(exc))
+        return 1
 
-    status, payload = request_json(f"{site_url.rstrip('/')}/api/admin-customers", token=token)
+    status, payload = request_json(f"{site_url.rstrip('/')}/api/admin-customers", token=token, opener=opener)
     if status != 200 or not payload.get("ok"):
         print(f"Admin email readiness check failed: {payload.get('message') or status}")
         return 1
@@ -68,6 +96,7 @@ def main() -> int:
             f"{site_url.rstrip('/')}/api/admin-customers",
             payload={"action": "send_setup_email", "customer": args.send},
             token=token,
+            opener=opener,
         )
         result = send_payload.get("email") or {}
         if send_status != 200 or not send_payload.get("ok") or not result.get("sent"):

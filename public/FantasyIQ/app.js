@@ -159,6 +159,7 @@ const leagueHealthScore = document.querySelector("#league-health-score");
 const leagueHealthGrid = document.querySelector("#league-health-grid");
 const boardMethodNote = document.querySelector("#board-method-note");
 const accountAddLeague = document.querySelector("#account-add-league");
+const accountManageBilling = document.querySelector("#account-manage-billing");
 const accountDashboardName = document.querySelector("#account-dashboard-name");
 const accountDashboardStatus = document.querySelector("#account-dashboard-status");
 const accountLeagueSlots = document.querySelector("#account-league-slots");
@@ -1569,6 +1570,40 @@ function addLeagueActionTitle(count = configuredLeagueCount()) {
   const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
   if (requiresCustomerAccess() && count <= 0) return "Finish league setup";
   return count < limit ? "Add included league" : `Add extra league (${price})`;
+}
+
+async function openBillingPortal() {
+  if (!hasCustomerAccess()) {
+    showCustomerAccessGate("Sign in with your checkout email and password before managing billing.");
+    return;
+  }
+  const originalText = accountManageBilling?.textContent || "Manage Billing";
+  if (accountManageBilling) {
+    accountManageBilling.disabled = true;
+    accountManageBilling.textContent = "Opening...";
+  }
+  try {
+    const response = await fetch("/api/customer-portal", {
+      method: "POST",
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok || !payload.url) {
+      throw new Error(payload.message || "Could not open billing portal.");
+    }
+    window.location.href = payload.url;
+  } catch (error) {
+    if (accountDashboardStatus) {
+      accountDashboardStatus.textContent = error.message || "Could not open billing portal. Contact support.";
+    }
+    if (accountManageBilling) {
+      accountManageBilling.disabled = false;
+      accountManageBilling.textContent = originalText;
+    }
+  }
 }
 
 function currentLeagueDisplayLabel() {
@@ -7039,6 +7074,7 @@ document.addEventListener("click", (event) => {
 leagueSelect?.addEventListener("change", () => setActiveLeague(leagueSelect.value));
 addLeagueAction?.addEventListener("click", openAddLeagueDialog);
 accountAddLeague?.addEventListener("click", openAddLeagueDialog);
+accountManageBilling?.addEventListener("click", openBillingPortal);
 
 const savedAutoSync = localStorage.getItem(loadoutStorageKey("auto-sync"));
 if (liveSyncToggle && savedAutoSync !== null) {

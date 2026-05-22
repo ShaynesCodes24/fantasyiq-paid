@@ -264,7 +264,7 @@ def main() -> int:
         board_freshness_check(),
         trade_history_check(),
         page_check("Setup page", f"{SITE_URL}/setup.html", ["Set up FantasyIQ in two minutes", "Create or reset your password", "auto-fills"]),
-        page_check("Admin page", f"{SITE_URL}/admin.html", ["Customer operations"]),
+        page_check("Admin gate page", f"{SITE_URL}/admin-login.html", ["Admin sign in"]),
         setup_validate_check(),
         customer_status_check(),
         password_reset_check(),

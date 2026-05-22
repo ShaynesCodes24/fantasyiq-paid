@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Sign In - MyFantasyIQ</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
+    <link rel="shortcut icon" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260521-premium-3" />
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="stylesheet" href="./site.css?v=20260521_myfantasyiq_premium_3" />
+  </head>
+  <body class="policy-page">
+    <header class="site-header">
+      <a class="brand" href="./">
+        <img src="./FantasyIQ/assets/myfantasyiq-wordmark.svg?v=20260522-centered-com-readable" alt="MyFantasyIQ logo" />
+        <span>MyFantasyIQ</span>
+      </a>
+      <nav aria-label="Admin sign-in navigation">
+        <a href="./">Home</a>
+        <a href="./help.html">Help</a>
+      </nav>
+    </header>
+
+    <main class="policy-main">
+      <section class="policy-card">
+        <p class="eyebrow">Owner Admin</p>
+        <h1>Admin sign in</h1>
+        <p>Enter the admin gate password before opening customer operations.</p>
+
+        <form class="tool-card" id="admin-gate-form">
+          <label class="stacked-field">
+            Admin gate password
+            <input id="admin-gate-password" type="password" autocomplete="current-password" required />
+          </label>
+          <div class="button-row">
+            <button class="primary" type="submit">Continue</button>
+            <a class="secondary" href="./">Cancel</a>
+          </div>
+          <div class="result-panel" id="admin-gate-result">Admin access is locked.</div>
+        </form>
+      </section>
+    </main>
+
+    <script>
+      const form = document.querySelector("#admin-gate-form");
+      const password = document.querySelector("#admin-gate-password");
+      const result = document.querySelector("#admin-gate-result");
+      const next = new URLSearchParams(window.location.search).get("next") || "/admin.html";
+
+      function safeNext(value) {
+        return value.startsWith("/") && !value.startsWith("//") ? value : "/admin.html";
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        result.textContent = "Checking admin access...";
+        const button = form.querySelector("button[type='submit']");
+        button.disabled = true;
+        try {
+          const response = await fetch("/api/admin-gate", {
+            method: "POST",
+            cache: "no-store",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password: password.value }),
+          });
+          const payload = await response.json();
+          if (!response.ok || !payload.ok) {
+            throw new Error(payload.message || "Admin sign in failed.");
+          }
+          window.location.href = safeNext(next);
+        } catch (error) {
+          result.textContent = error.message || "Admin sign in failed.";
+          button.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

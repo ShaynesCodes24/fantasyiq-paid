@@ -59,5 +59,7 @@ These should be resolved before advertising widely:
 - Done: Public demo says "Demo Mode" and "No customer account is loaded."
 - Done: Setup, success, admin, and API routes are marked noindex/noarchive through page metadata or response headers.
 - Done: Archived/hidden the old $25 Stripe product from new buyers while preserving legacy access.
-- Blocker: Create a Stripe customer portal link before scaling annual renewals beyond hands-on support.
-- Blocker: Add stronger admin MFA or identity-provider protection before delegating admin access.
+- Done: Added a signed-in customer portal endpoint and Account tab Manage Billing button.
+- Done: Added an admin gate sign-in cookie in front of `/admin.html` and `/api/admin-customers`.
+- Blocker: Configure Stripe Customer Portal rules in Stripe Dashboard before scaling annual renewals beyond hands-on support.
+- Blocker: Add SSO or identity-provider MFA before delegating admin access to anyone besides the owner.

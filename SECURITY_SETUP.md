@@ -10,6 +10,8 @@ dashboard.
 - Never paste live secrets into docs, chat, screenshots, or committed files.
 - Delete `.env.local` after one-time setup commands if the values are no longer
   needed.
+- Use `scripts/set_vercel_secret.ps1` to paste production secrets into Vercel
+  without writing the value to disk or exposing it in command history.
 
 ## Production Environment
 
@@ -17,8 +19,22 @@ Set these in Vercel project settings, not in `vercel.json`:
 
 ```text
 FANTASYIQ_ADMIN_TOKEN
+FANTASYIQ_ADMIN_GATE_PASSWORD
+FANTASYIQ_ADMIN_GATE_SECRET
 STRIPE_WEBHOOK_SECRET
 FANTASY_IQ_CUSTOMERS_JSON
+```
+
+To set or rotate a production secret from PowerShell:
+
+```powershell
+.\scripts\set_vercel_secret.ps1 -Name STRIPE_SECRET_KEY
+.\scripts\set_vercel_secret.ps1 -Name STRIPE_WEBHOOK_SECRET
+.\scripts\set_vercel_secret.ps1 -Name RESEND_API_KEY
+.\scripts\set_vercel_secret.ps1 -Name DATABASE_URL
+.\scripts\set_vercel_secret.ps1 -Name FANTASYIQ_ADMIN_TOKEN
+.\scripts\set_vercel_secret.ps1 -Name FANTASYIQ_ADMIN_GATE_PASSWORD
+.\scripts\set_vercel_secret.ps1 -Name FANTASYIQ_ADMIN_GATE_SECRET
 ```
 
 For durable self-serve records and transactional setup email, also set:
@@ -53,12 +69,18 @@ FANTASY_IQ_CUSTOMER_ACCESS_CODE
 
 ## Admin Access
 
-- Use `public/admin.html` with the admin token field.
+- Use `/admin-login.html` first, then `/admin.html` with the admin token field.
+- `/admin.html` and `/api/admin-customers` require a signed admin gate cookie
+  before the header token is checked.
 - Do not put admin tokens in URLs.
+- Keep `FANTASYIQ_ADMIN_GATE_PASSWORD`, `FANTASYIQ_ADMIN_GATE_SECRET`, and
+  `FANTASYIQ_ADMIN_TOKEN` as separate long random secrets.
 - Rotate `FANTASYIQ_ADMIN_TOKEN` if it is ever pasted into a browser URL, chat,
   email, or screenshot.
 - Use a long random value for `FANTASYIQ_ADMIN_TOKEN`; the API accepts it by
   header only and compares it without timing leaks.
+- Add SSO or identity-provider MFA before delegating admin access to anyone
+  besides the owner.
 
 ## Launch Abuse Protection
 
@@ -137,11 +159,15 @@ To configure Vercel env vars after setting a local token:
 ```powershell
 $env:VERCEL_TOKEN="your_vercel_token_here"
 $env:VERCEL_PROJECT_NAME="fantasyiq-paid"
+$env:FANTASYIQ_ADMIN_GATE_PASSWORD="long_random_admin_gate_password_here"
+$env:FANTASYIQ_ADMIN_GATE_SECRET="long_random_admin_gate_signing_secret_here"
 $env:FANTASYIQ_ADMIN_TOKEN="long_random_admin_token_here"
 $env:STRIPE_WEBHOOK_SECRET="whsec_your_webhook_secret_here"
 $env:FANTASY_IQ_CUSTOMERS_JSON='{"katelyn":{"customerName":"Katelyn Holladay","teamId":5,"teamName":"KatAttack","leagueId":584856941,"season":2026,"status":"configured","accessCode":"customer_code_here"}}'
 python .\scripts\secure_launch_setup.py --apply-vercel-env
 Remove-Item Env:\VERCEL_TOKEN
+Remove-Item Env:\FANTASYIQ_ADMIN_GATE_PASSWORD
+Remove-Item Env:\FANTASYIQ_ADMIN_GATE_SECRET
 Remove-Item Env:\FANTASYIQ_ADMIN_TOKEN
 Remove-Item Env:\STRIPE_WEBHOOK_SECRET
 Remove-Item Env:\FANTASY_IQ_CUSTOMERS_JSON

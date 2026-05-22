@@ -231,6 +231,26 @@ def customer_auth_record(slug_or_email: str) -> dict[str, Any] | None:
             return fetch_one_dict(cursor)
 
 
+def customer_billing_record(slug: str) -> dict[str, Any] | None:
+    lookup = slugify(slug)
+    if not lookup or not database_enabled():
+        return None
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT slug, customer_name, email, stripe_customer_id,
+                       status, subscription_status
+                  FROM fantasyiq_customers
+                 WHERE slug = %s
+                 LIMIT 1
+                """,
+                (lookup,),
+            )
+            return fetch_one_dict(cursor)
+
+
 def set_customer_password(slug: str, password_hash: str) -> dict[str, Any] | None:
     if not database_enabled():
         raise DatabaseUnavailable("Database is not enabled.")

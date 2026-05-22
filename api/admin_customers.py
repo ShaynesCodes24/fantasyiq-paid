@@ -12,9 +12,31 @@ from pathlib import Path
 from typing import Any
 
 try:
+    from admin_gate_auth import (
+        admin_gate_cookie,
+        admin_gate_max_age,
+        admin_gate_password,
+        admin_gate_secret,
+        admin_gate_token_from_headers,
+        clear_admin_gate_cookie,
+        require_admin_gate,
+        sign_admin_gate,
+        verify_admin_gate_token,
+    )
     from customer_context import ConfigError, all_customer_contexts, env
     from rate_limit import check_rate_limit, rate_limit_payload
 except ModuleNotFoundError:
+    from api.admin_gate_auth import (
+        admin_gate_cookie,
+        admin_gate_max_age,
+        admin_gate_password,
+        admin_gate_secret,
+        admin_gate_token_from_headers,
+        clear_admin_gate_cookie,
+        require_admin_gate,
+        sign_admin_gate,
+        verify_admin_gate_token,
+    )
     from api.customer_context import ConfigError, all_customer_contexts, env
     from api.rate_limit import check_rate_limit, rate_limit_payload
 
@@ -56,11 +78,62 @@ def auth_token_from(handler: BaseHTTPRequestHandler) -> str:
 
 
 def require_admin(handler: BaseHTTPRequestHandler) -> None:
+    require_admin_gate(handler.headers)
     expected = env("FANTASYIQ_ADMIN_TOKEN")
     if not expected:
         raise PermissionError("FANTASYIQ_ADMIN_TOKEN is not configured.")
     if not hmac.compare_digest(auth_token_from(handler), expected):
         raise PermissionError("Invalid admin token.")
+
+
+def is_admin_gate_request(handler: BaseHTTPRequestHandler) -> bool:
+    return "route=admin_gate" in str(handler.path or "")
+
+
+def admin_gate_payload(handler: BaseHTTPRequestHandler) -> dict[str, Any]:
+    ok = verify_admin_gate_token(admin_gate_token_from_headers(handler.headers))
+    return {"ok": ok, "authenticated": ok, "syncedAt": utc_now()}
+
+
+def handle_admin_gate_post(handler: BaseHTTPRequestHandler) -> tuple[dict[str, Any], HTTPStatus, list[tuple[str, str]]]:
+    raw = parse_body(handler)
+    action = str(raw.get("action") or "login").strip().lower()
+    if action == "logout":
+        return (
+            {"ok": True, "authenticated": False, "syncedAt": utc_now()},
+            HTTPStatus.OK,
+            [("Set-Cookie", clear_admin_gate_cookie(handler.headers))],
+        )
+
+    limit = check_rate_limit(
+        "admin_gate",
+        headers=handler.headers,
+        raw={"password": "attempt"},
+        fields=("password",),
+        limit=8,
+        window_seconds=600,
+    )
+    if not limit.allowed:
+        return (
+            rate_limit_payload(limit, "Too many admin gate attempts. Wait a few minutes, then try again."),
+            HTTPStatus.TOO_MANY_REQUESTS,
+            [],
+        )
+
+    expected = admin_gate_password()
+    if not expected:
+        raise PermissionError("FANTASYIQ_ADMIN_GATE_PASSWORD is not configured.")
+    if not admin_gate_secret():
+        raise PermissionError("FANTASYIQ_ADMIN_GATE_SECRET is not configured.")
+    if not hmac.compare_digest(str(raw.get("password") or ""), expected):
+        raise PermissionError("Invalid admin gate password.")
+
+    token = sign_admin_gate(int(time.time()))
+    return (
+        {"ok": True, "authenticated": True, "syncedAt": utc_now()},
+        HTTPStatus.OK,
+        [("Set-Cookie", admin_gate_cookie(token, handler.headers, max_age=admin_gate_max_age()))],
+    )
 
 
 def days_until(value: str) -> int | None:
@@ -578,17 +651,28 @@ def admin_action(raw: dict[str, Any]) -> dict[str, Any]:
 
 
 class handler(BaseHTTPRequestHandler):
-    def send_json(self, payload: dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> None:
+    def send_json(
+        self,
+        payload: dict[str, Any],
+        status: HTTPStatus = HTTPStatus.OK,
+        extra_headers: list[tuple[str, str]] | None = None,
+    ) -> None:
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Robots-Tag", "noindex, nofollow")
+        for name, value in extra_headers or []:
+            self.send_header(name, value)
         self.end_headers()
         self.wfile.write(body)
 
     def do_GET(self) -> None:
         try:
+            if is_admin_gate_request(self):
+                self.send_json(admin_gate_payload(self))
+                return
             limit = check_rate_limit("admin_customers", headers=self.headers, limit=20, window_seconds=600)
             if not limit.allowed:
                 self.send_json(
@@ -605,6 +689,10 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         try:
+            if is_admin_gate_request(self):
+                payload, status, extra_headers = handle_admin_gate_post(self)
+                self.send_json(payload, status, extra_headers)
+                return
             limit = check_rate_limit("admin_customers", headers=self.headers, limit=20, window_seconds=600)
             if not limit.allowed:
                 self.send_json(

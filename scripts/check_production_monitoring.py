@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import http.cookiejar
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -68,6 +69,32 @@ def post_json(
     )
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
+            return response.status, response.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as exc:
+        return exc.code, exc.read().decode("utf-8", errors="replace")
+    except urllib.error.URLError as exc:
+        return 0, str(exc)
+
+
+def opener_post_json(
+    opener: urllib.request.OpenerDirector,
+    url: str,
+    payload: dict[str, Any],
+    timeout: int = 30,
+    headers: dict[str, str] | None = None,
+) -> tuple[int, str]:
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "FantasyIQ production monitoring check",
+            **(headers or {}),
+        },
+        method="POST",
+    )
+    try:
+        with opener.open(request, timeout=timeout) as response:
             return response.status, response.read().decode("utf-8", errors="replace")
     except urllib.error.HTTPError as exc:
         return exc.code, exc.read().decode("utf-8", errors="replace")
@@ -164,6 +191,7 @@ def admin_auth_boundary_check() -> Result:
 
 def admin_ops_check() -> Result:
     token = os.environ.get("FANTASYIQ_ADMIN_TOKEN", "").strip()
+    gate_password = os.environ.get("FANTASYIQ_ADMIN_GATE_PASSWORD", "").strip()
     if not token:
         status = "FAIL" if STRICT else "WARN"
         return Result(
@@ -171,8 +199,29 @@ def admin_ops_check() -> Result:
             status,
             "set FANTASYIQ_ADMIN_TOKEN locally to verify protected production ops events",
         )
+    if not gate_password:
+        status = "FAIL" if STRICT else "WARN"
+        return Result(
+            "Admin ops events",
+            status,
+            "set FANTASYIQ_ADMIN_GATE_PASSWORD locally to verify protected production ops events",
+        )
 
-    status, body = post_json(
+    cookie_jar = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie_jar))
+    gate_status, gate_body = opener_post_json(
+        opener,
+        f"{SITE_URL}/api/admin-gate",
+        {"password": gate_password},
+    )
+    gate_payload, gate_error = parse_json("Admin gate", gate_status, gate_body)
+    if gate_error:
+        return gate_error
+    if gate_status != 200 or gate_payload.get("ok") is not True:
+        return Result("Admin ops events", "FAIL", f"admin gate returned HTTP {gate_status}: {gate_payload.get('message', 'unknown error')}")
+
+    status, body = opener_post_json(
+        opener,
         ADMIN_URL,
         {"action": "ops_events", "limit": 10},
         headers={"x-fantasyiq-admin-token": token},
@@ -213,7 +262,7 @@ def main() -> int:
         page_check("Dashboard page", "/FantasyIQ/", "FantasyIQ"),
         page_check("Setup page", "/setup.html", "Set up FantasyIQ"),
         page_check("Help page", "/help.html", "FantasyIQ Q&A"),
-        page_check("Admin page", "/admin.html", "Customer operations"),
+        page_check("Admin gate page", "/admin-login.html", "Admin sign in"),
         json_endpoint_check("Live draft API", "/api/live-draft"),
         live_boards_check(),
         webhook_boundary_check(),

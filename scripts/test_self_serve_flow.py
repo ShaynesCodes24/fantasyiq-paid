@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import http.cookiejar
 import json
 import os
 import sys
@@ -27,13 +28,21 @@ SITE_URL = os.environ.get("FANTASYIQ_SITE_URL", "https://myfantasyiq.com").rstri
 TEST_LEAGUE_ID = "584856941"
 TEST_TEAM_ID = "5"
 TEST_SEASON = "2026"
+ADMIN_OPENER: urllib.request.OpenerDirector | None = None
 
 
 def env(name: str) -> str:
     return os.environ.get(name, "").strip()
 
 
-def request_json(url: str, *, method: str = "GET", payload: dict[str, Any] | None = None, headers: dict[str, str] | None = None) -> tuple[int, dict[str, Any]]:
+def request_json(
+    url: str,
+    *,
+    method: str = "GET",
+    payload: dict[str, Any] | None = None,
+    headers: dict[str, str] | None = None,
+    opener: urllib.request.OpenerDirector | None = None,
+) -> tuple[int, dict[str, Any]]:
     body = None
     request_headers = headers or {}
     if payload is not None:
@@ -41,7 +50,8 @@ def request_json(url: str, *, method: str = "GET", payload: dict[str, Any] | Non
         request_headers = {"Content-Type": "application/json", **request_headers}
     request = urllib.request.Request(url, data=body, headers=request_headers, method=method)
     try:
-        with urllib.request.urlopen(request, timeout=45) as response:
+        open_request = opener.open if opener else urllib.request.urlopen
+        with open_request(request, timeout=45) as response:
             return response.status, json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         raw = exc.read().decode("utf-8", errors="replace")
@@ -50,6 +60,27 @@ def request_json(url: str, *, method: str = "GET", payload: dict[str, Any] | Non
         except json.JSONDecodeError:
             data = {"message": raw}
         return exc.code, data
+
+
+def admin_opener() -> urllib.request.OpenerDirector:
+    global ADMIN_OPENER
+    if ADMIN_OPENER is not None:
+        return ADMIN_OPENER
+    gate_password = env("FANTASYIQ_ADMIN_GATE_PASSWORD")
+    if not gate_password:
+        raise RuntimeError("FANTASYIQ_ADMIN_GATE_PASSWORD is missing from .env.local.")
+    cookie_jar = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie_jar))
+    status, data = request_json(
+        f"{SITE_URL}/api/admin-gate",
+        method="POST",
+        payload={"password": gate_password},
+        opener=opener,
+    )
+    if status != 200 or not data.get("ok"):
+        raise RuntimeError(f"Admin gate sign-in failed: {data}")
+    ADMIN_OPENER = opener
+    return opener
 
 
 def signed_stripe_headers(secret: str, body: bytes, timestamp: int) -> dict[str, str]:
@@ -107,6 +138,7 @@ def admin_action(action: str, customer: str = "", **extra: Any) -> dict[str, Any
         method="POST",
         payload={"action": action, "customer": customer, **extra},
         headers={"x-fantasyiq-admin-token": token},
+        opener=admin_opener(),
     )
     if status != 200 or not data.get("ok"):
         raise RuntimeError(f"Admin action {action} failed: {data}")

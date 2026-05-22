@@ -70,7 +70,7 @@ async function checkPublicPages(browser, viewport) {
     { route: "/", name: "home", text: "FantasyIQ" },
     { route: "/setup.html", name: "setup", text: "Set up FantasyIQ in two minutes" },
     { route: "/success.html", name: "success", text: "Welcome to FantasyIQ" },
-    { route: "/admin.html", name: "admin", text: "Customer operations" },
+    { route: "/admin-login.html", name: "admin-gate", text: "Admin sign in" },
     { route: "/help.html", name: "help", text: "FantasyIQ Q&A" },
     { route: "/feedback.html", name: "feedback", text: "Help improve MyFantasyIQ" },
   ];

@@ -86,7 +86,11 @@
     },
     {
       "source": "/api/customer-feedback",
-      "destination": "/api/customer_feedback"
+      "destination": "/api/setup_validate?route=customer_feedback"
+    },
+    {
+      "source": "/api/customer-portal",
+      "destination": "/api/customer_status?route=customer_portal"
     },
     {
       "source": "/api/add-league-checkout",
@@ -99,6 +103,10 @@
     {
       "source": "/api/admin-customers",
       "destination": "/api/admin_customers"
+    },
+    {
+      "source": "/api/admin-gate",
+      "destination": "/api/admin_customers?route=admin_gate"
     },
     {
       "source": "/api/stripe-webhook",
@@ -190,6 +198,19 @@
     },
     {
       "source": "/admin.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/admin-login.html",
       "headers": [
         {
           "key": "Cache-Control",

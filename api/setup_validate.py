@@ -49,6 +49,7 @@ ALLOWED_TRACKING_PREFIXES = (
     "dashboard.",
     "login.",
 )
+LIKERT_OPTIONS = {"Strongly Agree", "Agree", "Neutral", "Disagree", "Strongly Disagree"}
 
 
 def clean_event_type(value: Any) -> str:
@@ -77,6 +78,110 @@ def public_tracking_payload(raw: dict[str, Any]) -> dict[str, Any]:
         if isinstance(value, (str, int, float, bool)) or value is None:
             payload[clean_key[:60]] = value
     return payload
+
+
+def clean_feedback_text(value: Any, limit: int = 1200) -> str:
+    text = " ".join(str(value or "").replace("\x00", "").split())
+    return text[:limit]
+
+
+def clean_likert(value: Any) -> str:
+    text = clean_feedback_text(value, 40)
+    return text if text in LIKERT_OPTIONS else ""
+
+
+def clean_rating(value: Any) -> int | None:
+    try:
+        rating = int(str(value or "").strip())
+    except (TypeError, ValueError):
+        return None
+    return rating if 1 <= rating <= 5 else None
+
+
+def feedback_payload(raw: dict[str, Any]) -> dict[str, Any]:
+    rating = clean_rating(raw.get("satisfaction"))
+    if rating is None:
+        raise ConfigError("Choose an overall satisfaction rating.")
+    responses = {
+        "onboardingEase": clean_likert(raw.get("onboardingEase")),
+        "dashboardClarity": clean_likert(raw.get("dashboardClarity")),
+        "productValue": clean_likert(raw.get("productValue")),
+        "decisionConfidence": clean_likert(raw.get("decisionConfidence")),
+    }
+    missing = [key for key, value in responses.items() if not value]
+    if missing:
+        raise ConfigError("Answer each agreement statement before submitting.")
+    return {
+        "email": clean_feedback_text(raw.get("email"), 160).lower(),
+        "customerSlug": slugify(str(raw.get("customer") or raw.get("customerSlug") or raw.get("dashboard") or "")) if raw.get("customer") or raw.get("customerSlug") or raw.get("dashboard") else "",
+        "leagueKey": slugify(str(raw.get("league") or raw.get("leagueKey") or "")) if raw.get("league") or raw.get("leagueKey") else "",
+        "responses": responses,
+        "issues": clean_feedback_text(raw.get("issues"), 1200),
+        "improvements": clean_feedback_text(raw.get("improvements"), 1200),
+        "satisfaction": rating,
+        "source": clean_feedback_text(raw.get("source") or "customer_feedback_page", 80),
+        "submittedAt": utc_now(),
+    }
+
+
+def record_feedback(payload: dict[str, Any]) -> bool:
+    try:
+        try:
+            from database import record_ops_event
+        except ImportError:
+            from api.database import record_ops_event
+
+        return record_ops_event(
+            event_type="feedback.new_customer_survey",
+            severity="info",
+            source="customer_feedback",
+            customer_slug=payload.get("customerSlug") or "",
+            league_key=payload.get("leagueKey") or "",
+            message=f"New customer feedback survey submitted. Satisfaction: {payload.get('satisfaction')}/5.",
+            payload=payload,
+        )
+    except Exception:
+        return False
+
+
+def is_customer_feedback_request(raw: dict[str, Any]) -> bool:
+    return str(raw.get("route") or "").strip() == "customer_feedback"
+
+
+def handle_customer_feedback(handler: BaseHTTPRequestHandler, raw: dict[str, Any]) -> bool:
+    if not is_customer_feedback_request(raw):
+        return False
+    if str(raw.get("_method") or "").upper() == "GET":
+        handler.send_json({"ok": True, "message": "POST new-customer survey responses to submit feedback."})
+        return True
+    limit = check_rate_limit(
+        "customer_feedback",
+        headers=handler.headers,
+        raw=raw,
+        fields=("email", "customer", "customerSlug", "dashboard"),
+        limit=6,
+        window_seconds=3600,
+    )
+    if not limit.allowed:
+        handler.send_json(
+            rate_limit_payload(limit, "Too many feedback submissions right now. Try again later."),
+            HTTPStatus.TOO_MANY_REQUESTS,
+        )
+        return True
+    payload = feedback_payload(raw)
+    recorded = record_feedback(payload)
+    if not recorded:
+        handler.send_json(
+            {
+                "ok": False,
+                "message": "Feedback could not be saved right now. Please email support@myfantasyiq.com.",
+                "syncedAt": utc_now(),
+            },
+            HTTPStatus.SERVICE_UNAVAILABLE,
+        )
+        return True
+    handler.send_json({"ok": True, "message": "Thank you. Your feedback was sent to the MyFantasyIQ team.", "syncedAt": utc_now()})
+    return True
 
 
 def track_client_event(raw: dict[str, Any]) -> dict[str, Any]:
@@ -566,6 +671,8 @@ class handler(BaseHTTPRequestHandler):
         raw = {key: values[0] if values else "" for key, values in params.items()}
         raw["_method"] = "GET"
         try:
+            if handle_customer_feedback(self, raw):
+                return
             if handle_tracking_if_requested(self, raw):
                 return
             limit = check_rate_limit(
@@ -605,6 +712,8 @@ class handler(BaseHTTPRequestHandler):
             raw = {key: values[0] if values else "" for key, values in params.items()}
             raw.update(parse_body(self))
             raw["_method"] = "POST"
+            if handle_customer_feedback(self, raw):
+                return
             if handle_tracking_if_requested(self, raw):
                 return
             limit = check_rate_limit(

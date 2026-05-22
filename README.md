@@ -107,7 +107,7 @@ Recommended checkout/onboarding flow:
 3. FantasyIQ sends the dashboard/setup email when `RESEND_API_KEY` is configured.
 4. Customer validates each public ESPN league at `/setup.html`.
 5. Customer switches active leagues from the dashboard.
-6. Owner uses `/admin.html` for customer detail, setup email resend, and access-code reset.
+6. Owner unlocks `/admin-login.html`, then uses `/admin.html` for customer detail, setup email resend, and access-code reset.
 
 ## Current Dashboard Experience
 
@@ -128,8 +128,9 @@ practice loop:
   sections instead of dense source-data paragraphs.
 - Pre-draft live room states show readiness, draft order, team-slot guidance,
   smarter empty queues, and an armed post-draft plan before pick 1.
-- Admin operations include an ops event console for setup, login, live sync,
-  email, Stripe, and admin triage events.
+- Admin operations require an admin gate cookie plus the separate admin token,
+  and include an ops event console for setup, login, live sync, email, Stripe,
+  and admin triage events.
 
 ## FantasyIQ OS
 

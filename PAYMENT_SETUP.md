@@ -163,6 +163,32 @@ If you cannot find teamId=, send the full ESPN league URL and your team name.
 4. Complete the setup checklist in `CUSTOMER_ONBOARDING.md` if manual attention is needed.
 5. Set a renewal reminder before the annual renewal date.
 
+## Customer Portal
+
+Signed-in customers can open Stripe's hosted billing portal from the Account tab.
+The frontend calls:
+
+```text
+POST /api/customer-portal
+```
+
+The Python serverless endpoint reads the logged-in session cookie, looks up the
+customer's saved `stripe_customer_id`, creates a Stripe Billing Portal Session,
+and returns the short-lived hosted URL. The browser then redirects directly to
+Stripe.
+
+Required environment variables:
+
+```text
+STRIPE_SECRET_KEY=sk_live_...
+FANTASYIQ_SITE_URL=https://myfantasyiq.com
+FANTASYIQ_STRIPE_PORTAL_RETURN_URL=https://myfantasyiq.com/FantasyIQ/?login=1
+```
+
+In Stripe Dashboard, configure the Customer Portal rules for cancellations,
+payment method updates, invoices, and subscription management before sharing the
+button broadly.
+
 ## Notes
 
 The $30/year Season Pass includes up to three public ESPN leagues on one
