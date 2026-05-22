@@ -111,6 +111,7 @@ const simLog = document.querySelector("#sim-log");
 const externalMockPicks = document.querySelector("#external-mock-picks");
 const externalMockScoring = document.querySelector("#external-mock-scoring");
 const externalMockTeams = document.querySelector("#external-mock-teams");
+const externalMockSlot = document.querySelector("#external-mock-slot");
 const externalMockSuperflex = document.querySelector("#external-mock-superflex");
 const externalMockDoubleFlex = document.querySelector("#external-mock-double-flex");
 const externalMockGrade = document.querySelector("#external-mock-grade");
@@ -6325,8 +6326,11 @@ function renderMockSimulator() {
 function externalMockSettings() {
   const scoringType = normalizeScoringType(externalMockScoring?.value || "ppr");
   const receptionPoints = scoringType === "standard" ? 0 : scoringType === "half-ppr" ? 0.5 : 1;
+  const teamCount = Number(externalMockTeams?.value || 12);
+  const draftSlot = clampNumber(Number(externalMockSlot?.value || teamCount), 1, teamCount);
   return {
-    teamCount: Number(externalMockTeams?.value || 12),
+    teamCount,
+    draftSlot,
     scoringType,
     scoringLabel: SCORING_LABELS[scoringType] || "Full PPR",
     receptionPoints,
@@ -6336,6 +6340,58 @@ function externalMockSettings() {
       SUPERFLEX: externalMockSuperflex?.checked ? 1 : 0,
     },
   };
+}
+
+function syncExternalMockSlots() {
+  if (!externalMockSlot) return;
+  const teamCount = Number(externalMockTeams?.value || 12);
+  const previous = clampNumber(Number(externalMockSlot.value || teamCount), 1, teamCount);
+  externalMockSlot.innerHTML = Array.from({ length: teamCount }, (_, index) => {
+    const slot = index + 1;
+    return `<option value="${slot}">${slot}</option>`;
+  }).join("");
+  externalMockSlot.value = String(previous);
+}
+
+function externalSnakePickForRosterPick(rosterPickIndex, settings) {
+  const teamCount = Number(settings.teamCount || 12);
+  const slot = clampNumber(Number(settings.draftSlot || teamCount), 1, teamCount);
+  const round = rosterPickIndex + 1;
+  const pickInRound = round % 2 === 1 ? slot : teamCount + 1 - slot;
+  return {
+    overall: (round - 1) * teamCount + pickInRound,
+    round,
+    roundPick: pickInRound,
+  };
+}
+
+function explicitExternalPickFromLine(line, settings) {
+  const text = String(line || "").trim();
+  const teamCount = Number(settings.teamCount || 12);
+  const roundPick = text.match(/^\s*(?:round|rd)?\s*(\d{1,2})\s*(?:[.]|(?:\s*(?:pick|pk)\s*))\s*(\d{1,2})\b/i);
+  if (roundPick) {
+    const round = Number(roundPick[1]);
+    const pickInRound = Number(roundPick[2]);
+    if (round >= 1 && pickInRound >= 1 && pickInRound <= teamCount) {
+      return { overall: (round - 1) * teamCount + pickInRound, round, roundPick: pickInRound };
+    }
+  }
+  const overall = text.match(/^\s*(?:pick|pk)\s*(\d{1,3})\b/i);
+  if (overall) {
+    const pick = Number(overall[1]);
+    if (pick >= 1) {
+      return {
+        overall: pick,
+        round: Math.floor((pick - 1) / teamCount) + 1,
+        roundPick: ((pick - 1) % teamCount) + 1,
+      };
+    }
+  }
+  return null;
+}
+
+function externalPickSlotLabel(pick) {
+  return `R${pick.round}.${String(pick.roundPick).padStart(2, "0")} / Overall ${pick.overall}`;
 }
 
 function externalProjectionValue(row, settings) {
@@ -6449,7 +6505,7 @@ function gradeExternalMockDraft() {
   }
   const lines = parseLines(externalMockPicks?.value || "");
   if (!lines.length) {
-    externalMockOutput.innerHTML = "Paste picks from an outside mock draft to get a format-aware grade, build notes, reaches, steals, and roster fixes.";
+    externalMockOutput.innerHTML = "Choose your draft spot, then paste player names from an outside mock draft to get a format-aware grade, build notes, reaches, steals, and roster fixes.";
     return;
   }
 
@@ -6458,14 +6514,16 @@ function gradeExternalMockDraft() {
   const picks = lines.map((line, index) => {
     const clean = cleanExternalMockLine(line);
     const row = findPlayer(clean);
-    const overall = index + 1;
+    const inferredPick = explicitExternalPickFromLine(line, settings) || externalSnakePickForRosterPick(index, settings);
+    const overall = inferredPick.overall;
     const grade = externalMockPickGrade(overall, row, settings);
     return {
       line,
       clean,
       row,
       overall,
-      round: Math.floor(index / Number(settings.teamCount || 12)) + 1,
+      round: inferredPick.round,
+      roundPick: inferredPick.roundPick,
       grade,
       value: row ? externalLeagueValueScore(row, settings) : 0,
       projection: row ? externalProjectionValue(row, settings) : 0,
@@ -6533,13 +6591,14 @@ function gradeExternalMockDraft() {
   const formatParts = [
     settings.scoringLabel,
     `${settings.teamCount} teams`,
+    `Draft spot ${settings.draftSlot}`,
     settings.lineupSlots.SUPERFLEX ? "Superflex" : "1QB",
     settings.lineupSlots.FLEX >= 2 ? "Double flex" : "Single flex",
   ];
   const pickCards = picks.slice(0, 18).map((pick) => {
     const title = pick.row ? `${pick.row.Player} / ${pick.row.Pos} / ${pick.row.Team}` : pick.clean || pick.line;
     return `<div class="pick-card recommendation ${pick.grade.className}">
-      <span>Pick ${pick.overall} / Round ${pick.round}</span>
+      <span>${externalPickSlotLabel(pick)}</span>
       <strong>${htmlEscape(title)}</strong>
       <em>${htmlEscape(pick.grade.label)}</em>
       <small>${htmlEscape(pick.grade.detail)}${pick.row ? ` Value ${pick.value.toFixed(1)} / Projection ${pick.projection ? pick.projection.toFixed(1) : "TBD"}.` : ""}</small>
@@ -6794,9 +6853,14 @@ externalMockClear?.addEventListener("click", clearExternalMockDraft);
 externalMockPicks?.addEventListener("input", () => {
   if ((externalMockPicks.value || "").trim()) gradeExternalMockDraft();
 });
-[externalMockScoring, externalMockTeams, externalMockSuperflex, externalMockDoubleFlex].forEach((control) => {
+[externalMockScoring, externalMockSlot, externalMockSuperflex, externalMockDoubleFlex].forEach((control) => {
   control?.addEventListener("change", gradeExternalMockDraft);
 });
+externalMockTeams?.addEventListener("change", () => {
+  syncExternalMockSlots();
+  gradeExternalMockDraft();
+});
+syncExternalMockSlots();
 simPosition?.addEventListener("change", () => {
   simPositionButtons.forEach((button) => {
     button.classList.toggle("active", (button.dataset.simPos || "") === (simPosition.value || ""));

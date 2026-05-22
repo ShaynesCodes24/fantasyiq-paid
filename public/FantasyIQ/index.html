@@ -783,7 +783,7 @@
             <div class="external-grader-grid">
               <div class="external-grader-input">
                 <label for="external-mock-picks">Paste your drafted players in pick order</label>
-                <textarea id="external-mock-picks" placeholder="One pick per line&#10;Example:&#10;1.01 Christian McCaffrey&#10;2.12 Garrett Wilson&#10;3.01 Josh Allen"></textarea>
+                <textarea id="external-mock-picks" placeholder="One player per line, in the order you drafted them&#10;Example:&#10;Christian McCaffrey&#10;Garrett Wilson&#10;Josh Allen"></textarea>
                 <div class="external-grader-actions">
                   <button id="external-mock-grade" type="button">Grade External Mock</button>
                   <button id="external-mock-clear" class="secondary-action" type="button">Clear</button>
@@ -808,6 +808,23 @@
                     <option value="16">16 teams</option>
                   </select>
                 </label>
+                <label>
+                  Draft Spot
+                  <select id="external-mock-slot">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                    <option value="11">11</option>
+                    <option value="12" selected>12</option>
+                  </select>
+                </label>
                 <label class="compact-toggle">
                   <input id="external-mock-superflex" type="checkbox" />
                   Superflex
@@ -819,7 +836,7 @@
               </div>
             </div>
             <div id="external-mock-output" class="external-grader-output">
-              Paste picks from an outside mock draft to get a format-aware grade, build notes, reaches, steals, and roster fixes.
+              Choose your draft spot, then paste player names from an outside mock draft to get a format-aware grade, build notes, reaches, steals, and roster fixes.
             </div>
           </section>
 
