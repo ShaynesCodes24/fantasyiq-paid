@@ -21,14 +21,16 @@ Dashboard verified: https://myfantasyiq.com/FantasyIQ/?customer=katelyn
 ## Tester Steps
 
 1. Done: Open `https://myfantasyiq.com/`.
-2. Done: Click `Start setup` or `Subscribe`.
-3. Done: Complete Stripe checkout with a real email.
-4. Done: Fill in ESPN league ID, ESPN team ID, and ESPN season.
+2. Done: Run the free ESPN compatibility check before checkout.
+3. Done: Click `Start Season Pass`.
+4. Done: Complete Stripe checkout with a real email.
+5. Done: Confirm the Stripe success page says payment is complete and explains the setup email/access code.
+6. Done: Fill in ESPN league ID, ESPN team ID, and ESPN season.
    - League ID is the number after `leagueId=` in the ESPN browser URL.
    - Team ID is the number after `teamId=` on the ESPN team/roster page URL.
-5. Done: Confirm the hosted confirmation message is configured.
-6. Owner action: Keep the Stripe receipt or confirmation screenshot for records.
-7. Done: Open the dashboard and confirm the board status says it synced a live ESPN board.
+7. Owner action: Keep the Stripe receipt or confirmation screenshot for records.
+8. Done: Open the dashboard and confirm the board status says it synced a live ESPN board.
+9. Done: Log out, log back in with email/password, and confirm the saved league is still present.
 
 ## Owner Steps
 

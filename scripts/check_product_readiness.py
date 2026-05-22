@@ -91,7 +91,7 @@ def root_check() -> CheckResult:
         return CheckResult("Root URL", "FAIL", f"{ROOT_URL} returned HTTP {status}")
     if "FantasyIQ" not in body:
         return CheckResult("Root URL", "FAIL", f"{ROOT_URL} missing: FantasyIQ")
-    if "Start setup" in body and "buy.stripe.com" in body:
+    if ("Start setup" in body or "Start Season Pass" in body or "Check ESPN compatibility" in body) and "buy.stripe.com" in body:
         return CheckResult("Root URL", "PASS", f"{ROOT_URL} is in public sales mode")
     if "Active" in body and "Configured for" in body:
         return CheckResult("Root URL", "PASS", f"{ROOT_URL} redirects to paid customer dashboard")

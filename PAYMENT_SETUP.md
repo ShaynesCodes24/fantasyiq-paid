@@ -101,7 +101,7 @@ The script finds the matching Payment Link URL, then configures:
 
 ```text
 Required fields: primary ESPN league ID, primary ESPN team ID, ESPN season
-After-payment redirect: https://myfantasyiq.com/success.html
+After-payment redirect: https://myfantasyiq.com/success.html?checkout=season-pass
 Metadata: product, support email, website URL, dashboard URL, setup URL, success URL
 ```
 
@@ -139,7 +139,7 @@ If you cannot find teamId=, send the full ESPN league URL and your team name.
 
 ## After Payment
 
-1. Stripe redirects the customer to `https://myfantasyiq.com/success.html`.
+1. Stripe redirects the customer to `https://myfantasyiq.com/success.html?checkout=season-pass`.
 2. The webhook creates or updates the customer record when `DATABASE_URL` is connected.
 3. Send or verify the setup email from `CUSTOMER_EMAILS.md`.
 4. Complete the setup checklist in `CUSTOMER_ONBOARDING.md` if manual attention is needed.

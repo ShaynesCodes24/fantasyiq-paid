@@ -444,7 +444,7 @@ def verify_customer_access(context: CustomerContext, path: str = "", headers: An
     except Exception:
         pass
     if access_code_from(path, headers) != context.access_code:
-        raise PermissionError("Valid customer access code required.")
+        raise PermissionError("That access code does not match this customer dashboard. Check your setup email or contact support.")
 
 
 def authorize_customer_context(path: str = "", headers: Any | None = None) -> CustomerContext:

@@ -35,6 +35,11 @@ FANTASYIQ_SUPPORT_EMAIL
 still creates the customer record and the admin page can resend setup email
 after the key is configured.
 
+Run the database schema after connecting Neon/Postgres. The schema now includes
+customer records, sessions, ops events, and the `fantasyiq_rate_limits` table
+used to throttle login, password, setup, admin, event tracking, and live draft
+requests.
+
 For a single customer deployment, also set:
 
 ```text
@@ -52,6 +57,18 @@ FANTASY_IQ_CUSTOMER_ACCESS_CODE
 - Do not put admin tokens in URLs.
 - Rotate `FANTASYIQ_ADMIN_TOKEN` if it is ever pasted into a browser URL, chat,
   email, or screenshot.
+- Use a long random value for `FANTASYIQ_ADMIN_TOKEN`; the API accepts it by
+  header only and compares it without timing leaks.
+
+## Launch Abuse Protection
+
+- Customer login and password setup endpoints are rate limited by IP plus
+  customer identity.
+- Password reset requests return the same public message whether or not the
+  account exists.
+- ESPN setup validation and live draft sync are throttled so one stuck browser
+  or repeated refresh loop does not overload the API.
+- Client-side tracking is sanitized and throttled before it writes ops events.
 
 ## Customer Records
 
@@ -73,6 +90,12 @@ FANTASY_IQ_CUSTOMER_ACCESS_CODE
 ```powershell
 .\.venv\Scripts\Activate.ps1
 python .\scripts\check_product_readiness.py
+```
+
+Run the security checks before every launch push:
+
+```powershell
+python .\scripts\check_security_setup.py
 ```
 
 After deploying database/webhook changes, run the no-charge self-serve dry run:

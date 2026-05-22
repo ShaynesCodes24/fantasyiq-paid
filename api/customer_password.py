@@ -10,11 +10,13 @@ from urllib.parse import parse_qs
 try:
     from auth_service import make_session, password_hash, password_policy_error, session_cookie
     from customer_context import ConfigError, CustomerContext, all_customer_contexts, database_customer_context, slugify
-    from database import customer_auth_record, set_customer_password, upsert_customer, upsert_league
+    from database import customer_auth_record, record_ops_event, set_customer_password, upsert_customer, upsert_league
+    from rate_limit import check_rate_limit, rate_limit_payload
 except ModuleNotFoundError:
     from api.auth_service import make_session, password_hash, password_policy_error, session_cookie
     from api.customer_context import ConfigError, CustomerContext, all_customer_contexts, database_customer_context, slugify
-    from api.database import customer_auth_record, set_customer_password, upsert_customer, upsert_league
+    from api.database import customer_auth_record, record_ops_event, set_customer_password, upsert_customer, upsert_league
+    from api.rate_limit import check_rate_limit, rate_limit_payload
 
 
 def utc_now() -> str:
@@ -40,6 +42,22 @@ def dashboard_url(customer_slug: str, league_key: str = "") -> str:
     if league_key:
         query["league"] = league_key
     return f"/FantasyIQ/?{urlencode(query)}"
+
+
+def log_password_event(event_type: str, raw: dict[str, Any], message: str, severity: str = "info") -> None:
+    try:
+        identity = str(raw.get("customer") or raw.get("email") or raw.get("dashboard") or "")
+        record_ops_event(
+            event_type=event_type,
+            severity=severity,
+            source="customer_password",
+            customer_slug=slugify(identity) if identity else "",
+            league_key=slugify(str(raw.get("league") or raw.get("leagueKey") or "")) if raw.get("league") or raw.get("leagueKey") else "",
+            message=message[:500],
+            payload={},
+        )
+    except Exception:
+        return
 
 
 def ensure_database_customer(context: CustomerContext) -> None:
@@ -104,16 +122,16 @@ def create_password_payload(raw: dict[str, Any], headers: Any | None = None) -> 
     if context is None:
         context = all_customer_contexts(selected_league).get(slugify(identity))
     if context is None:
-        raise PermissionError("Customer account was not found.")
+        raise PermissionError("We could not find that checkout email. Use the exact email from Stripe checkout or open the setup link from your email.")
     if not context.access_code:
-        raise PermissionError("This customer account does not have an access code yet.")
+        raise PermissionError("This customer account is missing a setup access code. Contact support so we can fix it.")
     if access_code != context.access_code:
-        raise PermissionError("Valid customer access code required.")
+        raise PermissionError("That access code does not match this checkout email. Check your setup email or contact support.")
 
     ensure_database_customer(context)
     saved = set_customer_password(context.slug, password_hash(password))
     if not saved:
-        raise PermissionError("Could not update that customer account.")
+        raise PermissionError("We could not update that password. Contact support if this keeps happening.")
     token, expires_at = make_session(context.slug, headers)
     customer = context.public_dict()
     customer["passwordConfigured"] = True
@@ -148,12 +166,32 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_POST(self) -> None:
+        raw: dict[str, Any] = {}
         try:
-            payload, extra_headers = create_password_payload(parse_body(self), self.headers)
+            raw = parse_body(self)
+            limit = check_rate_limit(
+                "customer_password",
+                headers=self.headers,
+                raw=raw,
+                fields=("customer", "email", "dashboard"),
+                limit=8,
+                window_seconds=900,
+            )
+            if not limit.allowed:
+                log_password_event("password.rate_limited", raw, "Too many password setup attempts.", "warning")
+                self.send_json(
+                    rate_limit_payload(limit, "Too many password setup attempts. Wait a few minutes, then try again."),
+                    HTTPStatus.TOO_MANY_REQUESTS,
+                )
+                return
+            payload, extra_headers = create_password_payload(raw, self.headers)
+            log_password_event("password.created", raw, "Customer password was created or reset.")
             self.send_json(payload, extra_headers=extra_headers)
         except (PermissionError, ConfigError, json.JSONDecodeError) as exc:
+            log_password_event("password.create_failed", raw, str(exc), "warning")
             self.send_json({"ok": False, "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.UNAUTHORIZED)
         except Exception:
+            log_password_event("password.create_failed", raw, "Could not create that password right now.", "warning")
             self.send_json({"ok": False, "message": "Could not create that password right now.", "syncedAt": utc_now()}, HTTPStatus.BAD_GATEWAY)
 
     def do_GET(self) -> None:

@@ -20,7 +20,7 @@ SUPPORT_EMAIL = "support@myfantasyiq.com"
 WEBSITE_URL = "https://myfantasyiq.com/"
 DASHBOARD_URL = "https://myfantasyiq.com/FantasyIQ/"
 SETUP_URL = "https://myfantasyiq.com/setup.html"
-SUCCESS_URL = "https://myfantasyiq.com/success.html"
+SUCCESS_URL = "https://myfantasyiq.com/success.html?checkout=season-pass"
 
 
 def stripe_key() -> str:

@@ -4,7 +4,7 @@ import json
 import os
 import secrets
 from contextlib import contextmanager
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Iterator
 
 
@@ -680,6 +680,56 @@ def record_ops_event(
         return inserted
     except Exception:
         return False
+
+
+def consume_rate_limit(*, bucket_key: str, limit: int, window_seconds: int) -> dict[str, Any]:
+    if not database_enabled():
+        raise DatabaseUnavailable("Database is not enabled.")
+
+    safe_limit = max(1, int_value(limit, 1) or 1)
+    safe_window = max(1, int_value(window_seconds, 60) or 60)
+    now = datetime.now(timezone.utc)
+    epoch = int(now.timestamp())
+    window_epoch = epoch - (epoch % safe_window)
+    window_start = datetime.fromtimestamp(window_epoch, timezone.utc)
+    reset_at = window_start + timedelta(seconds=safe_window)
+    expires_at = window_start + timedelta(seconds=safe_window * 2)
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO fantasyiq_rate_limits (
+                    bucket_key, window_start, request_count, expires_at, updated_at
+                )
+                VALUES (%s, %s, 1, %s, now())
+                ON CONFLICT (bucket_key) DO UPDATE SET
+                    window_start = CASE
+                        WHEN fantasyiq_rate_limits.window_start < EXCLUDED.window_start
+                        THEN EXCLUDED.window_start
+                        ELSE fantasyiq_rate_limits.window_start
+                    END,
+                    request_count = CASE
+                        WHEN fantasyiq_rate_limits.window_start < EXCLUDED.window_start
+                        THEN 1
+                        ELSE fantasyiq_rate_limits.request_count + 1
+                    END,
+                    expires_at = EXCLUDED.expires_at,
+                    updated_at = now()
+                RETURNING request_count, window_start, expires_at
+                """,
+                (bucket_key.strip(), window_start, expires_at),
+            )
+            row = fetch_one_dict(cursor) or {}
+            count = int_value(row.get("request_count"), 0) or 0
+            return {
+                "allowed": count <= safe_limit,
+                "count": count,
+                "limit": safe_limit,
+                "windowSeconds": safe_window,
+                "resetAt": reset_at.isoformat() if isinstance(reset_at, (datetime, date)) else "",
+                "source": "database",
+            }
 
 
 def should_send_ops_alert(event_type: str, severity: str) -> bool:

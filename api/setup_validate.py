@@ -22,6 +22,7 @@ try:
         slugify,
         verify_customer_access,
     )
+    from rate_limit import check_rate_limit, rate_limit_payload
 except ModuleNotFoundError:
     from api.customer_context import (
         DEFAULT_SEASON,
@@ -33,10 +34,96 @@ except ModuleNotFoundError:
         slugify,
         verify_customer_access,
     )
+    from api.rate_limit import check_rate_limit, rate_limit_payload
 
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+ALLOWED_TRACKING_PREFIXES = (
+    "checkout.",
+    "setup.",
+    "password.",
+    "espn.",
+    "dashboard.",
+    "login.",
+)
+
+
+def clean_event_type(value: Any) -> str:
+    event_type = str(value or "").strip().lower().replace("_", ".")
+    cleaned = "".join(char for char in event_type if char.isalnum() or char in ".:-")
+    if not cleaned or not any(cleaned.startswith(prefix) for prefix in ALLOWED_TRACKING_PREFIXES):
+        return "dashboard.event"
+    return cleaned[:120]
+
+
+def is_tracking_payload(raw: dict[str, Any]) -> bool:
+    has_event = bool(raw.get("eventType") or raw.get("event") or raw.get("event_type"))
+    has_setup_ids = bool(raw.get("leagueId") or raw.get("league_id") or raw.get("teamId") or raw.get("team_id"))
+    return has_event and not has_setup_ids
+
+
+def public_tracking_payload(raw: dict[str, Any]) -> dict[str, Any]:
+    blocked = {"email", "password", "accesscode", "access_code", "code"}
+    payload: dict[str, Any] = {}
+    for key, value in raw.items():
+        clean_key = str(key or "").strip()
+        if not clean_key or clean_key.lower() in blocked:
+            continue
+        if clean_key in {"eventType", "event", "event_type", "customer", "dashboard", "league", "leagueKey", "source", "message"}:
+            continue
+        if isinstance(value, (str, int, float, bool)) or value is None:
+            payload[clean_key[:60]] = value
+    return payload
+
+
+def track_client_event(raw: dict[str, Any]) -> dict[str, Any]:
+    event_type = clean_event_type(raw.get("eventType") or raw.get("event") or raw.get("event_type"))
+    source = str(raw.get("source") or "client").strip()[:80]
+    customer_slug = slugify(str(raw.get("customer") or raw.get("dashboard") or "")) if raw.get("customer") or raw.get("dashboard") else ""
+    league_key = slugify(str(raw.get("league") or raw.get("leagueKey") or "")) if raw.get("league") or raw.get("leagueKey") else ""
+    message = str(raw.get("message") or event_type.replace(".", " ")).strip()[:500]
+    tracked = False
+    try:
+        try:
+            from database import record_ops_event
+        except ImportError:
+            from api.database import record_ops_event
+
+        tracked = record_ops_event(
+            event_type=event_type,
+            severity="info",
+            source=source,
+            customer_slug=customer_slug,
+            league_key=league_key,
+            message=message,
+            payload=public_tracking_payload(raw),
+        )
+    except Exception:
+        tracked = False
+    return {"ok": True, "tracked": tracked, "eventType": event_type, "syncedAt": utc_now()}
+
+
+def handle_tracking_if_requested(handler: BaseHTTPRequestHandler, raw: dict[str, Any]) -> bool:
+    if not is_tracking_payload(raw):
+        return False
+    limit = check_rate_limit(
+        "track_event",
+        headers=handler.headers,
+        raw=raw,
+        fields=("eventType", "event", "customer", "dashboard"),
+        limit=120,
+        window_seconds=60,
+    )
+    if not limit.allowed:
+        payload = rate_limit_payload(limit, "Too many events right now.")
+        payload["syncedAt"] = utc_now()
+        handler.send_json(payload, HTTPStatus.TOO_MANY_REQUESTS)
+        return True
+    handler.send_json(track_client_event(raw))
+    return True
 
 
 def clean_digits(value: Any) -> str:
@@ -421,6 +508,36 @@ def log_setup_error(event_type: str, message: str, request_path: str = "") -> No
         return
 
 
+def record_setup_event(event_type: str, raw: dict[str, Any], payload: dict[str, Any] | None = None, severity: str = "info") -> None:
+    try:
+        try:
+            from database import record_ops_event
+        except ImportError:
+            from api.database import record_ops_event
+
+        customer = slugify(str(raw.get("customer") or raw.get("dashboard") or raw.get("customerSlug") or "")) if raw.get("customer") or raw.get("dashboard") or raw.get("customerSlug") else ""
+        league_key = slugify(str(raw.get("league") or raw.get("leagueKey") or "")) if raw.get("league") or raw.get("leagueKey") else ""
+        clean_payload = {
+            "leagueId": (payload or {}).get("leagueId") or raw.get("leagueId") or raw.get("league_id") or "",
+            "teamId": (payload or {}).get("teamId") or raw.get("teamId") or raw.get("team_id") or "",
+            "season": (payload or {}).get("season") or raw.get("season") or DEFAULT_SEASON,
+            "status": (payload or {}).get("status") or "",
+            "saved": bool((payload or {}).get("saved")),
+            "method": str(raw.get("_method") or ""),
+        }
+        record_ops_event(
+            event_type=event_type,
+            severity=severity,
+            source="setup_validate",
+            customer_slug=customer,
+            league_key=league_key,
+            message=str((payload or {}).get("message") or event_type.replace(".", " "))[:500],
+            payload=clean_payload,
+        )
+    except Exception:
+        return
+
+
 class handler(BaseHTTPRequestHandler):
     def send_json(self, payload: dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> None:
         body = json.dumps(payload).encode("utf-8")
@@ -434,28 +551,85 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         params = parse_qs(urlparse(self.path).query)
         raw = {key: values[0] if values else "" for key, values in params.items()}
+        raw["_method"] = "GET"
         try:
+            if handle_tracking_if_requested(self, raw):
+                return
+            limit = check_rate_limit(
+                "setup_validate",
+                headers=self.headers,
+                raw=raw,
+                fields=("leagueId", "league_id", "teamId", "team_id", "customer", "dashboard"),
+                limit=40,
+                window_seconds=600,
+            )
+            if not limit.allowed:
+                record_setup_event("setup.rate_limited", raw, {"status": "rate_limited", "message": "Too many setup checks."}, "warning")
+                payload = rate_limit_payload(limit, "Too many ESPN setup checks. Wait a few minutes, then try again.")
+                payload["status"] = "rate_limited"
+                payload["syncedAt"] = utc_now()
+                self.send_json(payload, HTTPStatus.TOO_MANY_REQUESTS)
+                return
+            record_setup_event("setup.validation_attempted", raw)
             payload, status = validate_setup(raw)
+            record_setup_event(
+                "setup.validation_passed" if payload.get("ok") else "setup.validation_failed",
+                raw,
+                payload,
+                "info" if payload.get("ok") else "warning",
+            )
             self.send_json(payload, status)
         except ConfigError as exc:
+            record_setup_event("setup.validation_failed", raw, {"status": "invalid_input", "message": str(exc)}, "warning")
             self.send_json({"ok": False, "status": "invalid_input", "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.BAD_REQUEST)
         except Exception as exc:
+            record_setup_event("setup.validation_failed", raw, {"status": "validation_error", "message": str(exc)}, "warning")
             self.send_json({"ok": False, "status": "validation_error", "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.BAD_GATEWAY)
 
     def do_POST(self) -> None:
         try:
-            raw = parse_body(self)
+            params = parse_qs(urlparse(self.path).query)
+            raw = {key: values[0] if values else "" for key, values in params.items()}
+            raw.update(parse_body(self))
+            raw["_method"] = "POST"
+            if handle_tracking_if_requested(self, raw):
+                return
+            limit = check_rate_limit(
+                "setup_validate",
+                headers=self.headers,
+                raw=raw,
+                fields=("leagueId", "league_id", "teamId", "team_id", "customer", "dashboard"),
+                limit=30,
+                window_seconds=600,
+            )
+            if not limit.allowed:
+                record_setup_event("setup.rate_limited", raw, {"status": "rate_limited", "message": "Too many setup checks."}, "warning")
+                payload = rate_limit_payload(limit, "Too many ESPN setup checks. Wait a few minutes, then try again.")
+                payload["status"] = "rate_limited"
+                payload["syncedAt"] = utc_now()
+                self.send_json(payload, HTTPStatus.TOO_MANY_REQUESTS)
+                return
+            record_setup_event("setup.validation_attempted", raw)
             payload, status = validate_setup(raw)
             payload = save_setup_if_requested(raw, payload, self.headers)
+            record_setup_event(
+                "setup.validation_passed" if payload.get("ok") else "setup.validation_failed",
+                raw,
+                payload,
+                "info" if payload.get("ok") else "warning",
+            )
             self.send_json(payload, status)
         except (ConfigError, json.JSONDecodeError) as exc:
             log_setup_error("setup.invalid_input", str(exc), self.path)
+            record_setup_event("setup.validation_failed", locals().get("raw", {}), {"status": "invalid_input", "message": str(exc)}, "warning")
             self.send_json({"ok": False, "status": "invalid_input", "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.BAD_REQUEST)
         except PermissionError as exc:
             log_setup_error("setup.unauthorized", str(exc), self.path)
+            record_setup_event("setup.validation_failed", locals().get("raw", {}), {"status": "unauthorized", "message": str(exc)}, "warning")
             self.send_json({"ok": False, "status": "unauthorized", "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.UNAUTHORIZED)
         except Exception as exc:
             log_setup_error("setup.validation_error", str(exc), self.path)
+            record_setup_event("setup.validation_failed", locals().get("raw", {}), {"status": "validation_error", "message": str(exc)}, "warning")
             self.send_json({"ok": False, "status": "validation_error", "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.BAD_GATEWAY)
 
     def do_HEAD(self) -> None:

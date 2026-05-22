@@ -388,9 +388,9 @@ def persist_checkout_to_database(event: dict[str, Any], session: dict[str, Any],
                 message="Stripe checkout created or updated a customer account.",
                 payload={
                     "stripeEventId": event.get("id") or "",
-                    "stripeObjectId": row.get("stripe_object_id") or "",
-                    "amountTotal": row.get("amount_total"),
-                    "currency": row.get("currency") or "",
+                    "stripeObjectId": session.get("id") or "",
+                    "amountTotal": session.get("amount_total"),
+                    "currency": session.get("currency") or "",
                     "insertedEvent": inserted_event,
                 },
             )
@@ -403,7 +403,7 @@ def persist_checkout_to_database(event: dict[str, Any], session: dict[str, Any],
                 from api.email_service import send_customer_setup_email
             email_result = send_customer_setup_email(
                 saved_customer,
-                league_key=saved_customer.get("default_league_key") or metadata_value(session, "league_key") or "",
+                league_key=str(auto_setup.get("leagueKey") or saved_customer.get("default_league_key") or metadata_value(session, "league_key") or ""),
                 renewal_date=row.get("renewal_date", ""),
                 idempotency_key=f"fantasyiq-setup-{event.get('id') or session.get('id')}",
             )

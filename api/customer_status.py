@@ -4,13 +4,16 @@ import json
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
+from urllib.parse import parse_qs, urlparse
 
 try:
     from customer_context import ConfigError, access_code_from, resolve_customer_context, verify_customer_access
     from auth_service import session_slug_from_headers
+    from rate_limit import check_rate_limit, rate_limit_payload
 except ModuleNotFoundError:
     from api.customer_context import ConfigError, access_code_from, resolve_customer_context, verify_customer_access
     from api.auth_service import session_slug_from_headers
+    from api.rate_limit import check_rate_limit, rate_limit_payload
 
 
 def utc_now() -> str:
@@ -29,6 +32,22 @@ class handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         try:
+            params = {key: values[0] if values else "" for key, values in parse_qs(urlparse(self.path).query).items()}
+            if access_code_from(self.path, self.headers):
+                limit = check_rate_limit(
+                    "customer_status_access",
+                    headers=self.headers,
+                    raw=params,
+                    fields=("customer", "dashboard", "league"),
+                    limit=20,
+                    window_seconds=600,
+                )
+                if not limit.allowed:
+                    self.send_json(
+                        rate_limit_payload(limit, "Too many access checks. Wait a few minutes, then try again."),
+                        HTTPStatus.TOO_MANY_REQUESTS,
+                    )
+                    return
             context = resolve_customer_context(self.path)
             authenticated = not bool(context.access_code)
             if context.access_code and session_slug_from_headers(self.headers) == context.slug:

@@ -42,6 +42,9 @@ Production currently has these tables:
 fantasyiq_customers
 fantasyiq_leagues
 fantasyiq_payment_events
+fantasyiq_sessions
+fantasyiq_ops_events
+fantasyiq_rate_limits
 ```
 
 ## What The Database Stores
@@ -49,6 +52,9 @@ fantasyiq_payment_events
 - `fantasyiq_customers`: customer slug, name, email, dashboard access code, Stripe customer id, subscription status, included league limit.
 - `fantasyiq_leagues`: one or more ESPN league profiles per customer, including league ID, team ID, season, scoring, roster slots, and draft settings.
 - `fantasyiq_payment_events`: idempotent Stripe webhook records so paid checkouts do not disappear after a serverless function ends.
+- `fantasyiq_sessions`: hashed customer session tokens with expiration and revocation timestamps.
+- `fantasyiq_ops_events`: launch funnel, setup, login, email, and error telemetry for support/debugging.
+- `fantasyiq_rate_limits`: rolling request counters for login, setup, admin, live draft, and tracking endpoints.
 
 ## Self-Serve Flow
 

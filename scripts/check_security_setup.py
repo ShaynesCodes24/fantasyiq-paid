@@ -104,7 +104,58 @@ def check_admin_token_transport() -> Result:
         return Result("Admin token transport", "FAIL", "Admin endpoint still accepts URL query tokens.")
     if "x-fantasyiq-admin-token" not in text:
         return Result("Admin token transport", "FAIL", "Admin endpoint is missing the admin token header check.")
+    if "compare_digest" not in text:
+        return Result("Admin token comparison", "FAIL", "Admin endpoint should use constant-time token comparison.")
     return Result("Admin token transport", "PASS", "Admin token is accepted by header only.")
+
+
+def check_security_headers() -> Result:
+    config = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
+    headers = []
+    for rule in config.get("headers") or []:
+        if rule.get("source") == "/(.*)":
+            headers = rule.get("headers") or []
+            break
+    values = {item.get("key"): item.get("value") for item in headers}
+    required = {
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Frame-Options": "DENY",
+    }
+    missing = [key for key, value in required.items() if values.get(key) != value]
+    if missing:
+        return Result("Security headers", "FAIL", f"Missing or changed headers: {', '.join(missing)}")
+    return Result("Security headers", "PASS", "Baseline browser security headers are configured.")
+
+
+def check_rate_limiting() -> Result:
+    schema = (ROOT / "database" / "schema.sql").read_text(encoding="utf-8")
+    if "fantasyiq_rate_limits" not in schema:
+        return Result("Rate limit schema", "FAIL", "database/schema.sql is missing fantasyiq_rate_limits.")
+    helper = ROOT / "api" / "rate_limit.py"
+    if not helper.exists():
+        return Result("Rate limit helper", "FAIL", "api/rate_limit.py is missing.")
+    endpoint_files = [
+        "admin_customers.py",
+        "customer_login.py",
+        "customer_password.py",
+        "customer_password_reset.py",
+        "customer_status.py",
+        "live_draft.py",
+        "setup_validate.py",
+    ]
+    missing = [
+        file_name
+        for file_name in endpoint_files
+        if "check_rate_limit" not in (ROOT / "api" / file_name).read_text(encoding="utf-8")
+    ]
+    if missing:
+        return Result("Rate limited endpoints", "FAIL", f"Missing rate limit checks: {', '.join(missing)}")
+    setup_text = (ROOT / "api" / "setup_validate.py").read_text(encoding="utf-8")
+    if "track_event" not in setup_text or "handle_tracking_if_requested" not in setup_text:
+        return Result("Rate limited endpoints", "FAIL", "Client event tracking is not covered by setup_validate.py.")
+    return Result("Rate limited endpoints", "PASS", "Sensitive launch endpoints have throttling hooks.")
 
 
 def main() -> int:
@@ -114,7 +165,9 @@ def main() -> int:
         check_ignored(".gitignore", REQUIRED_GITIGNORE),
         check_ignored(".vercelignore", REQUIRED_VERCELIGNORE),
         check_vercel_config(),
+        check_security_headers(),
         check_admin_token_transport(),
+        check_rate_limiting(),
     ]
 
     for result in checks:

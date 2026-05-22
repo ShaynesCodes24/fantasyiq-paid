@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import hmac
 import json
 import time
 import urllib.parse
@@ -12,8 +13,10 @@ from typing import Any
 
 try:
     from customer_context import ConfigError, all_customer_contexts, env
+    from rate_limit import check_rate_limit, rate_limit_payload
 except ModuleNotFoundError:
     from api.customer_context import ConfigError, all_customer_contexts, env
+    from api.rate_limit import check_rate_limit, rate_limit_payload
 
 
 CUSTOMER_CSV = Path("customers.csv")
@@ -56,7 +59,7 @@ def require_admin(handler: BaseHTTPRequestHandler) -> None:
     expected = env("FANTASYIQ_ADMIN_TOKEN")
     if not expected:
         raise PermissionError("FANTASYIQ_ADMIN_TOKEN is not configured.")
-    if auth_token_from(handler) != expected:
+    if not hmac.compare_digest(auth_token_from(handler), expected):
         raise PermissionError("Invalid admin token.")
 
 
@@ -217,6 +220,42 @@ def admin_action(raw: dict[str, Any]) -> dict[str, Any]:
             "action": action,
             "opsSummary": summary,
             "opsEvents": events,
+            "syncedAt": utc_now(),
+        }
+
+    if action == "apply_database_schema":
+        schema_path = Path(__file__).resolve().parents[1] / "database" / "schema.sql"
+        if not schema_path.exists():
+            raise ConfigError("Database schema file was not found in the deployment.")
+        try:
+            try:
+                from database import apply_schema, database_status
+            except ImportError:
+                from api.database import apply_schema, database_status
+
+            before = database_status()
+            apply_schema(schema_path.read_text(encoding="utf-8"))
+            after = database_status()
+        except Exception as exc:
+            raise ConfigError(f"Could not apply database schema: {exc}") from exc
+        try:
+            try:
+                from database import record_ops_event
+            except ImportError:
+                from api.database import record_ops_event
+            record_ops_event(
+                event_type="admin.apply_database_schema",
+                severity="info",
+                source="admin_customers",
+                message="Database schema applied from protected admin action.",
+                payload={"before": before, "after": after},
+            )
+        except Exception:
+            pass
+        return {
+            "ok": True,
+            "action": action,
+            "database": after,
             "syncedAt": utc_now(),
         }
 
@@ -550,6 +589,13 @@ class handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         try:
+            limit = check_rate_limit("admin_customers", headers=self.headers, limit=20, window_seconds=600)
+            if not limit.allowed:
+                self.send_json(
+                    rate_limit_payload(limit, "Too many admin attempts. Wait a few minutes, then try again."),
+                    HTTPStatus.TOO_MANY_REQUESTS,
+                )
+                return
             require_admin(self)
             self.send_json(admin_payload())
         except PermissionError as exc:
@@ -559,6 +605,13 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         try:
+            limit = check_rate_limit("admin_customers", headers=self.headers, limit=20, window_seconds=600)
+            if not limit.allowed:
+                self.send_json(
+                    rate_limit_payload(limit, "Too many admin attempts. Wait a few minutes, then try again."),
+                    HTTPStatus.TOO_MANY_REQUESTS,
+                )
+                return
             require_admin(self)
             self.send_json(admin_action(parse_body(self)))
         except PermissionError as exc:

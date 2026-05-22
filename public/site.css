@@ -15,6 +15,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -310,6 +314,38 @@ h3 {
   box-shadow: 0 24px 70px rgba(7, 29, 24, 0.18);
 }
 
+.precheck-section {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 1.1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.precheck-section .section-head {
+  margin-bottom: 0;
+}
+
+.precheck-tool {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  border: 1px solid var(--soft-line);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(255, 248, 232, 0.095), rgba(255, 248, 232, 0.035)),
+    rgba(0, 17, 15, 0.72);
+  padding: 20px;
+  box-shadow: var(--soft-shadow);
+}
+
+.precheck-grid {
+  grid-template-columns: 1fr 1fr 0.7fr;
+}
+
+.precheck-result {
+  background: rgba(255, 248, 232, 0.08);
+}
+
 .faq-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -431,6 +467,16 @@ footer {
   color: var(--muted);
   font-size: 13px;
   font-weight: 750;
+  line-height: 1.45;
+}
+
+.setup-mode-note {
+  border: 1px solid rgba(231, 185, 90, 0.34);
+  border-radius: 8px;
+  background: rgba(231, 185, 90, 0.12);
+  padding: 12px 14px;
+  color: var(--gold-bright);
+  font-weight: 850;
   line-height: 1.45;
 }
 
@@ -853,6 +899,36 @@ button.secondary {
   line-height: 1.55;
 }
 
+.success-checklist {
+  margin-top: 18px;
+  border: 1px solid var(--soft-line);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(255, 248, 232, 0.095), rgba(255, 248, 232, 0.035)),
+    rgba(0, 17, 15, 0.72);
+  padding: 20px;
+  box-shadow: var(--soft-shadow);
+}
+
+.success-checklist h2 {
+  font-size: clamp(24px, 3vw, 34px);
+}
+
+.success-checklist ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--muted);
+  font-weight: 750;
+  line-height: 1.55;
+}
+
+.success-checklist a {
+  color: var(--gold-bright);
+  font-weight: 900;
+}
+
 .success-support {
   display: flex;
   align-items: center;
@@ -885,6 +961,7 @@ button.secondary {
   .proof-strip,
   .workflow,
   .product-preview,
+  .precheck-section,
   .faq-grid {
     grid-template-columns: 1fr;
   }
@@ -1097,7 +1174,8 @@ footer a {
 
   .setup-steps,
   .setup-account-grid,
-  .setup-basic-grid {
+  .setup-basic-grid,
+  .precheck-grid {
     grid-template-columns: 1fr;
   }
 }

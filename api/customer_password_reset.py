@@ -11,10 +11,12 @@ try:
     from customer_context import database_customer_context
     from database import customer_auth_record, record_ops_event
     from email_service import send_customer_password_reset_email
+    from rate_limit import check_rate_limit, rate_limit_payload
 except ModuleNotFoundError:
     from api.customer_context import database_customer_context
     from api.database import customer_auth_record, record_ops_event
     from api.email_service import send_customer_password_reset_email
+    from api.rate_limit import check_rate_limit, rate_limit_payload
 
 
 def utc_now() -> str:
@@ -91,7 +93,22 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         try:
-            payload = password_reset_payload(parse_body(self))
+            raw = parse_body(self)
+            limit = check_rate_limit(
+                "customer_password_reset",
+                headers=self.headers,
+                raw=raw,
+                fields=("customer", "email", "dashboard"),
+                limit=5,
+                window_seconds=3600,
+            )
+            if not limit.allowed:
+                self.send_json(
+                    rate_limit_payload(limit, "Too many password reset requests. Wait a while, then try again."),
+                    HTTPStatus.TOO_MANY_REQUESTS,
+                )
+                return
+            payload = password_reset_payload(raw)
             self.send_json(payload, HTTPStatus.OK if payload.get("ok") else HTTPStatus.BAD_REQUEST)
         except json.JSONDecodeError as exc:
             self.send_json({"ok": False, "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.BAD_REQUEST)

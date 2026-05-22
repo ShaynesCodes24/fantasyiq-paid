@@ -108,6 +108,8 @@ def customer_setup_email(
     subject = "Create your FantasyIQ password"
     text = f"""Thanks for grabbing FantasyIQ.
 
+Your account was created from this checkout email, and this is your setup email.
+
 Your dashboard is ready:
 {dashboard}
 
@@ -120,6 +122,11 @@ Create your password:
 Next step:
 Open the setup page and validate each public ESPN league you want connected. FantasyIQ auto-detects scoring, team count, flex, superflex, bench, and draft rounds from ESPN:
 {setup}
+
+Before draft day:
+- You need your ESPN league ID and team ID.
+- Your ESPN league must be public for live FantasyIQ sync.
+- If the access code does not match your checkout email, contact support.
 
 How to find your ESPN IDs:
 1. Open your ESPN fantasy league in a web browser, not the mobile app.
@@ -142,11 +149,20 @@ Support:
       <p style="color:#8a4f24; font-weight:700; text-transform:uppercase; font-size:12px;">FantasyIQ Season Pass</p>
       <h1 style="color:#0f3a30;">Create your FantasyIQ password</h1>
       <p>Thanks for grabbing FantasyIQ, {escape(name)}.</p>
+      <p>Your account was created from this checkout email, and this is your setup email.</p>
       <p><strong>Access code:</strong><br />{escape(access_code)}</p>
       <p><a href="{escape(create_password)}" style="display:inline-block; background:#0f3a30; color:#fff8e8; font-weight:700; padding:12px 16px; border-radius:8px; text-decoration:none;">Create / reset password</a></p>
       <p><a href="{escape(dashboard)}" style="color:#0f3a30; font-weight:700;">Open your dashboard</a></p>
       <p><strong>Next step:</strong><br />Validate each public ESPN league you want connected. FantasyIQ auto-detects scoring, team count, flex, superflex, bench, and draft rounds from ESPN.</p>
       <p><a href="{escape(setup)}" style="color:#0f3a30; font-weight:700;">Open setup page</a></p>
+      <div style="background:#eef8f1; border:1px solid #b8d8c0; border-radius:8px; padding:14px; margin:18px 0;">
+        <p style="margin:0 0 8px 0;"><strong>Before draft day</strong></p>
+        <ul style="margin:0; padding-left:20px;">
+          <li>You need your ESPN league ID and team ID.</li>
+          <li>Your ESPN league must be public for live FantasyIQ sync.</li>
+          <li>If the access code does not match your checkout email, contact support.</li>
+        </ul>
+      </div>
       <div style="background:#fbf6e8; border:1px solid #e3c875; border-radius:8px; padding:14px; margin:18px 0;">
         <p style="margin:0 0 8px 0;"><strong>How to find your ESPN IDs</strong></p>
         <ol style="margin:0; padding-left:20px;">

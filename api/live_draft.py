@@ -8,12 +8,14 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 try:
     from customer_context import ConfigError, CustomerContext, authorize_customer_context, require_customer_config, resolve_customer_context
+    from rate_limit import check_rate_limit, rate_limit_payload
 except ModuleNotFoundError:
     from api.customer_context import ConfigError, CustomerContext, authorize_customer_context, require_customer_config, resolve_customer_context
+    from api.rate_limit import check_rate_limit, rate_limit_payload
 
 
 class EspnSyncError(RuntimeError):
@@ -487,7 +489,22 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         force = "force=1" in parsed.query
+        params = {key: values[0] if values else "" for key, values in parse_qs(parsed.query).items()}
         try:
+            limit = check_rate_limit(
+                "live_draft",
+                headers=self.headers,
+                raw=params,
+                fields=("customer", "dashboard", "league"),
+                limit=80,
+                window_seconds=60,
+            )
+            if not limit.allowed:
+                log_live_sync_error("live_draft.rate_limited", "Too many live draft sync requests.", self.path)
+                payload = rate_limit_payload(limit, "Live sync is receiving too many requests. Wait a moment, then try again.")
+                payload["syncedAt"] = utc_now()
+                self.send_json(payload, HTTPStatus.TOO_MANY_REQUESTS)
+                return
             self.send_json(build_live_payload(self.path, self.headers, force=force))
         except PermissionError as exc:
             log_live_sync_error("live_draft.unauthorized", str(exc), self.path)

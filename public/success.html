@@ -23,7 +23,7 @@
         <a href="./setup.html">Setup check</a>
         <a href="./help.html">Help</a>
         <a href="mailto:support@myfantasyiq.com">Support</a>
-        <a class="dashboard-link" href="./FantasyIQ/">Dashboard</a>
+        <a class="dashboard-link" href="./FantasyIQ/?login=1">Customer Login</a>
       </nav>
     </header>
 
@@ -32,13 +32,12 @@
         <p class="eyebrow">Season Pass confirmed</p>
         <h1 id="success-title">Welcome to FantasyIQ</h1>
         <p>
-          Your checkout is complete. FantasyIQ creates your account, sends the setup
-          email, and gives you a self-serve setup page to validate each public ESPN
-          league before draft day.
+          Payment complete. Check your email for your FantasyIQ access code, then
+          create your password and connect each public ESPN league before draft day.
         </p>
         <div class="actions">
-          <a class="primary" href="./setup.html">Finish league setup</a>
-          <a class="secondary" href="./FantasyIQ/">Open dashboard</a>
+          <a class="primary" id="success-setup-link" href="./setup.html">Finish league setup</a>
+          <a class="secondary" id="success-dashboard-link" href="./FantasyIQ/?login=1">Customer login</a>
         </div>
       </section>
 
@@ -48,16 +47,16 @@
           <strong>Confirmed</strong>
         </article>
         <article>
-          <span>League setup</span>
-          <strong>Self-serve</strong>
+          <span>Account</span>
+          <strong>Created</strong>
         </article>
         <article>
-          <span>Email</span>
-          <strong>Account details sent</strong>
+          <span>Setup Email</span>
+          <strong>On the way</strong>
         </article>
         <article>
-          <span>Dashboard</span>
-          <strong>Ready after sign in</strong>
+          <span>ESPN League</span>
+          <strong>Must be public</strong>
         </article>
       </section>
 
@@ -66,16 +65,16 @@
           <span>1</span>
           <h2>Check your email</h2>
           <p>
-            Your setup email includes your create-password link, dashboard link,
-            access code, and league setup steps.
+            Your setup email includes your access code, password link, setup link,
+            dashboard link, and support address.
           </p>
         </article>
         <article>
           <span>2</span>
           <h2>Create your password</h2>
           <p>
-            Use the setup access code from your email once. After that, sign in
-            with your email and password.
+            Use the checkout email and access code from your setup email. After
+            that, log in with email and password.
           </p>
         </article>
         <article>
@@ -86,6 +85,18 @@
             and open the saved dashboard.
           </p>
         </article>
+      </section>
+
+      <section class="success-checklist" aria-label="Purchase confirmation checklist">
+        <p class="eyebrow">Before draft day</p>
+        <h2>Quick confirmation checklist</h2>
+        <ul>
+          <li>Your account was created from the Stripe checkout email.</li>
+          <li>Your setup email was sent with an access code and setup link.</li>
+          <li>You will need your ESPN league ID and ESPN team ID.</li>
+          <li>Your ESPN league must be public for live FantasyIQ sync.</li>
+          <li>Support is available at <a href="mailto:support@myfantasyiq.com">support@myfantasyiq.com</a>.</li>
+        </ul>
       </section>
 
       <section class="success-support" aria-label="Support">
@@ -105,5 +116,47 @@
         <a href="./refund-policy.html">Refund Policy</a>
       </nav>
     </footer>
+    <script>
+      const successParams = new URLSearchParams(window.location.search);
+      const setupLink = document.querySelector("#success-setup-link");
+      const dashboardLink = document.querySelector("#success-dashboard-link");
+
+      function successUrlWithParams(path) {
+        const url = new URL(path, window.location.href);
+        ["customer", "dashboard", "league"].forEach((key) => {
+          const value = successParams.get(key);
+          if (value) url.searchParams.set(key === "dashboard" ? "customer" : key, value);
+        });
+        if (path.includes("FantasyIQ")) url.searchParams.set("login", "1");
+        return `${url.pathname}${url.search}`;
+      }
+
+      if (setupLink) setupLink.href = successUrlWithParams("./setup.html");
+      if (dashboardLink) dashboardLink.href = successUrlWithParams("./FantasyIQ/");
+
+      try {
+        if (["127.0.0.1", "localhost"].includes(window.location.hostname)) throw new Error("local preview");
+        const body = JSON.stringify({
+          eventType: "checkout.success_page_opened",
+          source: "success_page",
+          customer: successParams.get("customer") || successParams.get("dashboard") || "",
+          league: successParams.get("league") || "",
+          path: window.location.pathname,
+        });
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon("/api/track-event", new Blob([body], { type: "application/json" }));
+        } else {
+          fetch("/api/track-event", {
+            method: "POST",
+            cache: "no-store",
+            keepalive: true,
+            headers: { "Content-Type": "application/json" },
+            body,
+          }).catch(() => {});
+        }
+      } catch (error) {
+        // Confirmation must keep working even if event tracking is unavailable.
+      }
+    </script>
   </body>
 </html>

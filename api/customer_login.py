@@ -11,10 +11,12 @@ try:
     from customer_context import ConfigError, all_customer_contexts, database_customer_context, slugify, verify_customer_access
     from auth_service import make_session, password_policy_error, session_cookie, verify_password
     from database import customer_auth_record
+    from rate_limit import check_rate_limit, rate_limit_payload
 except ModuleNotFoundError:
     from api.customer_context import ConfigError, all_customer_contexts, database_customer_context, slugify, verify_customer_access
     from api.auth_service import make_session, password_policy_error, session_cookie, verify_password
     from api.database import customer_auth_record
+    from api.rate_limit import check_rate_limit, rate_limit_payload
 
 
 def utc_now() -> str:
@@ -77,14 +79,14 @@ def login_payload(raw: dict[str, Any], headers: Any | None = None) -> tuple[dict
             raise PermissionError(policy_error)
         record = customer_auth_record(identity)
         if not record:
-            raise PermissionError("Customer account was not found.")
+            raise PermissionError("We could not find that checkout email. Use the exact email from Stripe checkout or open the setup link from your email.")
         if not record.get("password_hash"):
             raise PermissionError("Create a password with your access code first.")
         if not verify_password(password, str(record.get("password_hash") or "")):
             raise PermissionError("Email or password did not match.")
         context = database_customer_context(str(record.get("slug") or identity), selected_league)
         if context is None:
-            raise PermissionError("Customer account was not found.")
+            raise PermissionError("We could not find that customer dashboard. Open the setup link from your email or contact support.")
         token, expires_at = make_session(context.slug, headers)
         customer = context.public_dict()
         customer["passwordConfigured"] = True
@@ -108,11 +110,11 @@ def login_payload(raw: dict[str, Any], headers: Any | None = None) -> tuple[dict
     if context is None:
         context = all_customer_contexts(selected_league).get(slugify(identity))
     if context is None:
-        raise PermissionError("Customer account was not found.")
+        raise PermissionError("We could not find that checkout email. Use the exact email from Stripe checkout or open the setup link from your email.")
     if not context.access_code:
-        raise PermissionError("This customer account does not have an access code yet.")
+        raise PermissionError("This customer account is missing a setup access code. Contact support so we can fix it.")
     if access_code != context.access_code:
-        raise PermissionError("Valid customer access code required.")
+        raise PermissionError("That access code does not match this checkout email. Check your setup email or contact support.")
     verify_customer_access(context, "", {"x-fantasyiq-access-code": access_code})
     customer = context.public_dict()
     extra_headers: list[tuple[str, str]] = []
@@ -157,6 +159,21 @@ class handler(BaseHTTPRequestHandler):
         raw: dict[str, Any] = {}
         try:
             raw = parse_body(self)
+            limit = check_rate_limit(
+                "customer_login",
+                headers=self.headers,
+                raw=raw,
+                fields=("customer", "email", "dashboard"),
+                limit=10,
+                window_seconds=600,
+            )
+            if not limit.allowed:
+                log_login_event("login.rate_limited", "Too many login attempts.", raw, "warning")
+                self.send_json(
+                    rate_limit_payload(limit, "Too many login attempts. Wait a few minutes, then try again."),
+                    HTTPStatus.TOO_MANY_REQUESTS,
+                )
+                return
             payload, extra_headers = login_payload(raw, self.headers)
             log_login_event("login.succeeded", "Customer dashboard login succeeded.", raw)
             self.send_json(payload, extra_headers=extra_headers)

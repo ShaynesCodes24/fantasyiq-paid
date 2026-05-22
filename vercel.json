@@ -89,6 +89,10 @@
       "destination": "/api/add_league_checkout"
     },
     {
+      "source": "/api/track-event",
+      "destination": "/api/setup_validate"
+    },
+    {
       "source": "/api/admin-customers",
       "destination": "/api/admin_customers"
     },

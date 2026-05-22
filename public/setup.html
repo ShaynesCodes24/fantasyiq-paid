@@ -25,11 +25,14 @@
     <main class="policy-main">
       <section class="policy-card">
         <p class="eyebrow">Customer Setup</p>
-        <h1>Set up FantasyIQ in two minutes</h1>
-        <p>
+        <h1 id="setup-title">Set up FantasyIQ in two minutes</h1>
+        <p id="setup-intro">
           Start with the access code from your setup email. Then paste your ESPN league ID and team ID. FantasyIQ
           auto-fills scoring, roster, flex, bench, and draft settings from ESPN.
         </p>
+        <div class="setup-mode-note" id="setup-mode-note" hidden>
+          Checking before checkout? Skip password creation and use Step 2 as a free ESPN compatibility check.
+        </div>
 
         <div class="setup-steps" aria-label="Setup steps">
           <article>
@@ -153,7 +156,7 @@
           </details>
 
           <div class="button-row">
-            <button class="primary" type="submit">Connect league</button>
+            <button class="primary" id="setup-submit-button" type="submit">Connect league</button>
             <a class="primary dark" id="setup-open-dashboard-link" href="./FantasyIQ/">Open dashboard</a>
           </div>
           <div class="result-panel" id="setup-result">Paste your ESPN IDs and click Connect league.</div>
@@ -167,8 +170,14 @@
       const settingsNote = document.querySelector("#settings-note");
       const pageParams = new URLSearchParams(window.location.search);
       const customerSlug = pageParams.get("customer") || pageParams.get("dashboard") || "";
+      const precheckMode = pageParams.get("mode") === "precheck" || (!customerSlug && pageParams.has("leagueId"));
+      const seasonPassPaymentLink = "https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01";
       const setupStorageKey = "fantasyiq:last-validated-league";
+      const setupTitle = document.querySelector("#setup-title");
+      const setupIntro = document.querySelector("#setup-intro");
+      const setupModeNote = document.querySelector("#setup-mode-note");
       const setupAccessCode = document.querySelector("#setup-access-code");
+      const setupPasswordCard = document.querySelector("#create-password");
       const passwordEmailWrap = document.querySelector("#password-email-wrap");
       const passwordEmail = document.querySelector("#password-email");
       const setupPassword = document.querySelector("#setup-password");
@@ -177,6 +186,7 @@
       const resetEmailButton = document.querySelector("#reset-email-button");
       const setupSignInLink = document.querySelector("#setup-sign-in-link");
       const setupOpenDashboardLink = document.querySelector("#setup-open-dashboard-link");
+      const setupSubmitButton = document.querySelector("#setup-submit-button");
       const passwordResult = document.querySelector("#password-result");
       const settingsInputs = {
         scoringType: document.querySelector("#scoring-type"),
@@ -194,6 +204,45 @@
       let settingsOverride = false;
       let applyingSettings = false;
       let autoFillTimer = 0;
+
+      function trackSetupEvent(eventType, payload = {}) {
+        if (["127.0.0.1", "localhost"].includes(window.location.hostname)) return;
+        const body = JSON.stringify({
+          eventType,
+          source: "setup_page",
+          customer: customerSlug,
+          league: pageParams.get("league") || "",
+          mode: precheckMode ? "precheck" : customerSlug ? "customer_setup" : "public_setup",
+          path: window.location.pathname,
+          ...payload,
+        });
+        try {
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon("/api/track-event", new Blob([body], { type: "application/json" }));
+            return;
+          }
+        } catch (error) {
+          // Setup should continue even if tracking is unavailable.
+        }
+        fetch("/api/track-event", {
+          method: "POST",
+          cache: "no-store",
+          keepalive: true,
+          headers: { "Content-Type": "application/json" },
+          body,
+        }).catch(() => {});
+      }
+
+      trackSetupEvent("setup.page_opened");
+
+      document.addEventListener("click", (event) => {
+        const link = event.target.closest("[data-checkout-link]");
+        if (!link) return;
+        trackSetupEvent("checkout.started", {
+          checkoutType: "season_pass",
+          target: link.href,
+        });
+      });
 
       function savedAccessCode(customer) {
         if (!customer) return "";
@@ -214,6 +263,19 @@
       }
       if (customerSlug && passwordEmailWrap) {
         passwordEmailWrap.hidden = true;
+      }
+      if (precheckMode) {
+        if (setupTitle) setupTitle.textContent = "Check ESPN compatibility before checkout";
+        if (setupIntro) {
+          setupIntro.textContent =
+            "Paste your ESPN league ID, team ID, and season. FantasyIQ confirms public access, finds your team, and detects scoring before you buy.";
+        }
+        if (setupModeNote) setupModeNote.hidden = false;
+        if (setupPasswordCard) setupPasswordCard.hidden = true;
+        if (setupSubmitButton) setupSubmitButton.textContent = "Check league compatibility";
+        if (setupOpenDashboardLink) setupOpenDashboardLink.hidden = true;
+      } else if (!customerSlug && setupModeNote) {
+        setupModeNote.hidden = false;
       }
 
       function customerDashboardHref(customer, league = "") {
@@ -347,6 +409,10 @@
         input.value = String(value);
       }
 
+      setFieldValue(document.querySelector("#league-id"), pageParams.get("leagueId"));
+      setFieldValue(document.querySelector("#team-id"), pageParams.get("teamId"));
+      setFieldValue(document.querySelector("#season"), pageParams.get("season"));
+
       function applyLeagueSettings(settings) {
         if (!settings) return;
         const slots = settings.lineupSlots || {};
@@ -405,6 +471,9 @@
         input?.addEventListener("change", scheduleAutoFill);
         input?.addEventListener("blur", scheduleAutoFill);
       });
+      if (pageParams.has("leagueId")) {
+        scheduleAutoFill();
+      }
 
       async function createPassword() {
         const identity = customerSlug || passwordEmail?.value?.trim() || "";
@@ -424,6 +493,7 @@
           return;
         }
         passwordResult.innerHTML = "<strong>Creating password...</strong>";
+        trackSetupEvent("password.create_attempted", { customer: identity });
         try {
           const savedPacket = JSON.parse(localStorage.getItem(setupStorageKey) || "{}");
           const response = await fetch("/api/customer-password", {
@@ -441,6 +511,7 @@
           const payload = await response.json();
           if (!payload.ok) {
             passwordResult.innerHTML = `<strong>Password setup needs attention.</strong><p>${escapeHtml(payload.message || "Try again.")}</p>`;
+            trackSetupEvent("password.create_failed", { status: payload.status || "not_ok" });
             return;
           }
           const dashboard = payload.dashboardUrl || "./FantasyIQ/";
@@ -452,8 +523,10 @@
             <p>You can now sign in with your checkout email and password.</p>
             <div class="button-row setup-actions"><a class="primary dark" href="${escapeHtml(dashboard)}">Open dashboard</a></div>
           `;
+          trackSetupEvent("password.created", { customer: signedInCustomer });
         } catch (error) {
           passwordResult.innerHTML = `<strong>Could not create password.</strong><p>${escapeHtml(error.message)}</p>`;
+          trackSetupEvent("password.create_failed", { status: "request_failed" });
         }
       }
 
@@ -495,6 +568,11 @@
         if (accessCode) params.set("accessCode", accessCode);
         const headers = { "Content-Type": "application/x-www-form-urlencoded" };
         if (accessCode) headers["x-fantasyiq-access-code"] = accessCode;
+        trackSetupEvent("setup.validation_attempted", {
+          leagueId: data.get("leagueId") || "",
+          season: data.get("season") || "",
+          saving: customerSlug ? "1" : "0",
+        });
         try {
           const response = await fetch("/api/setup-validate", {
             method: "POST",
@@ -517,28 +595,46 @@
               ? "This league profile was saved to the customer account."
               : payload.saveMessage || "The league details were validated.";
             const nextUrl = previewUrl(packet);
+            const nextActions = payload.saved
+              ? `<a class="primary dark" href="${escapeHtml(nextUrl)}">Open saved dashboard</a>`
+              : precheckMode
+                ? `<a class="primary dark" href="${seasonPassPaymentLink}" data-checkout-link>Start Season Pass</a><a class="secondary dark-outline" href="${escapeHtml(nextUrl)}">Preview dashboard settings</a>`
+                : `<a class="primary dark" href="${escapeHtml(nextUrl)}">Preview dashboard settings</a>`;
             result.innerHTML = `
               <strong>Ready: ${escapeHtml(payload.leagueName)} / ${escapeHtml(payload.teamName)}</strong>
-              <p>Team ID ${escapeHtml(payload.teamId)} was found for the ${escapeHtml(payload.season)} season. ${escapeHtml(saveNote)}${payload.saved ? " Opening the saved dashboard now." : ""}</p>
+              <p>Team ID ${escapeHtml(payload.teamId)} was found for the ${escapeHtml(payload.season)} season. ${escapeHtml(saveNote)}${payload.saved ? " Opening the saved dashboard now." : precheckMode ? " Your league is compatible with FantasyIQ." : ""}</p>
               <div class="button-row setup-actions">
-                <a class="primary dark" href="${escapeHtml(nextUrl)}">${payload.saved ? "Open saved dashboard" : "Preview dashboard settings"}</a>
+                ${nextActions}
               </div>
               ${renderTeams(payload.teams)}
             `;
             if (payload.saved) {
               window.setTimeout(() => {
-                window.location.href = nextUrl;
+                const savedUrl = new URL(nextUrl, window.location.href);
+                savedUrl.searchParams.set("source", "setup_save");
+                window.location.href = `${savedUrl.pathname}${savedUrl.search}`;
               }, 900);
             }
+            trackSetupEvent(payload.saved ? "setup.league_saved" : "setup.validation_passed", {
+              leagueId: payload.leagueId || "",
+              season: payload.season || "",
+              leagueKey: payload.leagueKey || "",
+            });
             return;
           }
           result.innerHTML = `
             <strong>${escapeHtml(payload.message || "Setup needs attention.")}</strong>
-            <p>Status: ${escapeHtml(payload.status || "unknown")}</p>
+            <p>Check the league ID, team ID, season, and ESPN public league setting, then try again.</p>
             ${renderTeams(payload.teams)}
           `;
+          trackSetupEvent("setup.validation_failed", {
+            leagueId: payload.leagueId || data.get("leagueId") || "",
+            season: payload.season || data.get("season") || "",
+            status: payload.status || "not_ok",
+          });
         } catch (error) {
           result.innerHTML = `<strong>Setup check failed.</strong><p>${escapeHtml(error.message)}</p>`;
+          trackSetupEvent("setup.validation_failed", { status: "request_failed" });
         }
       });
     </script>

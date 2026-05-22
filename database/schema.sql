@@ -111,3 +111,14 @@ CREATE INDEX IF NOT EXISTS fantasyiq_ops_events_customer_idx
 
 CREATE INDEX IF NOT EXISTS fantasyiq_ops_events_severity_idx
     ON fantasyiq_ops_events (severity, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS fantasyiq_rate_limits (
+    bucket_key TEXT PRIMARY KEY,
+    window_start TIMESTAMPTZ NOT NULL,
+    request_count INTEGER NOT NULL DEFAULT 0,
+    expires_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS fantasyiq_rate_limits_expires_idx
+    ON fantasyiq_rate_limits (expires_at);

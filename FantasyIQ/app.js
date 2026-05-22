@@ -345,13 +345,19 @@ let mockSim = null;
 let simAutoAdvanceTimer = null;
 let simAutoAdvanceActive = false;
 let selectedBoardPlayerKey = null;
-const LIVE_SYNC_INTERVAL_MS = 8000;
+const LIVE_SYNC_DRAFT_INTERVAL_MS = 2500;
+const LIVE_SYNC_PREDRAFT_INTERVAL_MS = 10000;
+const LIVE_SYNC_COMPLETE_INTERVAL_MS = 30000;
+const LIVE_SYNC_ERROR_INTERVAL_MS = 15000;
 const INITIAL_BOARD_LIMIT = 180;
 const CUSTOMER_SESSION_DAYS = 30;
 let activePlayerAutocomplete = null;
 let fullBoardLoadStarted = false;
 let customerPasswordSession = false;
 let customerBootStarted = false;
+let dashboardOpenTracked = false;
+let liveSyncInFlight = false;
+let liveSyncFailureCount = 0;
 let lastLiveDraftRenderSignature = "";
 
 function rememberedCustomerLoadout(loadouts) {
@@ -558,6 +564,35 @@ function apiHeaders(extra = {}) {
   return headers;
 }
 
+function trackDashboardEvent(eventType, payload = {}) {
+  if (["127.0.0.1", "localhost"].includes(window.location.hostname)) return;
+  const body = JSON.stringify({
+    eventType,
+    source: "dashboard",
+    customer: appConfig.loadoutKey && appConfig.loadoutKey !== "default" ? appConfig.loadoutKey : "",
+    league: appConfig.leagueKey || "",
+    path: window.location.pathname,
+    authenticated: hasCustomerAccess() ? "1" : "0",
+    demoMode: requiresCustomerAccess() ? "0" : "1",
+    ...payload,
+  });
+  try {
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon("/api/track-event", new Blob([body], { type: "application/json" }));
+      return;
+    }
+  } catch (error) {
+    // Tracking should never block dashboard use.
+  }
+  fetch("/api/track-event", {
+    method: "POST",
+    cache: "no-store",
+    keepalive: true,
+    headers: { "Content-Type": "application/json" },
+    body,
+  }).catch(() => {});
+}
+
 function customerAccessGate() {
   return document.querySelector("#customer-access-gate");
 }
@@ -650,8 +685,11 @@ function showCustomerAccessGate(message = "") {
       return "Could not reach the FantasyIQ login service. Check your connection and try again.";
     }
     if (/create a password/i.test(message)) return passwordSetupMessage;
-    if (/customer account was not found/i.test(message)) {
+    if (/customer account was not found|could not find that checkout email|could not find that customer dashboard/i.test(message)) {
       return "We could not find that customer account. Use the exact email from checkout, or open the dashboard link from the setup email.";
+    }
+    if (/access code does not match/i.test(message)) {
+      return "That access code does not match this checkout email. Check your setup email or contact support.";
     }
     if (/email or password/i.test(message)) return "That email and password did not match. Try again, or use your setup access code below to reset/create the password.";
     return message || "Could not sign in. Refresh and try again.";
@@ -813,7 +851,7 @@ function handleCustomerAccessFailure(message = "Enter the current customer acces
   if (!requiresCustomerAccess()) return false;
   clearCustomerAccessCode();
   customerPasswordSession = false;
-  window.clearInterval(liveTimer);
+  stopLiveSyncTimer();
   updateAccountControl();
   showCustomerAccessGate(message);
   if (liveStatus) liveStatus.innerHTML = "<strong>Customer login required.</strong>";
@@ -860,6 +898,14 @@ async function bootCustomerDashboard() {
   if (loginRequested() && !hasCustomerAccess()) {
     showCustomerAccessGate();
   }
+  if (!dashboardOpenTracked) {
+    const params = new URLSearchParams(window.location.search);
+    dashboardOpenTracked = true;
+    trackDashboardEvent("dashboard.opened", {
+      openedFrom: params.get("source") || params.get("from") || "",
+      loginRequested: loginRequested() ? "1" : "0",
+    });
+  }
   loadBoards();
   startLiveSync();
 }
@@ -882,8 +928,7 @@ async function signOutCustomer() {
   clearCustomerAccessCode();
   customerPasswordSession = false;
   fetch("/api/customer-session", { method: "DELETE", cache: "no-store", credentials: "same-origin" }).catch(() => {});
-  window.clearInterval(liveTimer);
-  liveTimer = null;
+  stopLiveSyncTimer();
   updateAccountControl();
   if (requiresCustomerAccess()) {
     if (liveStatus) liveStatus.innerHTML = "<strong>Signed out.</strong> Sign in to reconnect live draft sync.";
@@ -5491,6 +5536,26 @@ function liveDraftRenderSignature(data = liveDraft) {
   });
 }
 
+function liveSyncIntervalMs(data = liveDraft) {
+  if (liveSyncFailureCount > 0) {
+    return Math.min(LIVE_SYNC_ERROR_INTERVAL_MS * liveSyncFailureCount, 60000);
+  }
+  if (!data) return LIVE_SYNC_PREDRAFT_INTERVAL_MS;
+  if (data.drafted) return LIVE_SYNC_COMPLETE_INTERVAL_MS;
+  if (data.inProgress || Number(data.completedPicks || 0) > 0) return LIVE_SYNC_DRAFT_INTERVAL_MS;
+  return LIVE_SYNC_PREDRAFT_INTERVAL_MS;
+}
+
+function liveSyncCadenceLabel(data = liveDraft) {
+  const seconds = Math.round(liveSyncIntervalMs(data) / 1000);
+  if (liveSyncFailureCount > 0) return `ESPN sync is backing off for ${seconds} seconds after a connection issue.`;
+  if (data?.drafted) return `Draft is complete; auto sync checks ESPN every ${seconds} seconds.`;
+  if (data?.inProgress || Number(data?.completedPicks || 0) > 0) {
+    return `Draft-day turbo sync checks ESPN about every ${seconds} seconds.`;
+  }
+  return `Pre-draft auto sync checks ESPN every ${seconds} seconds.`;
+}
+
 function renderLiveDraftSummary() {
   if (!liveStatus) return;
   if (!liveDraft) {
@@ -5512,7 +5577,7 @@ function renderLiveDraftSummary() {
     ? " Public demo league is connected; subscribers get their ESPN league configured after checkout."
     : preDraft
       ? " ESPN order is loaded; keep auto sync on when the room opens."
-      : ` Auto sync checks ESPN every ${LIVE_SYNC_INTERVAL_MS / 1000} seconds.`;
+      : ` ${liveSyncCadenceLabel()}`;
 
   liveStatus.innerHTML = `<strong>${state}</strong>: ${completed}/${total || totalFallback} picks completed.${syncContext}${stale}`;
   if (liveSyncStatus) {
@@ -6662,10 +6727,27 @@ function liveServerHelp(error) {
   renderLeagueHealth();
 }
 
+function stopLiveSyncTimer() {
+  window.clearTimeout(liveTimer);
+  liveTimer = null;
+}
+
+function scheduleNextLiveSync() {
+  stopLiveSyncTimer();
+  if (!liveSyncToggle?.checked) return;
+  if (requiresCustomerAccess() && !hasCustomerAccess()) return;
+  liveTimer = window.setTimeout(() => loadLiveDraft(), liveSyncIntervalMs());
+}
+
 function loadLiveDraft(force = false) {
-  if (!liveStatus) return;
-  if (!ensureCustomerAccess()) return;
-  fetch(apiUrl("/api/live-draft", { force: force ? 1 : "" }), { cache: "no-store", headers: apiHeaders() })
+  if (!liveStatus) return Promise.resolve();
+  if (!ensureCustomerAccess()) return Promise.resolve();
+  if (liveSyncInFlight) {
+    return Promise.resolve();
+  }
+  liveSyncInFlight = true;
+  if (force) stopLiveSyncTimer();
+  return fetch(apiUrl("/api/live-draft", { force: force ? 1 : "" }), { cache: "no-store", headers: apiHeaders() })
     .then((response) => jsonOrAccessError(response, `HTTP ${response.status}`))
     .then((data) => {
       if (!data) throw new Error("Live sync returned an empty response");
@@ -6676,21 +6758,26 @@ function loadLiveDraft(force = false) {
       } else {
         throw new Error(data.error || "ESPN returned no draft data");
       }
+      liveSyncFailureCount = 0;
       const nextSignature = liveDraftRenderSignature(liveDraft);
       const unchanged = !force && lastLiveDraftRenderSignature && nextSignature === lastLiveDraftRenderSignature;
       renderLiveDraft({ full: !unchanged });
     })
     .catch((error) => {
+      liveSyncFailureCount += 1;
       liveServerHelp(error.message);
+    })
+    .finally(() => {
+      liveSyncInFlight = false;
+      scheduleNextLiveSync();
     });
 }
 
 function startLiveSync() {
   if (!liveSyncToggle?.checked) return;
   if (!ensureCustomerAccess()) return;
-  window.clearInterval(liveTimer);
+  stopLiveSyncTimer();
   loadLiveDraft();
-  liveTimer = window.setInterval(() => loadLiveDraft(), LIVE_SYNC_INTERVAL_MS);
 }
 
 function liveBoardRequestUrl(limit = "") {
@@ -6921,7 +7008,7 @@ liveSyncToggle?.addEventListener("change", () => {
   if (liveSyncToggle.checked) {
     startLiveSync();
   } else {
-    window.clearInterval(liveTimer);
+    stopLiveSyncTimer();
     if (liveStatus) liveStatus.innerHTML = "<strong>Auto sync paused.</strong> Use Sync Now for a one-time ESPN refresh.";
   }
 });
@@ -6932,6 +7019,14 @@ accountAction?.addEventListener("click", () => {
   } else {
     showCustomerAccessGate();
   }
+});
+document.addEventListener("click", (event) => {
+  const link = event.target.closest('a[href*="buy.stripe.com"]');
+  if (!link) return;
+  trackDashboardEvent("checkout.started", {
+    checkoutType: link.href.includes("dRmcN5aAV1GX0Cc7X3efC02") ? "additional_league" : "season_pass",
+    target: link.href,
+  });
 });
 leagueSelect?.addEventListener("change", () => setActiveLeague(leagueSelect.value));
 addLeagueAction?.addEventListener("click", openAddLeagueDialog);
