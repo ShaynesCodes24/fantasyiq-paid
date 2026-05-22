@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -213,7 +214,8 @@ def customer_status_check() -> CheckResult:
 
 
 def password_reset_check() -> CheckResult:
-    status, body = post_json(PASSWORD_RESET_URL, {"customer": "readiness-no-account@example.com"})
+    marker = int(time.time())
+    status, body = post_json(PASSWORD_RESET_URL, {"customer": f"readiness-no-account-{marker}@example.com"})
     try:
         payload = json.loads(body)
     except json.JSONDecodeError:
