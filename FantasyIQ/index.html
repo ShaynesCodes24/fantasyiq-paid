@@ -7,7 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
     <link rel="shortcut icon" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260521-premium-3" />
-    <link rel="stylesheet" href="./styles.css?v=20260521_myfantasyiq_premium_3" />
+    <link rel="stylesheet" href="./styles.css?v=20260522_draft_grid_1" />
   </head>
   <body>
     <div class="field-overlay" aria-hidden="true">
@@ -33,14 +33,14 @@
       <span class="yard-number yard-10r yard-bottom">10</span>
     </div>
     <header class="topbar">
-      <div class="brand-lockup">
+      <a class="brand-lockup" href="./" aria-label="Go to your FantasyIQ dashboard home">
         <img src="./assets/fantasy-iq-logo.svg" alt="MyFantasyIQ league logo" />
         <div>
           <p class="eyebrow">League Command Center</p>
           <h1>MyFantasyIQ</h1>
           <small>Configurable ESPN Fantasy Platform</small>
         </div>
-      </div>
+      </a>
       <div class="draft-card">
         <span>Subscription</span>
         <strong>Active</strong>
@@ -125,6 +125,46 @@
             <strong>League engine active</strong>
             <span>Draft Room, Mock Simulator, Big Board values, and Trade Calculator are using this league profile.</span>
           </div>
+
+          <section class="intelligence-os-panel" id="intelligence-os-panel" aria-label="FantasyIQ intelligence operating system">
+            <div class="intelligence-os-head">
+              <div>
+                <p class="eyebrow">FantasyIQ Intelligence OS</p>
+                <h3 id="intelligence-main-move">Loading league-aware decision engine</h3>
+                <p id="intelligence-freshness">Syncing draft, roster, waiver, trade, and opponent context.</p>
+              </div>
+              <button id="intelligence-refresh" type="button">Refresh</button>
+            </div>
+            <div class="intelligence-main-card" id="intelligence-main-card">
+              <strong>Best move right now</strong>
+              <span>Waiting for intelligence API.</span>
+            </div>
+            <div class="intelligence-reasons" id="intelligence-reasons">
+              <p>FantasyIQ will compare action against doing nothing once data loads.</p>
+            </div>
+            <div class="intelligence-grid" id="intelligence-grid">
+              <article>
+                <span>Weekly</span>
+                <strong>Loading</strong>
+                <small>Lineup, waiver, and hold logic</small>
+              </article>
+              <article>
+                <span>Waivers</span>
+                <strong>Loading</strong>
+                <small>Add/drop and FAAB logic</small>
+              </article>
+              <article>
+                <span>Trades</span>
+                <strong>Loading</strong>
+                <small>Generated proposal lane</small>
+              </article>
+              <article>
+                <span>Opponents</span>
+                <strong>Loading</strong>
+                <small>Manager personas</small>
+              </article>
+            </div>
+          </section>
 
           <section class="league-health-panel" id="league-health-panel" aria-label="League health check">
             <div class="league-health-head">
@@ -392,10 +432,15 @@
               <strong id="live-last-sync">Pending</strong>
               <small id="live-source">ESPN public league API</small>
             </article>
+            <article class="live-stat live-slot-stat">
+              <span>My Draft Slot</span>
+              <strong id="live-my-slot">Select team</strong>
+              <small id="live-my-slot-note">Slot updates from ESPN when the draft room opens.</small>
+            </article>
             <label class="live-select">
               My ESPN Team
               <select id="my-team-select">
-                <option value="">Choose after draft order appears</option>
+                <option value="">Choose after ESPN order appears</option>
               </select>
             </label>
           </div>
@@ -483,6 +528,19 @@
               </div>
             </section>
           </div>
+
+          <section class="live-panel all-teams-draft-panel">
+            <div class="live-section-head">
+              <div>
+                <p class="eyebrow">League Draft Board</p>
+                <h3>Live pick grid</h3>
+              </div>
+              <span class="tier-note" id="all-teams-draft-summary">Waiting for ESPN draft order.</span>
+            </div>
+            <div id="all-teams-draft-board" class="all-teams-draft-board">
+              Waiting for ESPN draft picks.
+            </div>
+          </section>
 
           <section class="live-panel post-draft-panel">
             <div class="live-section-head">
@@ -1059,7 +1117,7 @@
       </section>
     </main>
 
-    <script src="./config.js?v=20260521_readability_32"></script>
-    <script src="./app.js?v=20260521_plain_reads_42"></script>
+    <script src="./config.js?v=20260522_logo_home_1"></script>
+    <script src="./app.js?v=20260522_draft_grid_1"></script>
   </body>
 </html>

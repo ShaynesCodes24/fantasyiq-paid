@@ -11,6 +11,7 @@ const files = [
   "index.html",
   "styles.css",
   path.join("assets", "fantasy-iq-logo.svg"),
+  path.join("assets", "myfantasyiq-wordmark.svg"),
   path.join("assets", "league-logo.jpeg"),
   path.join("data", "boards.json"),
   path.join("data", "boards_data.js"),

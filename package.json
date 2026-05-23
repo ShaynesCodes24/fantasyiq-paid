@@ -5,10 +5,17 @@
     "dev:vercel": "vercel dev",
     "build": "node scripts/build_static.js",
     "preview:static": "node scripts/build_static.js && python -m http.server 4173 --directory dist",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:phase1": "tsc -p tsconfig.json --noEmit",
+    "test:phase2": "tsc -p tsconfig.json --noEmit",
+    "test:phase3": "tsc -p tsconfig.json --noEmit",
+    "test:phase4": "tsc -p tsconfig.json --noEmit",
+    "test:phase5": "tsc -p tsconfig.json --noEmit",
     "test:visual": "node scripts/visual_smoke.js",
     "test:readiness": "python scripts/check_product_readiness.py"
   },
   "devDependencies": {
-    "playwright": "^1.60.0"
+    "playwright": "^1.60.0",
+    "typescript": "^6.0.3"
   }
 }

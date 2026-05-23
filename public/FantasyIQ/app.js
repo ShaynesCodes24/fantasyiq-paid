@@ -37,6 +37,13 @@ const cheatcodeTier = document.querySelector("#cheatcode-tier");
 const cheatcodeWait = document.querySelector("#cheatcode-wait");
 const cheatcodeAvoid = document.querySelector("#cheatcode-avoid");
 const cheatcodeRoom = document.querySelector("#cheatcode-room");
+const intelligencePanel = document.querySelector("#intelligence-os-panel");
+const intelligenceMainMove = document.querySelector("#intelligence-main-move");
+const intelligenceFreshness = document.querySelector("#intelligence-freshness");
+const intelligenceRefresh = document.querySelector("#intelligence-refresh");
+const intelligenceMainCard = document.querySelector("#intelligence-main-card");
+const intelligenceReasons = document.querySelector("#intelligence-reasons");
+const intelligenceGrid = document.querySelector("#intelligence-grid");
 const boardCount = document.querySelector("#board-count");
 const liveSyncStatus = document.querySelector("#live-sync-status");
 const alphaCommandSignal = document.querySelector("#alpha-command-signal");
@@ -67,6 +74,8 @@ const liveTotal = document.querySelector("#live-total");
 const liveProgressBar = document.querySelector("#live-progress-bar");
 const liveLastSync = document.querySelector("#live-last-sync");
 const liveSource = document.querySelector("#live-source");
+const liveMySlot = document.querySelector("#live-my-slot");
+const liveMySlotNote = document.querySelector("#live-my-slot-note");
 const myTeamSelect = document.querySelector("#my-team-select");
 const hideDrafted = document.querySelector("#hide-drafted");
 const hideDraftedBoard = document.querySelector("#hide-drafted-board");
@@ -79,6 +88,8 @@ const postDraftPlan = document.querySelector("#post-draft-plan");
 const liveRecentPicks = document.querySelector("#live-recent-picks");
 const liveNextPicks = document.querySelector("#live-next-picks");
 const draftOrderGrid = document.querySelector("#draft-order-grid");
+const allTeamsDraftBoard = document.querySelector("#all-teams-draft-board");
+const allTeamsDraftSummary = document.querySelector("#all-teams-draft-summary");
 const nextPickRadar = document.querySelector("#next-pick-radar");
 const tierAlerts = document.querySelector("#tier-alerts");
 const roomDetector = document.querySelector("#room-detector");
@@ -121,6 +132,7 @@ const accountCard = document.querySelector("#account-card");
 const accountLabel = document.querySelector("#account-label");
 const accountState = document.querySelector("#account-state");
 const accountAction = document.querySelector("#account-action");
+const brandHomeLink = document.querySelector(".brand-lockup");
 const leagueSwitcher = document.querySelector("#league-switcher");
 const leagueSwitcherLabel = document.querySelector("#league-switcher-label");
 const leagueSelect = document.querySelector("#league-select");
@@ -341,6 +353,8 @@ window.FANTASY_IQ_ACTIVE_CONFIG = appConfig;
 let boardData = null;
 let activeBoard = "combined";
 let liveDraft = null;
+let intelligenceData = null;
+let intelligenceInFlight = false;
 let liveTimer = null;
 let mockSim = null;
 let simAutoAdvanceTimer = null;
@@ -540,9 +554,22 @@ function rememberedPasswordSession() {
   }
 }
 
+function clearRememberedPasswordSession(slug = appConfig.loadoutKey) {
+  const normalizedSlug = normalizeDashboardSlug(slug || "");
+  if (!normalizedSlug) return;
+  try {
+    localStorage.removeItem(`fantasy-dashboard:${normalizedSlug}:password-session`);
+    if (normalizeDashboardSlug(localStorage.getItem("fantasy-dashboard:last-loadout") || "") === normalizedSlug) {
+      localStorage.removeItem("fantasy-dashboard:last-loadout");
+    }
+  } catch (error) {
+    // Session cleanup is best effort; server-side logout still clears the cookie.
+  }
+}
+
 function apiUrl(path, params = {}) {
   const url = new URL(path, window.location.origin);
-  if (appConfig.loadoutKey) {
+  if (appConfig.loadoutKey && appConfig.loadoutKey !== "default") {
     url.searchParams.set("customer", appConfig.loadoutKey);
   }
   if (appConfig.leagueKey) {
@@ -851,6 +878,7 @@ function ensureCustomerAccess() {
 function handleCustomerAccessFailure(message = "Enter the current customer access code.") {
   if (!requiresCustomerAccess()) return false;
   clearCustomerAccessCode();
+  clearRememberedPasswordSession();
   customerPasswordSession = false;
   stopLiveSyncTimer();
   updateAccountControl();
@@ -922,11 +950,13 @@ function updateAccountControl() {
   }
   accountCard.classList.toggle("signed-in", requiresCustomerAccess() && hasCustomerAccess());
   accountCard.classList.toggle("signed-out", requiresCustomerAccess() && !hasCustomerAccess());
+  updateBrandHomeLink();
   renderAccountPanel();
 }
 
 async function signOutCustomer() {
   clearCustomerAccessCode();
+  clearRememberedPasswordSession();
   customerPasswordSession = false;
   fetch("/api/customer-session", { method: "DELETE", cache: "no-store", credentials: "same-origin" }).catch(() => {});
   stopLiveSyncTimer();
@@ -1009,6 +1039,7 @@ function applyAppConfig() {
     }
   }
   renderLeagueProfile();
+  updateBrandHomeLink();
 }
 
 applyAppConfig();
@@ -1627,6 +1658,31 @@ function applyLeagueOption(option) {
   appConfig.leagueSettings = mergeLeagueSettings(appConfig.baseLeagueSettings || DEFAULT_LEAGUE_SETTINGS, option.leagueSettings || {});
 }
 
+function inactiveSubscriptionStatus(customer = {}) {
+  const status = String(customer.status || "").trim().toLowerCase();
+  const subscriptionStatus = String(customer.subscriptionStatus || "").trim().toLowerCase();
+  const blocked = new Set(["canceled", "cancelled", "expired", "suspended", "unpaid", "incomplete_expired"]);
+  return blocked.has(status) || blocked.has(subscriptionStatus);
+}
+
+function applyCustomerDashboardChrome(customer = {}) {
+  const slug = normalizeDashboardSlug(customer.customerSlug || appConfig.loadoutKey || "");
+  if (!slug || slug === "default" || customer.demoMode === true) return false;
+  const leagueName = customer.leagueName || appConfig.leagueName || currentLeagueDisplayLabel();
+  const limit = Number(customer.includedLeagueLimit || appConfig.includedLeagueLimit || 3);
+  const leagueOptions = normalizeLeagueProfiles(customer.leagues || appConfig.leagues || []);
+  const count = configuredLeagueCount(leagueOptions) || configuredLeagueCount();
+  const slotText = count ? `${Math.min(count, limit)}/${limit} included leagues` : `Up to ${limit} included leagues`;
+  appConfig.isDemoPreview = false;
+  appConfig.showSubscribeButton = false;
+  appConfig.draftCardLabel = "Season Pass";
+  appConfig.draftCardValue = inactiveSubscriptionStatus(customer) ? "Billing Review" : "Active";
+  appConfig.draftCardNote = leagueName ? `${leagueName} / ${slotText}` : slotText;
+  appConfig.demoLabel = "Customer Dashboard";
+  appConfig.demoMessage = "Signed-in customer league loaded.";
+  return true;
+}
+
 function applyServerCustomerContext(customer = {}) {
   if (!customer || typeof customer !== "object") return;
   const serverLeagues = normalizeLeagueProfiles(customer.leagues || []);
@@ -1649,6 +1705,11 @@ function applyServerCustomerContext(customer = {}) {
     if (appConfig.leagueName === "Public Demo League") appConfig.leagueName = "";
   }
   applyLeagueOption(activeLeagueOption());
+  const chromeChanged = applyCustomerDashboardChrome(customer);
+  if (chromeChanged) {
+    applyAppConfig();
+    updateAccountControl();
+  }
 }
 
 function renderLeagueSwitcher() {
@@ -1909,6 +1970,37 @@ function dashboardUrlWithHash(hash = "") {
   return `${window.location.pathname}${window.location.search}${hash}`;
 }
 
+function dashboardHomeUrl() {
+  const currentParams = new URLSearchParams(window.location.search);
+  const params = new URLSearchParams();
+  const customerSlug = appConfig.loadoutKey && appConfig.loadoutKey !== "default"
+    ? appConfig.loadoutKey
+    : normalizeDashboardSlug(currentParams.get("customer") || currentParams.get("loadout") || currentParams.get("dashboard") || "");
+  const leagueSlug = appConfig.leagueKey || normalizeDashboardSlug(currentParams.get("league") || currentParams.get("leagueKey") || "");
+  if (customerSlug) {
+    params.set("customer", customerSlug);
+  }
+  if (leagueSlug) {
+    params.set("league", leagueSlug);
+  }
+  const query = params.toString();
+  return `${window.location.pathname}${query ? `?${query}` : ""}`;
+}
+
+function shouldUseCustomerDashboardHome() {
+  return requiresCustomerAccess() && (hasCustomerAccess() || rememberedPasswordSession());
+}
+
+function updateBrandHomeLink() {
+  if (!brandHomeLink) return;
+  const useDashboardHome = shouldUseCustomerDashboardHome();
+  brandHomeLink.href = useDashboardHome ? dashboardHomeUrl() : "/";
+  brandHomeLink.setAttribute(
+    "aria-label",
+    useDashboardHome ? "Go to your FantasyIQ dashboard home" : "Go to MyFantasyIQ home",
+  );
+}
+
 function ensureCustomerUrlContext() {
   if (!requiresCustomerAccess() || !hasCustomerAccess()) return;
   const params = new URLSearchParams(window.location.search);
@@ -1930,6 +2022,7 @@ function ensureCustomerUrlContext() {
     changed = true;
   }
   if (changed) history.replaceState(null, "", `${window.location.pathname}?${params.toString()}${window.location.hash}`);
+  updateBrandHomeLink();
 }
 
 function scrollDashboardTop(behavior = "auto") {
@@ -1958,6 +2051,20 @@ navItems.forEach((button) => {
     scrollDashboardTop("smooth");
   });
 });
+
+if (brandHomeLink) {
+  brandHomeLink.addEventListener("click", (event) => {
+    updateBrandHomeLink();
+    if (!shouldUseCustomerDashboardHome()) return;
+    event.preventDefault();
+    ensureCustomerUrlContext();
+    const commandButton = Array.from(navItems).find((button) => button.dataset.section === "command");
+    if (commandButton) setActive(navItems, commandButton);
+    panels.forEach((panel) => panel.classList.toggle("active", panel.id === "command"));
+    history.replaceState(null, "", dashboardHomeUrl());
+    scrollDashboardTop("smooth");
+  });
+}
 
 function activateSection(section) {
   if (section === "mock") section = "simulator";
@@ -4017,11 +4124,275 @@ function renderWaiverAssistant(snapshot = activeRosterSnapshot({ preferPasted: t
     : "<p>No strong waiver adds from the current board. Hold roster spots for news-driven role changes.</p>";
 }
 
+function phaseSummaryLabel(phase) {
+  if (!phase) return "Waiting";
+  return phase.action ? `${phase.action}: ${phase.mainMove || "Ready"}` : phase.mainMove || "Ready";
+}
+
+function compactIntelligenceRow(row) {
+  if (!row) return null;
+  return `${row.Player} (${row.Pos}, ${row.Team || "FA"})`;
+}
+
+function actionFromDecision(decision) {
+  const label = decision?.label || "";
+  if (["Pick now", "Target", "Board value"].includes(label)) return "ACT_NOW";
+  if (label === "Controlled risk") return "WAIT";
+  if (label === "Avoid") return "AVOID";
+  return "WAIT";
+}
+
+function rosterValueDelta(addRow, dropRow) {
+  return Math.round((leagueValueScore(addRow) - leagueValueScore(dropRow)) * 10) / 10;
+}
+
+function weakestRosterRow(snapshot, pos = "") {
+  const candidates = (snapshot?.rows || [])
+    .filter((row) => !pos || row.Pos === pos)
+    .filter((row) => !["QB", "TE"].includes(row.Pos) || (snapshot.counts?.[row.Pos] || 0) > (starterTargetCounts()[row.Pos] || 1))
+    .sort((a, b) => leagueValueScore(a) - leagueValueScore(b) || Number(b.Risk || 0) - Number(a.Risk || 0));
+  return candidates[0] || (snapshot?.rows || []).slice().sort((a, b) => leagueValueScore(a) - leagueValueScore(b))[0] || null;
+}
+
+function buildClientIntelligenceData(serverData = {}) {
+  const snapshot = activeRosterSnapshot({ preferPasted: true });
+  const counts = snapshot.counts || emptyPositionCounts();
+  const weaknesses = snapshot.rows.length ? rosterWeaknesses(snapshot) : [];
+  const strengths = snapshot.rows.length ? rosterStrengths(snapshot) : [];
+  const available = boardData ? availableRows() : [];
+  const picks = boardData ? bestCheatcodeRows(counts) : {};
+  const topDraft = picks.bestNow?.row || picks.bestValue?.row || available[0] || null;
+  const draftDecision = topDraft ? recommendationDecision(topDraft, counts) : null;
+  const topWaiver = snapshot.rows.length ? waiverCandidates(snapshot, 1)[0] : null;
+  const waiverDrop = topWaiver ? weakestRosterRow(snapshot, topWaiver.Pos) : null;
+  const waiverGain = topWaiver && waiverDrop ? rosterValueDelta(topWaiver, waiverDrop) : 0;
+  const tradeIdea = snapshot.rows.length ? leagueTradeIdeas(snapshot, 1)[0] : null;
+  const topNeed = weaknesses[0];
+  const topStrength = strengths[0];
+  const boardFreshness = liveDraft?.syncedAt || boardData?.syncedAt || boardData?.updated || serverData.syncedAt || "";
+  const staleWarnings = [];
+  if (!snapshot.rows.length) staleWarnings.push("No selected ESPN roster or pasted roster, so roster-specific weekly logic is limited.");
+  if (!liveLeagueHasRosters()) staleWarnings.push("Opponent roster intelligence is limited until ESPN roster sync is available.");
+  if (!boardData) staleWarnings.push("Player board data is not loaded yet.");
+
+  let recommendation = serverData.recommendation || {};
+  const waiverIsActionable = topWaiver && waiverDrop && waiverGain >= 3;
+  const tradeIsActionable = tradeIdea && tradeIdea.score >= 56;
+
+  if (waiverIsActionable) {
+    recommendation = {
+      action: "ACT_NOW",
+      mainMove: `Add ${compactIntelligenceRow(topWaiver)} and drop ${compactIntelligenceRow(waiverDrop)}`,
+      confidenceScore: Math.round(clampNumber(66 + waiverGain * 1.2 - Number(topWaiver.Risk || 0), 52, 88)),
+      supportingQuantitativeReasons: [
+        `Projected roster VOR gain is ${waiverGain > 0 ? "+" : ""}${waiverGain.toFixed(1)} versus the best drop candidate.`,
+        topNeed ? `${topWaiver.Pos} maps to your top roster need: ${topNeed.starterGap} starter gap and ${topNeed.depthGap} depth gap.` : `${topWaiver.Pos} adds usable depth without forcing a lineup downgrade.`,
+        `League-adjusted value is ${valueDisplay(topWaiver)} with projection ${projectionDisplay(topWaiver)} in ${activeLeagueSettings().scoringLabel}.`,
+      ],
+      riskWarning: Number(topWaiver.Risk || 0) >= 6 ? `Risk is elevated at ${topWaiver.Risk}/10, so do not overpay FAAB.` : "Waiver value can evaporate quickly if role/news changes before claims process.",
+      alternativePath: tradeIsActionable
+        ? `Instead, shop ${compactIntelligenceRow(tradeIdea.give)} for ${compactIntelligenceRow(tradeIdea.get)}.`
+        : "Hold waiver priority/FAAB if news flow weakens the role before lock.",
+      dataFreshnessStatus: `Client synthesis from dashboard data. Board synced ${formatSyncTime(boardFreshness)}.`,
+    };
+  } else if (tradeIsActionable) {
+    const gain = Math.round((leagueValueScore(tradeIdea.get) - leagueValueScore(tradeIdea.give)) * 10) / 10;
+    recommendation = {
+      action: "ACT_NOW",
+      mainMove: `Offer ${compactIntelligenceRow(tradeIdea.give)} for ${compactIntelligenceRow(tradeIdea.get)}`,
+      confidenceScore: Math.round(clampNumber(61 + tradeIdea.score / 5 + Math.max(0, gain), 50, 84)),
+      supportingQuantitativeReasons: [
+        `User value delta is ${gain > 0 ? "+" : ""}${gain.toFixed(1)} before roster-fit adjustment.`,
+        tradeIdea.yourNeed ? `Incoming player attacks your ${tradeIdea.yourNeed.pos} need: ${tradeIdea.yourNeed.detail}.` : "Incoming player improves the highest available lineup lane.",
+        tradeIdea.theirNeed ? `Opponent acceptance angle: your outgoing player fills their ${tradeIdea.theirNeed.pos} need.` : "Trade shape is built around surplus for need rather than raw rank swapping.",
+      ],
+      riskWarning: Number(tradeIdea.get.Risk || 0) >= 6 ? `Incoming risk is ${tradeIdea.get.Risk}/10, so keep the ask flexible.` : "Trade acceptance depends on opponent preference and recent news.",
+      alternativePath: topWaiver ? `Fallback waiver path: add ${compactIntelligenceRow(topWaiver)} if the manager declines.` : "Fallback path is to hold and wait for waiver or injury leverage.",
+      dataFreshnessStatus: `Client synthesis from ESPN roster context. Synced ${formatSyncTime(boardFreshness)}.`,
+    };
+  } else if (topDraft && available.length) {
+    recommendation = {
+      action: actionFromDecision(draftDecision),
+      mainMove: `${draftDecision?.label || "Target"} ${compactIntelligenceRow(topDraft)}`,
+      confidenceScore: Math.round(clampNumber(58 + leagueValueScore(topDraft) / 6 - Number(topDraft.Risk || 0), 42, 86)),
+      supportingQuantitativeReasons: [
+        `League-adjusted value score is ${valueDisplay(topDraft)} with projection ${projectionDisplay(topDraft)}.`,
+        draftDecision?.survival ? `Estimated return probability is ${draftDecision.survival.pct}% before your next relevant pick.` : commandReason(topDraft, draftDecision, counts),
+        topNeed ? `Roster context still shows ${topNeed.pos} as the highest weighted need.` : "Roster construction does not force a lower-value position.",
+      ],
+      riskWarning: riskSignal(topDraft).detail,
+      alternativePath: picks.bestValue?.row && picks.bestValue.row !== topDraft ? `Alternative: ${compactIntelligenceRow(picks.bestValue.row)} as the pure value play.` : "Hold if the room pushes better tier value to you.",
+      dataFreshnessStatus: `Client synthesis from live draft board. Board synced ${formatSyncTime(boardFreshness)}.`,
+    };
+  } else {
+    recommendation = {
+      action: "WAIT",
+      mainMove: "Do Nothing",
+      confidenceScore: snapshot.rows.length ? 72 : 40,
+      supportingQuantitativeReasons: [
+        snapshot.rows.length ? "No waiver add clears the replacement-value threshold by 3.0 points." : "Roster-specific evaluation needs an ESPN team selection or pasted roster.",
+        topStrength ? `Current roster strength is ${topStrength.pos} with top value ${topStrength.topValue.toFixed(1)}.` : "No position has enough surplus to force a consolidation trade.",
+        "Preserving FAAB, waiver priority, and flexibility beats a low-edge move right now.",
+      ],
+      riskWarning: snapshot.rows.length ? "Standing still can miss late injury/news leverage, so rerun after major news." : "Recommendation quality is limited until roster context is present.",
+      alternativePath: topWaiver ? `Monitor ${compactIntelligenceRow(topWaiver)} as the top watchlist add.` : "Refresh after the next ESPN sync or roster update.",
+      dataFreshnessStatus: `Client synthesis from available dashboard context. Synced ${formatSyncTime(boardFreshness)}.`,
+    };
+  }
+
+  return {
+    ...serverData,
+    ok: true,
+    syncedAt: serverData.syncedAt || new Date().toISOString(),
+    teamName: snapshot.teamName || serverData.teamName || "",
+    recommendation,
+    phases: {
+      ...(serverData.phases || {}),
+      liveDraftRoom: {
+        action: topDraft ? actionFromDecision(draftDecision) : "WAIT",
+        mainMove: topDraft ? compactIntelligenceRow(topDraft) : "Waiting for board data",
+        supportingQuantitativeReasons: topDraft ? [`Value ${valueDisplay(topDraft)} / projection ${projectionDisplay(topDraft)}.`] : ["No live board row available."],
+      },
+      weeklyCommandCenter: {
+        action: recommendation.mainMove === "Do Nothing" ? "WAIT" : recommendation.action,
+        mainMove: recommendation.mainMove || "Do Nothing",
+        supportingQuantitativeReasons: recommendation.supportingQuantitativeReasons || [],
+      },
+      waiverSniper: {
+        action: waiverIsActionable ? "ACT_NOW" : "WAIT",
+        mainMove: topWaiver ? `Add ${compactIntelligenceRow(topWaiver)}` : "No priority add",
+        faabBidRange: topWaiver ? { min: waiverGain >= 8 ? 8 : 2, max: waiverGain >= 8 ? 16 : 6 } : null,
+      },
+      tradeFinder: {
+        action: tradeIsActionable ? "ACT_NOW" : "WAIT",
+        mainMove: tradeIdea ? `Offer ${compactIntelligenceRow(tradeIdea.give)} for ${compactIntelligenceRow(tradeIdea.get)}` : "No clean trade lane",
+        opponentTeam: tradeIdea ? teamSnapshotLabel(tradeIdea.team) : "",
+      },
+      opponentIntelligence: {
+        strongestSignals: liveLeagueTeams().slice(0, 4).map((team) => ({
+          teamId: team.teamId,
+          primaryPersona: rosterEntriesForTeam(team).length ? "Roster-aware manager" : "Sync-limited manager",
+        })),
+      },
+    },
+    missingDataWarnings: [...(serverData.missingDataWarnings || []), ...staleWarnings].slice(0, 4),
+    fallbackLogicUsed: [
+      ...(serverData.fallbackLogicUsed || []),
+      "Client-side dashboard synthesis ranked hold, waiver, trade, and draft actions against doing nothing.",
+    ],
+  };
+}
+
+function renderIntelligenceOS() {
+  if (!intelligencePanel) return;
+  if (!intelligenceData) {
+    if (intelligenceMainMove) intelligenceMainMove.textContent = intelligenceInFlight ? "Running league-aware engine" : "Intelligence engine ready";
+    if (intelligenceFreshness) intelligenceFreshness.textContent = intelligenceInFlight ? "Syncing ESPN and board context." : "Refresh to scan draft, weekly, waiver, trade, and opponent context.";
+    if (intelligenceMainCard) {
+      intelligenceMainCard.innerHTML = `<strong>Best move right now</strong><span>${intelligenceInFlight ? "Calculating..." : "Waiting for sync."}</span>`;
+    }
+    if (intelligenceReasons) intelligenceReasons.innerHTML = "<p>FantasyIQ compares every action against doing nothing once data loads.</p>";
+    return;
+  }
+  const rec = intelligenceData.recommendation || {};
+  const phases = intelligenceData.phases || {};
+  const warnings = intelligenceData.missingDataWarnings || [];
+  const fallback = intelligenceData.fallbackLogicUsed || [];
+  if (intelligenceMainMove) intelligenceMainMove.textContent = rec.mainMove || "No forced move";
+  if (intelligenceFreshness) {
+    intelligenceFreshness.textContent = rec.dataFreshnessStatus || `Synced ${formatSyncTime(intelligenceData.syncedAt)}.`;
+  }
+  if (intelligenceMainCard) {
+    const action = rec.action || "WAIT";
+    const confidence = rec.confidenceScore || "TBD";
+    intelligenceMainCard.innerHTML = `
+      <strong>${htmlEscape(action)}</strong>
+      <span>${htmlEscape(rec.mainMove || "No forced move")}</span>
+      <small>Confidence ${htmlEscape(String(confidence))}${intelligenceData.teamName ? ` / ${htmlEscape(intelligenceData.teamName)}` : ""}</small>
+    `;
+  }
+  const reasons = rec.supportingQuantitativeReasons || [];
+  if (intelligenceReasons) {
+    intelligenceReasons.innerHTML = `
+      ${reasons.slice(0, 3).map((reason) => `<p>${htmlEscape(reason)}</p>`).join("") || "<p>No quantitative reasons available yet.</p>"}
+      <p><strong>Risk:</strong> ${htmlEscape(rec.riskWarning || "Normal fantasy variance applies.")}</p>
+      <p><strong>Backup:</strong> ${htmlEscape(rec.alternativePath || "Wait for cleaner data or rerun sync.")}</p>
+      ${warnings.length ? `<p><strong>Missing:</strong> ${htmlEscape(warnings.slice(0, 2).join(" "))}</p>` : ""}
+      ${fallback.length ? `<p><strong>Fallback:</strong> ${htmlEscape(fallback.slice(0, 2).join(" "))}</p>` : ""}
+    `;
+  }
+  if (intelligenceGrid) {
+    const opponentCount = phases.opponentIntelligence?.managerProfiles?.length || phases.opponentIntelligence?.strongestSignals?.length || 0;
+    intelligenceGrid.innerHTML = `
+      <article>
+        <span>Weekly</span>
+        <strong>${htmlEscape(phaseSummaryLabel(phases.weeklyCommandCenter))}</strong>
+        <small>${htmlEscape((phases.weeklyCommandCenter?.supportingQuantitativeReasons || [])[0] || "Lineup and hold logic")}</small>
+      </article>
+      <article>
+        <span>Waivers</span>
+        <strong>${htmlEscape(phaseSummaryLabel(phases.waiverSniper))}</strong>
+        <small>${htmlEscape(phases.waiverSniper?.faabBidRange ? `FAAB ${phases.waiverSniper.faabBidRange.min}-${phases.waiverSniper.faabBidRange.max}` : "Add/drop scan")}</small>
+      </article>
+      <article>
+        <span>Trades</span>
+        <strong>${htmlEscape(phaseSummaryLabel(phases.tradeFinder))}</strong>
+        <small>${htmlEscape(phases.tradeFinder?.opponentTeam ? `Partner: ${phases.tradeFinder.opponentTeam}` : "Generated proposal lane")}</small>
+      </article>
+      <article>
+        <span>Opponents</span>
+        <strong>${opponentCount} profile${opponentCount === 1 ? "" : "s"}</strong>
+        <small>${htmlEscape((phases.opponentIntelligence?.strongestSignals || [])[0]?.primaryPersona || "Persona tracking")}</small>
+      </article>
+    `;
+  }
+}
+
+function loadIntelligence(force = false) {
+  if (!intelligencePanel || intelligenceInFlight) return Promise.resolve();
+  if (requiresCustomerAccess() && !hasCustomerAccess()) {
+    intelligenceData = null;
+    renderIntelligenceOS();
+    return Promise.resolve();
+  }
+  intelligenceInFlight = true;
+  renderIntelligenceOS();
+  return fetch(apiUrl("/api/intelligence", { force: force ? 1 : "" }), { cache: "no-store", headers: apiHeaders() })
+    .then((response) => jsonOrAccessError(response, `HTTP ${response.status}`))
+    .then((data) => {
+      if (!data?.ok) throw new Error(data?.error || "Intelligence API returned no recommendation");
+      intelligenceData = buildClientIntelligenceData(data);
+      renderIntelligenceOS();
+    })
+    .catch((error) => {
+      intelligenceData = buildClientIntelligenceData({
+        recommendation: {
+          action: "WAIT",
+          mainMove: "Intelligence sync unavailable",
+          confidenceScore: 20,
+          supportingQuantitativeReasons: ["The dashboard is still usable.", "Live boards and draft room can continue independently.", "Retry after ESPN/API sync recovers."],
+          riskWarning: error.message || "Unknown intelligence API error.",
+          alternativePath: "Use Draft Room, Waiver Assistant, and Trade Calculator manually for now.",
+          dataFreshnessStatus: "Intelligence API unavailable.",
+        },
+        phases: {},
+        missingDataWarnings: [error.message || "Unknown intelligence API error."],
+        fallbackLogicUsed: ["Client-side intelligence fallback."],
+      });
+      renderIntelligenceOS();
+    })
+    .finally(() => {
+      intelligenceInFlight = false;
+      renderIntelligenceOS();
+    });
+}
+
 function renderRosterEngines() {
   renderPostDraftPlan(activeRosterSnapshot());
   const tradeSnapshot = activeRosterSnapshot({ preferPasted: true });
   renderTradeFinder(tradeSnapshot);
   renderWaiverAssistant(tradeSnapshot);
+  renderIntelligenceOS();
 }
 
 function formatSyncTime(iso) {
@@ -4451,10 +4822,30 @@ function firstRoundPickForTeam(teamId = selectedTeamId()) {
     .sort((a, b) => Number(a.overall || 999) - Number(b.overall || 999))[0] || null;
 }
 
+function liveDraftSlotStorageKey(teamId) {
+  return loadoutStorageKey(`live-draft-slot:${teamId || "unknown"}`);
+}
+
+function liveDraftSlotChangeNote(teamId, firstPick) {
+  if (!teamId || !firstPick?.roundPick) return "";
+  const key = liveDraftSlotStorageKey(teamId);
+  const current = String(firstPick.roundPick);
+  try {
+    const previous = localStorage.getItem(key) || "";
+    localStorage.setItem(key, current);
+    if (previous && previous !== current) {
+      return ` Updated from ESPN: you moved from pick ${previous} to pick ${current}.`;
+    }
+  } catch (error) {
+    // Slot memory is only used to explain ESPN reshuffles.
+  }
+  return "";
+}
+
 function preDraftSlotSummary(teamId = selectedTeamId()) {
   const pick = firstRoundPickForTeam(teamId);
-  if (!pick) return "Choose your ESPN team to lock the room to your slot.";
-  return `Your first pick: Round ${pick.round}, Pick ${pick.roundPick}, Overall ${pick.overall}.`;
+  if (!pick) return "Choose your ESPN team; FantasyIQ will keep your slot synced to ESPN.";
+  return `Live ESPN slot: Round ${pick.round}, Pick ${pick.roundPick}, Overall ${pick.overall}.`;
 }
 
 function emptyStateHtml(title, detail, items = [], tone = "neutral") {
@@ -4527,7 +4918,7 @@ function slotPlan(firstPick) {
   return {
     title: "Pick slot needed",
     detail: "Select your ESPN team in Draft Room so FantasyIQ can locate your first pick and return windows.",
-    bullets: ["Sync ESPN once before draft day.", "Confirm the draft order is published.", "Then practice that exact slot in Mock Simulator."],
+    bullets: ["Enter the ESPN draft room before trusting the slot.", "Click Sync Now after ESPN publishes order.", "If ESPN reshuffles, FantasyIQ updates the slot from live draft order."],
   };
 }
 
@@ -4689,7 +5080,9 @@ function renderDraftPrep() {
   const score = Math.round((checks.filter((item) => item.ok).length / checks.length) * 100);
   draftPrepScore.textContent = `${score}%`;
   if (draftPrepScoreNote) {
-    draftPrepScoreNote.textContent = score >= 100 ? "Ready for draft day." : "Finish the watchlist and team slot before the room opens.";
+    draftPrepScoreNote.textContent = score >= 100
+      ? "Ready for draft day; slot will keep updating from ESPN."
+      : "Finish the watchlist and select your team; the draft slot updates when ESPN publishes order.";
   }
   if (draftPrepReadiness) {
     draftPrepReadiness.innerHTML = checks
@@ -4954,13 +5347,46 @@ function renderTeamOptions() {
   if (!myTeamSelect || !liveDraft?.teams) return;
   const teamStorageKey = loadoutStorageKey("my-team");
   const saved = localStorage.getItem(teamStorageKey) || myTeamSelect.value || appConfig.customerTeamId || "";
+  const validIds = new Set((liveDraft.teams || []).map((team) => String(team.teamId)));
   myTeamSelect.innerHTML = `<option value="">Choose your team</option>${liveDraft.teams
     .map((team) => `<option value="${htmlEscape(team.teamId)}">${htmlEscape(team.teamName)}${team.manager ? ` (${htmlEscape(team.manager)})` : ""}</option>`)
     .join("")}`;
-  if (saved) myTeamSelect.value = saved;
-  if (!localStorage.getItem(teamStorageKey) && appConfig.customerTeamId) {
+  if (saved && validIds.has(String(saved))) {
+    myTeamSelect.value = saved;
+  } else if (saved) {
+    myTeamSelect.value = "";
+    localStorage.removeItem(teamStorageKey);
+  }
+  if (!localStorage.getItem(teamStorageKey) && appConfig.customerTeamId && validIds.has(String(appConfig.customerTeamId))) {
     localStorage.setItem(teamStorageKey, appConfig.customerTeamId);
   }
+}
+
+function renderLiveDraftSlot() {
+  if (!liveMySlot || !liveMySlotNote) return;
+  if (!liveDraft) {
+    liveMySlot.textContent = "Pending";
+    liveMySlotNote.textContent = "Connect ESPN, then click Sync Now after the room opens.";
+    return;
+  }
+  const teamId = selectedTeamId();
+  if (!teamId) {
+    liveMySlot.textContent = "Select team";
+    liveMySlotNote.textContent = "Random rooms can reshuffle; choose your team after ESPN publishes order.";
+    return;
+  }
+  const firstPick = firstRoundPickForTeam(teamId);
+  if (!firstPick) {
+    liveMySlot.textContent = "Order pending";
+    liveMySlotNote.textContent = "Click Sync Now after entering the ESPN draft room. Slot is not assumed from setup.";
+    return;
+  }
+  const upcoming = pendingPicksForTeam(teamId);
+  const nextPick = upcoming[0];
+  const changeNote = liveDraftSlotChangeNote(teamId, firstPick);
+  liveMySlot.textContent = `Pick ${firstPick.roundPick}`;
+  liveMySlotNote.textContent =
+    `Live ESPN order. First pick overall ${firstPick.overall}.${nextPick ? ` Next turn overall ${nextPick.overall}.` : ""}${changeNote}`;
 }
 
 function renderPickCards(container, picks, emptyMessage) {
@@ -5555,6 +5981,128 @@ function renderDraftOrder() {
     .join("");
 }
 
+function liveDraftTeamsBySlot() {
+  const teams = liveDraft?.teams || [];
+  const picks = liveDraft?.picks || [];
+  const slotByTeam = new Map();
+  (liveDraft?.draftOrder || []).forEach((pick, index) => {
+    slotByTeam.set(String(pick.teamId), Number(pick.roundPick || index + 1));
+  });
+  const teamsById = new Map(
+    teams.map((team) => [
+      String(team.teamId),
+      {
+        teamId: String(team.teamId),
+        teamName: team.teamName || team.name || `Team ${team.teamId}`,
+        manager: team.manager || "",
+      },
+    ]),
+  );
+  picks.forEach((pick) => {
+    const key = String(pick.teamId || "");
+    if (!key || teamsById.has(key)) return;
+    teamsById.set(key, {
+      teamId: key,
+      teamName: pick.fantasyTeam || `Team ${key}`,
+      manager: pick.manager || "",
+    });
+  });
+  return Array.from(teamsById.values()).sort((a, b) => {
+    const aSlot = slotByTeam.get(String(a.teamId)) || 999;
+    const bSlot = slotByTeam.get(String(b.teamId)) || 999;
+    return aSlot - bSlot || String(a.teamName).localeCompare(String(b.teamName));
+  });
+}
+
+function draftBoardRoundCount(picks = liveDraft?.picks || []) {
+  const maxRound = picks.reduce((max, pick) => Math.max(max, Number(pick.round || 0)), 0);
+  return Math.max(1, draftRoundTotal(), maxRound);
+}
+
+function pickPositionForDraftBoard(pick) {
+  const row = pickBoardRow(pick);
+  return String(row?.Pos || pick?.pos || "").toUpperCase();
+}
+
+function draftBoardPositionClass(pos) {
+  const normalized = String(pos || "pending").toLowerCase().replace(/[^a-z]/g, "");
+  if (["qb", "rb", "wr", "te", "dst", "k"].includes(normalized)) return `pick-pos-${normalized}`;
+  return "pick-pos-pending";
+}
+
+function draftBoardPickTile(pick, round) {
+  if (!pick) {
+    return `<div class="draft-board-pick empty">
+      <span>R${round}</span>
+      <strong>Pending</strong>
+      <small>Awaiting ESPN</small>
+    </div>`;
+  }
+  const drafted = pick.status === "drafted";
+  const current = Number(pick.overall || 0) === currentOverallPick();
+  const row = pickBoardRow(pick);
+  const pos = pickPositionForDraftBoard(pick);
+  const player = drafted ? pick.player || "Unknown player" : current ? "On the clock" : `Pick ${pick.overall}`;
+  const detail = drafted
+    ? [pos, row?.Team || pick.proTeam, row?.Rank ? `#${row.Rank}` : ""].filter(Boolean).join(" / ") || "Drafted"
+    : `Overall ${pick.overall || "?"}`;
+  return `<div class="draft-board-pick ${drafted ? "made" : "pending"} ${current ? "current" : ""} ${draftBoardPositionClass(pos)}">
+    <span>R${htmlEscape(pick.round || round)}.${htmlEscape(pick.roundPick || "?")}</span>
+    <strong>${htmlEscape(player)}</strong>
+    <small>${htmlEscape(detail)}</small>
+  </div>`;
+}
+
+function renderAllTeamsDraftBoard() {
+  if (!allTeamsDraftBoard) return;
+  if (!liveDraft) {
+    allTeamsDraftBoard.textContent = "Connecting to ESPN public draft sync.";
+    if (allTeamsDraftSummary) allTeamsDraftSummary.textContent = "Waiting for ESPN.";
+    return;
+  }
+  const teams = liveDraftTeamsBySlot();
+  const picks = liveDraft?.picks || [];
+  const completed = Number(liveDraft.completedPicks || 0);
+  const total = Number(liveDraft.totalPicks || picks.length || 0);
+  if (allTeamsDraftSummary) {
+    allTeamsDraftSummary.textContent = `${completed}/${total || leagueTeamTotal() * draftRoundTotal()} picks complete`;
+  }
+  if (!teams.length || !picks.length) {
+    allTeamsDraftBoard.innerHTML = emptyStateHtml(
+      "Waiting for ESPN draft board",
+      "Keep Auto sync on, then hit Sync Now once the room publishes order or the first pick.",
+      ["The grid fills by team slot as ESPN records each pick.", "Use My ESPN Team above first so your build stays personalized."],
+      "watch",
+    );
+    return;
+  }
+  const roundCount = draftBoardRoundCount(picks);
+  allTeamsDraftBoard.innerHTML = `
+    <div class="draft-board-scroll" role="region" aria-label="Live ESPN draft board by team">
+      <div class="draft-board-grid" style="--draft-team-count: ${teams.length}; --draft-round-count: ${roundCount};">
+        ${teams
+          .map((team, index) => {
+      const teamPicks = picks
+        .filter((pick) => String(pick.teamId) === String(team.teamId))
+        .sort((a, b) => Number(a.overall || 0) - Number(b.overall || 0));
+      const draftedCount = teamPicks.filter((pick) => pick.status === "drafted").length;
+      const isMine = String(team.teamId) === String(selectedTeamId());
+      const picksByRound = new Map(teamPicks.map((pick) => [Number(pick.round || 0), pick]));
+      return `<section class="draft-board-column ${isMine ? "mine" : ""}">
+        <header class="draft-board-team">
+          <span>Slot ${index + 1}${isMine ? " / You" : ""}</span>
+          <strong>${htmlEscape(team.teamName)}</strong>
+          <small>${htmlEscape(team.manager || "Manager TBD")} / ${draftedCount}/${teamPicks.length || roundCount}</small>
+        </header>
+        ${Array.from({ length: roundCount }, (_, roundIndex) => draftBoardPickTile(picksByRound.get(roundIndex + 1), roundIndex + 1)).join("")}
+      </section>`;
+    })
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
 function liveDraftRenderSignature(data = liveDraft) {
   if (!data) return "";
   const current = data.currentPick || {};
@@ -5641,6 +6189,7 @@ function renderLiveDraftSummary() {
   if (liveProgressBar) liveProgressBar.style.width = `${pct}%`;
   if (liveLastSync) liveLastSync.textContent = formatSyncTime(liveDraft.syncedAt);
   if (liveSource) liveSource.textContent = liveDraft.demoMode ? "ESPN public demo league" : liveDraft.source || "ESPN public league API";
+  renderLiveDraftSlot();
   renderPreDraftPanel();
   renderDraftPrep();
   renderLeagueHealth();
@@ -5674,6 +6223,7 @@ function renderLiveDraft(options = {}) {
   renderPickCards(liveNextPicks, liveDraft.nextPicks, "No upcoming picks found.");
   renderLiveTierBoard();
   renderDraftOrder();
+  renderAllTeamsDraftBoard();
   renderBoard();
   lastLiveDraftRenderSignature = liveDraftRenderSignature();
 }
@@ -6847,6 +7397,7 @@ function applyBoardPayload(data) {
   renderTradeCalc();
   renderRosterEngines();
   refreshActivePlayerAutocomplete();
+  loadIntelligence(false);
 }
 
 function combinedBoardCount(data = boardData) {
@@ -7016,6 +7567,7 @@ tradeModeButtons.forEach((button) => {
   });
 });
 tradeSaveNote?.addEventListener("click", saveCurrentTradeNote);
+intelligenceRefresh?.addEventListener("click", () => loadIntelligence(true));
 
 const savedHideDrafted = localStorage.getItem(loadoutStorageKey("hide-drafted"));
 const initialHideDrafted = savedHideDrafted === null ? true : savedHideDrafted === "true";
@@ -7041,6 +7593,7 @@ hideDrafted?.addEventListener("change", () => setHideDrafted(hideDrafted.checked
 hideDraftedBoard?.addEventListener("change", () => setHideDrafted(hideDraftedBoard.checked));
 myTeamSelect?.addEventListener("change", () => {
   localStorage.setItem(loadoutStorageKey("my-team"), myTeamSelect.value);
+  renderLiveDraftSlot();
   renderDraftPrep();
   renderLiveDraft();
   renderCheatcodeMode();

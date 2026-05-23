@@ -2,7 +2,11 @@
 .env.local
 .env.*.local
 .venv
+.vercel
 .git
+node_modules
+dist
+artifacts
 __pycache__
 *.pyc
 *.log
