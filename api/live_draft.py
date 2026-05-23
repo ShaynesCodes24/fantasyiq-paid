@@ -13,9 +13,11 @@ from urllib.parse import parse_qs, urlparse
 
 try:
     from customer_context import ConfigError, CustomerContext, authorize_customer_context, require_customer_config, resolve_customer_context
+    from draft_bridge import bridge_snapshot_for_league
     from rate_limit import check_rate_limit, rate_limit_payload
 except ModuleNotFoundError:
     from api.customer_context import ConfigError, CustomerContext, authorize_customer_context, require_customer_config, resolve_customer_context
+    from api.draft_bridge import bridge_snapshot_for_league
     from api.rate_limit import check_rate_limit, rate_limit_payload
 
 
@@ -371,6 +373,57 @@ def overlay_roster_draft_picks(picks: list[dict[str, Any]], teams: dict[int, dic
     return applied
 
 
+def overlay_bridge_draft_picks(
+    picks: list[dict[str, Any]],
+    bridge_picks: list[dict[str, Any]],
+    players: dict[int, dict[str, Any]],
+) -> int:
+    """Fill live picks from the authenticated ESPN draft-room bridge."""
+    used_player_ids = {
+        int_setting(pick.get("playerId"), -1)
+        for pick in picks
+        if int_setting(pick.get("playerId"), -1) > 0
+    }
+    applied = 0
+    for bridge_pick in bridge_picks:
+        player_id = int_setting(bridge_pick.get("playerId"), -1)
+        team_id = int_setting(bridge_pick.get("teamId"), 0)
+        if player_id <= 0 or team_id <= 0 or player_id in used_player_ids:
+            continue
+        overall = int_setting(bridge_pick.get("overall") or bridge_pick.get("pickNumber"), 0)
+        target = None
+        if overall > 0:
+            target = next((pick for pick in picks if int_setting(pick.get("overall"), 0) == overall), None)
+        if not target:
+            target = next(
+                (
+                    pick
+                    for pick in picks
+                    if pick.get("status") != "drafted" and int_setting(pick.get("teamId"), 0) == team_id
+                ),
+                None,
+            )
+        if not target:
+            target = next((pick for pick in picks if pick.get("status") != "drafted"), None)
+        if not target:
+            continue
+        info = player_info(player_id, players)
+        target.update(
+            {
+                "teamId": team_id or target.get("teamId"),
+                "playerId": player_id,
+                "player": info.get("player"),
+                "pos": info.get("pos", ""),
+                "proTeam": info.get("proTeam", ""),
+                "status": "drafted",
+                "syncSource": "espnDraftRoomBridge",
+            }
+        )
+        used_player_ids.add(player_id)
+        applied += 1
+    return applied
+
+
 def scoring_item_points(settings: dict[str, Any], stat_ids: set[int], labels: tuple[str, ...]) -> float | None:
     scoring_settings = settings.get("scoringSettings") or {}
     for item in scoring_settings.get("scoringItems") or []:
@@ -510,6 +563,12 @@ def build_live_payload(request_path: str = "", headers: Any | None = None, force
     picks = [normalize_pick(pick, teams, players) for pick in raw_picks]
     draft_detail_completed = sum(1 for pick in picks if pick["status"] == "drafted")
     roster_overlay_count = overlay_roster_draft_picks(picks, teams)
+    bridge_snapshot = bridge_snapshot_for_league(league_id, season)
+    bridge_overlay_count = overlay_bridge_draft_picks(
+        picks,
+        bridge_snapshot.get("picks") if isinstance(bridge_snapshot, dict) else [],
+        players,
+    )
     completed = [pick for pick in picks if pick["status"] == "drafted"]
     pending = [pick for pick in picks if pick["status"] != "drafted"]
     draft_order = [pick for pick in picks if pick.get("round") == 1]
@@ -527,6 +586,11 @@ def build_live_payload(request_path: str = "", headers: Any | None = None, force
         fallback_states.append(
             "ESPN draftDetail did not include every drafted player; roster entries were used to keep drafted-player filtering current."
         )
+    if bridge_overlay_count:
+        draft_sync_mode = "espnDraftRoomBridge"
+        fallback_states.append(
+            f"ESPN public live picks are hidden; FantasyIQ is using {bridge_overlay_count} pick event(s) from the authenticated draft-room bridge."
+        )
     elif not draft_detail_completed and not rostered_players and raw_picks:
         league_status = league.get("status") or {}
         joined = int_setting(league_status.get("teamsJoined"), 0)
@@ -534,7 +598,7 @@ def build_live_payload(request_path: str = "", headers: Any | None = None, force
         joined_note = f" ESPN reports {joined}/{expected} teams joined." if joined and expected else ""
     drafted = bool(draft_detail.get("drafted")) or (bool(picks) and len(completed) >= len(picks))
     in_progress = bool(draft_detail.get("inProgress")) or (0 < len(completed) < len(picks))
-    if not draft_detail_completed and not rostered_players and raw_picks:
+    if not bridge_overlay_count and not draft_detail_completed and not rostered_players and raw_picks:
         if in_progress:
             draft_sync_mode = "espnLiveHidden"
             fallback_states.append(
@@ -563,6 +627,8 @@ def build_live_payload(request_path: str = "", headers: Any | None = None, force
         "draftSyncMode": draft_sync_mode,
         "draftDetailCompletedPicks": draft_detail_completed,
         "rosterFallbackPicks": roster_overlay_count,
+        "draftBridgePicks": bridge_overlay_count,
+        "draftBridgeUpdatedAt": bridge_snapshot.get("postedAt") if isinstance(bridge_snapshot, dict) else "",
         "fallbackStates": fallback_states,
         "totalPicks": len(picks),
         "completedPicks": len(completed),

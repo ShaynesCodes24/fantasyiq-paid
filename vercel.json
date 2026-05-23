@@ -45,6 +45,14 @@
       "destination": "/api/live_draft"
     },
     {
+      "source": "/api/draft-bridge",
+      "destination": "/api/draft_bridge"
+    },
+    {
+      "source": "/api/draft-bridge.json",
+      "destination": "/api/draft_bridge"
+    },
+    {
       "source": "/api/live-boards",
       "destination": "/api/live_boards"
     },

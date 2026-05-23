@@ -6467,6 +6467,8 @@ function renderLiveDraftSummary() {
   const state = liveDraft.inProgress ? "Draft live" : liveDraft.drafted ? "Draft complete" : preDraft ? "Pre-draft board ready" : "Draft board loaded";
   const sourceNote = liveDraft.draftSyncMode === "rosterFallback"
     ? " ESPN roster fallback is active for drafted-player filtering."
+    : liveDraft.draftSyncMode === "espnDraftRoomBridge"
+      ? " ESPN public picks are hidden, so FantasyIQ is using authenticated draft-room bridge events."
     : liveDraft.draftSyncMode === "espnLiveHidden"
       ? " ESPN has started this draft but is not exposing live picks through the public feed. Use the drafted-player paste importer below."
     : "";
@@ -6505,6 +6507,8 @@ function renderLiveDraftSummary() {
       ? "ESPN public demo league"
       : liveDraft.draftSyncMode === "rosterFallback"
         ? "ESPN roster fallback"
+        : liveDraft.draftSyncMode === "espnDraftRoomBridge"
+          ? "ESPN draft-room bridge"
         : liveDraft.draftSyncMode === "espnLiveHidden"
           ? "ESPN live picks hidden"
         : draftLeagueOverrideState?.leagueId
