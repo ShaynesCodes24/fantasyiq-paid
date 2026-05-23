@@ -147,8 +147,10 @@ const draftPasteSync = document.querySelector("#draft-paste-sync");
 const draftPasteInput = document.querySelector("#draft-paste-input");
 const draftPasteApply = document.querySelector("#draft-paste-apply");
 const draftBridgeSync = document.querySelector("#draft-bridge-sync");
+const draftBridgeOpen = document.querySelector("#draft-bridge-open");
 const draftBridgeCopy = document.querySelector("#draft-bridge-copy");
 const draftBridgeStatus = document.querySelector("#draft-bridge-status");
+const draftCompanionInstall = document.querySelector("#draft-companion-install");
 let addLeagueDialog = null;
 const leagueTeamCount = document.querySelector("#league-team-count");
 const leagueTypeNote = document.querySelector("#league-type-note");
@@ -387,6 +389,7 @@ let liveSyncFailureCount = 0;
 let lastLiveDraftRenderSignature = "";
 let manualDraftOverrides = [];
 let draftLeagueOverrideState = null;
+let draftCompanionInstalled = false;
 
 function rememberedCustomerLoadout(loadouts) {
   try {
@@ -651,6 +654,11 @@ function extractMemberId(value = "") {
   }
 }
 
+function extractDraftUrl(value = "") {
+  const text = String(value || "").trim();
+  return /^https:\/\/fantasy\.espn\.com\/football\/draft/i.test(text) ? text : "";
+}
+
 function loadDraftLeagueOverride() {
   const params = new URLSearchParams(window.location.search);
   const queryLeagueId = extractLeagueId(params.get("draftLeagueId") || params.get("liveLeagueId") || params.get("leagueId") || "");
@@ -700,7 +708,9 @@ function setDraftOverrideUrlState() {
 
 function renderDraftLeagueOverrideControls() {
   if (!draftLeagueOverride) return;
-  if (draftLeagueInput && draftLeagueOverrideState?.leagueId) draftLeagueInput.value = draftLeagueOverrideState.leagueId;
+  if (draftLeagueInput && draftLeagueOverrideState?.leagueId) {
+    draftLeagueInput.value = draftLeagueOverrideState.draftUrl || draftLeagueOverrideState.leagueId;
+  }
   if (draftTeamInput && draftLeagueOverrideState?.teamId) draftTeamInput.value = draftLeagueOverrideState.teamId;
   draftLeagueOverride.classList.toggle("active", Boolean(draftLeagueOverrideState?.leagueId));
   draftLeagueOverride.dataset.active = draftLeagueOverrideState?.leagueId ? "true" : "false";
@@ -710,13 +720,20 @@ function renderDraftLeagueOverrideControls() {
     draftLeagueOverrideState?.memberId
   );
   if (draftBridgeSync) draftBridgeSync.classList.toggle("active", Boolean(draftLeagueOverrideState?.leagueId));
+  if (draftBridgeOpen) draftBridgeOpen.disabled = !bridgeReady;
   if (draftBridgeCopy) draftBridgeCopy.disabled = !bridgeReady;
+  if (draftCompanionInstall) {
+    draftCompanionInstall.dataset.installed = draftCompanionInstalled ? "true" : "false";
+    draftCompanionInstall.textContent = draftCompanionInstalled ? "Companion Installed" : "Install Companion";
+  }
   if (draftBridgeStatus) {
     draftBridgeStatus.textContent = bridgeReady
-      ? "Bridge ready. Run it from the ESPN draft room if public live picks are hidden."
+      ? draftCompanionInstalled
+        ? "Automatic sync ready. Open ESPN from here and leave both tabs open."
+        : "Install the Draft Sync Companion once, then this opens ESPN and syncs automatically."
       : draftLeagueOverrideState?.leagueId
-        ? "Paste the full ESPN draft URL above so the bridge can include teamId and memberId."
-        : "Paste the full ESPN draft URL above to enable the bridge.";
+        ? "Paste the full ESPN draft URL above so automatic sync can include teamId and memberId."
+        : "Paste the full ESPN draft URL above to prepare automatic draft sync.";
   }
 }
 
@@ -726,12 +743,13 @@ function applyDraftLeagueOverrideFromInputs() {
   const teamId = numericText(draftTeamInput?.value || "") || extractTeamId(rawInput);
   const season = extractSeasonId(rawInput) || "2026";
   const memberId = extractMemberId(rawInput);
+  const draftUrl = extractDraftUrl(rawInput);
   if (!leagueId) {
     if (liveStatus) liveStatus.innerHTML = "<strong>Paste the ESPN draft URL or leagueId first.</strong>";
     draftLeagueInput?.focus();
     return;
   }
-  saveDraftLeagueOverride({ leagueId, teamId, season, memberId, label: "Draft room override" });
+  saveDraftLeagueOverride({ leagueId, teamId, season, memberId, draftUrl, label: "Draft room override" });
   setDraftOverrideUrlState();
   manualDraftOverrides = [];
   saveManualDraftOverrides();
@@ -765,6 +783,47 @@ function randomDraftBridgeKey() {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+function espnDraftRoomUrl() {
+  if (draftLeagueOverrideState?.draftUrl) return draftLeagueOverrideState.draftUrl;
+  const leagueId = draftLeagueOverrideState?.leagueId || "";
+  const season = draftLeagueOverrideState?.season || "2026";
+  const teamId = draftLeagueOverrideState?.teamId || "";
+  const memberId = draftLeagueOverrideState?.memberId || "";
+  if (!leagueId || !teamId || !memberId) return "";
+  const url = new URL("https://fantasy.espn.com/football/draft");
+  url.searchParams.set("leagueId", leagueId);
+  url.searchParams.set("seasonId", season);
+  url.searchParams.set("teamId", teamId);
+  url.searchParams.set("memberId", memberId);
+  return url.toString();
+}
+
+function draftBridgeConfigPayload() {
+  return {
+    leagueId: draftLeagueOverrideState?.leagueId || "",
+    season: draftLeagueOverrideState?.season || "2026",
+    teamId: draftLeagueOverrideState?.teamId || "",
+    memberId: draftLeagueOverrideState?.memberId || "",
+    bridgeKey: draftLeagueOverrideState?.bridgeKey || "",
+    endpoint: `${window.location.origin}/api/draft-bridge`,
+    draftUrl: espnDraftRoomUrl(),
+  };
+}
+
+function sendDraftBridgeConfigToCompanion() {
+  window.postMessage(
+    {
+      type: "FANTASYIQ_DRAFT_BRIDGE_CONFIG",
+      config: draftBridgeConfigPayload(),
+    },
+    window.location.origin
+  );
+}
+
+function pingDraftCompanion() {
+  window.postMessage({ type: "FANTASYIQ_DRAFT_COMPANION_PING" }, window.location.origin);
+}
+
 async function registerDraftBridgeSession() {
   if (!draftLeagueOverrideState?.leagueId || !draftLeagueOverrideState?.teamId || !draftLeagueOverrideState?.memberId) {
     throw new Error("Paste the full ESPN draft URL first.");
@@ -790,14 +849,7 @@ async function registerDraftBridgeSession() {
 }
 
 function buildEspnDraftBridgeScript() {
-  const config = {
-    leagueId: draftLeagueOverrideState?.leagueId || "",
-    season: draftLeagueOverrideState?.season || "2026",
-    teamId: draftLeagueOverrideState?.teamId || "",
-    memberId: draftLeagueOverrideState?.memberId || "",
-    bridgeKey: draftLeagueOverrideState?.bridgeKey || "",
-    endpoint: `${window.location.origin}/api/draft-bridge`,
-  };
+  const config = draftBridgeConfigPayload();
   return `(() => {
   const cfg = ${JSON.stringify(config)};
   const picks = [];
@@ -956,6 +1008,53 @@ function copyEspnDraftBridgeScript() {
       if (draftBridgeStatus) draftBridgeStatus.textContent = `Bridge copy failed: ${error.message}`;
     });
 }
+
+function openEspnDraftRoomWithCompanion() {
+  if (!draftLeagueOverrideState?.leagueId || !draftLeagueOverrideState?.teamId || !draftLeagueOverrideState?.memberId) {
+    if (draftBridgeStatus) draftBridgeStatus.textContent = "Paste the full ESPN draft URL first, then click Use Draft League.";
+    draftLeagueInput?.focus();
+    return;
+  }
+  const bridgeKey = draftLeagueOverrideState.bridgeKey || randomDraftBridgeKey();
+  saveDraftLeagueOverride({ ...draftLeagueOverrideState, bridgeKey });
+  sendDraftBridgeConfigToCompanion();
+  if (draftBridgeStatus) {
+    draftBridgeStatus.textContent = draftCompanionInstalled
+      ? "Opening ESPN. The companion will connect automatically in the draft room."
+      : "Opening ESPN. Install the companion once for automatic live sync.";
+  }
+  const draftUrl = espnDraftRoomUrl();
+  const draftWindow = draftUrl ? window.open("about:blank", "_blank") : null;
+  registerDraftBridgeSession()
+    .then(() => {
+      sendDraftBridgeConfigToCompanion();
+      if (draftWindow && draftUrl) {
+        draftWindow.location.href = draftUrl;
+      } else if (draftUrl) {
+        window.open(draftUrl, "_blank");
+      }
+      loadLiveDraft(true);
+    })
+    .catch((error) => {
+      try {
+        draftWindow?.close();
+      } catch (closeError) {
+        // Browser-managed popup cleanup is best effort.
+      }
+      if (draftBridgeStatus) draftBridgeStatus.textContent = `Automatic sync setup failed: ${error.message}`;
+    });
+}
+
+window.addEventListener("message", (event) => {
+  if (event.origin !== window.location.origin) return;
+  const message = event.data || {};
+  if (message.type !== "FANTASYIQ_DRAFT_COMPANION_STATUS") return;
+  draftCompanionInstalled = Boolean(message.installed);
+  if (draftBridgeStatus && message.reason === "configured") {
+    draftBridgeStatus.textContent = "Companion configured. Open ESPN from here and live picks will sync automatically.";
+  }
+  renderDraftLeagueOverrideControls();
+});
 
 function trackDashboardEvent(eventType, payload = {}) {
   if (["127.0.0.1", "localhost"].includes(window.location.hostname)) return;
@@ -8040,6 +8139,8 @@ function loadBoards() {
 draftLeagueOverrideState = loadDraftLeagueOverride();
 manualDraftOverrides = loadManualDraftOverrides();
 renderDraftLeagueOverrideControls();
+pingDraftCompanion();
+window.setTimeout(pingDraftCompanion, 800);
 
 if (boardTable) {
   bootCustomerDashboard();
@@ -8189,6 +8290,7 @@ draftTeamInput?.addEventListener("keydown", (event) => {
   }
 });
 draftPasteApply?.addEventListener("click", importDraftedPlayersFromText);
+draftBridgeOpen?.addEventListener("click", openEspnDraftRoomWithCompanion);
 draftBridgeCopy?.addEventListener("click", copyEspnDraftBridgeScript);
 liveSyncToggle?.addEventListener("change", () => {
   localStorage.setItem(loadoutStorageKey("auto-sync"), String(liveSyncToggle.checked));

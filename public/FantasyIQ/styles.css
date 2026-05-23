@@ -1105,7 +1105,11 @@ textarea {
   padding: 10px 12px;
 }
 
-.draft-bridge-sync button {
+.draft-bridge-sync button,
+.draft-bridge-sync a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 40px;
   border: 1px solid rgba(18, 63, 52, 0.22);
   border-radius: 8px;
@@ -1113,8 +1117,25 @@ textarea {
   color: #fff8e8;
   padding: 0 12px;
   font-weight: 950;
+  text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
+}
+
+.draft-bridge-sync a {
+  background: #fffdf8;
+  color: var(--accent);
+}
+
+.draft-bridge-sync a[data-installed="true"] {
+  border-color: rgba(45, 126, 87, 0.28);
+  background: #e9f7ef;
+  color: #215f42;
+}
+
+.draft-bridge-sync .draft-bridge-emergency {
+  background: transparent;
+  color: var(--muted);
 }
 
 .draft-bridge-sync button:disabled {
@@ -5985,6 +6006,7 @@ textarea,
   .draft-league-override button,
   .draft-paste-sync button,
   .draft-bridge-sync button,
+  .draft-bridge-sync a,
   .add-league-actions button,
   .player-drawer-actions button {
     width: 100%;

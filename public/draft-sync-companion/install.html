@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MyFantasyIQ Draft Sync Companion</title>
+    <style>
+      :root {
+        --ink: #102c25;
+        --muted: #63726d;
+        --green: #123f34;
+        --gold: #f0c35b;
+        --paper: #fffaf0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #06251f;
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      main {
+        width: min(860px, calc(100% - 32px));
+        margin: 42px auto;
+        border: 1px solid rgba(240, 195, 91, 0.38);
+        border-radius: 8px;
+        background: var(--paper);
+        padding: 28px;
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        font-size: clamp(32px, 5vw, 56px);
+        line-height: 0.98;
+      }
+
+      p {
+        color: var(--muted);
+        font-size: 18px;
+        font-weight: 750;
+        line-height: 1.55;
+      }
+
+      a,
+      code {
+        color: var(--green);
+        font-weight: 900;
+      }
+
+      ol {
+        display: grid;
+        gap: 14px;
+        margin: 24px 0 0;
+        padding-left: 22px;
+      }
+
+      li {
+        font-size: 17px;
+        font-weight: 800;
+        line-height: 1.45;
+      }
+
+      .note {
+        margin-top: 24px;
+        border-left: 5px solid var(--gold);
+        background: #fff3cf;
+        padding: 14px 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Draft Sync Companion</h1>
+      <p>
+        This is the one-time browser helper that lets MyFantasyIQ read ESPN draft-room pick events from your
+        logged-in ESPN tab when ESPN hides live picks from its public league feed.
+      </p>
+      <ol>
+        <li>Install the companion extension once. The Chrome Web Store link will replace this internal test page before launch.</li>
+        <li>Open your MyFantasyIQ dashboard and paste the full ESPN draft URL.</li>
+        <li>Click <strong>Open ESPN Draft Room</strong>. The companion starts automatically in ESPN.</li>
+      </ol>
+      <p class="note">
+        Internal testing: load the <code>public/draft-sync-companion</code> folder as an unpacked Chrome extension.
+        Customers should never need DevTools or console paste.
+      </p>
+    </main>
+  </body>
+</html>
