@@ -990,6 +990,62 @@ textarea {
   min-width: 0;
 }
 
+.draft-league-override {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) minmax(100px, 0.5fr) auto auto;
+  gap: 10px;
+  align-items: end;
+  margin: 0 0 14px;
+  border: 1px solid rgba(18, 63, 52, 0.16);
+  border-radius: 8px;
+  background: #fffaf0;
+  padding: 12px;
+}
+
+.draft-league-override.active {
+  border-color: rgba(184, 135, 53, 0.42);
+  background: #fff4d8;
+}
+
+.draft-league-override label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.draft-league-override input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid rgba(18, 63, 52, 0.18);
+  border-radius: 8px;
+  background: #fffdf8;
+  color: var(--ink);
+  padding: 0 12px;
+  font: inherit;
+  font-weight: 850;
+}
+
+.draft-league-override button {
+  min-height: 42px;
+  border: 1px solid rgba(18, 63, 52, 0.22);
+  border-radius: 8px;
+  background: #123f34;
+  color: #fff8e8;
+  padding: 0 12px;
+  font-weight: 950;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.draft-league-override button:last-child {
+  background: #fffdf8;
+  color: var(--accent);
+}
+
 .league-health-panel {
   display: grid;
   gap: 12px;
@@ -5766,6 +5822,10 @@ textarea,
     justify-content: flex-start;
   }
 
+  .draft-league-override {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .panel {
     padding: 18px;
   }
@@ -5816,6 +5876,7 @@ textarea,
 
   .hero-actions,
   .live-switches,
+  .draft-league-override,
   .add-league-actions,
   .access-grid,
   .access-actions,
@@ -5827,6 +5888,7 @@ textarea,
 
   .hero-actions button,
   .live-switches button,
+  .draft-league-override button,
   .add-league-actions button,
   .player-drawer-actions button {
     width: 100%;

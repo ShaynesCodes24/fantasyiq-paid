@@ -4,6 +4,7 @@ import json
 import time
 import urllib.error
 import urllib.request
+from dataclasses import replace
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
@@ -122,6 +123,36 @@ def league_url(context: CustomerContext, cache_bust: bool = False) -> str:
     if cache_bust:
         url = f"{url}&_={int(time.time() * 1000)}"
     return url
+
+
+def override_customer_context(context: CustomerContext, request_path: str = "") -> CustomerContext:
+    parsed = urlparse(request_path)
+    params = parse_qs(parsed.query)
+    raw_league_id = (
+        params.get("draftLeagueId", [""])[0]
+        or params.get("liveLeagueId", [""])[0]
+        or params.get("leagueId", [""])[0]
+    )
+    if not raw_league_id:
+        return context
+    league_id = int_setting(raw_league_id, 0)
+    if league_id <= 0:
+        raise ConfigError("Live draft leagueId must be a number.")
+    raw_team_id = (
+        params.get("draftTeamId", [""])[0]
+        or params.get("liveTeamId", [""])[0]
+        or params.get("teamId", [""])[0]
+    )
+    raw_season = params.get("draftSeason", [""])[0] or params.get("season", [""])[0]
+    return replace(
+        context,
+        league_id=league_id,
+        season=int_setting(raw_season, context.season) or context.season,
+        customer_team_id=int_setting(raw_team_id, 0) or context.customer_team_id,
+        league_key=f"live-draft-{league_id}",
+        league_name="Live Draft Override",
+        demo_mode=False,
+    )
 
 
 def players_url(context: CustomerContext) -> str:
@@ -439,7 +470,8 @@ def extract_league_settings(
 
 
 def build_live_payload(request_path: str = "", headers: Any | None = None, force: bool = False) -> dict[str, Any]:
-    context = authorize_customer_context(request_path, headers)
+    authorized_context = authorize_customer_context(request_path, headers)
+    context = override_customer_context(authorized_context, request_path)
     now = time.time()
     cached = _live_cache.get(context.cache_key)
     if not force and cached and cached.get("data") and now - float(cached.get("ts") or 0) < 5:

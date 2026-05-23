@@ -138,6 +138,11 @@ const leagueSwitcherLabel = document.querySelector("#league-switcher-label");
 const leagueSelect = document.querySelector("#league-select");
 const addLeagueAction = document.querySelector("#add-league-action");
 const leagueSlotNote = document.querySelector("#league-slot-note");
+const draftLeagueOverride = document.querySelector("#draft-league-override");
+const draftLeagueInput = document.querySelector("#draft-league-input");
+const draftTeamInput = document.querySelector("#draft-team-input");
+const draftLeagueApply = document.querySelector("#draft-league-apply");
+const draftLeagueClear = document.querySelector("#draft-league-clear");
 let addLeagueDialog = null;
 const leagueTeamCount = document.querySelector("#league-team-count");
 const leagueTypeNote = document.querySelector("#league-type-note");
@@ -375,6 +380,7 @@ let liveSyncInFlight = false;
 let liveSyncFailureCount = 0;
 let lastLiveDraftRenderSignature = "";
 let manualDraftOverrides = [];
+let draftLeagueOverrideState = null;
 
 function rememberedCustomerLoadout(loadouts) {
   try {
@@ -581,6 +587,11 @@ function apiUrl(path, params = {}) {
       url.searchParams.set(key, String(value));
     }
   });
+  if (path === "/api/live-draft" && draftLeagueOverrideState?.leagueId) {
+    url.searchParams.set("draftLeagueId", draftLeagueOverrideState.leagueId);
+    if (draftLeagueOverrideState.teamId) url.searchParams.set("draftTeamId", draftLeagueOverrideState.teamId);
+    if (draftLeagueOverrideState.season) url.searchParams.set("draftSeason", draftLeagueOverrideState.season);
+  }
   return `${url.pathname}${url.search}`;
 }
 
@@ -591,6 +602,112 @@ function apiHeaders(extra = {}) {
     headers["x-fantasyiq-access-code"] = accessCode;
   }
   return headers;
+}
+
+function draftLeagueOverrideStorageKey() {
+  return loadoutStorageKey("draft-league-override");
+}
+
+function numericText(value = "") {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function extractLeagueId(value = "") {
+  const text = String(value || "").trim();
+  const fromParam = text.match(/[?&]leagueId=(\d+)/i);
+  if (fromParam) return fromParam[1];
+  const fromPath = text.match(/\/leagues?\/(\d+)/i);
+  if (fromPath) return fromPath[1];
+  const digits = numericText(text);
+  return digits.length >= 4 ? digits : "";
+}
+
+function extractTeamId(value = "") {
+  const text = String(value || "").trim();
+  const fromParam = text.match(/[?&]teamId=(\d+)/i);
+  return fromParam ? fromParam[1] : "";
+}
+
+function loadDraftLeagueOverride() {
+  const params = new URLSearchParams(window.location.search);
+  const queryLeagueId = extractLeagueId(params.get("draftLeagueId") || params.get("liveLeagueId") || params.get("leagueId") || "");
+  const queryTeamId = numericText(params.get("draftTeamId") || params.get("liveTeamId") || params.get("teamId") || "");
+  if (queryLeagueId) {
+    return { leagueId: queryLeagueId, teamId: queryTeamId, season: params.get("season") || params.get("draftSeason") || "2026" };
+  }
+  try {
+    const saved = JSON.parse(localStorage.getItem(draftLeagueOverrideStorageKey()) || "null");
+    return saved?.leagueId ? saved : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function saveDraftLeagueOverride(value) {
+  draftLeagueOverrideState = value?.leagueId ? value : null;
+  try {
+    if (draftLeagueOverrideState) {
+      localStorage.setItem(draftLeagueOverrideStorageKey(), JSON.stringify(draftLeagueOverrideState));
+    } else {
+      localStorage.removeItem(draftLeagueOverrideStorageKey());
+    }
+  } catch (error) {
+    // Local storage is best effort; the current page still keeps the override in memory.
+  }
+}
+
+function setDraftOverrideUrlState() {
+  const params = new URLSearchParams(window.location.search);
+  params.delete("draftLeagueId");
+  params.delete("draftTeamId");
+  params.delete("draftSeason");
+  if (draftLeagueOverrideState?.leagueId) {
+    params.set("draftLeagueId", draftLeagueOverrideState.leagueId);
+    if (draftLeagueOverrideState.teamId) params.set("draftTeamId", draftLeagueOverrideState.teamId);
+    if (draftLeagueOverrideState.season) params.set("draftSeason", draftLeagueOverrideState.season);
+  }
+  const query = params.toString();
+  history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`);
+}
+
+function renderDraftLeagueOverrideControls() {
+  if (!draftLeagueOverride) return;
+  if (draftLeagueInput && draftLeagueOverrideState?.leagueId) draftLeagueInput.value = draftLeagueOverrideState.leagueId;
+  if (draftTeamInput && draftLeagueOverrideState?.teamId) draftTeamInput.value = draftLeagueOverrideState.teamId;
+  draftLeagueOverride.classList.toggle("active", Boolean(draftLeagueOverrideState?.leagueId));
+  draftLeagueOverride.dataset.active = draftLeagueOverrideState?.leagueId ? "true" : "false";
+}
+
+function applyDraftLeagueOverrideFromInputs() {
+  const leagueId = extractLeagueId(draftLeagueInput?.value || "");
+  const teamId = numericText(draftTeamInput?.value || "") || extractTeamId(draftLeagueInput?.value || "");
+  if (!leagueId) {
+    if (liveStatus) liveStatus.innerHTML = "<strong>Paste the ESPN draft URL or leagueId first.</strong>";
+    draftLeagueInput?.focus();
+    return;
+  }
+  saveDraftLeagueOverride({ leagueId, teamId, season: "2026", label: "Draft room override" });
+  setDraftOverrideUrlState();
+  manualDraftOverrides = [];
+  saveManualDraftOverrides();
+  liveDraft = null;
+  lastLiveDraftRenderSignature = "";
+  if (myTeamSelect) myTeamSelect.value = teamId || "";
+  renderDraftLeagueOverrideControls();
+  if (liveStatus) liveStatus.innerHTML = `<strong>Connecting to ESPN league ${htmlEscape(leagueId)}.</strong>`;
+  loadLiveDraft(true);
+}
+
+function clearDraftLeagueOverride() {
+  saveDraftLeagueOverride(null);
+  setDraftOverrideUrlState();
+  liveDraft = null;
+  lastLiveDraftRenderSignature = "";
+  if (draftLeagueInput) draftLeagueInput.value = "";
+  if (draftTeamInput) draftTeamInput.value = "";
+  renderDraftLeagueOverrideControls();
+  if (liveStatus) liveStatus.innerHTML = "<strong>Back to saved league.</strong> Pulling a fresh ESPN sync now.";
+  loadLiveDraft(true);
 }
 
 function trackDashboardEvent(eventType, payload = {}) {
@@ -1334,10 +1451,12 @@ function renderLeagueProfile() {
   if (leagueDraftRounds) leagueDraftRounds.textContent = `${rounds} rounds`;
   if (leagueDraftNote) leagueDraftNote.textContent = `${settings.playoffTeams || 0} playoff teams`;
   if (leagueProfileStrip) {
-    leagueProfileStrip.innerHTML = `<strong>League engine active</strong><span>${htmlEscape(teamText)} / ${htmlEscape(scoringText)} / ${htmlEscape(lineupText)}. Source: ${htmlEscape(source)}.</span>`;
+    const overrideText = draftLeagueOverrideState?.leagueId ? ` Live draft override: ESPN league ${draftLeagueOverrideState.leagueId}.` : "";
+    leagueProfileStrip.innerHTML = `<strong>League engine active</strong><span>${htmlEscape(teamText)} / ${htmlEscape(scoringText)} / ${htmlEscape(lineupText)}. Source: ${htmlEscape(source)}.${htmlEscape(overrideText)}</span>`;
   }
   if (leagueRoomNote) {
-    leagueRoomNote.innerHTML = `<strong>${htmlEscape(scoringText)} league profile</strong><span>${htmlEscape(teamText)} with ${htmlEscape(lineupText)}. Recommendations, mocks, and trades are using this profile.</span>`;
+    const roomLeague = draftLeagueOverrideState?.leagueId ? `ESPN league ${draftLeagueOverrideState.leagueId}` : "saved ESPN league";
+    leagueRoomNote.innerHTML = `<strong>${htmlEscape(scoringText)} league profile</strong><span>${htmlEscape(teamText)} with ${htmlEscape(lineupText)}. Live sync is using the ${htmlEscape(roomLeague)}.</span>`;
   }
   if (boardMethodNote) {
     boardMethodNote.textContent = boardData?.scoringProfile
@@ -4557,7 +4676,7 @@ function rosterCountsFor(teamId) {
 }
 
 function selectedTeamId() {
-  return myTeamSelect?.value || appConfig.customerTeamId || "";
+  return myTeamSelect?.value || draftLeagueOverrideState?.teamId || appConfig.customerTeamId || "";
 }
 
 function currentRound() {
@@ -5478,7 +5597,7 @@ function renderLiveTierBoard() {
 function renderTeamOptions() {
   if (!myTeamSelect || !liveDraft?.teams) return;
   const teamStorageKey = loadoutStorageKey("my-team");
-  const saved = localStorage.getItem(teamStorageKey) || myTeamSelect.value || appConfig.customerTeamId || "";
+  const saved = draftLeagueOverrideState?.teamId || localStorage.getItem(teamStorageKey) || myTeamSelect.value || appConfig.customerTeamId || "";
   const validIds = new Set((liveDraft.teams || []).map((team) => String(team.teamId)));
   myTeamSelect.innerHTML = `<option value="">Choose your team</option>${liveDraft.teams
     .map((team) => `<option value="${htmlEscape(team.teamId)}">${htmlEscape(team.teamName)}${team.manager ? ` (${htmlEscape(team.manager)})` : ""}</option>`)
@@ -6306,6 +6425,9 @@ function renderLiveDraftSummary() {
   const sourceNote = liveDraft.draftSyncMode === "rosterFallback"
     ? " ESPN roster fallback is active for drafted-player filtering."
     : "";
+  const overrideNote = draftLeagueOverrideState?.leagueId
+    ? ` Draft-room override is using ESPN league ${draftLeagueOverrideState.leagueId}.`
+    : "";
   const manualNote = manualDraftOverrides.length
     ? ` Manual tracker has ${manualDraftOverrides.length} pick${manualDraftOverrides.length === 1 ? "" : "s"}. <button type="button" class="inline-sync-action" data-clear-manual-draft>Clear manual picks</button>`
     : "";
@@ -6315,7 +6437,7 @@ function renderLiveDraftSummary() {
       ? " ESPN order is loaded; keep auto sync on when the room opens."
       : ` ${liveSyncCadenceLabel()}`;
 
-  liveStatus.innerHTML = `<strong>${state}</strong>: ${completed}/${total || totalFallback} picks completed.${syncContext}${sourceNote}${syncWarnings}${manualNote}${stale}`;
+  liveStatus.innerHTML = `<strong>${state}</strong>: ${completed}/${total || totalFallback} picks completed.${syncContext}${overrideNote}${sourceNote}${syncWarnings}${manualNote}${stale}`;
   if (liveSyncStatus) {
     liveSyncStatus.textContent = liveDraft.demoMode ? "Demo league connected" : liveDraft.inProgress ? "Draft live" : preDraft ? "Pre-draft ready" : "ESPN connected";
   }
@@ -6338,6 +6460,8 @@ function renderLiveDraftSummary() {
       ? "ESPN public demo league"
       : liveDraft.draftSyncMode === "rosterFallback"
         ? "ESPN roster fallback"
+        : draftLeagueOverrideState?.leagueId
+          ? `ESPN override ${draftLeagueOverrideState.leagueId}`
         : liveDraft.source || "ESPN public league API";
   }
   renderLiveDraftSlot();
@@ -7618,7 +7742,9 @@ function loadBoards() {
     });
 }
 
+draftLeagueOverrideState = loadDraftLeagueOverride();
 manualDraftOverrides = loadManualDraftOverrides();
+renderDraftLeagueOverrideControls();
 
 if (boardTable) {
   bootCustomerDashboard();
@@ -7753,6 +7879,20 @@ myTeamSelect?.addEventListener("change", () => {
   renderCheatcodeMode();
 });
 manualSync?.addEventListener("click", () => loadLiveDraft(true));
+draftLeagueApply?.addEventListener("click", applyDraftLeagueOverrideFromInputs);
+draftLeagueClear?.addEventListener("click", clearDraftLeagueOverride);
+draftLeagueInput?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    applyDraftLeagueOverrideFromInputs();
+  }
+});
+draftTeamInput?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    applyDraftLeagueOverrideFromInputs();
+  }
+});
 liveSyncToggle?.addEventListener("change", () => {
   localStorage.setItem(loadoutStorageKey("auto-sync"), String(liveSyncToggle.checked));
   if (liveSyncToggle.checked) {
