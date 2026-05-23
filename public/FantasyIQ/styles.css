@@ -2670,6 +2670,33 @@ code {
   outline-offset: 2px;
 }
 
+.recommendation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.manual-draft-button,
+.inline-sync-action {
+  min-height: 30px;
+  border: 1px solid rgba(15, 111, 95, 0.28);
+  border-radius: 999px;
+  background: #e8f4ef;
+  color: var(--accent);
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.manual-draft-button:hover,
+.inline-sync-action:hover {
+  border-color: rgba(15, 111, 95, 0.48);
+  background: #dcefe8;
+}
+
 .player-card-drawer {
   position: fixed;
   inset: 0;

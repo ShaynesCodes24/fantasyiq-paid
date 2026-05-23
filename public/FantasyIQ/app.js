@@ -374,6 +374,7 @@ let dashboardOpenTracked = false;
 let liveSyncInFlight = false;
 let liveSyncFailureCount = 0;
 let lastLiveDraftRenderSignature = "";
+let manualDraftOverrides = [];
 
 function rememberedCustomerLoadout(loadouts) {
   try {
@@ -1923,7 +1924,11 @@ function hideDraftedEnabled() {
 
 function liveDraftedKeys() {
   const keys = new Set();
-  (liveDraft?.draftedNames || []).forEach((name) => {
+  [
+    ...(liveDraft?.draftedNames || []),
+    ...(liveDraft?.rosteredNames || []),
+    ...manualDraftOverrides.map((pick) => pick.player),
+  ].forEach((name) => {
     keys.add(normalizePlayerName(name));
     const row = findPlayer(name);
     if (row) keys.add(normalizePlayerName(row.Player));
@@ -1931,8 +1936,113 @@ function liveDraftedKeys() {
   return keys;
 }
 
+function manualDraftStorageKey() {
+  return loadoutStorageKey("manual-draft-overrides");
+}
+
+function loadManualDraftOverrides() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(manualDraftStorageKey()) || "[]");
+    return Array.isArray(saved) ? saved.filter((pick) => pick?.player) : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveManualDraftOverrides() {
+  try {
+    localStorage.setItem(manualDraftStorageKey(), JSON.stringify(manualDraftOverrides.slice(-260)));
+  } catch (error) {
+    // Draft-day fallback should never block the dashboard.
+  }
+}
+
+function liveDraftServerNameKeys(data = liveDraft) {
+  const keys = new Set();
+  [...(data?.draftedNames || []), ...(data?.rosteredNames || [])].forEach((name) => {
+    if (name) keys.add(normalizePlayerName(name));
+  });
+  return keys;
+}
+
+function applyManualDraftOverrides(data = liveDraft) {
+  if (!data || !manualDraftOverrides.length) return data;
+  const picks = Array.isArray(data.picks) ? data.picks : [];
+  const serverKeys = liveDraftServerNameKeys(data);
+  manualDraftOverrides
+    .filter((override) => override?.player && !serverKeys.has(normalizePlayerName(override.player)))
+    .forEach((override) => {
+      const alreadyApplied = picks.some((pick) => pick?.status === "drafted" && normalizePlayerName(pick.player) === normalizePlayerName(override.player));
+      if (alreadyApplied) return;
+      const matchingPick = picks.find(
+        (pick) => Number(pick.overall || 0) === Number(override.overall || 0) && pick.status !== "drafted",
+      );
+      const targetPick = matchingPick || picks.find((pick) => pick.status !== "drafted");
+      if (!targetPick) return;
+      targetPick.playerId = Number(override.playerId || -1);
+      targetPick.player = override.player;
+      targetPick.pos = override.pos || "";
+      targetPick.proTeam = override.proTeam || "";
+      targetPick.status = "drafted";
+      targetPick.syncSource = "manual";
+    });
+  rebuildLiveDraftPickState(data);
+  return data;
+}
+
+function rebuildLiveDraftPickState(data = liveDraft) {
+  if (!data) return;
+  const picks = Array.isArray(data.picks) ? data.picks : [];
+  const completed = picks.filter((pick) => pick.status === "drafted");
+  const pending = picks.filter((pick) => pick.status !== "drafted");
+  data.completedPicks = completed.length;
+  data.currentPick = pending[0] || null;
+  data.nextPicks = pending.slice(0, 12);
+  data.recentPicks = completed.slice(-12).reverse();
+  data.draftedNames = Array.from(new Set(completed.map((pick) => pick.player).filter(Boolean)));
+  data.draftedPlayerIds = completed.map((pick) => Number(pick.playerId || -1)).filter((id) => id > 0);
+  data.drafted = Boolean(picks.length && completed.length >= picks.length);
+  data.inProgress = !data.drafted && (Boolean(data.inProgress) || completed.length > 0);
+  if (manualDraftOverrides.length) {
+    data.draftSyncMode = data.draftSyncMode === "rosterFallback" ? "rosterFallback" : "manualOverlay";
+    const manualWarning = "Manual draft tracker is active for picks ESPN has not exposed yet.";
+    data.fallbackStates = Array.from(new Set([...(data.fallbackStates || []), manualWarning]));
+  }
+}
+
+function markManualDrafted(playerName) {
+  const row = findPlayer(playerName);
+  if (!row) return;
+  const key = normalizePlayerName(row.Player);
+  if (liveDraftedKeys().has(key)) return;
+  const nextPick = (liveDraft?.picks || []).find((pick) => pick.status !== "drafted") || {};
+  manualDraftOverrides.push({
+    player: row.Player,
+    pos: row.Pos,
+    proTeam: row.Team,
+    playerId: Number(row.PlayerId || row.playerId || -1),
+    overall: nextPick.overall || "",
+    round: nextPick.round || "",
+    roundPick: nextPick.roundPick || "",
+    teamId: nextPick.teamId || "",
+    fantasyTeam: nextPick.fantasyTeam || "",
+    createdAt: Date.now(),
+  });
+  saveManualDraftOverrides();
+  applyManualDraftOverrides();
+  renderLiveDraft({ full: true });
+  renderBoard();
+}
+
+function clearManualDraftOverrides() {
+  manualDraftOverrides = [];
+  saveManualDraftOverrides();
+  if (liveStatus) liveStatus.innerHTML = "<strong>Manual draft tracker cleared.</strong> Pulling a fresh ESPN sync now.";
+  loadLiveDraft(true);
+}
+
 function isDrafted(row) {
-  if (!row || !liveDraft) return false;
+  if (!row || (!liveDraft && !manualDraftOverrides.length)) return false;
   return liveDraftedKeys().has(normalizePlayerName(row.Player));
 }
 
@@ -2344,7 +2454,12 @@ function renderBoard() {
       : boardData.updated
         ? ` Updated ${boardData.updated}.`
         : "";
-    const drafted = liveDraft?.completedPicks ? ` ESPN live sync has ${liveDraft.completedPicks} drafted players.` : "";
+    const rosteredCount = Number(liveDraft?.rosteredNames?.length || 0);
+    const drafted = liveDraft?.completedPicks
+      ? ` ESPN live sync has ${liveDraft.completedPicks} drafted players.`
+      : rosteredCount
+        ? ` ESPN roster sync is filtering ${rosteredCount} rostered players.`
+        : "";
     const tierHint = positionFilter?.value ? " Tier dividers are on for this position view." : "";
     boardStatus.innerHTML = `<strong>${title}</strong>: showing ${rows.length} players. Click any player name for analysis.${tierHint}${updated}${drafted}`;
   }
@@ -2771,6 +2886,7 @@ function openPlayerDrawer(playerName) {
       </div>
       <div class="player-drawer-actions">
         <button class="primary-action" type="button" data-player-focus-board="${htmlEscape(row.Player)}">Open In Big Board</button>
+        <button class="secondary-action" type="button" data-manual-draft-player="${htmlEscape(row.Player)}">Mark Drafted</button>
         <button class="secondary-action" type="button" data-close-player-drawer>Close</button>
       </div>
     </section>
@@ -2808,6 +2924,19 @@ document.addEventListener("click", (event) => {
     event.preventDefault();
     closePlayerDrawer();
     openPlayerAnalysis(boardFocus.dataset.playerFocusBoard);
+    return;
+  }
+  const manualDraftButton = event.target.closest("[data-manual-draft-player]");
+  if (manualDraftButton) {
+    event.preventDefault();
+    markManualDrafted(manualDraftButton.dataset.manualDraftPlayer);
+    closePlayerDrawer();
+    return;
+  }
+  const clearManualButton = event.target.closest("[data-clear-manual-draft]");
+  if (clearManualButton) {
+    event.preventDefault();
+    clearManualDraftOverrides();
     return;
   }
   const button = event.target.closest("[data-player-focus]");
@@ -5251,12 +5380,15 @@ function renderRecommendationCard(row, counts, index = 0) {
     `${leagueTeamTotal()} teams`,
     lineupSummary(),
     selectedTeamId() ? "selected roster" : "board value",
-    liveDraft?.draftedNames?.length ? `${liveDraft.draftedNames.length} drafted filtered` : "draft board state",
+    liveDraftedKeys().size ? `${liveDraftedKeys().size} drafted filtered` : "draft board state",
     hasUdkSignal(row) ? `UDK ${row["UDK Alignment"]}` : "",
   ].filter(Boolean);
   return `<div class="pick-card recommendation ${priority} ${decision.className}">
     <span>#${row.Rank} / ${row.Pos} / ${row.Team}</span>
-    ${playerFocusButton(row)}
+    <div class="recommendation-actions">
+      ${playerFocusButton(row)}
+      <button type="button" class="manual-draft-button" data-manual-draft-player="${htmlEscape(row.Player)}">Mark Drafted</button>
+    </div>
     <div class="rec-meta">
       <em>${decision.label}</em>
       <b class="${decision.survival.className}">${survivalText}</b>
@@ -6065,7 +6197,8 @@ function renderAllTeamsDraftBoard() {
   const completed = Number(liveDraft.completedPicks || 0);
   const total = Number(liveDraft.totalPicks || picks.length || 0);
   if (allTeamsDraftSummary) {
-    allTeamsDraftSummary.textContent = `${completed}/${total || leagueTeamTotal() * draftRoundTotal()} picks complete`;
+    const fallbackLabel = liveDraft.draftSyncMode === "rosterFallback" ? " / roster fallback" : "";
+    allTeamsDraftSummary.textContent = `${completed}/${total || leagueTeamTotal() * draftRoundTotal()} picks complete${fallbackLabel}`;
   }
   if (!teams.length || !picks.length) {
     allTeamsDraftBoard.innerHTML = emptyStateHtml(
@@ -6114,12 +6247,15 @@ function liveDraftRenderSignature(data = liveDraft) {
     total: Number(data.totalPicks || 0),
     drafted: Boolean(data.drafted),
     inProgress: Boolean(data.inProgress),
+    syncMode: data.draftSyncMode || "",
+    rosteredCount: (data.rosteredNames || []).length,
+    fallbackStates: (data.fallbackStates || []).join("|"),
     currentOverall: Number(current.overall || 0),
     currentTeam: current.fantasyTeam || "",
     currentManager: current.manager || "",
     draftedCount: (data.draftedNames || []).length,
     teams: (data.teams || []).length,
-    teamNames: (data.teams || []).map((team) => team.name || team.fantasyTeam || "").join("|"),
+    teamNames: (data.teams || []).map((team) => team.teamName || team.name || team.fantasyTeam || "").join("|"),
     recent: recent.map((pick) => `${pick.overall || ""}:${pick.player || pick.playerName || ""}`).join("|"),
     next: next.map((pick) => `${pick.overall || ""}:${pick.fantasyTeam || ""}`).join("|"),
     draftOrder: draftOrder.map((pick) => `${pick.overall || ""}:${pick.roundPick || ""}:${pick.fantasyTeam || ""}`).join("|"),
@@ -6162,15 +6298,24 @@ function renderLiveDraftSummary() {
   const totalFallback = leagueTeamTotal() * draftRoundTotal();
   const pct = total || totalFallback ? Math.round((completed / (total || totalFallback)) * 100) : 0;
   const stale = liveDraft.staleError ? ` ESPN sync is delayed. FantasyIQ is using cached board mode. Click Sync Now or continue with manual draft tracking. ${liveDraft.staleError}` : "";
+  const syncWarnings = Array.isArray(liveDraft.fallbackStates) && liveDraft.fallbackStates.length
+    ? ` ${liveDraft.fallbackStates.join(" ")}`
+    : "";
   const preDraft = isPreDraftLeague();
   const state = liveDraft.inProgress ? "Draft live" : liveDraft.drafted ? "Draft complete" : preDraft ? "Pre-draft board ready" : "Draft board loaded";
+  const sourceNote = liveDraft.draftSyncMode === "rosterFallback"
+    ? " ESPN roster fallback is active for drafted-player filtering."
+    : "";
+  const manualNote = manualDraftOverrides.length
+    ? ` Manual tracker has ${manualDraftOverrides.length} pick${manualDraftOverrides.length === 1 ? "" : "s"}. <button type="button" class="inline-sync-action" data-clear-manual-draft>Clear manual picks</button>`
+    : "";
   const syncContext = liveDraft.demoMode
     ? " Public demo league is connected; subscribers get their ESPN league configured after checkout."
     : preDraft
       ? " ESPN order is loaded; keep auto sync on when the room opens."
       : ` ${liveSyncCadenceLabel()}`;
 
-  liveStatus.innerHTML = `<strong>${state}</strong>: ${completed}/${total || totalFallback} picks completed.${syncContext}${stale}`;
+  liveStatus.innerHTML = `<strong>${state}</strong>: ${completed}/${total || totalFallback} picks completed.${syncContext}${sourceNote}${syncWarnings}${manualNote}${stale}`;
   if (liveSyncStatus) {
     liveSyncStatus.textContent = liveDraft.demoMode ? "Demo league connected" : liveDraft.inProgress ? "Draft live" : preDraft ? "Pre-draft ready" : "ESPN connected";
   }
@@ -6188,7 +6333,13 @@ function renderLiveDraftSummary() {
   if (liveTotal) liveTotal.textContent = `of ${total || totalFallback}`;
   if (liveProgressBar) liveProgressBar.style.width = `${pct}%`;
   if (liveLastSync) liveLastSync.textContent = formatSyncTime(liveDraft.syncedAt);
-  if (liveSource) liveSource.textContent = liveDraft.demoMode ? "ESPN public demo league" : liveDraft.source || "ESPN public league API";
+  if (liveSource) {
+    liveSource.textContent = liveDraft.demoMode
+      ? "ESPN public demo league"
+      : liveDraft.draftSyncMode === "rosterFallback"
+        ? "ESPN roster fallback"
+        : liveDraft.source || "ESPN public league API";
+  }
   renderLiveDraftSlot();
   renderPreDraftPanel();
   renderDraftPrep();
@@ -7351,6 +7502,7 @@ function loadLiveDraft(force = false) {
       } else {
         throw new Error(data.error || "ESPN returned no draft data");
       }
+      applyManualDraftOverrides(liveDraft);
       liveSyncFailureCount = 0;
       const nextSignature = liveDraftRenderSignature(liveDraft);
       const unchanged = !force && lastLiveDraftRenderSignature && nextSignature === lastLiveDraftRenderSignature;
@@ -7465,6 +7617,8 @@ function loadBoards() {
       console.error(error);
     });
 }
+
+manualDraftOverrides = loadManualDraftOverrides();
 
 if (boardTable) {
   bootCustomerDashboard();

@@ -112,13 +112,16 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
-def league_url(context: CustomerContext) -> str:
+def league_url(context: CustomerContext, cache_bust: bool = False) -> str:
     league_id, season = require_customer_config(context)
-    return (
+    url = (
         "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/"
         f"seasons/{season}/segments/0/leagues/{league_id}"
         "?view=mDraftDetail&view=mRoster&view=mSettings&view=mTeam"
     )
+    if cache_bust:
+        url = f"{url}&_={int(time.time() * 1000)}"
+    return url
 
 
 def players_url(context: CustomerContext) -> str:
@@ -142,6 +145,8 @@ def sync_error_from_http(exc: urllib.error.HTTPError) -> EspnSyncError:
 def fetch_json(url: str, extra_headers: dict[str, str] | None = None) -> Any:
     headers = {
         "Accept": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
         "User-Agent": "Fantasy-IQ/1.0 (customer draft dashboard)",
     }
     if extra_headers:
@@ -254,6 +259,87 @@ def float_setting(value: Any, default: float = 0.0) -> float:
         return default
 
 
+def normalized_player_key(name: Any) -> str:
+    return "".join(char.lower() for char in str(name or "") if char.isalnum())
+
+
+def player_identity_key(player: dict[str, Any]) -> str:
+    player_id = int_setting(player.get("playerId"), -1)
+    if player_id > 0:
+        return f"id:{player_id}"
+    return f"name:{normalized_player_key(player.get('player'))}"
+
+
+def unique_roster_players(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[str] = set()
+    unique: list[dict[str, Any]] = []
+    for entry in entries:
+        if not entry.get("player"):
+            continue
+        key = player_identity_key(entry)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        unique.append(entry)
+    return unique
+
+
+def roster_entry_priority(entry: dict[str, Any]) -> tuple[int]:
+    acquisition = str(entry.get("acquisitionType") or "").upper()
+    draft_priority = 0 if "DRAFT" in acquisition else 1
+    return (draft_priority,)
+
+
+def overlay_roster_draft_picks(picks: list[dict[str, Any]], teams: dict[int, dict[str, Any]]) -> int:
+    """Fill missing draftDetail player data from ESPN roster entries when ESPN lags live picks."""
+    used_player_keys = {
+        player_identity_key(pick)
+        for pick in picks
+        if pick.get("status") == "drafted" and player_identity_key(pick) != "name:"
+    }
+    applied = 0
+    for team_id, team in teams.items():
+        team_picks = sorted(
+            [pick for pick in picks if int_setting(pick.get("teamId"), -1) == team_id],
+            key=lambda item: int_setting(item.get("overall"), 9999),
+        )
+        if not team_picks:
+            continue
+        roster_entries = sorted(
+            unique_roster_players(team.get("roster") or []),
+            key=roster_entry_priority,
+        )
+        if not roster_entries:
+            continue
+
+        roster_index = 0
+        for pick in team_picks:
+            if pick.get("status") == "drafted":
+                continue
+            while roster_index < len(roster_entries):
+                entry = roster_entries[roster_index]
+                roster_index += 1
+                entry_key = player_identity_key(entry)
+                if entry_key in used_player_keys:
+                    continue
+                pick.update(
+                    {
+                        "playerId": int_setting(entry.get("playerId"), -1),
+                        "player": entry.get("player"),
+                        "pos": entry.get("pos", ""),
+                        "proTeam": entry.get("proTeam", ""),
+                        "status": "drafted",
+                        "syncSource": "rosterFallback",
+                    }
+                )
+                used_player_keys.add(entry_key)
+                applied += 1
+                break
+            if roster_index >= len(roster_entries):
+                break
+    return applied
+
+
 def scoring_item_points(settings: dict[str, Any], stat_ids: set[int], labels: tuple[str, ...]) -> float | None:
     scoring_settings = settings.get("scoringSettings") or {}
     for item in scoring_settings.get("scoringItems") or []:
@@ -360,7 +446,7 @@ def build_live_payload(request_path: str = "", headers: Any | None = None, force
         return cached["data"]
 
     league_id, season = require_customer_config(context)
-    league = fetch_json(league_url(context))
+    league = fetch_json(league_url(context, cache_bust=force))
     players = load_players(context, force=force)
     members = {item.get("id"): item.get("displayName", "") for item in league.get("members", [])}
     teams: dict[int, dict[str, Any]] = {}
@@ -390,6 +476,8 @@ def build_live_payload(request_path: str = "", headers: Any | None = None, force
         key=lambda item: int(item.get("overallPickNumber") or item.get("id") or 9999),
     )
     picks = [normalize_pick(pick, teams, players) for pick in raw_picks]
+    draft_detail_completed = sum(1 for pick in picks if pick["status"] == "drafted")
+    roster_overlay_count = overlay_roster_draft_picks(picks, teams)
     completed = [pick for pick in picks if pick["status"] == "drafted"]
     pending = [pick for pick in picks if pick["status"] != "drafted"]
     draft_order = [pick for pick in picks if pick.get("round") == 1]
@@ -400,6 +488,23 @@ def build_live_payload(request_path: str = "", headers: Any | None = None, force
         for roster_player in team.get("roster", [])
         if roster_player.get("player")
     ]
+    fallback_states: list[str] = []
+    draft_sync_mode = "draftDetail"
+    if roster_overlay_count:
+        draft_sync_mode = "rosterFallback"
+        fallback_states.append(
+            "ESPN draftDetail did not include every drafted player; roster entries were used to keep drafted-player filtering current."
+        )
+    elif not draft_detail_completed and not rostered_players and raw_picks:
+        league_status = league.get("status") or {}
+        joined = int_setting(league_status.get("teamsJoined"), 0)
+        expected = len(teams) or int_setting(settings.get("size"), 0)
+        joined_note = f" ESPN reports {joined}/{expected} teams joined." if joined and expected else ""
+        fallback_states.append(
+            f"ESPN is publishing draft order for league {league_id} but no completed picks yet.{joined_note} Confirm this is the same ESPN league that is currently drafting."
+        )
+    drafted = bool(draft_detail.get("drafted")) or (bool(picks) and len(completed) >= len(picks))
+    in_progress = bool(draft_detail.get("inProgress")) or (0 < len(completed) < len(picks))
 
     payload = {
         "ok": True,
@@ -414,8 +519,12 @@ def build_live_payload(request_path: str = "", headers: Any | None = None, force
         "leagueLogo": settings.get("logoUrl") or settings.get("imageUrl") or league.get("logoUrl"),
         "leagueSettings": league_settings,
         "syncedAt": utc_now(),
-        "drafted": bool(draft_detail.get("drafted")),
-        "inProgress": bool(draft_detail.get("inProgress")),
+        "drafted": drafted,
+        "inProgress": in_progress,
+        "draftSyncMode": draft_sync_mode,
+        "draftDetailCompletedPicks": draft_detail_completed,
+        "rosterFallbackPicks": roster_overlay_count,
+        "fallbackStates": fallback_states,
         "totalPicks": len(picks),
         "completedPicks": len(completed),
         "currentPick": pending[0] if pending else None,
