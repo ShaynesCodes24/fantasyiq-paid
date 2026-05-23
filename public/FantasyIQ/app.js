@@ -755,18 +755,56 @@ function clearDraftLeagueOverride() {
   loadLiveDraft(true);
 }
 
+function randomDraftBridgeKey() {
+  const bytes = new Uint8Array(24);
+  if (window.crypto?.getRandomValues) {
+    window.crypto.getRandomValues(bytes);
+  } else {
+    for (let index = 0; index < bytes.length; index += 1) bytes[index] = Math.floor(Math.random() * 256);
+  }
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function registerDraftBridgeSession() {
+  if (!draftLeagueOverrideState?.leagueId || !draftLeagueOverrideState?.teamId || !draftLeagueOverrideState?.memberId) {
+    throw new Error("Paste the full ESPN draft URL first.");
+  }
+  const bridgeKey = draftLeagueOverrideState.bridgeKey || randomDraftBridgeKey();
+  saveDraftLeagueOverride({ ...draftLeagueOverrideState, bridgeKey });
+  const response = await fetch(apiUrl("/api/draft-bridge"), {
+    method: "POST",
+    cache: "no-store",
+    headers: apiHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({
+      action: "register",
+      leagueId: draftLeagueOverrideState.leagueId,
+      season: draftLeagueOverrideState.season || "2026",
+      bridgeKey,
+    }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.ok) {
+    throw new Error(payload.error || `Bridge register HTTP ${response.status}`);
+  }
+  return bridgeKey;
+}
+
 function buildEspnDraftBridgeScript() {
   const config = {
     leagueId: draftLeagueOverrideState?.leagueId || "",
     season: draftLeagueOverrideState?.season || "2026",
     teamId: draftLeagueOverrideState?.teamId || "",
     memberId: draftLeagueOverrideState?.memberId || "",
+    bridgeKey: draftLeagueOverrideState?.bridgeKey || "",
     endpoint: `${window.location.origin}/api/draft-bridge`,
   };
   return `(() => {
   const cfg = ${JSON.stringify(config)};
   const picks = [];
   let postTimer = null;
+  let heartbeatTimer = null;
+  let pingTimer = null;
+  let eventCount = 0;
   const log = (message) => console.log("[FantasyIQ bridge] " + message);
   const decode = async (data) => {
     if (typeof data === "string") return data;
@@ -774,14 +812,14 @@ function buildEspnDraftBridgeScript() {
     if (data instanceof Blob) return (await data.text()).replace(/\\0+$/g, "");
     return String(data || "");
   };
-  const post = () => {
+  const post = (reason = "pick") => {
     window.clearTimeout(postTimer);
     postTimer = window.setTimeout(() => {
       fetch(cfg.endpoint, {
         method: "POST",
         mode: "cors",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leagueId: cfg.leagueId, season: cfg.season, source: "espnDraftRoomBridge", picks })
+        body: JSON.stringify({ leagueId: cfg.leagueId, season: cfg.season, bridgeKey: cfg.bridgeKey, source: "espnDraftRoomBridge", reason, picks })
       }).then((response) => response.json()).then((payload) => {
         log("posted " + payload.pickCount + " pick event(s) to MyFantasyIQ");
       }).catch((error) => log("post failed: " + error.message));
@@ -793,18 +831,22 @@ function buildEspnDraftBridgeScript() {
     slotId = Number(slotId);
     if (!teamId || !playerId || picks.some((pick) => pick.teamId === teamId && pick.playerId === playerId)) return;
     picks.push({ event, teamId, playerId, slotId, pickNumber: picks.length + 1 });
+    eventCount += 1;
     log(event + " team " + teamId + " player " + playerId);
     post();
   };
   const parseLine = (line) => {
     const parts = String(line || "").trim().split(/\\s+/);
+    if (!parts[0]) return;
     if (parts[0] === "SELECTED") remember("SELECTED", parts[1], parts[2], parts[3]);
     if (parts[0] === "SOLD") remember("SOLD", parts[1], parts[2], parts[3]);
     if (parts[0] === "UNDONE") {
       const keep = Math.max(0, Number(parts[1]) || 0);
       picks.splice(keep);
-      post();
+      post("undo");
     }
+    if (parts[0] === "INIT") log("received ESPN draft init state");
+    if (parts[0] === "PONG") log("heartbeat acknowledged");
   };
   const securityToken = async () => {
     const url = "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/" + cfg.season + "/segments/0/leagues/" + cfg.leagueId + "/teams/" + cfg.teamId + "/draftSecurity";
@@ -818,22 +860,60 @@ function buildEspnDraftBridgeScript() {
       return String(text).replace(/^"|"$/g, "");
     }
   };
-  const connect = (token) => {
-    const draftToken = ["ffl", cfg.leagueId, cfg.teamId, cfg.memberId, token].join(":");
-    const url = "wss://fantasydraft.espn.com/game-ffl/league-" + cfg.leagueId + "/JOIN?1=ffl&2=" + encodeURIComponent(cfg.leagueId) + "&3=" + encodeURIComponent(cfg.teamId) + "&4=" + encodeURIComponent(cfg.memberId) + "&5=" + encodeURIComponent(draftToken) + "&6=false&7=false&8=KONA&nocache=" + Math.floor(Math.random() * 1000000);
+  const joinUrl = (base, draftToken) => {
+    return base + "/JOIN?1=ffl&2=" + encodeURIComponent(cfg.leagueId) + "&3=" + encodeURIComponent(cfg.teamId) + "&4=" + encodeURIComponent(cfg.memberId) + "&5=" + encodeURIComponent(draftToken) + "&6=false&7=false&8=KONA&nocache=" + Math.floor(Math.random() * 1000000);
+  };
+  const startHeartbeat = (transport) => {
+    window.clearInterval(heartbeatTimer);
+    window.clearInterval(pingTimer);
+    post("heartbeat");
+    heartbeatTimer = window.setInterval(() => post("heartbeat"), 15000);
+    pingTimer = window.setInterval(() => {
+      try {
+        if (transport && transport.readyState === WebSocket.OPEN) transport.send("PING\\n");
+      } catch (error) {
+        log("ping failed: " + error.message);
+      }
+    }, 12000);
+  };
+  const connectSse = (draftToken) => {
+    const url = joinUrl("https://fantasydraft.espn.com/game-ffl/league-" + cfg.leagueId + "/sse", draftToken);
+    const source = new EventSource(url);
+    source.onopen = () => {
+      log("connected via ESPN SSE fallback. Leave this draft tab open.");
+      startHeartbeat(null);
+    };
+    source.onerror = () => log("SSE connection issue. ESPN may retry automatically.");
+    source.onmessage = (event) => String(event.data || "").split(/\\r?\\n/).forEach(parseLine);
+    window.__fantasyIQEspnBridge = { source, picks, post };
+  };
+  const connectWebSocket = (draftToken) => {
+    const url = joinUrl("wss://fantasydraft.espn.com/game-ffl/league-" + cfg.leagueId, draftToken);
     const ws = new WebSocket(url);
     ws.binaryType = "arraybuffer";
-    ws.onopen = () => log("connected. Leave this ESPN draft tab open.");
+    ws.onopen = () => {
+      log("connected via ESPN WebSocket. Leave this draft tab open.");
+      startHeartbeat(ws);
+      try { ws.send("PING\\n"); } catch (error) {}
+    };
     ws.onerror = () => log("socket error. Confirm you are logged into ESPN and inside the draft room.");
-    ws.onclose = () => log("socket closed.");
+    ws.onclose = () => {
+      window.clearInterval(pingTimer);
+      log("socket closed. Trying ESPN SSE fallback.");
+      connectSse(draftToken);
+    };
     ws.onmessage = async (event) => {
       const text = await decode(event.data);
       text.split(/\\r?\\n/).forEach(parseLine);
     };
     window.__fantasyIQEspnBridge = { ws, picks, post };
   };
-  if (!cfg.leagueId || !cfg.teamId || !cfg.memberId) {
-    alert("FantasyIQ bridge needs a full ESPN draft URL with leagueId, teamId, and memberId.");
+  const connect = (token) => {
+    const draftToken = ["ffl", cfg.leagueId, cfg.teamId, cfg.memberId, token].join(":");
+    connectWebSocket(draftToken);
+  };
+  if (!cfg.leagueId || !cfg.teamId || !cfg.memberId || !cfg.bridgeKey) {
+    alert("FantasyIQ bridge needs a full ESPN draft URL and a registered bridge session.");
     return;
   }
   securityToken().then(connect).catch((error) => alert("FantasyIQ bridge failed: " + error.message));
@@ -862,14 +942,18 @@ function copyEspnDraftBridgeScript() {
     draftLeagueInput?.focus();
     return;
   }
+  const bridgeKey = draftLeagueOverrideState.bridgeKey || randomDraftBridgeKey();
+  saveDraftLeagueOverride({ ...draftLeagueOverrideState, bridgeKey });
+  if (draftBridgeStatus) draftBridgeStatus.textContent = "Copying bridge and registering secure session...";
   copyTextToClipboard(buildEspnDraftBridgeScript())
+    .then(() => registerDraftBridgeSession())
     .then(() => {
       if (draftBridgeStatus) {
         draftBridgeStatus.textContent = "Copied. In the ESPN draft room, open DevTools Console, paste it, and press Enter.";
       }
     })
-    .catch(() => {
-      if (draftBridgeStatus) draftBridgeStatus.textContent = "Copy failed. Browser blocked clipboard access.";
+    .catch((error) => {
+      if (draftBridgeStatus) draftBridgeStatus.textContent = `Bridge copy failed: ${error.message}`;
     });
 }
 
