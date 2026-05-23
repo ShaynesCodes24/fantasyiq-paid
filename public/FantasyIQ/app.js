@@ -146,6 +146,9 @@ const draftLeagueClear = document.querySelector("#draft-league-clear");
 const draftPasteSync = document.querySelector("#draft-paste-sync");
 const draftPasteInput = document.querySelector("#draft-paste-input");
 const draftPasteApply = document.querySelector("#draft-paste-apply");
+const draftBridgeSync = document.querySelector("#draft-bridge-sync");
+const draftBridgeCopy = document.querySelector("#draft-bridge-copy");
+const draftBridgeStatus = document.querySelector("#draft-bridge-status");
 let addLeagueDialog = null;
 const leagueTeamCount = document.querySelector("#league-team-count");
 const leagueTypeNote = document.querySelector("#league-type-note");
@@ -631,12 +634,34 @@ function extractTeamId(value = "") {
   return fromParam ? fromParam[1] : "";
 }
 
+function extractSeasonId(value = "") {
+  const text = String(value || "").trim();
+  const fromParam = text.match(/[?&]seasonId=(\d+)/i) || text.match(/[?&]season=(\d+)/i);
+  return fromParam ? fromParam[1] : "";
+}
+
+function extractMemberId(value = "") {
+  const text = String(value || "").trim();
+  const fromParam = text.match(/[?&]memberId=([^&#]+)/i);
+  if (!fromParam) return "";
+  try {
+    return decodeURIComponent(fromParam[1]);
+  } catch (error) {
+    return fromParam[1];
+  }
+}
+
 function loadDraftLeagueOverride() {
   const params = new URLSearchParams(window.location.search);
   const queryLeagueId = extractLeagueId(params.get("draftLeagueId") || params.get("liveLeagueId") || params.get("leagueId") || "");
   const queryTeamId = numericText(params.get("draftTeamId") || params.get("liveTeamId") || params.get("teamId") || "");
   if (queryLeagueId) {
-    return { leagueId: queryLeagueId, teamId: queryTeamId, season: params.get("season") || params.get("draftSeason") || "2026" };
+    return {
+      leagueId: queryLeagueId,
+      teamId: queryTeamId,
+      season: params.get("season") || params.get("draftSeason") || "2026",
+      memberId: params.get("memberId") || "",
+    };
   }
   try {
     const saved = JSON.parse(localStorage.getItem(draftLeagueOverrideStorageKey()) || "null");
@@ -679,17 +704,34 @@ function renderDraftLeagueOverrideControls() {
   if (draftTeamInput && draftLeagueOverrideState?.teamId) draftTeamInput.value = draftLeagueOverrideState.teamId;
   draftLeagueOverride.classList.toggle("active", Boolean(draftLeagueOverrideState?.leagueId));
   draftLeagueOverride.dataset.active = draftLeagueOverrideState?.leagueId ? "true" : "false";
+  const bridgeReady = Boolean(
+    draftLeagueOverrideState?.leagueId &&
+    draftLeagueOverrideState?.teamId &&
+    draftLeagueOverrideState?.memberId
+  );
+  if (draftBridgeSync) draftBridgeSync.classList.toggle("active", Boolean(draftLeagueOverrideState?.leagueId));
+  if (draftBridgeCopy) draftBridgeCopy.disabled = !bridgeReady;
+  if (draftBridgeStatus) {
+    draftBridgeStatus.textContent = bridgeReady
+      ? "Bridge ready. Run it from the ESPN draft room if public live picks are hidden."
+      : draftLeagueOverrideState?.leagueId
+        ? "Paste the full ESPN draft URL above so the bridge can include teamId and memberId."
+        : "Paste the full ESPN draft URL above to enable the bridge.";
+  }
 }
 
 function applyDraftLeagueOverrideFromInputs() {
-  const leagueId = extractLeagueId(draftLeagueInput?.value || "");
-  const teamId = numericText(draftTeamInput?.value || "") || extractTeamId(draftLeagueInput?.value || "");
+  const rawInput = draftLeagueInput?.value || "";
+  const leagueId = extractLeagueId(rawInput);
+  const teamId = numericText(draftTeamInput?.value || "") || extractTeamId(rawInput);
+  const season = extractSeasonId(rawInput) || "2026";
+  const memberId = extractMemberId(rawInput);
   if (!leagueId) {
     if (liveStatus) liveStatus.innerHTML = "<strong>Paste the ESPN draft URL or leagueId first.</strong>";
     draftLeagueInput?.focus();
     return;
   }
-  saveDraftLeagueOverride({ leagueId, teamId, season: "2026", label: "Draft room override" });
+  saveDraftLeagueOverride({ leagueId, teamId, season, memberId, label: "Draft room override" });
   setDraftOverrideUrlState();
   manualDraftOverrides = [];
   saveManualDraftOverrides();
@@ -711,6 +753,124 @@ function clearDraftLeagueOverride() {
   renderDraftLeagueOverrideControls();
   if (liveStatus) liveStatus.innerHTML = "<strong>Back to saved league.</strong> Pulling a fresh ESPN sync now.";
   loadLiveDraft(true);
+}
+
+function buildEspnDraftBridgeScript() {
+  const config = {
+    leagueId: draftLeagueOverrideState?.leagueId || "",
+    season: draftLeagueOverrideState?.season || "2026",
+    teamId: draftLeagueOverrideState?.teamId || "",
+    memberId: draftLeagueOverrideState?.memberId || "",
+    endpoint: `${window.location.origin}/api/draft-bridge`,
+  };
+  return `(() => {
+  const cfg = ${JSON.stringify(config)};
+  const picks = [];
+  let postTimer = null;
+  const log = (message) => console.log("[FantasyIQ bridge] " + message);
+  const decode = async (data) => {
+    if (typeof data === "string") return data;
+    if (data instanceof ArrayBuffer) return new TextDecoder().decode(data).replace(/\\0+$/g, "");
+    if (data instanceof Blob) return (await data.text()).replace(/\\0+$/g, "");
+    return String(data || "");
+  };
+  const post = () => {
+    window.clearTimeout(postTimer);
+    postTimer = window.setTimeout(() => {
+      fetch(cfg.endpoint, {
+        method: "POST",
+        mode: "cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leagueId: cfg.leagueId, season: cfg.season, source: "espnDraftRoomBridge", picks })
+      }).then((response) => response.json()).then((payload) => {
+        log("posted " + payload.pickCount + " pick event(s) to MyFantasyIQ");
+      }).catch((error) => log("post failed: " + error.message));
+    }, 250);
+  };
+  const remember = (event, teamId, playerId, slotId) => {
+    teamId = Number(teamId);
+    playerId = Number(playerId);
+    slotId = Number(slotId);
+    if (!teamId || !playerId || picks.some((pick) => pick.teamId === teamId && pick.playerId === playerId)) return;
+    picks.push({ event, teamId, playerId, slotId, pickNumber: picks.length + 1 });
+    log(event + " team " + teamId + " player " + playerId);
+    post();
+  };
+  const parseLine = (line) => {
+    const parts = String(line || "").trim().split(/\\s+/);
+    if (parts[0] === "SELECTED") remember("SELECTED", parts[1], parts[2], parts[3]);
+    if (parts[0] === "SOLD") remember("SOLD", parts[1], parts[2], parts[3]);
+    if (parts[0] === "UNDONE") {
+      const keep = Math.max(0, Number(parts[1]) || 0);
+      picks.splice(keep);
+      post();
+    }
+  };
+  const securityToken = async () => {
+    const url = "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/" + cfg.season + "/segments/0/leagues/" + cfg.leagueId + "/teams/" + cfg.teamId + "/draftSecurity";
+    const response = await fetch(url, { credentials: "include", headers: { Accept: "application/json", "X-Fantasy-Source": "kona" } });
+    const text = await response.text();
+    if (!response.ok) throw new Error("draftSecurity HTTP " + response.status + " " + text.slice(0, 80));
+    try {
+      const parsed = JSON.parse(text);
+      return String(typeof parsed === "string" ? parsed : parsed.token || parsed.draftToken || parsed.securityToken || text).replace(/^"|"$/g, "");
+    } catch (error) {
+      return String(text).replace(/^"|"$/g, "");
+    }
+  };
+  const connect = (token) => {
+    const draftToken = ["ffl", cfg.leagueId, cfg.teamId, cfg.memberId, token].join(":");
+    const url = "wss://fantasydraft.espn.com/game-ffl/league-" + cfg.leagueId + "/JOIN?1=ffl&2=" + encodeURIComponent(cfg.leagueId) + "&3=" + encodeURIComponent(cfg.teamId) + "&4=" + encodeURIComponent(cfg.memberId) + "&5=" + encodeURIComponent(draftToken) + "&6=false&7=false&8=KONA&nocache=" + Math.floor(Math.random() * 1000000);
+    const ws = new WebSocket(url);
+    ws.binaryType = "arraybuffer";
+    ws.onopen = () => log("connected. Leave this ESPN draft tab open.");
+    ws.onerror = () => log("socket error. Confirm you are logged into ESPN and inside the draft room.");
+    ws.onclose = () => log("socket closed.");
+    ws.onmessage = async (event) => {
+      const text = await decode(event.data);
+      text.split(/\\r?\\n/).forEach(parseLine);
+    };
+    window.__fantasyIQEspnBridge = { ws, picks, post };
+  };
+  if (!cfg.leagueId || !cfg.teamId || !cfg.memberId) {
+    alert("FantasyIQ bridge needs a full ESPN draft URL with leagueId, teamId, and memberId.");
+    return;
+  }
+  securityToken().then(connect).catch((error) => alert("FantasyIQ bridge failed: " + error.message));
+})();`;
+}
+
+function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    return navigator.clipboard.writeText(text);
+  }
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  textArea.setAttribute("readonly", "readonly");
+  textArea.style.position = "fixed";
+  textArea.style.left = "-9999px";
+  document.body.appendChild(textArea);
+  textArea.select();
+  document.execCommand("copy");
+  textArea.remove();
+  return Promise.resolve();
+}
+
+function copyEspnDraftBridgeScript() {
+  if (!draftLeagueOverrideState?.leagueId || !draftLeagueOverrideState?.teamId || !draftLeagueOverrideState?.memberId) {
+    if (draftBridgeStatus) draftBridgeStatus.textContent = "Paste the full ESPN draft URL first, then click Use Draft League.";
+    draftLeagueInput?.focus();
+    return;
+  }
+  copyTextToClipboard(buildEspnDraftBridgeScript())
+    .then(() => {
+      if (draftBridgeStatus) {
+        draftBridgeStatus.textContent = "Copied. In the ESPN draft room, open DevTools Console, paste it, and press Enter.";
+      }
+    })
+    .catch(() => {
+      if (draftBridgeStatus) draftBridgeStatus.textContent = "Copy failed. Browser blocked clipboard access.";
+    });
 }
 
 function trackDashboardEvent(eventType, payload = {}) {
@@ -7945,6 +8105,7 @@ draftTeamInput?.addEventListener("keydown", (event) => {
   }
 });
 draftPasteApply?.addEventListener("click", importDraftedPlayersFromText);
+draftBridgeCopy?.addEventListener("click", copyEspnDraftBridgeScript);
 liveSyncToggle?.addEventListener("change", () => {
   localStorage.setItem(loadoutStorageKey("auto-sync"), String(liveSyncToggle.checked));
   if (liveSyncToggle.checked) {
