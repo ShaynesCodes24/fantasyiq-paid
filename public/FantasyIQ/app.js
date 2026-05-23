@@ -143,6 +143,9 @@ const draftLeagueInput = document.querySelector("#draft-league-input");
 const draftTeamInput = document.querySelector("#draft-team-input");
 const draftLeagueApply = document.querySelector("#draft-league-apply");
 const draftLeagueClear = document.querySelector("#draft-league-clear");
+const draftPasteSync = document.querySelector("#draft-paste-sync");
+const draftPasteInput = document.querySelector("#draft-paste-input");
+const draftPasteApply = document.querySelector("#draft-paste-apply");
 let addLeagueDialog = null;
 const leagueTeamCount = document.querySelector("#league-team-count");
 const leagueTypeNote = document.querySelector("#league-type-note");
@@ -2109,6 +2112,30 @@ function applyManualDraftOverrides(data = liveDraft) {
   return data;
 }
 
+function manualOverrideForRow(row) {
+  const nextPick = (liveDraft?.picks || []).find((pick) => pick.status !== "drafted") || {};
+  return {
+    player: row.Player,
+    pos: row.Pos,
+    proTeam: row.Team,
+    playerId: Number(row.PlayerId || row.playerId || -1),
+    overall: nextPick.overall || "",
+    round: nextPick.round || "",
+    roundPick: nextPick.roundPick || "",
+    teamId: nextPick.teamId || "",
+    fantasyTeam: nextPick.fantasyTeam || "",
+    createdAt: Date.now(),
+  };
+}
+
+function addManualDraftedRow(row) {
+  if (!row) return false;
+  const key = normalizePlayerName(row.Player);
+  if (!key || liveDraftedKeys().has(key)) return false;
+  manualDraftOverrides.push(manualOverrideForRow(row));
+  return true;
+}
+
 function rebuildLiveDraftPickState(data = liveDraft) {
   if (!data) return;
   const picks = Array.isArray(data.picks) ? data.picks : [];
@@ -2131,26 +2158,42 @@ function rebuildLiveDraftPickState(data = liveDraft) {
 
 function markManualDrafted(playerName) {
   const row = findPlayer(playerName);
-  if (!row) return;
-  const key = normalizePlayerName(row.Player);
-  if (liveDraftedKeys().has(key)) return;
-  const nextPick = (liveDraft?.picks || []).find((pick) => pick.status !== "drafted") || {};
-  manualDraftOverrides.push({
-    player: row.Player,
-    pos: row.Pos,
-    proTeam: row.Team,
-    playerId: Number(row.PlayerId || row.playerId || -1),
-    overall: nextPick.overall || "",
-    round: nextPick.round || "",
-    roundPick: nextPick.roundPick || "",
-    teamId: nextPick.teamId || "",
-    fantasyTeam: nextPick.fantasyTeam || "",
-    createdAt: Date.now(),
+  if (!addManualDraftedRow(row)) return;
+  saveManualDraftOverrides();
+  applyManualDraftOverrides();
+  renderLiveDraft({ full: true });
+  renderBoard();
+}
+
+function importDraftedPlayersFromText() {
+  const raw = draftPasteInput?.value || "";
+  if (!raw.trim()) {
+    if (liveStatus) liveStatus.innerHTML = "<strong>Paste ESPN drafted-player text first.</strong>";
+    draftPasteInput?.focus();
+    return;
+  }
+  if (!boardData) {
+    if (liveStatus) liveStatus.innerHTML = "<strong>Player board is still loading.</strong> Try again in a few seconds.";
+    return;
+  }
+  const normalizedText = normalizePlayerName(raw);
+  const matches = combinedBoardRows()
+    .map((row) => ({ row, index: normalizedText.indexOf(normalizePlayerName(row.Player)) }))
+    .filter((item) => item.index >= 0)
+    .sort((a, b) => a.index - b.index || Number(a.row.Rank || 999) - Number(b.row.Rank || 999));
+  let imported = 0;
+  matches.forEach(({ row }) => {
+    if (addManualDraftedRow(row)) imported += 1;
   });
   saveManualDraftOverrides();
   applyManualDraftOverrides();
   renderLiveDraft({ full: true });
   renderBoard();
+  if (liveStatus) {
+    liveStatus.innerHTML = imported
+      ? `<strong>Imported ${imported} drafted player${imported === 1 ? "" : "s"}.</strong> Recommendations and the pick grid are refreshed from the manual ESPN paste.`
+      : "<strong>No new drafted players found.</strong> Paste only the ESPN draft board/recent-picks text, not the available-player list.";
+  }
 }
 
 function clearManualDraftOverrides() {
@@ -7893,6 +7936,7 @@ draftTeamInput?.addEventListener("keydown", (event) => {
     applyDraftLeagueOverrideFromInputs();
   }
 });
+draftPasteApply?.addEventListener("click", importDraftedPlayersFromText);
 liveSyncToggle?.addEventListener("change", () => {
   localStorage.setItem(loadoutStorageKey("auto-sync"), String(liveSyncToggle.checked));
   if (liveSyncToggle.checked) {

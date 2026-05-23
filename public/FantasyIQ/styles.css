@@ -1046,6 +1046,54 @@ textarea {
   color: var(--accent);
 }
 
+.draft-paste-sync {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin: 0 0 14px;
+  border: 1px solid rgba(184, 135, 53, 0.28);
+  border-radius: 8px;
+  background: #fff8e6;
+  padding: 12px;
+}
+
+.draft-paste-sync label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.draft-paste-sync textarea {
+  width: 100%;
+  min-height: 74px;
+  resize: vertical;
+  border: 1px solid rgba(18, 63, 52, 0.18);
+  border-radius: 8px;
+  background: #fffdf8;
+  color: var(--ink);
+  padding: 10px 12px;
+  font: inherit;
+  font-weight: 750;
+  text-transform: none;
+}
+
+.draft-paste-sync button {
+  min-height: 44px;
+  border: 1px solid rgba(18, 63, 52, 0.22);
+  border-radius: 8px;
+  background: #123f34;
+  color: #fff8e8;
+  padding: 0 12px;
+  font-weight: 950;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 .league-health-panel {
   display: grid;
   gap: 12px;
@@ -5826,6 +5874,10 @@ textarea,
     grid-template-columns: 1fr 1fr;
   }
 
+  .draft-paste-sync {
+    grid-template-columns: 1fr;
+  }
+
   .panel {
     padding: 18px;
   }
@@ -5877,6 +5929,7 @@ textarea,
   .hero-actions,
   .live-switches,
   .draft-league-override,
+  .draft-paste-sync,
   .add-league-actions,
   .access-grid,
   .access-actions,
@@ -5889,6 +5942,7 @@ textarea,
   .hero-actions button,
   .live-switches button,
   .draft-league-override button,
+  .draft-paste-sync button,
   .add-league-actions button,
   .player-drawer-actions button {
     width: 100%;
