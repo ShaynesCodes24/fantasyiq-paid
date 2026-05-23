@@ -1,0 +1,15 @@
+.env
+.env.local
+.env.*.local
+.venv
+.vercel
+.git
+node_modules
+dist
+artifacts
+__pycache__
+*.pyc
+*.log
+customers.csv
+customers.local.csv
+stripe_product_image.png

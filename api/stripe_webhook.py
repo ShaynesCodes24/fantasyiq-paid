@@ -1,0 +1,624 @@
+from __future__ import annotations
+
+import csv
+import hashlib
+import hmac
+import json
+import os
+import time
+from datetime import datetime, timezone
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler
+from pathlib import Path
+from typing import Any
+
+try:
+    from customer_context import DEFAULT_SEASON, env
+except ModuleNotFoundError:
+    from api.customer_context import DEFAULT_SEASON, env
+
+
+WEBHOOK_TOLERANCE_SECONDS = 300
+CUSTOMER_FIELDS = [
+    "customer_name",
+    "email",
+    "league_id",
+    "team_id",
+    "season",
+    "league_name",
+    "payment_provider",
+    "payment_reference",
+    "paid_at",
+    "renewal_date",
+    "dashboard_url",
+    "status",
+    "notes",
+]
+
+
+class WebhookError(RuntimeError):
+    pass
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def utc_date_from_timestamp(timestamp: int) -> str:
+    return datetime.fromtimestamp(timestamp, tz=timezone.utc).date().isoformat()
+
+
+def renewal_date(paid_at: str) -> str:
+    paid = datetime.strptime(paid_at, "%Y-%m-%d").date()
+    try:
+        return paid.replace(year=paid.year + 1).isoformat()
+    except ValueError:
+        return paid.replace(year=paid.year + 1, day=28).isoformat()
+
+
+def parse_signature(header: str) -> dict[str, list[str]]:
+    parts: dict[str, list[str]] = {}
+    for item in header.split(","):
+        if "=" not in item:
+            continue
+        key, value = item.split("=", 1)
+        parts.setdefault(key.strip(), []).append(value.strip())
+    return parts
+
+
+def verify_signature(payload: bytes, signature_header: str, secret: str) -> None:
+    if not signature_header:
+        raise WebhookError("Missing Stripe-Signature header.")
+    parsed = parse_signature(signature_header)
+    timestamp = (parsed.get("t") or [""])[0]
+    signatures = parsed.get("v1") or []
+    if not timestamp or not signatures:
+        raise WebhookError("Stripe signature header is missing timestamp or v1 signature.")
+    try:
+        timestamp_int = int(timestamp)
+    except ValueError as exc:
+        raise WebhookError("Stripe signature timestamp is invalid.") from exc
+    if abs(time.time() - timestamp_int) > WEBHOOK_TOLERANCE_SECONDS:
+        raise WebhookError("Stripe webhook timestamp is outside the allowed tolerance.")
+
+    signed_payload = timestamp.encode("utf-8") + b"." + payload
+    expected = hmac.new(secret.encode("utf-8"), signed_payload, hashlib.sha256).hexdigest()
+    if not any(hmac.compare_digest(expected, signature) for signature in signatures):
+        raise WebhookError("Stripe webhook signature verification failed.")
+
+
+def custom_field_value(session: dict[str, Any], key: str) -> str:
+    for field in session.get("custom_fields") or []:
+        if field.get("key") != key:
+            continue
+        field_type = field.get("type") or "text"
+        value_data = field.get(field_type) or {}
+        return str(value_data.get("value") or "").strip()
+    return ""
+
+
+def checkout_row(session: dict[str, Any]) -> dict[str, str]:
+    customer = session.get("customer_details") or {}
+    paid_at = utc_date_from_timestamp(int(session.get("created") or time.time()))
+    league_id = custom_field_value(session, "leagueid")
+    team_id = custom_field_value(session, "teamid")
+    season = custom_field_value(session, "season") or str(DEFAULT_SEASON)
+    league_name = custom_field_value(session, "leaguename")
+    dashboard_url = env("FANTASYIQ_DASHBOARD_URL", "https://myfantasyiq.com/FantasyIQ/")
+    return {
+        "customer_name": str(customer.get("name") or "").strip(),
+        "email": str(customer.get("email") or "").strip(),
+        "league_id": league_id,
+        "team_id": team_id,
+        "season": season,
+        "league_name": league_name,
+        "payment_provider": "stripe",
+        "payment_reference": str(session.get("id") or ""),
+        "paid_at": paid_at,
+        "renewal_date": renewal_date(paid_at),
+        "dashboard_url": dashboard_url,
+        "status": "paid_needs_setup",
+        "notes": "Received by Stripe webhook. Validate ESPN league/team, then configure customer dashboard.",
+    }
+
+
+def metadata_value(session: dict[str, Any], *keys: str) -> str:
+    metadata = session.get("metadata") or {}
+    for key in keys:
+        value = metadata.get(key)
+        if value not in (None, ""):
+            return str(value).strip()
+    return ""
+
+
+def checkout_league_profile(row: dict[str, str]) -> dict[str, Any]:
+    if not row.get("league_id") or not row.get("team_id"):
+        return {"saved": False, "reason": "missing_checkout_league_fields"}
+
+    raw = {
+        "leagueId": row.get("league_id", ""),
+        "teamId": row.get("team_id", ""),
+        "season": row.get("season") or str(DEFAULT_SEASON),
+        "leagueLabel": row.get("league_name", ""),
+    }
+    try:
+        try:
+            from setup_validate import setup_league_settings, validate_setup
+        except ImportError:
+            from api.setup_validate import setup_league_settings, validate_setup
+
+        payload, _status = validate_setup(raw)
+        if not payload.get("ok"):
+            return {
+                "saved": False,
+                "reason": str(payload.get("status") or "validation_failed"),
+                "message": str(payload.get("message") or "ESPN league validation did not pass."),
+                "leagueId": payload.get("leagueId") or row.get("league_id"),
+                "teamId": payload.get("teamId") or row.get("team_id"),
+                "season": payload.get("season") or row.get("season"),
+            }
+        label = row.get("league_name") or str(payload.get("leagueName") or "").strip() or "ESPN league"
+        return {
+            "saved": True,
+            "leagueKey": row.get("league_name") or str(payload.get("leagueName") or row.get("league_id") or "league"),
+            "label": label,
+            "leagueName": str(payload.get("leagueName") or label),
+            "leagueId": payload.get("leagueId") or row.get("league_id"),
+            "teamId": payload.get("teamId") or row.get("team_id"),
+            "teamName": str(payload.get("teamName") or ""),
+            "season": payload.get("season") or row.get("season"),
+            "leagueSettings": setup_league_settings(raw, payload),
+            "status": str(payload.get("status") or "ready"),
+        }
+    except Exception as exc:
+        return {
+            "saved": False,
+            "reason": "auto_validation_failed",
+            "message": str(exc),
+            "leagueId": row.get("league_id"),
+            "teamId": row.get("team_id"),
+            "season": row.get("season"),
+        }
+
+
+def checkout_customer_slug(session: dict[str, Any], row: dict[str, str]) -> str:
+    try:
+        try:
+            from database import customer_slug_from_email, slugify
+        except ImportError:
+            from api.database import customer_slug_from_email, slugify
+    except ImportError:
+        def slugify(value: str) -> str:
+            cleaned = "".join(char.lower() if char.isalnum() else "-" for char in str(value or "").strip())
+            return cleaned.strip("-") or "customer"
+
+        def customer_slug_from_email(email: str) -> str:
+            return slugify(email)
+
+    explicit = (
+        metadata_value(session, "customer_slug", "customer", "dashboard")
+        or custom_field_value(session, "customerslug")
+        or custom_field_value(session, "customer")
+        or str(session.get("client_reference_id") or "")
+    )
+    return slugify(explicit or customer_slug_from_email(row.get("email", "")) or row.get("customer_name", ""))
+
+
+def is_additional_league_checkout(session: dict[str, Any]) -> bool:
+    metadata = session.get("metadata") or {}
+    product = str(metadata.get("product") or metadata.get("type") or metadata.get("checkout_type") or "").lower()
+    if any(token in product for token in ("additional_league", "league_addon", "add-on", "addon")):
+        return True
+    amount_total = int(session.get("amount_total") or 0)
+    try:
+        add_on_amount = int(env("FANTASYIQ_ADDITIONAL_LEAGUE_AMOUNT_CENTS", "500") or 500)
+    except ValueError:
+        add_on_amount = 500
+    has_league_intake = bool(custom_field_value(session, "leagueid") or custom_field_value(session, "teamid"))
+    return amount_total > 0 and amount_total <= add_on_amount and not has_league_intake
+
+
+def persist_additional_league_checkout(event: dict[str, Any], session: dict[str, Any], row: dict[str, str]) -> dict[str, Any]:
+    try:
+        try:
+            from database import (
+                DatabaseUnavailable,
+                database_status,
+                increment_additional_league_count,
+                record_ops_event,
+                record_stripe_event,
+            )
+        except ImportError:
+            from api.database import (
+                DatabaseUnavailable,
+                database_status,
+                increment_additional_league_count,
+                record_ops_event,
+                record_stripe_event,
+            )
+
+        status = database_status()
+        if not status["enabled"]:
+            return {"databaseEnabled": status["enabled"], "persistedDatabase": False, "reason": "database_not_connected"}
+
+        customer_slug = checkout_customer_slug(session, row)
+        inserted_event = record_stripe_event(
+            stripe_event_id=str(event.get("id") or ""),
+            event_type=str(event.get("type") or ""),
+            stripe_object_id=str(session.get("id") or ""),
+            customer_slug=customer_slug,
+            email=row["email"],
+            amount_total=session.get("amount_total"),
+            currency=str(session.get("currency") or ""),
+            status="additional_league_paid",
+            payload={"session": session, "fulfillment": "additional_league"},
+        )
+        saved_customer = None
+        if inserted_event:
+            saved_customer = increment_additional_league_count(customer_slug or row.get("email", ""), 1)
+            record_ops_event(
+                event_type="checkout.additional_league_paid",
+                severity="info",
+                source="stripe_webhook",
+                customer_slug=(saved_customer or {}).get("slug") or customer_slug,
+                message="Additional league add-on credited to customer account.",
+                payload={
+                    "stripeEventId": event.get("id") or "",
+                    "stripeObjectId": session.get("id") or "",
+                    "amountTotal": session.get("amount_total"),
+                    "currency": session.get("currency") or "",
+                },
+            )
+        return {
+            "databaseEnabled": True,
+            "persistedDatabase": bool(saved_customer) or not inserted_event,
+            "insertedEvent": inserted_event,
+            "customerSlug": (saved_customer or {}).get("slug") or customer_slug,
+            "additionalLeagueCount": (saved_customer or {}).get("additional_league_count"),
+        }
+    except (DatabaseUnavailable, ValueError) as exc:
+        return {"databaseEnabled": False, "persistedDatabase": False, "reason": str(exc)}
+    except Exception:
+        return {"databaseEnabled": True, "persistedDatabase": False, "reason": "additional_league_fulfillment_failed"}
+
+
+def persist_checkout_to_database(event: dict[str, Any], session: dict[str, Any], row: dict[str, str]) -> dict[str, Any]:
+    try:
+        try:
+            from database import DatabaseUnavailable, database_status, record_ops_event, record_stripe_event, upsert_customer, upsert_league
+        except ImportError:
+            from api.database import DatabaseUnavailable, database_status, record_ops_event, record_stripe_event, upsert_customer, upsert_league
+
+        status = database_status()
+        if not status["enabled"]:
+            return {"databaseEnabled": status["enabled"], "persistedDatabase": False, "reason": "database_not_connected"}
+
+        customer_slug = checkout_customer_slug(session, row)
+        saved_customer = upsert_customer(
+            slug=customer_slug,
+            customer_name=row["customer_name"],
+            email=row["email"],
+            status=row["status"],
+            stripe_customer_id=str(session.get("customer") or ""),
+            subscription_status=str(session.get("payment_status") or "paid"),
+            included_league_limit=int(env("FANTASYIQ_INCLUDED_LEAGUE_LIMIT", "3") or 3),
+        )
+
+        auto_setup = checkout_league_profile(row)
+        if auto_setup.get("saved"):
+            saved_league = upsert_league(
+                customer_slug=saved_customer.get("slug") or customer_slug,
+                league_key=metadata_value(session, "league_key") or str(auto_setup.get("leagueKey") or ""),
+                label=str(auto_setup.get("label") or "Checkout league"),
+                league_name=str(auto_setup.get("leagueName") or ""),
+                league_id=auto_setup.get("leagueId"),
+                team_id=auto_setup.get("teamId"),
+                team_name=str(auto_setup.get("teamName") or ""),
+                season=auto_setup.get("season"),
+                league_settings=auto_setup.get("leagueSettings") or {"source": "Stripe checkout auto setup"},
+                status="configured",
+                source="stripe_checkout",
+            )
+            auto_setup["leagueKey"] = saved_league.get("league_key") or auto_setup.get("leagueKey")
+            record_ops_event(
+                event_type="checkout.league_auto_configured",
+                severity="info",
+                source="stripe_webhook",
+                customer_slug=saved_customer.get("slug") or customer_slug,
+                league_key=str(auto_setup.get("leagueKey") or ""),
+                message="Stripe checkout ESPN details were validated and saved automatically.",
+                payload={
+                    "leagueId": auto_setup.get("leagueId"),
+                    "teamId": auto_setup.get("teamId"),
+                    "season": auto_setup.get("season"),
+                    "validationStatus": auto_setup.get("status"),
+                },
+            )
+        elif row.get("league_id") and row.get("team_id"):
+            saved_league = upsert_league(
+                customer_slug=saved_customer.get("slug") or customer_slug,
+                league_key=metadata_value(session, "league_key") or row.get("league_name") or row.get("league_id") or "league",
+                label=row.get("league_name") or "Checkout league",
+                league_name=row.get("league_name") or "",
+                league_id=row.get("league_id"),
+                team_id=row.get("team_id"),
+                season=row.get("season"),
+                league_settings={
+                    "source": "Stripe checkout intake",
+                    "autoSetupReason": auto_setup.get("reason") or "validation_failed",
+                    "autoSetupMessage": auto_setup.get("message") or "",
+                },
+                status="pending_validation",
+                source="stripe_checkout",
+            )
+            auto_setup["leagueKey"] = saved_league.get("league_key") or auto_setup.get("leagueKey") or ""
+            record_ops_event(
+                event_type="checkout.league_needs_setup",
+                severity="warning",
+                source="stripe_webhook",
+                customer_slug=saved_customer.get("slug") or customer_slug,
+                league_key=str(auto_setup.get("leagueKey") or ""),
+                message="Stripe checkout ESPN details need setup validation before the league is active.",
+                payload={
+                    "reason": auto_setup.get("reason"),
+                    "message": auto_setup.get("message"),
+                    "leagueId": row.get("league_id"),
+                    "teamId": row.get("team_id"),
+                    "season": row.get("season"),
+                },
+            )
+
+        inserted_event = record_stripe_event(
+            stripe_event_id=str(event.get("id") or ""),
+            event_type=str(event.get("type") or ""),
+            stripe_object_id=str(session.get("id") or ""),
+            customer_slug=saved_customer.get("slug") or customer_slug,
+            email=row["email"],
+            amount_total=session.get("amount_total"),
+            currency=str(session.get("currency") or ""),
+            status=row["status"],
+            payload={"session": session},
+        )
+        try:
+            record_ops_event(
+                event_type="checkout.completed",
+                severity="info",
+                source="stripe_webhook",
+                customer_slug=saved_customer.get("slug") or customer_slug,
+                message="Stripe checkout created or updated a customer account.",
+                payload={
+                    "stripeEventId": event.get("id") or "",
+                    "stripeObjectId": session.get("id") or "",
+                    "amountTotal": session.get("amount_total"),
+                    "currency": session.get("currency") or "",
+                    "insertedEvent": inserted_event,
+                },
+            )
+        except Exception:
+            pass
+        try:
+            try:
+                from email_service import send_customer_setup_email
+            except ImportError:
+                from api.email_service import send_customer_setup_email
+            email_result = send_customer_setup_email(
+                saved_customer,
+                league_key=str(auto_setup.get("leagueKey") or saved_customer.get("default_league_key") or metadata_value(session, "league_key") or ""),
+                renewal_date=row.get("renewal_date", ""),
+                idempotency_key=f"fantasyiq-setup-{event.get('id') or session.get('id')}",
+            )
+        except Exception:
+            email_result = {"sent": False, "reason": "email_send_failed"}
+        return {
+            "databaseEnabled": True,
+            "persistedDatabase": True,
+            "insertedEvent": inserted_event,
+            "customerSlug": saved_customer.get("slug") or customer_slug,
+            "autoSetup": auto_setup,
+            "setupEmail": email_result,
+        }
+    except (DatabaseUnavailable, ValueError) as exc:
+        return {"databaseEnabled": False, "persistedDatabase": False, "reason": str(exc)}
+    except Exception:
+        return {
+            "databaseEnabled": True,
+            "persistedDatabase": False,
+            "reason": "database_save_failed",
+        }
+
+
+def persist_generic_stripe_event(event: dict[str, Any], data_object: dict[str, Any], status: str = "") -> dict[str, Any]:
+    try:
+        try:
+            from database import database_status, record_stripe_event
+        except ImportError:
+            from api.database import database_status, record_stripe_event
+
+        database_state = database_status()
+        if not database_state["enabled"]:
+            return {"databaseEnabled": database_state["enabled"], "persistedDatabase": False}
+        inserted = record_stripe_event(
+            stripe_event_id=str(event.get("id") or ""),
+            event_type=str(event.get("type") or ""),
+            stripe_object_id=str(data_object.get("id") or ""),
+            email=str((data_object.get("customer_details") or {}).get("email") or ""),
+            status=status or str(data_object.get("status") or ""),
+            payload={"object": data_object},
+        )
+        return {"databaseEnabled": True, "persistedDatabase": True, "insertedEvent": inserted}
+    except Exception:
+        return {"databaseEnabled": True, "persistedDatabase": False, "reason": "database_save_failed"}
+
+
+def persist_subscription_access_event(event: dict[str, Any], data_object: dict[str, Any], status: str = "") -> dict[str, Any]:
+    result = persist_generic_stripe_event(event, data_object, status)
+    try:
+        try:
+            from database import update_customer_subscription_status
+        except ImportError:
+            from api.database import update_customer_subscription_status
+
+        stripe_customer_id = str(data_object.get("customer") or "")
+        customer_email = str((data_object.get("customer_details") or {}).get("email") or data_object.get("customer_email") or "")
+        access_status = status or str(data_object.get("status") or "")
+        customer_status = ""
+        if access_status in {"canceled", "cancelled", "unpaid", "incomplete_expired"}:
+            customer_status = "suspended"
+        updated = update_customer_subscription_status(
+            stripe_customer_id=stripe_customer_id,
+            email=customer_email,
+            subscription_status=access_status,
+            status=customer_status,
+        )
+        result["customerUpdated"] = bool(updated)
+        if updated:
+            result["customerSlug"] = updated.get("slug") or ""
+    except Exception:
+        result["customerUpdated"] = False
+    return result
+
+
+def append_customer_locally(row: dict[str, str]) -> bool:
+    path_value = env("FANTASYIQ_CUSTOMER_CSV_PATH")
+    if not path_value:
+        return False
+    path = Path(path_value)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    existing = set()
+    if path.exists():
+        with path.open("r", newline="", encoding="utf-8") as handle:
+            existing = {item.get("payment_reference", "") for item in csv.DictReader(handle)}
+    if row["payment_reference"] in existing:
+        return False
+    write_header = not path.exists()
+    with path.open("a", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=CUSTOMER_FIELDS)
+        if write_header:
+            writer.writeheader()
+        writer.writerow({field: row.get(field, "") for field in CUSTOMER_FIELDS})
+    return True
+
+
+def append_event_log(event: dict[str, Any], result: dict[str, Any]) -> bool:
+    path_value = env("FANTASYIQ_WEBHOOK_LOG_PATH")
+    if not path_value:
+        return False
+    path = Path(path_value)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    record = {
+        "receivedAt": utc_now(),
+        "eventId": event.get("id"),
+        "eventType": event.get("type"),
+        "result": result,
+    }
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(record, separators=(",", ":")) + "\n")
+    return True
+
+
+def process_event(event: dict[str, Any]) -> dict[str, Any]:
+    event_type = event.get("type")
+    data_object = ((event.get("data") or {}).get("object") or {})
+    if event_type == "checkout.session.completed":
+        row = checkout_row(data_object)
+        if is_additional_league_checkout(data_object):
+            database_result = persist_additional_league_checkout(event, data_object, row)
+            return {
+                "action": "additional_league_paid",
+                "status": "additional_league_paid",
+                "customer": {
+                    "customer_name": row["customer_name"],
+                    "email": row["email"],
+                    "dashboard_url": row["dashboard_url"],
+                },
+                "database": database_result,
+                "nextStep": "Customer can open setup and save the new league profile.",
+            }
+        appended = append_customer_locally(row)
+        database_result = persist_checkout_to_database(event, data_object, row)
+        return {
+            "action": "customer_paid",
+            "status": row["status"],
+            "customer": {
+                "customer_name": row["customer_name"],
+                "email": row["email"],
+                "league_id": row["league_id"],
+                "team_id": row["team_id"],
+                "season": row["season"],
+                "dashboard_url": row["dashboard_url"],
+            },
+            "persistedLocally": appended,
+            "database": database_result,
+            "nextStep": "Run setup validation. When DATABASE_URL is connected, this checkout creates the customer account record automatically.",
+        }
+    if event_type in {"customer.subscription.deleted", "invoice.payment_failed"}:
+        access_status = "canceled" if event_type == "customer.subscription.deleted" else "past_due"
+        database_result = persist_subscription_access_event(event, data_object, access_status)
+        return {
+            "action": "subscription_attention_required",
+            "status": access_status,
+            "stripeObjectId": data_object.get("id"),
+            "database": database_result,
+            "nextStep": "Review the subscription in Stripe and disable dashboard access if needed.",
+        }
+    if event_type in {"customer.subscription.created", "customer.subscription.updated"}:
+        database_result = persist_subscription_access_event(event, data_object, str(data_object.get("status") or "updated"))
+        return {
+            "action": "subscription_updated",
+            "status": data_object.get("status") or "updated",
+            "stripeObjectId": data_object.get("id"),
+            "database": database_result,
+        }
+    if event_type == "invoice.paid":
+        database_result = persist_subscription_access_event(event, data_object, "active")
+        return {
+            "action": "invoice_paid",
+            "status": "active",
+            "stripeObjectId": data_object.get("id"),
+            "database": database_result,
+        }
+    return {"action": "ignored", "eventType": event_type}
+
+
+class handler(BaseHTTPRequestHandler):
+    def send_json(self, payload: dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> None:
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_POST(self) -> None:
+        secret = env("STRIPE_WEBHOOK_SECRET")
+        if not secret:
+            self.send_json({"ok": False, "message": "STRIPE_WEBHOOK_SECRET is not configured."}, HTTPStatus.SERVICE_UNAVAILABLE)
+            return
+
+        length = int(self.headers.get("Content-Length") or 0)
+        payload = self.rfile.read(length)
+        try:
+            verify_signature(payload, self.headers.get("Stripe-Signature", ""), secret)
+            event = json.loads(payload.decode("utf-8"))
+            result = process_event(event)
+            logged = append_event_log(event, result)
+            self.send_json({"ok": True, "received": True, "logged": logged, "result": result})
+        except (WebhookError, json.JSONDecodeError) as exc:
+            self.send_json({"ok": False, "message": str(exc)}, HTTPStatus.BAD_REQUEST)
+        except Exception as exc:
+            self.send_json({"ok": False, "message": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
+
+    def do_GET(self) -> None:
+        self.send_json(
+            {
+                "ok": True,
+                "message": "Stripe webhook endpoint is installed. Configure it in Stripe for checkout.session.completed and subscription events.",
+                "requires": ["STRIPE_WEBHOOK_SECRET"],
+            }
+        )
+
+    def do_HEAD(self) -> None:
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()

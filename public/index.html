@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MyFantasyIQ League Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
+    <link rel="shortcut icon" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260521-premium-3" />
+    <meta
+      name="description"
+        content="MyFantasyIQ creates premium ESPN fantasy football dashboards with live public-league draft sync, league-aware draft boards, mock draft tools, and trade checks."
+    />
+    <link rel="stylesheet" href="./site.css?v=20260522_logo_home_1" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/">
+        <img src="./FantasyIQ/assets/myfantasyiq-wordmark.svg?v=20260522-wordmark-safe-1" alt="MyFantasyIQ logo" />
+        <span>MyFantasyIQ</span>
+      </a>
+      <nav aria-label="Site navigation">
+        <a href="#pricing">Pricing</a>
+        <a href="#included">Included</a>
+        <a href="#espn-precheck"><span class="full-label">ESPN pre-check</span><span class="compact-label">ESPN Check</span></a>
+        <a href="./help.html">Help</a>
+        <a href="mailto:support@myfantasyiq.com">Contact</a>
+        <a class="login-link" href="./FantasyIQ/?login=1" aria-label="Customer Login"><span class="full-label">Customer Login</span><span class="compact-label">Login</span></a>
+        <a class="dashboard-link" href="./FantasyIQ/">Try Demo</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <img class="hero-logo" src="./FantasyIQ/assets/myfantasyiq-wordmark.svg?v=20260522-wordmark-safe-1" alt="MyFantasyIQ" />
+          <p class="eyebrow">ESPN fantasy football dashboard</p>
+          <h1>MyFantasyIQ</h1>
+          <p>
+            A premium command center for your ESPN fantasy football leagues with
+            live public-league draft sync, league-aware boards, mock draft practice,
+            and trade checks.
+          </p>
+          <div class="actions">
+            <a class="primary" href="#espn-precheck">Check ESPN compatibility</a>
+            <a class="secondary" href="./setup.html?mode=precheck">Start Season Pass</a>
+            <a class="secondary login-cta" href="./FantasyIQ/?login=1">Already paid? Log in</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="section precheck-section" id="espn-precheck">
+        <div class="section-head">
+          <p class="eyebrow">Free compatibility check</p>
+          <h2>Check if your ESPN league works before you buy</h2>
+          <p>
+            Enter your ESPN league ID, team ID, and season. FantasyIQ confirms the
+            league is public, finds your team, and detects the scoring setup before
+            you start checkout.
+          </p>
+        </div>
+        <form class="precheck-tool" id="precheck-form">
+          <div class="field-grid precheck-grid">
+            <label>
+              ESPN league ID
+              <input id="precheck-league-id" name="leagueId" inputmode="numeric" autocomplete="off" required />
+            </label>
+            <label>
+              ESPN team ID
+              <input id="precheck-team-id" name="teamId" inputmode="numeric" autocomplete="off" required />
+            </label>
+            <label>
+              Season
+              <input id="precheck-season" name="season" inputmode="numeric" autocomplete="off" value="2026" required />
+            </label>
+          </div>
+          <div class="button-row">
+            <button class="primary" type="submit">Check league compatibility</button>
+            <a class="secondary dark-outline" href="./setup.html?mode=precheck">Open full setup check</a>
+          </div>
+          <div class="precheck-result result-panel" id="precheck-result">
+            Your ESPN league must be public for FantasyIQ live sync.
+          </div>
+        </form>
+      </section>
+
+      <section class="price-band" id="pricing">
+        <div>
+          <p class="eyebrow">Self-serve setup</p>
+          <h2>$30 / year Season Pass</h2>
+          <p>
+            One account dashboard for up to three public ESPN fantasy football
+            leagues. Additional leagues can be added for $5/year each.
+          </p>
+          <p class="fine-print">
+            Software subscription only. MyFantasyIQ does not collect league dues,
+            hold prize pools, process winnings, operate contests, or guarantee outcomes.
+          </p>
+        </div>
+        <a class="primary dark" href="#espn-precheck">Check ESPN first</a>
+      </section>
+
+      <section class="proof-strip" aria-label="MyFantasyIQ launch readiness">
+        <div>
+          <span>Live board</span>
+          <strong>ESPN-driven PPR values</strong>
+        </div>
+        <div>
+          <span>Draft room</span>
+          <strong>Alpha signal sync</strong>
+        </div>
+        <div>
+          <span>Access</span>
+          <strong>Multi-league switcher</strong>
+        </div>
+        <div>
+          <span>Setup</span>
+          <strong>Auto-configured</strong>
+        </div>
+      </section>
+
+      <section class="section" id="included">
+        <div class="section-head">
+          <p class="eyebrow">What is included</p>
+          <h2>Built for draft day and the weeks after</h2>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <h3>Dynamic SoS Heat Map</h3>
+            <p>Compares weekly matchup leverage by position, player, team, and playoff window so roster decisions have a schedule edge.</p>
+          </article>
+          <article>
+            <h3>Ranked Boards</h3>
+            <p>League-aware boards with native scoring, tiers, risk flags, trends, and quick player analysis.</p>
+          </article>
+          <article>
+            <h3>Mock Practice</h3>
+            <p>Practice draft slots, review roster shape, and test pick decisions before draft night.</p>
+          </article>
+          <article>
+            <h3>Trade Calculator</h3>
+            <p>Compare trade pieces and slow down impulsive offers after the draft.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="product-preview section">
+        <div class="preview-copy">
+          <p class="eyebrow">Product preview</p>
+          <h2>The working dashboard is the pitch</h2>
+          <p>
+            MyFantasyIQ is built around the decisions managers actually make:
+            who is left, when your next pick arrives, whether a tier is about
+            to dry up, and whether a trade improves your weekly lineup.
+          </p>
+          <div class="preview-actions">
+            <a class="primary dark" href="./FantasyIQ/">Open demo dashboard</a>
+            <a class="secondary dark-outline" href="#espn-precheck">Check ESPN league</a>
+          </div>
+        </div>
+        <img src="./fantasyiq_product_preview.png" alt="MyFantasyIQ dashboard preview" />
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <p class="eyebrow">How setup works</p>
+          <h2>From ESPN check to saved dashboard, without the guesswork</h2>
+        </div>
+        <div class="workflow">
+          <article>
+            <span>1</span>
+            <h3>Validate the ESPN league</h3>
+            <p>The free setup check confirms public ESPN access and detects scoring, roster slots, team count, and draft rounds.</p>
+          </article>
+          <article>
+            <span>2</span>
+            <h3>Pay and create login</h3>
+            <p>Checkout is handled by Stripe. The setup email lets you create a FantasyIQ password and open your dashboard.</p>
+          </article>
+          <article>
+            <span>3</span>
+            <h3>Open your saved dashboard</h3>
+            <p>Your dashboard stores league branding, team context, password login, and access-code backup.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <p class="eyebrow">Questions</p>
+          <h2>Clear rules before checkout</h2>
+        </div>
+        <div class="faq-grid">
+          <article>
+            <h3>Do I need to share my ESPN password?</h3>
+            <p>No. MyFantasyIQ v1 uses public ESPN league data. Your league needs to be public for live sync.</p>
+          </article>
+          <article>
+            <h3>What happens after I subscribe?</h3>
+            <p>You receive a setup email, create a password, validate each public ESPN league, then open your saved dashboard.</p>
+          </article>
+          <article>
+            <h3>Can private leagues use it?</h3>
+            <p>Live draft sync requires public ESPN data. Use the free compatibility check before checkout, or make the league public before relying on draft-day sync.</p>
+          </article>
+          <article>
+            <h3>What does one subscription cover?</h3>
+            <p>One account dashboard for up to three ESPN fantasy football leagues for one season, with self-serve setup and support.</p>
+          </article>
+          <article>
+            <h3>Does this include league dues or prize pools?</h3>
+            <p>No. MyFantasyIQ sells fantasy football dashboard software only. League dues, side bets, prize pools, and payouts are not part of the subscription.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section split">
+        <div>
+          <p class="eyebrow">Requirement</p>
+          <h2>Live sync requires a public ESPN league</h2>
+          <p>
+            Private ESPN league authentication is not included in this v1.
+            The setup check validates public league access before draft day, so
+            make the ESPN league public before relying on live sync.
+          </p>
+        </div>
+        <div class="support-panel">
+          <h3>Support</h3>
+          <p>Email setup questions, league details, and support requests to:</p>
+          <a href="mailto:support@myfantasyiq.com">support@myfantasyiq.com</a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>MyFantasyIQ</span>
+      <nav aria-label="Policies">
+        <a href="./terms.html">Terms</a>
+        <a href="./privacy.html">Privacy</a>
+        <a href="./refund-policy.html">Refund Policy</a>
+      </nav>
+    </footer>
+    <script>
+      const paymentLink = "https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01";
+      const precheckForm = document.querySelector("#precheck-form");
+      const precheckResult = document.querySelector("#precheck-result");
+
+      function trackFunnelEvent(eventType, payload = {}) {
+        if (["127.0.0.1", "localhost"].includes(window.location.hostname)) return;
+        const body = JSON.stringify({
+          eventType,
+          source: "public_site",
+          path: window.location.pathname,
+          referrer: document.referrer || "",
+          ...payload,
+        });
+        try {
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon("/api/track-event", new Blob([body], { type: "application/json" }));
+            return;
+          }
+        } catch (error) {
+          // Tracking should never block checkout or setup.
+        }
+        fetch("/api/track-event", {
+          method: "POST",
+          cache: "no-store",
+          keepalive: true,
+          headers: { "Content-Type": "application/json" },
+          body,
+        }).catch(() => {});
+      }
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function renderPrecheckTeams(teams) {
+        if (!teams?.length) return "";
+        return `<details class="team-list"><summary>Show ESPN teams and IDs</summary><div class="mini-table">${teams
+          .map(
+            (team) => `<div>
+              <span>Team ${escapeHtml(team.teamId)}</span>
+              <strong>${escapeHtml(team.teamName)}</strong>
+              <span>${escapeHtml(team.manager || "Manager unavailable")}</span>
+            </div>`,
+          )
+          .join("")}</div></details>`;
+      }
+
+      document.addEventListener("click", (event) => {
+        const link = event.target.closest("[data-checkout-link]");
+        if (!link) return;
+        trackFunnelEvent("checkout.started", {
+          checkoutType: "season_pass",
+          target: link.href,
+        });
+      });
+
+      precheckForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const data = new FormData(precheckForm);
+        const params = new URLSearchParams(data);
+        precheckResult.innerHTML = "<strong>Checking ESPN...</strong><p>Confirming public league access, team match, and scoring settings.</p>";
+        trackFunnelEvent("espn.precheck_started", {
+          leagueId: data.get("leagueId") || "",
+          season: data.get("season") || "",
+        });
+        try {
+          const response = await fetch(`/api/setup-validate?${params.toString()}`, { cache: "no-store" });
+          const payload = await response.json();
+          const settings = payload.leagueSettings || {};
+          const slots = settings.lineupSlots || {};
+          if (payload.ok) {
+            precheckResult.innerHTML = `
+              <strong>Your league is compatible.</strong>
+              <p>League found: ${escapeHtml(payload.leagueName)}. Team found: ${escapeHtml(payload.teamName)}. Public access works, and FantasyIQ detected ${escapeHtml(settings.scoringLabel || settings.scoringType || "league scoring")}, ${escapeHtml(settings.teamCount || payload.teamCount || "?")} teams, ${escapeHtml(slots.FLEX || 0)} FLEX, and ${escapeHtml(settings.draftRounds || "?")} draft rounds.</p>
+              <div class="button-row setup-actions">
+                <a class="primary dark" href="${paymentLink}" data-checkout-link>Start Season Pass</a>
+                <a class="secondary dark-outline" href="./setup.html?mode=precheck&${params.toString()}">Open full setup check</a>
+              </div>
+            `;
+            trackFunnelEvent("espn.precheck_passed", {
+              leagueId: payload.leagueId || "",
+              season: payload.season || "",
+              status: payload.status || "ready",
+            });
+            return;
+          }
+          precheckResult.innerHTML = `
+            <strong>${escapeHtml(payload.message || "FantasyIQ could not confirm that league yet.")}</strong>
+            <p>Check the league ID, team ID, season, and ESPN public league setting, then try again.</p>
+            ${renderPrecheckTeams(payload.teams)}
+          `;
+          trackFunnelEvent("espn.precheck_failed", {
+            leagueId: payload.leagueId || data.get("leagueId") || "",
+            season: payload.season || data.get("season") || "",
+            status: payload.status || "validation_failed",
+          });
+        } catch (error) {
+          precheckResult.innerHTML = "<strong>Could not reach ESPN right now.</strong><p>Try again in a moment, or contact support if this keeps happening.</p>";
+          trackFunnelEvent("espn.precheck_failed", {
+            leagueId: data.get("leagueId") || "",
+            season: data.get("season") || "",
+            status: "network_error",
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MyFantasyIQ Admin</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
+    <link rel="shortcut icon" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260521-premium-3" />
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="stylesheet" href="./site.css?v=20260522_logo_home_1" />
+  </head>
+  <body class="policy-page">
+    <header class="site-header">
+      <a class="brand" href="./">
+        <img src="./FantasyIQ/assets/myfantasyiq-wordmark.svg?v=20260522-wordmark-safe-1" alt="MyFantasyIQ logo" />
+        <span>MyFantasyIQ</span>
+      </a>
+      <nav aria-label="Admin navigation">
+        <a href="./setup.html">Setup validator</a>
+        <a href="./help.html">Help</a>
+        <a href="./FantasyIQ/" class="dashboard-link">Dashboard</a>
+        <button class="secondary admin-lock-button" id="admin-gate-logout" type="button">Lock Admin</button>
+      </nav>
+    </header>
+
+    <main class="policy-main">
+      <section class="policy-card">
+        <p class="eyebrow">Owner Admin</p>
+        <h1>Customer operations</h1>
+        <p>
+          This view requires the admin gate sign-in plus <strong>FANTASYIQ_ADMIN_TOKEN</strong>. Enter the admin token here
+          to review customer setup status after the gate unlocks.
+        </p>
+
+        <div class="tool-card">
+          <label class="stacked-field">
+            Admin token
+            <input id="admin-token" type="password" autocomplete="off" />
+          </label>
+          <div class="admin-filter-row">
+            <label>
+              Search
+              <input id="admin-search" type="search" placeholder="Name, email, or slug" />
+            </label>
+            <label>
+              Status
+              <select id="admin-status-filter">
+                <option value="">All statuses</option>
+                <option value="configured">Configured</option>
+                <option value="paid_needs_setup">Needs setup</option>
+                <option value="warning">Needs attention</option>
+              </select>
+            </label>
+          </div>
+          <details class="ops-filter-panel" open>
+            <summary>Ops event filters</summary>
+            <div class="admin-filter-row">
+              <label>
+                Event search
+                <input id="ops-search" type="search" placeholder="setup, login, sync, email, Stripe" />
+              </label>
+              <label>
+                Severity
+                <select id="ops-severity-filter">
+                  <option value="">All severities</option>
+                  <option value="critical">Critical</option>
+                  <option value="error">Error</option>
+                  <option value="warning">Warning</option>
+                  <option value="info">Info</option>
+                </select>
+              </label>
+              <label>
+                Event type
+                <input id="ops-type-filter" type="search" placeholder="login.failed" />
+              </label>
+              <label>
+                Customer
+                <input id="ops-customer-filter" type="search" placeholder="customer slug" />
+              </label>
+              <label>
+                Source
+                <input id="ops-source-filter" type="search" placeholder="setup_validate" />
+              </label>
+            </div>
+          </details>
+          <div class="button-row">
+            <button class="primary" id="load-admin" type="button">Load customers</button>
+            <button class="secondary" id="refresh-ops" type="button">Refresh ops</button>
+            <button class="primary dark" id="smoke-admin" type="button">Run checkout smoke</button>
+            <button class="secondary" id="clean-admin" type="button">Clean stale setup</button>
+            <button class="secondary" id="refresh-sos" type="button">Refresh SoS heat map</button>
+            <a class="secondary" href="./setup.html">Validate a setup</a>
+          </div>
+          <div class="result-panel" id="admin-result">Admin data has not been loaded.</div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const tokenInput = document.querySelector("#admin-token");
+      const loadButton = document.querySelector("#load-admin");
+      const result = document.querySelector("#admin-result");
+      const searchInput = document.querySelector("#admin-search");
+      const statusFilter = document.querySelector("#admin-status-filter");
+      const cleanButton = document.querySelector("#clean-admin");
+      const smokeButton = document.querySelector("#smoke-admin");
+      const refreshSosButton = document.querySelector("#refresh-sos");
+      const refreshOpsButton = document.querySelector("#refresh-ops");
+      const adminGateLogout = document.querySelector("#admin-gate-logout");
+      const opsSearch = document.querySelector("#ops-search");
+      const opsSeverityFilter = document.querySelector("#ops-severity-filter");
+      const opsTypeFilter = document.querySelector("#ops-type-filter");
+      const opsCustomerFilter = document.querySelector("#ops-customer-filter");
+      const opsSourceFilter = document.querySelector("#ops-source-filter");
+      let adminPayload = null;
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function renderCustomers(customers) {
+        if (!customers?.length) return "<p>No customer rows found yet.</p>";
+        return `<div class="mini-table">${customers
+          .map(
+            (customer) => `<div class="has-actions">
+              <span>${escapeHtml(customer.status || "unknown")}</span>
+              <strong>${escapeHtml(customer.customer_name || customer.email || "Customer")}</strong>
+              <span>${escapeHtml(customer.league_name || customer.league_id)} / Team ${escapeHtml(customer.team_id)}</span>
+            </div>`,
+          )
+          .join("")}</div>`;
+      }
+
+      function renderRegistry(customers) {
+        if (!customers?.length) return "<p>No configured customer registry found yet.</p>";
+        return `<div class="mini-table">${customers
+          .map(
+            (customer) => `<div>
+              <span>${escapeHtml(customer.status || "unknown")}</span>
+              <strong>${escapeHtml(customer.customerName || customer.customerSlug || "Customer")}</strong>
+              <span>${escapeHtml(customer.leagueName || customer.leagueId)} / Team ${escapeHtml(customer.customerTeamId || "")}</span>
+            </div>`,
+          )
+          .join("")}</div>`;
+      }
+
+      function renderDatabase(customers) {
+        if (!customers?.length) return "<p>No database customer records found yet.</p>";
+        return `<div class="mini-table">${customers
+          .map(
+            (customer) => `<div class="has-actions">
+              <span>${escapeHtml(customer.status || "unknown")}</span>
+              <strong>${escapeHtml(customer.customer_name || customer.email || customer.slug || "Customer")}</strong>
+              <span>${escapeHtml(customer.configured_league_count || 0)} active / ${escapeHtml(customer.pending_league_count || 0)} pending / ${customer.password_configured ? "password set" : "no password"} / ${customer.last_login_at ? `last login ${escapeHtml(customer.last_login_at)}` : "no login yet"}</span>
+              <span class="admin-actions">
+                <button type="button" data-admin-action="customer_detail" data-customer="${escapeHtml(customer.slug)}">Details</button>
+                <button type="button" data-admin-action="send_setup_email" data-customer="${escapeHtml(customer.slug)}">Send setup</button>
+                <button type="button" data-admin-action="send_password_reset_email" data-customer="${escapeHtml(customer.slug)}">Reset email</button>
+                <button type="button" data-admin-action="send_onboarding_email" data-stage="draft_room" data-customer="${escapeHtml(customer.slug)}">Onboard</button>
+                <button type="button" data-admin-action="clean_pending_leagues" data-customer="${escapeHtml(customer.slug)}">Clean</button>
+                <button type="button" data-admin-action="reset_access_code" data-customer="${escapeHtml(customer.slug)}">Reset code</button>
+              </span>
+            </div>`,
+          )
+          .join("")}</div>`;
+      }
+
+      function filteredDatabaseCustomers(customers) {
+        const query = searchInput.value.trim().toLowerCase();
+        const status = statusFilter.value;
+        return (customers || []).filter((customer) => {
+          const text = `${customer.customer_name || ""} ${customer.email || ""} ${customer.slug || ""} ${customer.status || ""}`.toLowerCase();
+          const matchesQuery = !query || text.includes(query);
+          const matchesStatus = !status || customer.status === status || (status === "warning" && !customer.access_code_set);
+          return matchesQuery && matchesStatus;
+        });
+      }
+
+      function formatDate(value) {
+        if (!value) return "unknown time";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return date.toLocaleString();
+      }
+
+      function eventPayloadPreview(payload) {
+        if (!payload || typeof payload !== "object" || !Object.keys(payload).length) return "";
+        return JSON.stringify(payload, null, 2);
+      }
+
+      function filteredOpsEvents(events) {
+        const query = opsSearch.value.trim().toLowerCase();
+        const severity = opsSeverityFilter.value;
+        const type = opsTypeFilter.value.trim().toLowerCase();
+        const customer = opsCustomerFilter.value.trim().toLowerCase();
+        const source = opsSourceFilter.value.trim().toLowerCase();
+        return (events || []).filter((event) => {
+          const payload = eventPayloadPreview(event.payload).toLowerCase();
+          const text = `${event.event_type || ""} ${event.source || ""} ${event.customer_slug || ""} ${event.league_key || ""} ${event.message || ""} ${payload}`.toLowerCase();
+          return (
+            (!query || text.includes(query)) &&
+            (!severity || event.severity === severity) &&
+            (!type || String(event.event_type || "").toLowerCase().includes(type)) &&
+            (!customer || String(event.customer_slug || "").toLowerCase().includes(customer)) &&
+            (!source || String(event.source || "").toLowerCase().includes(source))
+          );
+        });
+      }
+
+      function renderOpsEvents(events) {
+        if (!events?.length) return "<p>No ops events have been recorded yet.</p>";
+        return `<div class="ops-table">${events
+          .map(
+            (event) => {
+              const payload = eventPayloadPreview(event.payload);
+              return `<article class="ops-event ${escapeHtml(event.severity || "info")}">
+                <div class="ops-event-head">
+                  <span>${escapeHtml(event.severity || "info")}</span>
+                  <strong>${escapeHtml(event.event_type || "event")}</strong>
+                  <small>${escapeHtml(formatDate(event.created_at))}</small>
+                </div>
+                <div class="ops-event-meta">
+                  <span>source: ${escapeHtml(event.source || "unknown")}</span>
+                  <span>customer: ${escapeHtml(event.customer_slug || "platform")}</span>
+                  ${event.league_key ? `<span>league: ${escapeHtml(event.league_key)}</span>` : ""}
+                </div>
+                <p>${escapeHtml(event.message || "No message recorded.")}</p>
+                ${
+                  payload
+                    ? `<details><summary>Payload</summary><pre>${escapeHtml(payload)}</pre></details>`
+                    : ""
+                }
+              </article>`;
+            },
+          )
+          .join("")}</div>`;
+      }
+
+      function bindAdminActionButtons() {
+        result.querySelectorAll("[data-admin-action]").forEach((button) => {
+          button.addEventListener("click", async () => {
+            try {
+              await runAdminAction(button.dataset.adminAction, button.dataset.customer, button.dataset.stage || "");
+            } catch (error) {
+              result.insertAdjacentHTML("afterbegin", `<div class="result-panel"><strong>Admin action failed.</strong><p>${escapeHtml(error.message)}</p></div>`);
+            }
+          });
+        });
+      }
+
+      function renderAdminPayload(payload) {
+        const databaseCustomers = filteredDatabaseCustomers(payload.databaseCustomers);
+        const opsEvents = filteredOpsEvents(payload.opsEvents);
+        const email = payload.email || {};
+        const ops = payload.opsSummary || {};
+        result.innerHTML = `
+          <strong>${escapeHtml(payload.configuredCount)} configured / ${escapeHtml(payload.needsSetupCount)} need setup</strong>
+          <div class="admin-status-grid">
+            <article><span>Database</span><strong>${payload.database?.enabled ? "Connected" : "Not connected"}</strong></article>
+            <article><span>Email</span><strong>${email.configured ? "Ready" : "Needs key"}</strong><small>${escapeHtml(email.from || email.provider || "Resend")}</small></article>
+            <article><span>Ops events</span><strong>${escapeHtml(ops.total || 0)}</strong><small>${escapeHtml(ops.errors || 0)} errors / ${escapeHtml(ops.warnings || 0)} warnings</small></article>
+          </div>
+          <h3>Database accounts</h3>
+          ${renderDatabase(databaseCustomers)}
+          <h3>Ops event console</h3>
+          <p>${escapeHtml(opsEvents.length)} event(s) shown. Use this for setup, login, live sync, email, Stripe, and admin triage.</p>
+          ${renderOpsEvents(opsEvents)}
+          <h3>Configured dashboards</h3>
+          ${renderRegistry(payload.registry)}
+          <h3>Setup queue</h3>
+          ${renderCustomers(payload.customers)}
+          <p>${escapeHtml(payload.nextActions?.[0] || "")}</p>
+        `;
+        bindAdminActionButtons();
+      }
+
+      async function runAdminAction(action, customer = "", stage = "") {
+        result.insertAdjacentHTML("afterbegin", "<p><strong>Running admin action...</strong></p>");
+        const response = await fetch("/api/admin-customers", {
+          method: "POST",
+          cache: "no-store",
+          headers: {
+            "Content-Type": "application/json",
+            "x-fantasyiq-admin-token": tokenInput.value.trim(),
+          },
+          body: JSON.stringify({ action, customer, stage }),
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.message || response.statusText);
+        }
+        if (action === "customer_detail" || action === "reset_access_code") {
+          const customerData = payload.customer || {};
+          const accessCode = customerData.access_code || "";
+          const setupUrl = payload.setupUrl || "";
+          const dashboardUrl = payload.dashboardUrl || "";
+          result.insertAdjacentHTML(
+            "afterbegin",
+            `<div class="result-panel">
+              <strong>${escapeHtml(customerData.customer_name || customerData.slug || "Customer")}</strong>
+              <p>Dashboard: ${escapeHtml(dashboardUrl)}</p>
+              <p>Setup: ${escapeHtml(setupUrl)}</p>
+              <p>Access code: <code>${escapeHtml(accessCode || "not set")}</code></p>
+            </div>`,
+          );
+          return;
+        }
+        if (action === "send_setup_email") {
+          const email = payload.email || {};
+          result.insertAdjacentHTML(
+            "afterbegin",
+            `<div class="result-panel"><strong>Setup email ${email.sent ? "sent" : "not sent"}.</strong><p>${escapeHtml(email.reason || email.id || email.subject || "")}</p></div>`,
+          );
+        }
+        if (action === "send_password_reset_email") {
+          const email = payload.email || {};
+          result.insertAdjacentHTML(
+            "afterbegin",
+            `<div class="result-panel"><strong>Password reset email ${email.sent ? "sent" : "not sent"}.</strong><p>${escapeHtml(email.reason || email.id || email.subject || "")}</p></div>`,
+          );
+        }
+        if (action === "send_onboarding_email") {
+          const email = payload.email || {};
+          result.insertAdjacentHTML(
+            "afterbegin",
+            `<div class="result-panel"><strong>Onboarding email ${email.sent ? "sent" : "not sent"}.</strong><p>${escapeHtml(payload.stage || "")}: ${escapeHtml(email.reason || email.id || email.subject || "")}</p></div>`,
+          );
+        }
+        if (action === "clean_pending_leagues") {
+          result.insertAdjacentHTML(
+            "afterbegin",
+            `<div class="result-panel"><strong>Cleanup complete.</strong><p>Archived ${escapeHtml(payload.archivedCount || 0)} stale pending league profile(s).</p></div>`,
+          );
+          await loadAdmin();
+        }
+        if (action === "self_serve_smoke_test") {
+          result.insertAdjacentHTML(
+            "afterbegin",
+            `<div class="result-panel"><strong>Checkout smoke ${payload.ok ? "passed" : "needs attention"}.</strong><p>DB: ${payload.persistedDatabase ? "yes" : "no"} / auto setup: ${payload.autoSetupSaved ? "yes" : "no"} / setup email: ${payload.setupEmailSent ? "yes" : "no"} / cleanup: ${payload.deleted ? "yes" : "no"}</p></div>`,
+          );
+          await loadAdmin();
+        }
+        if (action === "refresh_sos_heatmap") {
+          const sources = payload.sources || {};
+          result.insertAdjacentHTML(
+            "afterbegin",
+            `<div class="result-panel"><strong>SoS Heat Map refreshed.</strong><p>${escapeHtml(payload.rows || 0)} rows / ${escapeHtml(payload.cache?.layer || "fresh")} / ${escapeHtml(sources.odds || "odds source unknown")}</p></div>`,
+          );
+        }
+      }
+
+      async function refreshOpsEvents() {
+        if (!tokenInput.value.trim()) {
+          result.insertAdjacentHTML("afterbegin", `<div class="result-panel"><strong>Admin token required.</strong><p>Enter the admin token before refreshing ops events.</p></div>`);
+          return;
+        }
+        const response = await fetch("/api/admin-customers", {
+          method: "POST",
+          cache: "no-store",
+          headers: {
+            "Content-Type": "application/json",
+            "x-fantasyiq-admin-token": tokenInput.value.trim(),
+          },
+          body: JSON.stringify({
+            action: "ops_events",
+            query: opsSearch.value.trim(),
+            severity: opsSeverityFilter.value,
+            eventType: opsTypeFilter.value.trim(),
+            customer: opsCustomerFilter.value.trim(),
+            source: opsSourceFilter.value.trim(),
+            limit: 150,
+          }),
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.message || response.statusText);
+        }
+        adminPayload = {
+          ...(adminPayload || { configuredCount: 0, needsSetupCount: 0, databaseCustomers: [], registry: [], customers: [] }),
+          opsSummary: payload.opsSummary,
+          opsEvents: payload.opsEvents,
+        };
+        renderAdminPayload(adminPayload);
+      }
+
+      async function loadAdmin() {
+        result.innerHTML = "<strong>Loading admin data...</strong>";
+        try {
+          const response = await fetch("/api/admin-customers", {
+            cache: "no-store",
+            headers: { "x-fantasyiq-admin-token": tokenInput.value.trim() },
+          });
+          const payload = await response.json();
+          if (!response.ok || !payload.ok) {
+            result.innerHTML = `<strong>Admin check failed.</strong><p>${escapeHtml(payload.message || response.statusText)}</p>`;
+            return;
+          }
+          adminPayload = payload;
+          renderAdminPayload(payload);
+        } catch (error) {
+          result.innerHTML = `<strong>Admin request failed.</strong><p>${escapeHtml(error.message)}</p>`;
+        }
+      }
+
+      loadButton.addEventListener("click", loadAdmin);
+      adminGateLogout.addEventListener("click", async () => {
+        await fetch("/api/admin-gate", {
+          method: "POST",
+          cache: "no-store",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "logout" }),
+        });
+        window.location.href = "/admin-login.html";
+      });
+      cleanButton.addEventListener("click", async () => {
+        try {
+          await runAdminAction("clean_pending_leagues");
+        } catch (error) {
+          result.insertAdjacentHTML("afterbegin", `<div class="result-panel"><strong>Cleanup failed.</strong><p>${escapeHtml(error.message)}</p></div>`);
+        }
+      });
+      smokeButton.addEventListener("click", async () => {
+        try {
+          await runAdminAction("self_serve_smoke_test");
+        } catch (error) {
+          result.insertAdjacentHTML("afterbegin", `<div class="result-panel"><strong>Smoke test failed.</strong><p>${escapeHtml(error.message)}</p></div>`);
+        }
+      });
+      refreshSosButton.addEventListener("click", async () => {
+        try {
+          await runAdminAction("refresh_sos_heatmap");
+        } catch (error) {
+          result.insertAdjacentHTML("afterbegin", `<div class="result-panel"><strong>SoS refresh failed.</strong><p>${escapeHtml(error.message)}</p></div>`);
+        }
+      });
+      refreshOpsButton.addEventListener("click", async () => {
+        try {
+          await refreshOpsEvents();
+        } catch (error) {
+          result.insertAdjacentHTML("afterbegin", `<div class="result-panel"><strong>Ops refresh failed.</strong><p>${escapeHtml(error.message)}</p></div>`);
+        }
+      });
+
+      [searchInput, statusFilter, opsSearch, opsSeverityFilter, opsTypeFilter, opsCustomerFilter, opsSourceFilter].forEach((control) => {
+        control.addEventListener("input", () => {
+          if (adminPayload) renderAdminPayload(adminPayload);
+        });
+        control.addEventListener("change", () => {
+          if (adminPayload) renderAdminPayload(adminPayload);
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,250 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "node scripts/build_static.js",
+  "installCommand": "",
+  "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/login",
+      "destination": "/FantasyIQ/?login=1",
+      "permanent": false
+    },
+    {
+      "source": "/sign-in",
+      "destination": "/FantasyIQ/?login=1",
+      "permanent": false
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/FantasyIQ/?login=1",
+      "permanent": false
+    },
+    {
+      "source": "/FantasyIQ",
+      "destination": "/FantasyIQ/",
+      "permanent": false
+    },
+    {
+      "source": "/fantasyiq",
+      "destination": "/FantasyIQ/",
+      "permanent": false
+    },
+    {
+      "source": "/fantasyiq/(.*)",
+      "destination": "/FantasyIQ/$1",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/live-draft",
+      "destination": "/api/live_draft"
+    },
+    {
+      "source": "/api/live-draft.json",
+      "destination": "/api/live_draft"
+    },
+    {
+      "source": "/api/draft-bridge",
+      "destination": "/api/draft_bridge"
+    },
+    {
+      "source": "/api/draft-bridge.json",
+      "destination": "/api/draft_bridge"
+    },
+    {
+      "source": "/api/live-boards",
+      "destination": "/api/live_boards"
+    },
+    {
+      "source": "/api/live-boards.json",
+      "destination": "/api/live_boards"
+    },
+    {
+      "source": "/api/sos-heatmap",
+      "destination": "/api/sos_heatmap"
+    },
+    {
+      "source": "/api/sos-heatmap.json",
+      "destination": "/api/sos_heatmap"
+    },
+    {
+      "source": "/api/trade-history",
+      "destination": "/api/trade_history"
+    },
+    {
+      "source": "/api/trade-history.json",
+      "destination": "/api/trade_history"
+    },
+    {
+      "source": "/api/intelligence",
+      "destination": "/api/intelligence"
+    },
+    {
+      "source": "/api/intelligence.json",
+      "destination": "/api/intelligence"
+    },
+    {
+      "source": "/api/setup-validate",
+      "destination": "/api/setup_validate"
+    },
+    {
+      "source": "/api/customer-status",
+      "destination": "/api/customer_status"
+    },
+    {
+      "source": "/api/customer-login",
+      "destination": "/api/customer_login"
+    },
+    {
+      "source": "/api/customer-password",
+      "destination": "/api/customer_password"
+    },
+    {
+      "source": "/api/customer-password-reset",
+      "destination": "/api/customer_password_reset"
+    },
+    {
+      "source": "/api/customer-session",
+      "destination": "/api/customer_session"
+    },
+    {
+      "source": "/api/customer-feedback",
+      "destination": "/api/setup_validate?route=customer_feedback"
+    },
+    {
+      "source": "/api/customer-portal",
+      "destination": "/api/customer_status?route=customer_portal"
+    },
+    {
+      "source": "/api/add-league-checkout",
+      "destination": "/api/add_league_checkout"
+    },
+    {
+      "source": "/api/track-event",
+      "destination": "/api/setup_validate"
+    },
+    {
+      "source": "/api/admin-customers",
+      "destination": "/api/admin_customers"
+    },
+    {
+      "source": "/api/admin-gate",
+      "destination": "/api/admin_customers?route=admin_gate"
+    },
+    {
+      "source": "/api/stripe-webhook",
+      "destination": "/api/stripe_webhook"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        }
+      ]
+    },
+    {
+      "source": "/FantasyIQ/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/setup.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/success.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/feedback.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/admin.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/admin-login.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>MyFantasyIQ Setup</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
+    <link rel="shortcut icon" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260521-premium-3" />
+    <link rel="stylesheet" href="./site.css?v=20260522_logo_home_1" />
+  </head>
+  <body class="policy-page">
+    <header class="site-header">
+      <a class="brand" href="./">
+        <img src="./FantasyIQ/assets/myfantasyiq-wordmark.svg?v=20260522-wordmark-safe-1" alt="MyFantasyIQ logo" />
+        <span>MyFantasyIQ</span>
+      </a>
+      <nav aria-label="Setup navigation">
+        <a href="./FantasyIQ/" class="dashboard-link">Dashboard</a>
+        <a href="./help.html">Help</a>
+        <a href="mailto:support@myfantasyiq.com">Support</a>
+      </nav>
+    </header>
+
+    <main class="policy-main">
+      <section class="policy-card">
+        <p class="eyebrow">Customer Setup</p>
+        <h1 id="setup-title">Set up FantasyIQ in two minutes</h1>
+        <p id="setup-intro">
+          Start with the access code from your setup email. Then paste your ESPN league ID and team ID. FantasyIQ
+          auto-fills scoring, roster, flex, bench, and draft settings from ESPN.
+        </p>
+        <div class="setup-mode-note" id="setup-mode-note" hidden>
+          Checking before checkout? Skip password creation and use Step 2 as a free ESPN compatibility check.
+        </div>
+
+        <div class="setup-steps" aria-label="Setup steps">
+          <article>
+            <span>1</span>
+            <strong>Create login</strong>
+            <p>Use the access code from your email once.</p>
+          </article>
+          <article>
+            <span>2</span>
+            <strong>Connect ESPN</strong>
+            <p>Paste league ID, team ID, and season.</p>
+          </article>
+          <article>
+            <span>3</span>
+            <strong>Open dashboard</strong>
+            <p>Your league profile stays saved.</p>
+          </article>
+        </div>
+
+        <section class="tool-card setup-password-card" id="create-password">
+          <div>
+            <p class="eyebrow">Step 1</p>
+            <h2>Create or reset your password</h2>
+            <p>Use the FantasyIQ access code from your setup email. This is not your ESPN password.</p>
+          </div>
+          <div class="field-grid setup-account-grid">
+            <label id="setup-access-wrap">
+              Access code
+              <input id="setup-access-code" name="accessCode" type="password" autocomplete="off" placeholder="From setup email" />
+            </label>
+            <label id="password-email-wrap">
+              Checkout email
+              <input id="password-email" type="email" autocomplete="email" placeholder="you@example.com" />
+            </label>
+            <label>
+              New password <span class="field-hint">15 characters minimum</span>
+              <input id="setup-password" type="password" autocomplete="new-password" />
+            </label>
+            <label>
+              Confirm password
+              <input id="setup-password-confirm" type="password" autocomplete="new-password" />
+            </label>
+          </div>
+          <div class="button-row">
+            <button class="primary" id="create-password-button" type="button">Create / Reset password</button>
+            <button class="secondary" id="reset-email-button" type="button">Email reset link</button>
+            <a class="primary dark" id="setup-sign-in-link" href="./FantasyIQ/">Open dashboard</a>
+          </div>
+          <div class="result-panel" id="password-result">Create a password, or use the same access code below to connect a league.</div>
+        </section>
+
+        <form class="tool-card setup-league-card" id="setup-form">
+          <div>
+            <p class="eyebrow">Step 2</p>
+            <h2>Connect your ESPN league</h2>
+            <p>Paste the IDs from ESPN. FantasyIQ checks the public league and saves it to your account.</p>
+          </div>
+          <div class="field-grid setup-basic-grid">
+            <label>
+              League nickname
+              <input id="league-label" name="leagueLabel" autocomplete="off" placeholder="Home league" />
+            </label>
+            <label>
+              ESPN league ID
+              <input id="league-id" name="leagueId" inputmode="numeric" autocomplete="off" required />
+            </label>
+            <label>
+              ESPN team ID
+              <input id="team-id" name="teamId" inputmode="numeric" autocomplete="off" required />
+            </label>
+            <label>
+              Season
+              <input id="season" name="season" inputmode="numeric" value="2026" required />
+            </label>
+          </div>
+
+          <details class="setup-help">
+            <summary>Where do I find my ESPN IDs?</summary>
+            <ol>
+              <li>Open your ESPN fantasy league in a web browser.</li>
+              <li>Copy the number after <strong>leagueId=</strong> in the address bar.</li>
+              <li>Open your team page or roster page.</li>
+              <li>Copy the number after <strong>teamId=</strong> in the address bar.</li>
+            </ol>
+          </details>
+
+          <details class="setup-help advanced-settings">
+            <summary>Advanced settings FantasyIQ auto-fills from ESPN</summary>
+            <p id="settings-note">FantasyIQ will auto-detect league format from ESPN after the league ID and season are recognized.</p>
+            <div class="field-grid">
+            <label>
+              Scoring
+              <select id="scoring-type" name="scoringType">
+                <option value="ppr">Full PPR</option>
+                <option value="half-ppr">Half PPR</option>
+                <option value="standard">Standard</option>
+                <option value="custom">Custom ESPN scoring</option>
+              </select>
+            </label>
+            <label>
+              Teams
+              <input id="team-count" name="teamCount" inputmode="numeric" value="12" required />
+            </label>
+            <label>
+              Flex
+              <input id="flex-count" name="flexCount" inputmode="numeric" value="1" required />
+            </label>
+            <label>
+              Superflex
+              <input id="superflex-count" name="superflexCount" inputmode="numeric" value="0" required />
+            </label>
+            <label>
+              Bench
+              <input id="bench-count" name="benchCount" inputmode="numeric" value="7" required />
+            </label>
+            <label>
+              Draft rounds
+              <input id="draft-rounds" name="draftRounds" inputmode="numeric" value="16" required />
+            </label>
+            </div>
+          </details>
+
+          <div class="button-row">
+            <button class="primary" id="setup-submit-button" type="submit">Connect league</button>
+            <a class="primary dark" id="setup-open-dashboard-link" href="./FantasyIQ/">Open dashboard</a>
+          </div>
+          <div class="result-panel" id="setup-result">Paste your ESPN IDs and click Connect league.</div>
+        </form>
+      </section>
+    </main>
+
+    <script>
+      const form = document.querySelector("#setup-form");
+      const result = document.querySelector("#setup-result");
+      const settingsNote = document.querySelector("#settings-note");
+      const pageParams = new URLSearchParams(window.location.search);
+      const customerSlug = pageParams.get("customer") || pageParams.get("dashboard") || "";
+      const precheckMode = pageParams.get("mode") === "precheck" || (!customerSlug && pageParams.has("leagueId"));
+      const seasonPassPaymentLink = "https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01";
+      const setupStorageKey = "fantasyiq:last-validated-league";
+      const setupTitle = document.querySelector("#setup-title");
+      const setupIntro = document.querySelector("#setup-intro");
+      const setupModeNote = document.querySelector("#setup-mode-note");
+      const setupAccessCode = document.querySelector("#setup-access-code");
+      const setupPasswordCard = document.querySelector("#create-password");
+      const passwordEmailWrap = document.querySelector("#password-email-wrap");
+      const passwordEmail = document.querySelector("#password-email");
+      const setupPassword = document.querySelector("#setup-password");
+      const setupPasswordConfirm = document.querySelector("#setup-password-confirm");
+      const createPasswordButton = document.querySelector("#create-password-button");
+      const resetEmailButton = document.querySelector("#reset-email-button");
+      const setupSignInLink = document.querySelector("#setup-sign-in-link");
+      const setupOpenDashboardLink = document.querySelector("#setup-open-dashboard-link");
+      const setupSubmitButton = document.querySelector("#setup-submit-button");
+      const passwordResult = document.querySelector("#password-result");
+      const settingsInputs = {
+        scoringType: document.querySelector("#scoring-type"),
+        teamCount: document.querySelector("#team-count"),
+        flexCount: document.querySelector("#flex-count"),
+        superflexCount: document.querySelector("#superflex-count"),
+        benchCount: document.querySelector("#bench-count"),
+        draftRounds: document.querySelector("#draft-rounds"),
+      };
+      const leagueInputs = [
+        document.querySelector("#league-id"),
+        document.querySelector("#team-id"),
+        document.querySelector("#season"),
+      ];
+      let settingsOverride = false;
+      let applyingSettings = false;
+      let autoFillTimer = 0;
+
+      function trackSetupEvent(eventType, payload = {}) {
+        if (["127.0.0.1", "localhost"].includes(window.location.hostname)) return;
+        const body = JSON.stringify({
+          eventType,
+          source: "setup_page",
+          customer: customerSlug,
+          league: pageParams.get("league") || "",
+          mode: precheckMode ? "precheck" : customerSlug ? "customer_setup" : "public_setup",
+          path: window.location.pathname,
+          ...payload,
+        });
+        try {
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon("/api/track-event", new Blob([body], { type: "application/json" }));
+            return;
+          }
+        } catch (error) {
+          // Setup should continue even if tracking is unavailable.
+        }
+        fetch("/api/track-event", {
+          method: "POST",
+          cache: "no-store",
+          keepalive: true,
+          headers: { "Content-Type": "application/json" },
+          body,
+        }).catch(() => {});
+      }
+
+      trackSetupEvent("setup.page_opened");
+
+      document.addEventListener("click", (event) => {
+        const link = event.target.closest("[data-checkout-link]");
+        if (!link) return;
+        trackSetupEvent("checkout.started", {
+          checkoutType: "season_pass",
+          target: link.href,
+        });
+      });
+
+      function savedAccessCode(customer) {
+        if (!customer) return "";
+        try {
+          const raw = localStorage.getItem(`fantasy-dashboard:${customer}:access-code`) || "";
+          if (!raw) return "";
+          if (!raw.trim().startsWith("{")) return raw;
+          const session = JSON.parse(raw);
+          if (session.expiresAt && Date.now() > Number(session.expiresAt)) return "";
+          return String(session.code || "");
+        } catch (error) {
+          return "";
+        }
+      }
+
+      if (setupAccessCode && customerSlug) {
+        setupAccessCode.value = savedAccessCode(customerSlug);
+      }
+      if (customerSlug && passwordEmailWrap) {
+        passwordEmailWrap.hidden = true;
+      }
+      if (precheckMode) {
+        if (setupTitle) setupTitle.textContent = "Check ESPN compatibility before checkout";
+        if (setupIntro) {
+          setupIntro.textContent =
+            "Paste your ESPN league ID, team ID, and season. FantasyIQ confirms public access, finds your team, and detects scoring before you buy.";
+        }
+        if (setupModeNote) setupModeNote.hidden = false;
+        if (setupPasswordCard) setupPasswordCard.hidden = true;
+        if (setupSubmitButton) setupSubmitButton.textContent = "Check league compatibility";
+        if (setupOpenDashboardLink) setupOpenDashboardLink.hidden = true;
+      } else if (!customerSlug && setupModeNote) {
+        setupModeNote.hidden = false;
+      }
+
+      function customerDashboardHref(customer, league = "") {
+        const dashboard = new URL("./FantasyIQ/", window.location.href);
+        if (customer) dashboard.searchParams.set("customer", customer);
+        if (league) dashboard.searchParams.set("league", league);
+        return dashboard.pathname + dashboard.search;
+      }
+
+      function updateSetupSignInLink(customer = customerSlug, league = "") {
+        const href = customerDashboardHref(customer, league);
+        if (setupSignInLink) setupSignInLink.href = href;
+        if (setupOpenDashboardLink) setupOpenDashboardLink.href = href;
+      }
+
+      updateSetupSignInLink();
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function renderTeams(teams) {
+        if (!teams?.length) return "";
+        return `<details class="team-list"><summary>Show ESPN teams and IDs</summary><div class="mini-table">${teams
+          .map(
+            (team) => `<div>
+              <span>Team ${escapeHtml(team.teamId)}</span>
+              <strong>${escapeHtml(team.teamName)}</strong>
+              <span>${escapeHtml(team.manager || "Manager unavailable")}</span>
+            </div>`,
+          )
+          .join("")}</div></details>`;
+      }
+
+      function slugify(value) {
+        return String(value || "")
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "") || "league";
+      }
+
+      function scoringLabel(type) {
+        if (type === "half-ppr") return "Half PPR";
+        if (type === "standard") return "Standard";
+        if (type === "custom") return "Custom ESPN scoring";
+        return "Full PPR";
+      }
+
+      function detectedOrFormSettings(data, payload) {
+        const detected = payload.leagueSettings || {};
+        const slots = detected.lineupSlots || {};
+        const useForm = settingsOverride;
+        const scoringType = useForm ? data.get("scoringType") || "ppr" : detected.scoringType || data.get("scoringType") || "ppr";
+        return {
+          teamCount: Number(useForm ? data.get("teamCount") || 12 : detected.teamCount || data.get("teamCount") || 12),
+          scoringType,
+          scoringLabel: useForm ? scoringLabel(scoringType) : detected.scoringLabel || scoringLabel(scoringType),
+          receptionPoints: detected.receptionPoints,
+          scoringItems: detected.scoringItems || [],
+          lineupSlots: {
+            QB: Number(slots.QB ?? 1),
+            RB: Number(slots.RB ?? 2),
+            WR: Number(slots.WR ?? 2),
+            TE: Number(slots.TE ?? 1),
+            FLEX: Number(useForm ? data.get("flexCount") || 1 : slots.FLEX ?? data.get("flexCount") ?? 1),
+            SUPERFLEX: Number(useForm ? data.get("superflexCount") || 0 : slots.SUPERFLEX ?? data.get("superflexCount") ?? 0),
+            DST: Number(slots.DST ?? 1),
+            K: Number(slots.K ?? 1),
+            BE: Number(useForm ? data.get("benchCount") || 7 : slots.BE ?? data.get("benchCount") ?? 7),
+            IR: Number(slots.IR ?? 1),
+          },
+          draftRounds: Number(useForm ? data.get("draftRounds") || 16 : detected.draftRounds || data.get("draftRounds") || 16),
+          playoffTeams: Number(detected.playoffTeams || 6),
+          source: useForm ? "Customer setup override" : detected.source || "ESPN league settings",
+        };
+      }
+
+      function setupPacket(data, payload) {
+        const leagueLabel = data.get("leagueLabel") || payload.leagueName || "ESPN league";
+        return {
+          customer: payload.customerSlug || customerSlug,
+          leagueKey: slugify(leagueLabel),
+          label: leagueLabel,
+          leagueName: payload.leagueName,
+          leagueId: payload.leagueId,
+          teamId: payload.teamId,
+          teamName: payload.teamName,
+          season: payload.season,
+          leagueSettings: detectedOrFormSettings(data, payload),
+        };
+      }
+
+      function previewUrl(packet) {
+        const preview = new URL("./FantasyIQ/", window.location.href);
+        if (packet.customer) preview.searchParams.set("customer", packet.customer);
+        if (packet.leagueKey && packet.customer) preview.searchParams.set("league", packet.leagueKey);
+        preview.searchParams.set("leagueLabel", packet.label);
+        preview.searchParams.set("teamName", packet.teamName);
+        preview.searchParams.set("teamId", packet.teamId);
+        preview.searchParams.set("teamCount", packet.leagueSettings.teamCount);
+        preview.searchParams.set("scoring", packet.leagueSettings.scoringType);
+        preview.searchParams.set("flex", packet.leagueSettings.lineupSlots.FLEX);
+        preview.searchParams.set("superflex", packet.leagueSettings.lineupSlots.SUPERFLEX);
+        preview.searchParams.set("bench", packet.leagueSettings.lineupSlots.BE);
+        preview.searchParams.set("rounds", packet.leagueSettings.draftRounds);
+        return preview.pathname + preview.search;
+      }
+
+      function rememberAccessCode(customer, code) {
+        if (!customer || !code) return;
+        const now = Date.now();
+        localStorage.setItem(
+          `fantasy-dashboard:${customer}:access-code`,
+          JSON.stringify({
+            code,
+            signedAt: now,
+            expiresAt: now + 30 * 24 * 60 * 60 * 1000,
+          }),
+        );
+        localStorage.setItem("fantasy-dashboard:last-loadout", customer);
+      }
+
+      function setFieldValue(input, value) {
+        if (!input || value === undefined || value === null || value === "") return;
+        input.value = String(value);
+      }
+
+      setFieldValue(document.querySelector("#league-id"), pageParams.get("leagueId"));
+      setFieldValue(document.querySelector("#team-id"), pageParams.get("teamId"));
+      setFieldValue(document.querySelector("#season"), pageParams.get("season"));
+
+      function applyLeagueSettings(settings) {
+        if (!settings) return;
+        const slots = settings.lineupSlots || {};
+        applyingSettings = true;
+        setFieldValue(settingsInputs.scoringType, settings.scoringType || "ppr");
+        setFieldValue(settingsInputs.teamCount, settings.teamCount);
+        setFieldValue(settingsInputs.flexCount, slots.FLEX);
+        setFieldValue(settingsInputs.superflexCount, slots.SUPERFLEX);
+        setFieldValue(settingsInputs.benchCount, slots.BE);
+        setFieldValue(settingsInputs.draftRounds, settings.draftRounds);
+        applyingSettings = false;
+        if (settingsNote) {
+          settingsNote.textContent = `Auto-filled from ESPN: ${settings.scoringLabel || scoringLabel(settings.scoringType)} / ${settings.teamCount || "?"} teams / ${slots.FLEX || 0} FLEX / ${slots.SUPERFLEX || 0} superflex / ${slots.BE || 0} bench / ${settings.draftRounds || "?"} rounds.`;
+        }
+      }
+
+      async function autoFillLeagueSettings({ quiet = true } = {}) {
+        const [leagueIdInput, teamIdInput, seasonInput] = leagueInputs;
+        const leagueId = leagueIdInput?.value?.trim();
+        const teamId = teamIdInput?.value?.trim();
+        const season = seasonInput?.value?.trim();
+        if (!leagueId || !season) return null;
+        const params = new URLSearchParams({ leagueId, season });
+        if (teamId) params.set("teamId", teamId);
+        try {
+          const response = await fetch(`/api/setup-validate?${params.toString()}`, { cache: "no-store" });
+          const payload = await response.json();
+          if (payload.leagueSettings) {
+            applyLeagueSettings(payload.leagueSettings);
+            if (!quiet) {
+              if (payload.ok) {
+                result.innerHTML = `<strong>ESPN settings found.</strong><p>${escapeHtml(payload.leagueName)} / ${escapeHtml(payload.teamName)} is ready. Click Connect league to save it.</p>`;
+              } else {
+                result.innerHTML = `<strong>ESPN settings found.</strong><p>${escapeHtml(payload.message || "Enter your ESPN team ID to finish validation.")}</p>${renderTeams(payload.teams)}`;
+              }
+            }
+          }
+          return payload;
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function scheduleAutoFill() {
+        window.clearTimeout(autoFillTimer);
+        autoFillTimer = window.setTimeout(() => autoFillLeagueSettings({ quiet: false }), 450);
+      }
+
+      Object.values(settingsInputs).forEach((input) => {
+        input?.addEventListener("input", () => {
+          if (!applyingSettings) settingsOverride = true;
+        });
+      });
+
+      leagueInputs.forEach((input) => {
+        input?.addEventListener("change", scheduleAutoFill);
+        input?.addEventListener("blur", scheduleAutoFill);
+      });
+      if (pageParams.has("leagueId")) {
+        scheduleAutoFill();
+      }
+
+      async function createPassword() {
+        const identity = customerSlug || passwordEmail?.value?.trim() || "";
+        const accessCode = String(setupAccessCode?.value || savedAccessCode(customerSlug) || "").trim();
+        const password = setupPassword?.value || "";
+        const confirm = setupPasswordConfirm?.value || "";
+        if (!identity) {
+          passwordResult.innerHTML = "<strong>Enter the checkout email from your setup email.</strong>";
+          return;
+        }
+        if (!accessCode) {
+          passwordResult.innerHTML = "<strong>Enter your FantasyIQ access code above first.</strong>";
+          return;
+        }
+        if (password !== confirm) {
+          passwordResult.innerHTML = "<strong>Passwords do not match.</strong>";
+          return;
+        }
+        passwordResult.innerHTML = "<strong>Creating password...</strong>";
+        trackSetupEvent("password.create_attempted", { customer: identity });
+        try {
+          const savedPacket = JSON.parse(localStorage.getItem(setupStorageKey) || "{}");
+          const response = await fetch("/api/customer-password", {
+            method: "POST",
+            cache: "no-store",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              customer: identity,
+              accessCode,
+              password,
+              league: savedPacket.leagueKey || pageParams.get("league") || "",
+            }),
+          });
+          const payload = await response.json();
+          if (!payload.ok) {
+            passwordResult.innerHTML = `<strong>Password setup needs attention.</strong><p>${escapeHtml(payload.message || "Try again.")}</p>`;
+            trackSetupEvent("password.create_failed", { status: payload.status || "not_ok" });
+            return;
+          }
+          const dashboard = payload.dashboardUrl || "./FantasyIQ/";
+          const signedInCustomer = payload.customer?.customerSlug || customerSlug || identity;
+          rememberAccessCode(signedInCustomer, accessCode);
+          updateSetupSignInLink(signedInCustomer, savedPacket.leagueKey || pageParams.get("league") || "");
+          passwordResult.innerHTML = `
+            <strong>Password created.</strong>
+            <p>You can now sign in with your checkout email and password.</p>
+            <div class="button-row setup-actions"><a class="primary dark" href="${escapeHtml(dashboard)}">Open dashboard</a></div>
+          `;
+          trackSetupEvent("password.created", { customer: signedInCustomer });
+        } catch (error) {
+          passwordResult.innerHTML = `<strong>Could not create password.</strong><p>${escapeHtml(error.message)}</p>`;
+          trackSetupEvent("password.create_failed", { status: "request_failed" });
+        }
+      }
+
+      createPasswordButton?.addEventListener("click", createPassword);
+
+      async function emailResetLink() {
+        const identity = customerSlug || passwordEmail?.value?.trim() || "";
+        if (!identity) {
+          passwordResult.innerHTML = "<strong>Enter the checkout email from your setup email.</strong>";
+          return;
+        }
+        passwordResult.innerHTML = "<strong>Sending reset email...</strong>";
+        try {
+          const response = await fetch("/api/customer-password-reset", {
+            method: "POST",
+            cache: "no-store",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ customer: identity }),
+          });
+          const payload = await response.json();
+          passwordResult.innerHTML = `<strong>${escapeHtml(payload.message || "If that account exists, a reset email is on the way.")}</strong>`;
+        } catch (error) {
+          passwordResult.innerHTML = `<strong>Could not send reset email.</strong><p>${escapeHtml(error.message)}</p>`;
+        }
+      }
+
+      resetEmailButton?.addEventListener("click", emailResetLink);
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        result.innerHTML = "<strong>Checking ESPN...</strong>";
+        const data = new FormData(form);
+        const params = new URLSearchParams(data);
+        if (customerSlug) params.set("customer", customerSlug);
+        if (customerSlug) params.set("save", "1");
+        if (settingsOverride) params.set("settingsOverride", "1");
+        const accessCode = String(setupAccessCode?.value || data.get("accessCode") || savedAccessCode(customerSlug) || "").trim();
+        if (accessCode) params.set("accessCode", accessCode);
+        const headers = { "Content-Type": "application/x-www-form-urlencoded" };
+        if (accessCode) headers["x-fantasyiq-access-code"] = accessCode;
+        trackSetupEvent("setup.validation_attempted", {
+          leagueId: data.get("leagueId") || "",
+          season: data.get("season") || "",
+          saving: customerSlug ? "1" : "0",
+        });
+        try {
+          const response = await fetch("/api/setup-validate", {
+            method: "POST",
+            cache: "no-store",
+            headers,
+            body: params.toString(),
+          });
+          const payload = await response.json();
+          if (payload.ok) {
+            applyLeagueSettings(payload.leagueSettings);
+            const refreshedData = new FormData(form);
+            const packet = setupPacket(refreshedData, payload);
+            if (payload.saved) {
+              packet.leagueKey = payload.leagueKey || packet.leagueKey;
+              rememberAccessCode(packet.customer, accessCode);
+              updateSetupSignInLink(packet.customer, packet.leagueKey);
+            }
+            localStorage.setItem(setupStorageKey, JSON.stringify(packet));
+            const saveNote = payload.saved
+              ? "This league profile was saved to the customer account."
+              : payload.saveMessage || "The league details were validated.";
+            const nextUrl = previewUrl(packet);
+            const nextActions = payload.saved
+              ? `<a class="primary dark" href="${escapeHtml(nextUrl)}">Open saved dashboard</a>`
+              : precheckMode
+                ? `<a class="primary dark" href="${seasonPassPaymentLink}" data-checkout-link>Start Season Pass</a><a class="secondary dark-outline" href="${escapeHtml(nextUrl)}">Preview dashboard settings</a><p class="fine-print">Software subscription only. Does not include league buy-ins, prize pools, payouts, or winnings.</p>`
+                : `<a class="primary dark" href="${escapeHtml(nextUrl)}">Preview dashboard settings</a>`;
+            result.innerHTML = `
+              <strong>Ready: ${escapeHtml(payload.leagueName)} / ${escapeHtml(payload.teamName)}</strong>
+              <p>Team ID ${escapeHtml(payload.teamId)} was found for the ${escapeHtml(payload.season)} season. ${escapeHtml(saveNote)}${payload.saved ? " Opening the saved dashboard now." : precheckMode ? " Your league is compatible with FantasyIQ." : ""}</p>
+              <div class="button-row setup-actions">
+                ${nextActions}
+              </div>
+              ${renderTeams(payload.teams)}
+            `;
+            if (payload.saved) {
+              window.setTimeout(() => {
+                const savedUrl = new URL(nextUrl, window.location.href);
+                savedUrl.searchParams.set("source", "setup_save");
+                window.location.href = `${savedUrl.pathname}${savedUrl.search}`;
+              }, 900);
+            }
+            trackSetupEvent(payload.saved ? "setup.league_saved" : "setup.validation_passed", {
+              leagueId: payload.leagueId || "",
+              season: payload.season || "",
+              leagueKey: payload.leagueKey || "",
+            });
+            return;
+          }
+          result.innerHTML = `
+            <strong>${escapeHtml(payload.message || "Setup needs attention.")}</strong>
+            <p>Check the league ID, team ID, season, and ESPN public league setting, then try again.</p>
+            ${renderTeams(payload.teams)}
+          `;
+          trackSetupEvent("setup.validation_failed", {
+            leagueId: payload.leagueId || data.get("leagueId") || "",
+            season: payload.season || data.get("season") || "",
+            status: payload.status || "not_ok",
+          });
+        } catch (error) {
+          result.innerHTML = `<strong>Setup check failed.</strong><p>${escapeHtml(error.message)}</p>`;
+          trackSetupEvent("setup.validation_failed", { status: "request_failed" });
+        }
+      });
+    </script>
+  </body>
+</html>
