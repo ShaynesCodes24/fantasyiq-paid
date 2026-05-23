@@ -532,11 +532,18 @@ def build_live_payload(request_path: str = "", headers: Any | None = None, force
         joined = int_setting(league_status.get("teamsJoined"), 0)
         expected = len(teams) or int_setting(settings.get("size"), 0)
         joined_note = f" ESPN reports {joined}/{expected} teams joined." if joined and expected else ""
-        fallback_states.append(
-            f"ESPN is publishing draft order for league {league_id} but no completed picks yet.{joined_note} Confirm this is the same ESPN league that is currently drafting."
-        )
     drafted = bool(draft_detail.get("drafted")) or (bool(picks) and len(completed) >= len(picks))
     in_progress = bool(draft_detail.get("inProgress")) or (0 < len(completed) < len(picks))
+    if not draft_detail_completed and not rostered_players and raw_picks:
+        if in_progress:
+            draft_sync_mode = "espnLiveHidden"
+            fallback_states.append(
+                f"ESPN says league {league_id} is drafting, but its public API is hiding live picks. Use the ESPN drafted-player paste importer or Mark Drafted buttons until the post-draft feed updates."
+            )
+        else:
+            fallback_states.append(
+                f"ESPN is publishing draft order for league {league_id} but no completed picks yet.{joined_note} Confirm this is the same ESPN league that is currently drafting."
+            )
 
     payload = {
         "ok": True,
