@@ -1,5 +1,22 @@
 const ADMIN_GATE_COOKIE = "fantasyiq_admin_gate";
+const CANONICAL_HOST = "myfantasyiq.com";
 const DEFAULT_MAX_AGE_SECONDS = 8 * 60 * 60;
+
+function requestHost(request, url) {
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const host = request.headers.get("host");
+  return (forwardedHost || host || url.host || "").split(",")[0].trim().split(":")[0].toLowerCase();
+}
+
+function canonicalRedirect(request, url) {
+  const host = requestHost(request, url);
+  if (!host.endsWith(".vercel.app")) return null;
+
+  url.hostname = CANONICAL_HOST;
+  url.protocol = "https:";
+  url.port = "";
+  return Response.redirect(url, 308);
+}
 
 function adminGateMaxAge() {
   const raw = Number.parseInt(process.env.FANTASYIQ_ADMIN_GATE_MAX_AGE_SECONDS || "", 10);
@@ -60,6 +77,11 @@ function jsonUnauthorized(message) {
 
 export default async function middleware(request) {
   const url = new URL(request.url);
+  const redirect = canonicalRedirect(request, url);
+  if (redirect) return redirect;
+
+  if (url.pathname !== "/admin.html" && url.pathname !== "/api/admin-customers") return;
+
   const authenticated = await hasValidAdminGate(request);
   if (authenticated) return;
 
@@ -73,5 +95,5 @@ export default async function middleware(request) {
 }
 
 export const config = {
-  matcher: ["/admin.html", "/api/admin-customers"],
+  matcher: ["/:path*"],
 };
