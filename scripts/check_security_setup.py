@@ -106,8 +106,15 @@ def check_admin_token_transport() -> Result:
         return Result("Admin token transport", "FAIL", "Admin endpoint still accepts URL query tokens.")
     if "require_admin_gate" not in text or "FANTASYIQ_ADMIN_GATE_SECRET" not in gate_text:
         return Result("Admin gate", "FAIL", "Admin endpoint is missing the signed admin gate cookie check.")
-    if 'matcher: ["/admin.html", "/api/admin-customers"]' not in middleware_text:
-        return Result("Admin gate middleware", "FAIL", "Middleware is not scoped to the admin page and admin API.")
+    scoped_admin_middleware = 'matcher: ["/admin.html", "/api/admin-customers"]' in middleware_text
+    canonical_middleware = (
+        'matcher: ["/:path*"]' in middleware_text
+        and "canonicalRedirect" in middleware_text
+        and 'url.pathname !== "/admin.html"' in middleware_text
+        and 'url.pathname !== "/api/admin-customers"' in middleware_text
+    )
+    if not (scoped_admin_middleware or canonical_middleware):
+        return Result("Admin gate middleware", "FAIL", "Middleware is not scoped to canonical redirects plus the admin page/API.")
     if "x-fantasyiq-admin-token" not in text:
         return Result("Admin token transport", "FAIL", "Admin endpoint is missing the admin token header check.")
     if "compare_digest" not in text:
