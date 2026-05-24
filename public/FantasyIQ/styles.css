@@ -1328,26 +1328,26 @@ textarea {
 }
 
 .sos-legend .tier-easy {
-  --sos-heat-bg: #da4530;
-  --sos-heat-border: rgba(218, 69, 48, 0.72);
+  --sos-heat-bg: #2f9753;
+  --sos-heat-border: rgba(47, 151, 83, 0.72);
   --sos-text: #fff8e8;
 }
 
 .sos-legend .tier-good {
-  --sos-heat-bg: #ca8128;
-  --sos-heat-border: rgba(202, 129, 40, 0.72);
+  --sos-heat-bg: #dfe834;
+  --sos-heat-border: rgba(226, 232, 52, 0.72);
   --sos-text: #1b1208;
 }
 
 .sos-legend .tier-hard {
-  --sos-heat-bg: #575b58;
-  --sos-heat-border: rgba(135, 139, 136, 0.72);
-  --sos-text: #fff8e8;
+  --sos-heat-bg: #f08f23;
+  --sos-heat-border: rgba(240, 143, 35, 0.72);
+  --sos-text: #1b1208;
 }
 
 .sos-legend .tier-brutal {
-  --sos-heat-bg: #1f3e53;
-  --sos-heat-border: rgba(54, 93, 119, 0.72);
+  --sos-heat-bg: #d83e3d;
+  --sos-heat-border: rgba(216, 62, 61, 0.72);
   --sos-text: #fff8e8;
 }
 
@@ -1361,7 +1361,7 @@ textarea {
 
 .sos-table {
   width: 100%;
-  min-width: 1120px;
+  min-width: 1280px;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 13px;
@@ -1392,6 +1392,12 @@ textarea {
 }
 
 .sos-table td:first-child {
+  min-width: 40px;
+  color: rgba(255, 248, 232, 0.64);
+  text-align: center;
+}
+
+.sos-table td:nth-child(2) {
   min-width: 190px;
   color: #fff8e8;
 }
@@ -1410,6 +1416,54 @@ textarea {
 .sos-table td {
   color: rgba(255, 248, 232, 0.82);
   font-weight: 850;
+}
+
+.sos-row-number {
+  font-variant-numeric: tabular-nums;
+}
+
+.sos-overall-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  min-height: 30px;
+  border: 1px solid rgba(255, 248, 232, 0.14);
+  border-radius: 6px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.sos-overall-easy {
+  border-color: rgba(47, 151, 83, 0.48);
+  background: rgba(47, 151, 83, 0.84);
+  color: #fff8e8;
+}
+
+.sos-overall-tough {
+  border-color: rgba(240, 143, 35, 0.48);
+  background: rgba(240, 143, 35, 0.78);
+  color: #181607;
+}
+
+.sos-playoff-week {
+  background: rgba(117, 27, 34, 0.16);
+}
+
+.sos-table th.sos-playoff-week {
+  border-top: 2px solid rgba(216, 62, 61, 0.82);
+}
+
+.sos-table th.sos-playoff-start,
+.sos-table td.sos-playoff-start {
+  border-left: 2px solid rgba(216, 62, 61, 0.82);
+}
+
+.sos-table th.sos-playoff-end,
+.sos-table td.sos-playoff-end {
+  border-right: 2px solid rgba(216, 62, 61, 0.82);
 }
 
 .sos-mini-bars {
@@ -7148,6 +7202,7 @@ small,
 }
 
 #live.sos-panel .sos-table {
+  min-width: 1280px;
   border-collapse: separate;
   border-spacing: 0;
 }
@@ -7163,7 +7218,41 @@ small,
 }
 
 #live.sos-panel .sos-table td:first-child {
+  color: rgba(255, 248, 232, 0.64);
+}
+
+#live.sos-panel .sos-table td:nth-child(2) {
   color: #fff8e8;
+}
+
+#live.sos-panel .sos-overall-easy {
+  border-color: rgba(47, 151, 83, 0.48);
+  background: rgba(47, 151, 83, 0.84);
+  color: #fff8e8;
+}
+
+#live.sos-panel .sos-overall-tough {
+  border-color: rgba(240, 143, 35, 0.48);
+  background: rgba(240, 143, 35, 0.78);
+  color: #181607;
+}
+
+#live.sos-panel .sos-playoff-week {
+  background: rgba(117, 27, 34, 0.16);
+}
+
+#live.sos-panel .sos-table th.sos-playoff-week {
+  border-top: 2px solid rgba(216, 62, 61, 0.82);
+}
+
+#live.sos-panel .sos-table th.sos-playoff-start,
+#live.sos-panel .sos-table td.sos-playoff-start {
+  border-left: 2px solid rgba(216, 62, 61, 0.82);
+}
+
+#live.sos-panel .sos-table th.sos-playoff-end,
+#live.sos-panel .sos-table td.sos-playoff-end {
+  border-right: 2px solid rgba(216, 62, 61, 0.82);
 }
 
 #live.sos-panel .sos-table td small {
@@ -7220,24 +7309,25 @@ small,
 }
 
 #live.sos-panel .sos-legend .tier-easy {
-  --sos-heat-bg: #da4530;
-  --sos-heat-border: rgba(218, 69, 48, 0.72);
+  --sos-heat-bg: #2f9753;
+  --sos-heat-border: rgba(47, 151, 83, 0.72);
 }
 
 #live.sos-panel .sos-legend .tier-good {
-  --sos-heat-bg: #ca8128;
-  --sos-heat-border: rgba(202, 129, 40, 0.72);
+  --sos-heat-bg: #dfe834;
+  --sos-heat-border: rgba(226, 232, 52, 0.72);
   --sos-text: #1b1208;
 }
 
 #live.sos-panel .sos-legend .tier-hard {
-  --sos-heat-bg: #575b58;
-  --sos-heat-border: rgba(135, 139, 136, 0.72);
+  --sos-heat-bg: #f08f23;
+  --sos-heat-border: rgba(240, 143, 35, 0.72);
+  --sos-text: #1b1208;
 }
 
 #live.sos-panel .sos-legend .tier-brutal {
-  --sos-heat-bg: #1f3e53;
-  --sos-heat-border: rgba(54, 93, 119, 0.72);
+  --sos-heat-bg: #d83e3d;
+  --sos-heat-border: rgba(216, 62, 61, 0.72);
 }
 
 @media (max-width: 900px) {
