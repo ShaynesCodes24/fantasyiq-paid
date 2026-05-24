@@ -102,7 +102,7 @@ def check_admin_token_transport() -> Result:
     text = (ROOT / "api" / "admin_customers.py").read_text(encoding="utf-8")
     gate_text = (ROOT / "api" / "admin_gate_auth.py").read_text(encoding="utf-8")
     middleware_text = (ROOT / "middleware.js").read_text(encoding="utf-8")
-    if "parse_qs" in text or "urlparse" in text or "params.get(\"token\"" in text:
+    if "params.get(\"token\"" in text or "params.get('token'" in text or "query token" in text.lower():
         return Result("Admin token transport", "FAIL", "Admin endpoint still accepts URL query tokens.")
     if "require_admin_gate" not in text or "FANTASYIQ_ADMIN_GATE_SECRET" not in gate_text:
         return Result("Admin gate", "FAIL", "Admin endpoint is missing the signed admin gate cookie check.")

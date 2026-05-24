@@ -200,16 +200,22 @@ def email_readiness() -> dict[str, Any]:
 
 
 def customer_key(row: dict[str, Any]) -> str:
-    for field in ("email", "customerEmail"):
-        value = str(row.get(field) or "").strip().lower()
-        if value:
-            return f"email:{value}"
     for field in ("slug", "customerSlug", "customer_slug"):
         value = str(row.get(field) or "").strip().lower()
         if value:
             return f"slug:{value}"
     dashboard = str(row.get("dashboard_url") or row.get("dashboardUrl") or "").strip().lower()
-    return f"dashboard:{dashboard}" if dashboard else f"row:{id(row)}"
+    if dashboard:
+        parsed = urllib.parse.urlparse(dashboard)
+        requested = urllib.parse.parse_qs(parsed.query).get("customer", [""])[0]
+        if requested:
+            return f"slug:{requested.strip().lower()}"
+        return f"dashboard:{dashboard}"
+    for field in ("email", "customerEmail"):
+        value = str(row.get(field) or "").strip().lower()
+        if value:
+            return f"email:{value}"
+    return f"row:{id(row)}"
 
 
 def customer_totals(*sources: list[dict[str, Any]]) -> tuple[int, int]:
