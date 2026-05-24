@@ -5,12 +5,14 @@ import os
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from datetime import date, datetime
 
 
 SITE_URL = os.environ.get("FANTASYIQ_SITE_URL", "https://myfantasyiq.com/").rstrip("/")
+VERCEL_APP_URL = os.environ.get("FANTASYIQ_VERCEL_APP_URL", "https://fantasyiq-paid.vercel.app").rstrip("/")
 ROOT_URL = f"{SITE_URL}/"
 DASHBOARD_URL = f"{SITE_URL}/FantasyIQ/"
 STRIPE_URL = os.environ.get(
@@ -44,6 +46,21 @@ def fetch(url: str, timeout: int = 30) -> tuple[int, str]:
             return response.status, response.read().decode("utf-8", errors="replace")
     except urllib.error.HTTPError as exc:
         return exc.code, exc.read().decode("utf-8", errors="replace")
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[no-untyped-def]
+        return None
+
+
+def fetch_no_redirect(url: str, timeout: int = 30) -> tuple[int, str]:
+    request = urllib.request.Request(url, headers={"User-Agent": "FantasyIQ readiness check"})
+    opener = urllib.request.build_opener(NoRedirect)
+    try:
+        with opener.open(request, timeout=timeout) as response:
+            return response.status, response.headers.get("Location", "")
+    except urllib.error.HTTPError as exc:
+        return exc.code, exc.headers.get("Location", "")
 
 
 def post_json(url: str, payload: dict[str, object], timeout: int = 30) -> tuple[int, str]:
@@ -84,6 +101,20 @@ def dashboard_check() -> CheckResult:
     if "Active" in body and "Configured for" in body and "Demo Mode" not in body:
         return CheckResult("Dashboard", "PASS", f"{DASHBOARD_URL} is in paid customer mode")
     return CheckResult("Dashboard", "FAIL", f"{DASHBOARD_URL} is neither demo mode nor paid customer mode")
+
+
+def canonical_domain_check() -> CheckResult:
+    app_host = urllib.parse.urlparse(VERCEL_APP_URL).netloc.lower()
+    site_host = urllib.parse.urlparse(SITE_URL).netloc.lower()
+    if not app_host or app_host == site_host:
+        return CheckResult("Canonical domain", "PASS", f"{SITE_URL} is the configured site URL")
+
+    check_url = f"{VERCEL_APP_URL}/FantasyIQ/"
+    status, location = fetch_no_redirect(check_url)
+    expected = f"{SITE_URL}/FantasyIQ/"
+    if status in {301, 302, 307, 308} and location == expected:
+        return CheckResult("Canonical domain", "PASS", f"{check_url} redirects to {expected}")
+    return CheckResult("Canonical domain", "FAIL", f"{check_url} returned HTTP {status} with Location {location or 'missing'}")
 
 
 def root_check() -> CheckResult:
@@ -256,6 +287,7 @@ def main() -> int:
     checks = [
         root_check(),
         dashboard_check(),
+        canonical_domain_check(),
         page_check("Terms", f"{SITE_URL}/terms.html", ["Terms"]),
         page_check("Privacy", f"{SITE_URL}/privacy.html", ["Privacy"]),
         page_check("Refund policy", f"{SITE_URL}/refund-policy.html", ["Refund"]),

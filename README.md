@@ -24,7 +24,7 @@ the env registry remains available as a fallback.
 Website URL shape:
 
 ```text
-https://<customer-project>.vercel.app/
+https://myfantasyiq.com/
 ```
 
 Recommended Vercel project name:
@@ -48,7 +48,7 @@ https://myfantasyiq.com/FantasyIQ/
 Paid dashboard URL shape:
 
 ```text
-https://<customer-project>.vercel.app/FantasyIQ/
+https://myfantasyiq.com/FantasyIQ/
 ```
 
 The repo also keeps a root-level static copy of the site files so Vercel can
@@ -164,6 +164,7 @@ python .\scripts\check_os_readiness.py
 - `scripts/configure_stripe_webhook.py`: creates or updates the Stripe webhook endpoint.
 - `scripts/configure_vercel_env.py`: sets customer ESPN league env vars through the Vercel API.
 - `scripts/fulfill_latest_stripe_order.py`: fetches the latest paid Stripe checkout and updates `customers.csv`.
+- `scripts/export_customers_csv.py`: regenerates private ignored `customers.csv` from database/env customer records.
 - `scripts/check_product_readiness.py`: checks the live website, dashboard, Stripe link, and API.
 - `scripts/check_production_monitoring.py`: checks production pages, core APIs, webhook boundaries, admin auth boundaries, and protected ops events when an admin token is available.
 - `scripts/check_security_setup.py`: checks tracked files, deploy ignores, and public Vercel config for secure setup.
