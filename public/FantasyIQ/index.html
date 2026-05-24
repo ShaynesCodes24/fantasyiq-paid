@@ -7,7 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
     <link rel="shortcut icon" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260521-premium-3" />
-    <link rel="stylesheet" href="./styles.css?v=20260524_heatmap_upgrade_1" />
+    <link rel="stylesheet" href="./styles.css?v=20260524_sos_rank_model_1" />
   </head>
   <body>
     <div class="field-overlay" aria-hidden="true">
@@ -419,9 +419,9 @@
               <label>
                 View
                 <select id="sos-view">
-                  <option value="all">All edges</option>
-                  <option value="targets">Targets</option>
-                  <option value="fades">Fades</option>
+                  <option value="all">All schedules</option>
+                  <option value="easy">Easiest</option>
+                  <option value="tough">Toughest</option>
                   <option value="streamers">Streamers</option>
                 </select>
               </label>
@@ -432,7 +432,8 @@
               <label>
                 Weeks
                 <select id="sos-range">
-                  <option value="1-18">Full season</option>
+                  <option value="1-17">Fantasy season</option>
+                  <option value="1-18">NFL weeks 1-18</option>
                   <option value="1-4">Weeks 1-4</option>
                   <option value="5-8">Weeks 5-8</option>
                   <option value="9-14">Weeks 9-14</option>
@@ -450,14 +451,14 @@
 
             <div class="sos-score-strip">
               <article>
-                <span>Best Stretch</span>
+                <span>Easiest Overall</span>
                 <strong id="sos-best-stretch">Loading</strong>
-                <small>Easiest selected window</small>
+                <small>Lowest average matchup difficulty</small>
               </article>
               <article>
-                <span>Brutal Fade</span>
+                <span>Toughest Overall</span>
                 <strong id="sos-brutal-stretch">Loading</strong>
-                <small>Hardest selected window</small>
+                <small>Highest average matchup difficulty</small>
               </article>
               <article>
                 <span>Playoff Edge</span>
@@ -465,9 +466,9 @@
                 <small>Customize to match your league</small>
               </article>
               <article>
-                <span>Market Layer</span>
+                <span>Model</span>
                 <strong id="sos-market-status">Loading</strong>
-                <small id="sos-market-detail">Position-specific matchup scoring</small>
+                <small id="sos-market-detail">Opponent difficulty by position</small>
               </article>
             </div>
 
@@ -1231,6 +1232,6 @@
     </main>
 
     <script src="./config.js?v=20260522_live_override_3"></script>
-    <script src="./app.js?v=20260524_heatmap_upgrade_1"></script>
+    <script src="./app.js?v=20260524_sos_rank_model_1"></script>
   </body>
 </html>

@@ -190,7 +190,7 @@ def fetch_json_with_headers(url: str, timeout: int = 20) -> tuple[Any, dict[str,
 
 
 def sos_cache_key(season: int) -> str:
-    return f"sos_heatmap:v6-market-percentiles:{season}"
+    return f"sos_heatmap:v7-schedule-rank:{season}"
 
 
 def ensure_sos_cache_table(cursor: Any) -> None:
@@ -327,8 +327,9 @@ def fetch_schedule_week(season: int, week: int) -> tuple[int, list[dict[str, Any
         return week, []
 
 
-def schedule(season: int) -> tuple[dict[str, dict[int, str]], dict[int, datetime]]:
+def schedule(season: int) -> tuple[dict[str, dict[int, str]], dict[int, datetime], dict[str, dict[int, str]]]:
     games_by_team: dict[str, dict[int, str]] = {team: {} for team in TEAM_ABBR_TO_ESPN_ID}
+    site_by_team: dict[str, dict[int, str]] = {team: {} for team in TEAM_ABBR_TO_ESPN_ID}
     week_starts: dict[int, datetime] = {}
     with ThreadPoolExecutor(max_workers=PROVIDER_WORKERS) as executor:
         futures = [executor.submit(fetch_schedule_week, season, week) for week in range(1, 19)]
@@ -342,13 +343,17 @@ def schedule(season: int) -> tuple[dict[str, dict[int, str]], dict[int, datetime
                 if len(competitors) < 2:
                     continue
                 teams = []
+                sites = []
                 for competitor in competitors[:2]:
                     abbr = (competitor.get("team") or {}).get("abbreviation") or ""
                     teams.append(ESPN_ABBR_MAP.get(abbr, abbr))
+                    sites.append(str(competitor.get("homeAway") or "").lower())
                 if len(teams) == 2 and teams[0] in games_by_team and teams[1] in games_by_team:
                     games_by_team[teams[0]][week] = teams[1]
                     games_by_team[teams[1]][week] = teams[0]
-    return games_by_team, week_starts
+                    site_by_team[teams[0]][week] = "away" if sites[0] == "away" else "home"
+                    site_by_team[teams[1]][week] = "away" if sites[1] == "away" else "home"
+    return games_by_team, week_starts, site_by_team
 
 
 def sleeper_injuries() -> dict[str, int]:
@@ -763,7 +768,7 @@ def build_payload(season: int, force: bool = False) -> dict[str, Any]:
         return durable
     started_at = time.time()
     stats = team_stats(season)
-    games, week_starts = schedule(season)
+    games, week_starts, sites = schedule(season)
     fpa, fpa_meta = fantasy_points_allowed(season)
     injuries = sleeper_injuries()
     odds, odds_meta = odds_context(season, week_starts)
@@ -788,6 +793,8 @@ def build_payload(season: int, force: bool = False) -> dict[str, Any]:
                 cells.append({
                     "week": week,
                     "opponent": opponent,
+                    "site": sites.get(team, {}).get(week),
+                    "isAway": sites.get(team, {}).get(week) == "away",
                     "score": round(score, 2),
                     "tier": tier,
                     "fpa": fpa.get(opponent, {}).get(position),
