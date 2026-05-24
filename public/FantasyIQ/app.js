@@ -152,6 +152,7 @@ const draftBridgeCopy = document.querySelector("#draft-bridge-copy");
 const draftBridgeStatus = document.querySelector("#draft-bridge-status");
 const draftCompanionInstall = document.querySelector("#draft-companion-install");
 let addLeagueDialog = null;
+let sosRuntimeReady = false;
 const leagueTeamCount = document.querySelector("#league-team-count");
 const leagueTypeNote = document.querySelector("#league-type-note");
 const leagueStarters = document.querySelector("#league-starters");
@@ -178,6 +179,16 @@ const draftWatchlistType = document.querySelector("#draft-watchlist-type");
 const draftWatchlistInput = document.querySelector("#draft-watchlist-input");
 const draftWatchlistAdd = document.querySelector("#draft-watchlist-add");
 const draftWatchlistList = document.querySelector("#draft-watchlist-list");
+const sosPosition = document.querySelector("#sos-position");
+const sosPlayerSearch = document.querySelector("#sos-player-search");
+const sosRange = document.querySelector("#sos-range");
+const sosWeekToggles = document.querySelector("#sos-week-toggles");
+const sosTableHead = document.querySelector("#sos-table-head");
+const sosTableBody = document.querySelector("#sos-table-body");
+const sosSelectedSummary = document.querySelector("#sos-selected-summary");
+const sosBestStretch = document.querySelector("#sos-best-stretch");
+const sosBrutalStretch = document.querySelector("#sos-brutal-stretch");
+const sosPlayoffEdge = document.querySelector("#sos-playoff-edge");
 const leagueHealthPanel = document.querySelector("#league-health-panel");
 const leagueHealthTitle = document.querySelector("#league-health-title");
 const leagueHealthScore = document.querySelector("#league-health-score");
@@ -471,7 +482,7 @@ function resolveAppConfig(config) {
     merged.demoMessage = loadoutConfig.demoMessage || "Signed-in customer league loaded.";
     merged.heroSubtitle =
       loadoutConfig.heroSubtitle ||
-      "Your official FantasyIQ command center for live draft sync, player values, mock tracking, and trade discipline.";
+      "Your official FantasyIQ command center for matchup leverage, player values, mock tracking, and trade discipline.";
   }
 
   if (params.get("name")) merged.customerName = params.get("name");
@@ -613,7 +624,12 @@ function apiHeaders(extra = {}) {
   return headers;
 }
 
-function draftLeagueOverrideStorageKey() {
+function draftLeagueOverrideStorageKey(leagueKey = appConfig.leagueKey, leagueId = appConfig.leagueId) {
+  const segment = normalizeDashboardSlug(leagueKey || "") || numericText(leagueId || "") || "default";
+  return loadoutStorageKey(`draft-league-override:${segment}`);
+}
+
+function legacyDraftLeagueOverrideStorageKey() {
   return loadoutStorageKey("draft-league-override");
 }
 
@@ -672,8 +688,23 @@ function loadDraftLeagueOverride() {
     };
   }
   try {
-    const saved = JSON.parse(localStorage.getItem(draftLeagueOverrideStorageKey()) || "null");
-    return saved?.leagueId ? saved : null;
+    const storageKey = draftLeagueOverrideStorageKey();
+    const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
+    if (saved?.leagueId) return saved;
+    const legacySaved = JSON.parse(localStorage.getItem(legacyDraftLeagueOverrideStorageKey()) || "null");
+    const activeLeagueId = numericText(appConfig.leagueId || "");
+    if (
+      legacySaved?.leagueId &&
+      (String(legacySaved.leagueId) === activeLeagueId || (!activeLeagueId && currentLeagueOptions().length <= 1))
+    ) {
+      localStorage.setItem(storageKey, JSON.stringify(legacySaved));
+      localStorage.removeItem(legacyDraftLeagueOverrideStorageKey());
+      return legacySaved;
+    }
+    if (legacySaved?.leagueId && activeLeagueId && String(legacySaved.leagueId) !== activeLeagueId) {
+      localStorage.removeItem(legacyDraftLeagueOverrideStorageKey());
+    }
+    return null;
   } catch (error) {
     return null;
   }
@@ -714,11 +745,8 @@ function renderDraftLeagueOverrideControls() {
   if (draftTeamInput && draftLeagueOverrideState?.teamId) draftTeamInput.value = draftLeagueOverrideState.teamId;
   draftLeagueOverride.classList.toggle("active", Boolean(draftLeagueOverrideState?.leagueId));
   draftLeagueOverride.dataset.active = draftLeagueOverrideState?.leagueId ? "true" : "false";
-  const bridgeReady = Boolean(
-    draftLeagueOverrideState?.leagueId &&
-    draftLeagueOverrideState?.teamId &&
-    draftLeagueOverrideState?.memberId
-  );
+  const bridgeReady = Boolean(draftLeagueOverrideState?.leagueId && draftBridgeTeamId());
+  draftLeagueOverride.dataset.bridgeReady = bridgeReady ? "true" : "false";
   if (draftBridgeSync) draftBridgeSync.classList.toggle("active", Boolean(draftLeagueOverrideState?.leagueId));
   if (draftBridgeOpen) draftBridgeOpen.disabled = !bridgeReady;
   if (draftBridgeCopy) draftBridgeCopy.disabled = !bridgeReady;
@@ -728,12 +756,16 @@ function renderDraftLeagueOverrideControls() {
   }
   if (draftBridgeStatus) {
     draftBridgeStatus.textContent = bridgeReady
-      ? draftCompanionInstalled
-        ? "Automatic sync ready. Open ESPN from here and leave both tabs open."
-        : "Install the Draft Sync Companion once, then this opens ESPN and syncs automatically."
+      ? draftLeagueOverrideState?.memberId
+        ? draftCompanionInstalled
+          ? "Automatic sync ready. Open ESPN from here and leave both tabs open."
+          : "Install the Draft Sync Companion once, then this opens ESPN and syncs automatically."
+        : draftCompanionInstalled
+          ? "Automatic sync ready. The companion will infer memberId from ESPN."
+          : "Install the Draft Sync Companion once. It can infer memberId from ESPN."
       : draftLeagueOverrideState?.leagueId
-        ? "Paste the full ESPN draft URL above so automatic sync can include teamId and memberId."
-        : "Paste the full ESPN draft URL above to prepare automatic draft sync.";
+        ? "Add your ESPN teamId so automatic sync can connect to the draft room."
+        : "Paste the ESPN draft URL or leagueId above to prepare automatic draft sync.";
   }
 }
 
@@ -783,18 +815,33 @@ function randomDraftBridgeKey() {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+function draftBridgeTeamId() {
+  return draftLeagueOverrideState?.teamId || selectedTeamId() || appConfig.customerTeamId || "";
+}
+
 function espnDraftRoomUrl() {
-  if (draftLeagueOverrideState?.draftUrl) return draftLeagueOverrideState.draftUrl;
   const leagueId = draftLeagueOverrideState?.leagueId || "";
   const season = draftLeagueOverrideState?.season || "2026";
-  const teamId = draftLeagueOverrideState?.teamId || "";
+  const teamId = draftBridgeTeamId();
   const memberId = draftLeagueOverrideState?.memberId || "";
-  if (!leagueId || !teamId || !memberId) return "";
+  if (!leagueId || !teamId) return "";
+  if (draftLeagueOverrideState?.draftUrl) {
+    try {
+      const url = new URL(draftLeagueOverrideState.draftUrl);
+      if (!url.searchParams.get("leagueId")) url.searchParams.set("leagueId", leagueId);
+      if (!url.searchParams.get("seasonId")) url.searchParams.set("seasonId", season);
+      if (!url.searchParams.get("teamId")) url.searchParams.set("teamId", teamId);
+      if (memberId && !url.searchParams.get("memberId")) url.searchParams.set("memberId", memberId);
+      return url.toString();
+    } catch (error) {
+      // Fall through to a clean ESPN draft URL.
+    }
+  }
   const url = new URL("https://fantasy.espn.com/football/draft");
   url.searchParams.set("leagueId", leagueId);
   url.searchParams.set("seasonId", season);
   url.searchParams.set("teamId", teamId);
-  url.searchParams.set("memberId", memberId);
+  if (memberId) url.searchParams.set("memberId", memberId);
   return url.toString();
 }
 
@@ -802,11 +849,18 @@ function draftBridgeConfigPayload() {
   return {
     leagueId: draftLeagueOverrideState?.leagueId || "",
     season: draftLeagueOverrideState?.season || "2026",
-    teamId: draftLeagueOverrideState?.teamId || "",
+    teamId: draftBridgeTeamId(),
     memberId: draftLeagueOverrideState?.memberId || "",
     bridgeKey: draftLeagueOverrideState?.bridgeKey || "",
     endpoint: `${window.location.origin}/api/draft-bridge`,
     draftUrl: espnDraftRoomUrl(),
+    players: combinedBoardRows()
+      .slice(0, 320)
+      .map((row) => ({
+        player: row.Player,
+        playerId: Number(row.PlayerId || row.playerId || -1),
+      }))
+      .filter((row) => row.player),
   };
 }
 
@@ -825,8 +879,8 @@ function pingDraftCompanion() {
 }
 
 async function registerDraftBridgeSession() {
-  if (!draftLeagueOverrideState?.leagueId || !draftLeagueOverrideState?.teamId || !draftLeagueOverrideState?.memberId) {
-    throw new Error("Paste the full ESPN draft URL first.");
+  if (!draftLeagueOverrideState?.leagueId || !draftBridgeTeamId()) {
+    throw new Error("Paste the ESPN draft URL or leagueId and teamId first.");
   }
   const bridgeKey = draftLeagueOverrideState.bridgeKey || randomDraftBridgeKey();
   saveDraftLeagueOverride({ ...draftLeagueOverrideState, bridgeKey });
@@ -858,6 +912,7 @@ function buildEspnDraftBridgeScript() {
   let pingTimer = null;
   let eventCount = 0;
   const log = (message) => console.log("[FantasyIQ bridge] " + message);
+  const normalizeName = (value = "") => String(value || "").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
   const decode = async (data) => {
     if (typeof data === "string") return data;
     if (data instanceof ArrayBuffer) return new TextDecoder().decode(data).replace(/\\0+$/g, "");
@@ -877,14 +932,20 @@ function buildEspnDraftBridgeScript() {
       }).catch((error) => log("post failed: " + error.message));
     }, 250);
   };
-  const remember = (event, teamId, playerId, slotId) => {
+  const remember = (event, teamId, playerId, slotId, playerName = "") => {
     teamId = Number(teamId);
     playerId = Number(playerId);
     slotId = Number(slotId);
-    if (!teamId || !playerId || picks.some((pick) => pick.teamId === teamId && pick.playerId === playerId)) return;
-    picks.push({ event, teamId, playerId, slotId, pickNumber: picks.length + 1 });
+    playerName = String(playerName || "").trim();
+    if ((!playerId && !playerName) || picks.some((pick) => (playerId && pick.playerId === playerId) || (playerName && normalizeName(pick.playerName || pick.player) === normalizeName(playerName)))) return;
+    const pick = { event, pickNumber: picks.length + 1 };
+    if (teamId) pick.teamId = teamId;
+    if (playerId) pick.playerId = playerId;
+    if (playerName) pick.playerName = playerName;
+    if (Number.isFinite(slotId)) pick.slotId = slotId;
+    picks.push(pick);
     eventCount += 1;
-    log(event + " team " + teamId + " player " + playerId);
+    log(event + " " + (playerName || ("player " + playerId)));
     post();
   };
   const parseLine = (line) => {
@@ -900,6 +961,20 @@ function buildEspnDraftBridgeScript() {
     if (parts[0] === "INIT") log("received ESPN draft init state");
     if (parts[0] === "PONG") log("heartbeat acknowledged");
   };
+  const startVisiblePageScan = () => {
+    const candidates = (cfg.players || []).map((player) => ({ player: String(player.player || "").trim(), playerId: Number(player.playerId || -1), key: normalizeName(player.player) })).filter((player) => player.player && player.key.length >= 5).sort((a, b) => b.key.length - a.key.length);
+    if (!candidates.length) return;
+    const scan = () => {
+      const text = normalizeName(document.body && document.body.innerText || "");
+      if (!text) return;
+      candidates.forEach((player) => {
+        if (text.includes(player.key)) remember("VISIBLE", "", player.playerId > 0 ? player.playerId : "", "", player.player);
+      });
+    };
+    scan();
+    window.setInterval(scan, 3000);
+    log("visible draft-room scanner active");
+  };
   const securityToken = async () => {
     const url = "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/" + cfg.season + "/segments/0/leagues/" + cfg.leagueId + "/teams/" + cfg.teamId + "/draftSecurity";
     const response = await fetch(url, { credentials: "include", headers: { Accept: "application/json", "X-Fantasy-Source": "kona" } });
@@ -911,6 +986,19 @@ function buildEspnDraftBridgeScript() {
     } catch (error) {
       return String(text).replace(/^"|"$/g, "");
     }
+  };
+  const inferMemberId = async () => {
+    if (cfg.memberId) return cfg.memberId;
+    const url = "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/" + cfg.season + "/segments/0/leagues/" + cfg.leagueId + "?view=mTeam";
+    const response = await fetch(url, { credentials: "include", headers: { Accept: "application/json", "X-Fantasy-Source": "kona" } });
+    const text = await response.text();
+    if (!response.ok) throw new Error("member lookup HTTP " + response.status + " " + text.slice(0, 80));
+    const league = JSON.parse(text);
+    const team = (league.teams || []).find((item) => String(item.id) === String(cfg.teamId));
+    const owner = team && (team.primaryOwner || (team.owners || [])[0]);
+    if (!owner) throw new Error("Could not infer ESPN memberId for this team.");
+    cfg.memberId = owner;
+    return owner;
   };
   const joinUrl = (base, draftToken) => {
     return base + "/JOIN?1=ffl&2=" + encodeURIComponent(cfg.leagueId) + "&3=" + encodeURIComponent(cfg.teamId) + "&4=" + encodeURIComponent(cfg.memberId) + "&5=" + encodeURIComponent(draftToken) + "&6=false&7=false&8=KONA&nocache=" + Math.floor(Math.random() * 1000000);
@@ -964,11 +1052,14 @@ function buildEspnDraftBridgeScript() {
     const draftToken = ["ffl", cfg.leagueId, cfg.teamId, cfg.memberId, token].join(":");
     connectWebSocket(draftToken);
   };
-  if (!cfg.leagueId || !cfg.teamId || !cfg.memberId || !cfg.bridgeKey) {
-    alert("FantasyIQ bridge needs a full ESPN draft URL and a registered bridge session.");
+  if (!cfg.leagueId || !cfg.teamId || !cfg.bridgeKey) {
+    alert("FantasyIQ bridge needs leagueId, teamId, and a registered bridge session.");
     return;
   }
-  securityToken().then(connect).catch((error) => alert("FantasyIQ bridge failed: " + error.message));
+  startVisiblePageScan();
+  inferMemberId().then(securityToken).then(connect).catch((error) => {
+    log("ESPN socket failed; visible scanner remains active. " + error.message);
+  });
 })();`;
 }
 
@@ -989,8 +1080,8 @@ function copyTextToClipboard(text) {
 }
 
 function copyEspnDraftBridgeScript() {
-  if (!draftLeagueOverrideState?.leagueId || !draftLeagueOverrideState?.teamId || !draftLeagueOverrideState?.memberId) {
-    if (draftBridgeStatus) draftBridgeStatus.textContent = "Paste the full ESPN draft URL first, then click Use Draft League.";
+  if (!draftLeagueOverrideState?.leagueId || !draftBridgeTeamId()) {
+    if (draftBridgeStatus) draftBridgeStatus.textContent = "Paste the ESPN draft URL or leagueId, enter teamId, then click Use Draft League.";
     draftLeagueInput?.focus();
     return;
   }
@@ -1010,8 +1101,8 @@ function copyEspnDraftBridgeScript() {
 }
 
 function openEspnDraftRoomWithCompanion() {
-  if (!draftLeagueOverrideState?.leagueId || !draftLeagueOverrideState?.teamId || !draftLeagueOverrideState?.memberId) {
-    if (draftBridgeStatus) draftBridgeStatus.textContent = "Paste the full ESPN draft URL first, then click Use Draft League.";
+  if (!draftLeagueOverrideState?.leagueId || !draftBridgeTeamId()) {
+    if (draftBridgeStatus) draftBridgeStatus.textContent = "Paste the ESPN draft URL or leagueId, enter teamId, then click Use Draft League.";
     draftLeagueInput?.focus();
     return;
   }
@@ -1426,7 +1517,7 @@ async function signOutCustomer() {
   stopLiveSyncTimer();
   updateAccountControl();
   if (requiresCustomerAccess()) {
-    if (liveStatus) liveStatus.innerHTML = "<strong>Signed out.</strong> Sign in to reconnect live draft sync.";
+    if (liveStatus) liveStatus.innerHTML = "<strong>Signed out.</strong> Sign in to reconnect matchup intelligence.";
     showCustomerAccessGate("Signed out. Use your password or setup access code to unlock the dashboard.");
   }
 }
@@ -2117,10 +2208,10 @@ function currentLeagueDisplayLabel() {
 function applyLeagueOption(option) {
   if (!option) return;
   appConfig.leagueKey = option.key || appConfig.leagueKey || "";
-  appConfig.leagueId = option.leagueId || option.espnLeagueId || appConfig.leagueId;
+  appConfig.leagueId = String(option.leagueId || option.espnLeagueId || "");
   appConfig.leagueName = option.leagueName || option.label || appConfig.leagueName;
-  appConfig.customerTeamId = option.customerTeamId || appConfig.customerTeamId;
-  appConfig.customerTeamName = option.customerTeamName || appConfig.customerTeamName;
+  appConfig.customerTeamId = String(option.customerTeamId || option.teamId || option.team_id || "");
+  appConfig.customerTeamName = option.customerTeamName || option.teamName || option.team_name || "";
   appConfig.leagueSettings = mergeLeagueSettings(appConfig.baseLeagueSettings || DEFAULT_LEAGUE_SETTINGS, option.leagueSettings || {});
 }
 
@@ -2222,15 +2313,24 @@ function setActiveLeague(leagueKey) {
   history.replaceState(null, "", `${window.location.pathname}?${params.toString()}${window.location.hash}`);
   liveDraft = null;
   lastLiveDraftRenderSignature = "";
+  draftLeagueOverrideState = loadDraftLeagueOverride();
+  manualDraftOverrides = loadManualDraftOverrides();
   boardData = null;
   clearSimAutoAdvance();
   mockSim = null;
   selectedBoardPlayerKey = null;
+  if (myTeamSelect) myTeamSelect.value = appConfig.customerTeamId || "";
   if (boardStatus) boardStatus.textContent = "Switching league profile...";
-  if (liveStatus) liveStatus.textContent = "Connecting to selected ESPN league...";
+  if (liveStatus) {
+    liveStatus.textContent = draftLeagueOverrideState?.leagueId
+      ? `Connecting to ESPN draft override ${draftLeagueOverrideState.leagueId} for this league profile...`
+      : "Connecting to selected ESPN league...";
+  }
   applyAppConfig();
   renderLeagueSwitcher();
   renderLeagueProfile();
+  renderDraftLeagueOverrideControls();
+  pingDraftCompanion();
   loadBoards();
   startLiveSync();
 }
@@ -2402,13 +2502,29 @@ function liveDraftedKeys() {
 }
 
 function manualDraftStorageKey() {
+  const segment = normalizeDashboardSlug(appConfig.leagueKey || "") || numericText(appConfig.leagueId || "") || "default";
+  return loadoutStorageKey(`manual-draft-overrides:${segment}`);
+}
+
+function legacyManualDraftStorageKey() {
   return loadoutStorageKey("manual-draft-overrides");
 }
 
 function loadManualDraftOverrides() {
   try {
-    const saved = JSON.parse(localStorage.getItem(manualDraftStorageKey()) || "[]");
-    return Array.isArray(saved) ? saved.filter((pick) => pick?.player) : [];
+    const storageKey = manualDraftStorageKey();
+    const saved = JSON.parse(localStorage.getItem(storageKey) || "[]");
+    if (Array.isArray(saved) && saved.length) return saved.filter((pick) => pick?.player);
+    const legacySaved = JSON.parse(localStorage.getItem(legacyManualDraftStorageKey()) || "[]");
+    if (!Array.isArray(legacySaved) || !legacySaved.length) return [];
+    if (currentLeagueOptions().length <= 1) {
+      const cleaned = legacySaved.filter((pick) => pick?.player);
+      localStorage.setItem(storageKey, JSON.stringify(cleaned.slice(-260)));
+      localStorage.removeItem(legacyManualDraftStorageKey());
+      return cleaned;
+    }
+    localStorage.removeItem(legacyManualDraftStorageKey());
+    return [];
   } catch (error) {
     return [];
   }
@@ -2689,6 +2805,10 @@ function activateSection(section) {
   history.replaceState(null, "", dashboardUrlWithHash(`#${section}`));
   setActive(navItems, targetButton);
   panels.forEach((panel) => panel.classList.toggle("active", panel.id === section));
+  if (section === "live" && sosRuntimeReady) {
+    renderSosHeatMap();
+    loadSosHeatMap();
+  }
   scrollDashboardTop("auto");
 }
 
@@ -4104,6 +4224,342 @@ function combinedBoardRows() {
   return boardData?.boards?.combined?.rows || [];
 }
 
+const SOS_POSITIONS = ["QB", "RB", "WR", "TE", "DST", "K"];
+const SOS_TEAMS = [
+  "ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE",
+  "DAL", "DEN", "DET", "GB", "HOU", "IND", "JAX", "KC",
+  "LV", "LAC", "LAR", "MIA", "MIN", "NE", "NO", "NYG",
+  "NYJ", "PHI", "PIT", "SF", "SEA", "TB", "TEN", "WAS",
+];
+const SOS_TEAM_NAMES = {
+  ARI: "Arizona", ATL: "Atlanta", BAL: "Baltimore", BUF: "Buffalo", CAR: "Carolina", CHI: "Chicago",
+  CIN: "Cincinnati", CLE: "Cleveland", DAL: "Dallas", DEN: "Denver", DET: "Detroit", GB: "Green Bay",
+  HOU: "Houston", IND: "Indianapolis", JAX: "Jacksonville", KC: "Kansas City", LV: "Las Vegas",
+  LAC: "LA Chargers", LAR: "LA Rams", MIA: "Miami", MIN: "Minnesota", NE: "New England", NO: "New Orleans",
+  NYG: "NY Giants", NYJ: "NY Jets", PHI: "Philadelphia", PIT: "Pittsburgh", SF: "San Francisco",
+  SEA: "Seattle", TB: "Tampa Bay", TEN: "Tennessee", WAS: "Washington",
+};
+let sosSort = { key: "avg", direction: "asc" };
+let sosApiData = null;
+let sosApiLoading = false;
+let sosApiError = "";
+sosRuntimeReady = true;
+window.setTimeout(() => {
+  if (document.querySelector("#live")?.classList.contains("active")) {
+    renderSosHeatMap();
+    loadSosHeatMap();
+  }
+}, 0);
+
+function sosHash(value = "") {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+}
+
+function sosWeeks() {
+  const range = sosRange?.value || "1-18";
+  if (range === "custom") {
+    const selected = Array.from(sosWeekToggles?.querySelectorAll(".active") || [])
+      .map((button) => Number(button.dataset.sosWeek))
+      .filter(Boolean)
+      .sort((a, b) => a - b);
+    return selected.length ? selected : [15, 16, 17];
+  }
+  const [start, end] = range.split("-").map(Number);
+  return Array.from({ length: Math.max(1, end - start + 1) }, (_, index) => start + index);
+}
+
+function sosOpponent(team, week) {
+  const index = SOS_TEAMS.indexOf(team);
+  if (index < 0) return "BYE";
+  const opponentIndex = (index + week * 7 + Math.floor(week / 3)) % SOS_TEAMS.length;
+  return SOS_TEAMS[opponentIndex] === team ? SOS_TEAMS[(opponentIndex + 1) % SOS_TEAMS.length] : SOS_TEAMS[opponentIndex];
+}
+
+function sosScore(team, position, week) {
+  const opponent = sosOpponent(team, week);
+  const base = sosHash(`${opponent}:${position}:${week}`);
+  const positionalBias = { QB: 1, RB: 3, WR: 2, TE: 0, DST: 2, K: 1 }[position] || 0;
+  return ((base + positionalBias + week) % 4) + 1;
+}
+
+function sosTier(score, apiTier = "") {
+  if (apiTier === "bye") return "tier-bye";
+  if (score <= 1.75) return "tier-easy";
+  if (score <= 2.5) return "tier-good";
+  if (score <= 3.25) return "tier-hard";
+  return "tier-brutal";
+}
+
+function sosTierLabel(score, apiTier = "") {
+  if (apiTier === "bye") return "Bye";
+  return score <= 1.75 ? "Easy" : score <= 2.5 ? "Good" : score <= 3.25 ? "Tough" : "Brutal";
+}
+
+function sosNumber(value, fallback = null) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function sosFormat(value, digits = 1, fallback = "N/A") {
+  const number = sosNumber(value);
+  return number === null ? fallback : number.toFixed(digits);
+}
+
+function sosPercent(value, fallback = "N/A") {
+  const number = sosNumber(value);
+  return number === null ? fallback : `${Math.round(number * 100)}%`;
+}
+
+function sosMoneyline(value) {
+  const number = sosNumber(value);
+  if (number === null) return "N/A";
+  return number > 0 ? `+${Math.round(number)}` : `${Math.round(number)}`;
+}
+
+function sosNormalizePosition(value = "") {
+  const position = String(value || "").toUpperCase().replace(/[^A-Z/]/g, "");
+  if (position.includes("DST") || position.includes("D/ST")) return "DST";
+  if (position.includes("WRCB")) return "WR";
+  if (SOS_POSITIONS.includes(position)) return position;
+  return position.slice(0, 2);
+}
+
+function primaryRowsByTeamPosition() {
+  const byKey = new Map();
+  combinedBoardRows().forEach((row) => {
+    const team = String(row.Team || row.NFL || "").toUpperCase();
+    const position = sosNormalizePosition(row.Pos || row.Position || "");
+    if (!SOS_TEAMS.includes(team) || !SOS_POSITIONS.includes(position)) return;
+    const key = `${team}:${position}`;
+    const current = byKey.get(key);
+    if (!current || Number(row.Rank || 9999) < Number(current.Rank || 9999)) byKey.set(key, row);
+  });
+  return byKey;
+}
+
+function sosRows() {
+  const primary = primaryRowsByTeamPosition();
+  const positionFilterValue = sosPosition?.value || "ALL";
+  const search = normalizePlayerName(sosPlayerSearch?.value || "");
+  const positions = positionFilterValue === "ALL" ? SOS_POSITIONS : [positionFilterValue];
+  const weeks = sosWeeks();
+  const rows = [];
+  const apiRows = Array.isArray(sosApiData?.rows) ? sosApiData.rows : [];
+  const rowSource = apiRows.length
+    ? apiRows.filter((row) => positions.includes(row.position))
+    : SOS_TEAMS.flatMap((team) => positions.map((position) => ({ team, position })));
+  rowSource.forEach((sourceRow) => {
+      const team = sourceRow.team;
+      const position = sourceRow.position;
+      const boardRow = primary.get(`${team}:${position}`);
+      const player = boardRow?.Player || (position === "DST" ? `${SOS_TEAM_NAMES[team]} D/ST` : `${SOS_TEAM_NAMES[team]} ${position}1`);
+      const haystack = normalizePlayerName(`${player} ${team} ${SOS_TEAM_NAMES[team]} ${position}`);
+      if (search && !haystack.includes(search)) return;
+      const sourceCells = Array.isArray(sourceRow.cells) ? sourceRow.cells : [];
+      const scores = weeks.map((week) => {
+        const apiCell = sourceCells.find((cell) => Number(cell.week) === Number(week));
+        if (apiCell) {
+          const score = sosNumber(apiCell.score);
+          const fallbackHeat = score === null ? null : (5 - score) * 6.5;
+          return {
+            week,
+            opponent: apiCell.opponent || "BYE",
+            score,
+            apiTier: apiCell.tier || "",
+            fpa: sosNumber(apiCell.fpa),
+            fpaScore: sosNumber(apiCell.fpaScore),
+            heatValue: sosNumber(apiCell.heatValue, sosNumber(apiCell.impliedTotal, fallbackHeat)),
+            impliedTotal: sosNumber(apiCell.impliedTotal),
+            opponentImpliedTotal: sosNumber(apiCell.opponentImpliedTotal),
+            gameTotal: sosNumber(apiCell.gameTotal),
+            spread: sosNumber(apiCell.spread),
+            moneyline: sosNumber(apiCell.moneyline),
+            noVigWinProbability: sosNumber(apiCell.noVigWinProbability),
+            oddsSource: apiCell.oddsSource || sourceRow.oddsSource || "",
+            bookmakers: sosNumber(apiCell.bookmakers),
+            oddsSamples: sosNumber(apiCell.oddsSamples),
+          };
+        }
+        const score = sosScore(team, position, week);
+        return { week, opponent: sosOpponent(team, week), score, heatValue: (5 - score) * 6.5, oddsSource: "modeled fallback" };
+      });
+      const validScores = scores.map((item) => item.score).filter((score) => Number.isFinite(score));
+      const avg = validScores.length ? validScores.reduce((sum, score) => sum + score, 0) / validScores.length : 2.5;
+      const brutal = validScores.filter((score) => score >= 3).length;
+      rows.push({ team, position, player, rank: Number(boardRow?.Rank || 999), scores, avg, brutal, source: sourceRow.source || "modeled" });
+  });
+  return rows.sort((left, right) => {
+    const direction = sosSort.direction === "desc" ? -1 : 1;
+    if (sosSort.key === "player") return direction * left.player.localeCompare(right.player);
+    if (sosSort.key === "position") return direction * left.position.localeCompare(right.position);
+    if (sosSort.key === "team") return direction * left.team.localeCompare(right.team);
+    if (sosSort.key === "brutal") return direction * (right.brutal - left.brutal || right.avg - left.avg);
+    return direction * (left.avg - right.avg || left.rank - right.rank);
+  });
+}
+
+function sosHeatValues(rows) {
+  return rows
+    .flatMap((row) => row.scores.map((item) => item.heatValue))
+    .filter((value) => Number.isFinite(value))
+    .sort((left, right) => left - right);
+}
+
+function sosPercentileRank(value, values) {
+  if (!Number.isFinite(value) || !values.length) return 0.5;
+  if (values.length === 1) return 0.5;
+  let below = 0;
+  while (below < values.length && values[below] < value) below += 1;
+  let equal = below;
+  while (equal < values.length && values[equal] === value) equal += 1;
+  return Math.max(0, Math.min(1, (below + (equal - below) / 2) / (values.length - 1)));
+}
+
+function sosInterpolateColor(left, right, amount) {
+  return left.map((channel, index) => Math.round(channel + (right[index] - channel) * amount));
+}
+
+function sosHeatColor(percentile) {
+  const stops = [
+    [0, [13, 27, 46]],
+    [0.28, [31, 62, 83]],
+    [0.52, [87, 91, 88]],
+    [0.74, [202, 129, 40]],
+    [1, [218, 69, 48]],
+  ];
+  const pct = Math.max(0, Math.min(1, percentile));
+  for (let index = 1; index < stops.length; index += 1) {
+    const [stop, color] = stops[index];
+    const [previousStop, previousColor] = stops[index - 1];
+    if (pct <= stop) {
+      const amount = (pct - previousStop) / (stop - previousStop || 1);
+      return sosInterpolateColor(previousColor, color, amount).join(", ");
+    }
+  }
+  return stops[stops.length - 1][1].join(", ");
+}
+
+function sosCellStyle(item, heatValues) {
+  if (item.apiTier === "bye") return "";
+  const percentile = sosPercentileRank(item.heatValue, heatValues);
+  const color = sosHeatColor(percentile);
+  const glow = Math.round(10 + percentile * 28);
+  const text = percentile > 0.6 && percentile < 0.86 ? "#1b1208" : "#fff8e8";
+  return `--sos-heat-bg: rgb(${color}); --sos-heat-border: rgba(${color}, 0.72); --sos-heat-glow: rgba(${color}, ${percentile > 0.72 ? 0.46 : 0.2}); --sos-text: ${text}; --sos-glow-size: ${glow}px;`;
+}
+
+function sosSourceLabel(value = "") {
+  const clean = String(value || "").replace(/[-_]/g, " ").trim();
+  if (!clean) return "Fallback";
+  return clean.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function sosCellTooltip(row, item, percentile) {
+  if (item.apiTier === "bye") return `${row.team} Week ${item.week}\nBye`;
+  const lines = [
+    `${row.player} (${row.team} ${row.position})`,
+    `Week ${item.week} vs ${item.opponent}`,
+    `Heat percentile: ${Math.round(percentile * 100)}`,
+    `Implied team total: ${sosFormat(item.impliedTotal)}`,
+    `Game total: ${sosFormat(item.gameTotal)}`,
+    `Spread: ${sosFormat(item.spread, 1)}`,
+    `Moneyline: ${sosMoneyline(item.moneyline)}`,
+    `No-vig win prob: ${sosPercent(item.noVigWinProbability)}`,
+    `FPA: ${sosFormat(item.fpa, 1)}`,
+    `Source: ${sosSourceLabel(item.oddsSource)}`,
+  ];
+  if (Number.isFinite(item.bookmakers)) lines.push(`Books: ${sosFormat(item.bookmakers, 0)}`);
+  return lines.join("\n");
+}
+
+function loadSosHeatMap(force = false) {
+  if (sosApiLoading || (!force && sosApiData)) return Promise.resolve(sosApiData);
+  sosApiLoading = true;
+  sosApiError = "";
+  return fetch(apiUrl("/api/sos-heatmap", { season: appConfig.season || "2026", v: force ? Date.now() : "" }), {
+    cache: "no-store",
+    headers: apiHeaders(),
+  })
+    .then((response) => {
+      if (!response.ok) throw new Error(`SoS API returned HTTP ${response.status}`);
+      return response.json();
+    })
+    .then((payload) => {
+      if (!payload?.ok) throw new Error(payload?.error || "SoS API returned no data");
+      sosApiData = payload;
+      renderSosHeatMap();
+      return payload;
+    })
+    .catch((error) => {
+      sosApiError = error.message;
+      renderSosHeatMap();
+      return null;
+    })
+    .finally(() => {
+      sosApiLoading = false;
+    });
+}
+
+function renderSosHeatMap() {
+  if (!sosTableHead || !sosTableBody) return;
+  const weeks = sosWeeks();
+  const rows = sosRows();
+  const heatValues = sosHeatValues(rows);
+  const weekLabel = weeks.length === 1 ? `Week ${weeks[0]}` : `Weeks ${weeks[0]}-${weeks[weeks.length - 1]}`;
+  if (sosSelectedSummary) {
+    const sourceLabel = sosApiData
+      ? "market-adjusted projections"
+      : sosApiLoading
+        ? "loading real data"
+        : sosApiError
+          ? "modeled fallback"
+          : "modeled fallback";
+    sosSelectedSummary.textContent = `${weekLabel} / ${sosPosition?.value === "ALL" ? "All positions" : sosPosition?.value} / ${sourceLabel}`;
+  }
+  if (sosPlayoffEdge) {
+    sosPlayoffEdge.textContent = (sosRange?.value || "") === "custom" ? weeks.join(", ") : "Weeks 15-17";
+  }
+  const best = rows[0];
+  const brutal = [...rows].sort((left, right) => right.brutal - left.brutal || right.avg - left.avg)[0];
+  if (sosBestStretch) sosBestStretch.textContent = best ? `${best.player} (${best.team})` : "No match";
+  if (sosBrutalStretch) sosBrutalStretch.textContent = brutal ? `${brutal.player} (${brutal.team})` : "No match";
+  const sortButton = (key, label) => `<button type="button" data-sos-sort="${key}">${htmlEscape(label)}${sosSort.key === key ? (sosSort.direction === "asc" ? " +" : " -") : ""}</button>`;
+  sosTableHead.innerHTML = `<tr>
+    <th>${sortButton("player", "Player")}</th>
+    <th>${sortButton("team", "Team")}</th>
+    <th>${sortButton("position", "Pos")}</th>
+    ${weeks.map((week) => `<th>W${week}</th>`).join("")}
+    <th>${sortButton("avg", "Ease")}</th>
+    <th>${sortButton("brutal", "Brutal")}</th>
+  </tr>`;
+  sosTableBody.innerHTML = rows.slice(0, 140).map((row) => {
+    const ease = Math.round((5 - row.avg) * 25);
+    const rowAverageTotal = row.scores
+      .map((item) => item.impliedTotal)
+      .filter((value) => Number.isFinite(value));
+    const averageTotal = rowAverageTotal.length
+      ? rowAverageTotal.reduce((sum, value) => sum + value, 0) / rowAverageTotal.length
+      : null;
+    return `<tr>
+      <td><strong>${htmlEscape(row.player)}</strong><small>${htmlEscape(SOS_TEAM_NAMES[row.team] || row.team)}</small></td>
+      <td>${htmlEscape(row.team)}</td>
+      <td>${htmlEscape(row.position)}</td>
+      ${row.scores.map((item) => {
+        const percentile = sosPercentileRank(item.heatValue, heatValues);
+        const tooltip = sosCellTooltip(row, item, percentile);
+        const label = item.apiTier === "bye" ? "BYE" : item.opponent;
+        return `<td><span class="sos-cell ${sosTier(item.score ?? 2.5, item.apiTier)}" style="${sosCellStyle(item, heatValues)}" data-tooltip="${htmlEscape(tooltip)}" title="${htmlEscape(tooltip)}">${htmlEscape(label)}</span></td>`;
+      }).join("")}
+      <td><strong>${ease}</strong><small>${averageTotal === null ? "No total" : `${sosFormat(averageTotal)} ITT`}</small></td>
+      <td>${row.brutal}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="${weeks.length + 5}">No players match this filter.</td></tr>`;
+}
+
 function liveLeagueTeams() {
   return Array.isArray(liveDraft?.teams) ? liveDraft.teams : [];
 }
@@ -5006,7 +5462,7 @@ function loadIntelligence(force = false) {
           confidenceScore: 20,
           supportingQuantitativeReasons: ["The dashboard is still usable.", "Live boards and draft room can continue independently.", "Retry after ESPN/API sync recovers."],
           riskWarning: error.message || "Unknown intelligence API error.",
-          alternativePath: "Use Draft Room, Waiver Assistant, and Trade Calculator manually for now.",
+          alternativePath: "Use SoS Heat Map, Waiver Assistant, and Trade Calculator manually for now.",
           dataFreshnessStatus: "Intelligence API unavailable.",
         },
         phases: {},
@@ -5551,7 +6007,7 @@ function slotPlan(firstPick) {
   }
   return {
     title: "Pick slot needed",
-    detail: "Select your ESPN team in Draft Room so FantasyIQ can locate your first pick and return windows.",
+    detail: "Use SoS Heat Map with mock practice so FantasyIQ can pair value with schedule leverage.",
     bullets: ["Enter the ESPN draft room before trusting the slot.", "Click Sync Now after ESPN publishes order.", "If ESPN reshuffles, FantasyIQ updates the slot from live draft order."],
   };
 }
@@ -5768,55 +6224,21 @@ function renderPreDraftPanel() {
     return;
   }
   const teamId = selectedTeamId();
-  const team = selectedEspnTeam();
   const firstPick = firstRoundPickForTeam(teamId);
   const orderCount = (liveDraft?.draftOrder || []).length;
   const settings = activeLeagueSettings();
   const bestRb = topTierNames("RB", 2) || "RB tier loading";
   const bestWr = topTierNames("WR", 2) || "WR tier loading";
-  const prepItems = [
-    {
-      label: "League",
-      value: `${leagueTeamTotal()} teams`,
-      detail: `${settings.scoringLabel || SCORING_LABELS[settings.scoringType] || "Custom scoring"} / ${lineupSummary(settings)}`,
-      state: "good",
-    },
-    {
-      label: "Order",
-      value: orderCount ? `${orderCount} slots` : "Pending",
-      detail: orderCount ? "ESPN has published the Round 1 order." : "Sync again once ESPN publishes the order.",
-      state: orderCount ? "good" : "watch",
-    },
-    {
-      label: "Your Slot",
-      value: firstPick ? `Pick ${firstPick.roundPick}` : "Select team",
-      detail: firstPick ? `${team?.teamName || "Your team"} opens at overall ${firstPick.overall}.` : "Use My ESPN Team to personalize survival odds.",
-      state: firstPick ? "good" : "watch",
-    },
-    {
-      label: "Tier Watch",
-      value: "RB/WR base",
-      detail: `${bestRb}; ${bestWr}`,
-      state: "good",
-    },
-  ];
+  const format = `${leagueTeamTotal()} teams / ${settings.scoringLabel || SCORING_LABELS[settings.scoringType] || "Custom scoring"}`;
+  const orderText = orderCount ? `${orderCount} draft slots loaded` : "Draft order pending";
+  const slotText = firstPick ? `Your first pick: Round 1, Pick ${firstPick.roundPick}, Overall ${firstPick.overall}` : "Choose your ESPN team to personalize the board.";
+  const tierText = `Watch early RB/WR value: ${bestRb}; ${bestWr}`;
   preDraftPanel.hidden = false;
   preDraftPanel.innerHTML = `
     <div class="pre-draft-copy">
-      <span>Before the draft opens</span>
-      <strong>${htmlEscape(firstPick ? "Your room is staged" : "Draft room is staged")}</strong>
-      <p>${htmlEscape(firstPick ? preDraftSlotSummary(teamId) : "Pick your ESPN team once, then FantasyIQ will show your first turn, make-it-back reads, and roster pressure before the first pick is made.")}</p>
-    </div>
-    <div class="pre-draft-checks">
-      ${prepItems
-        .map(
-          (item) => `<article class="${item.state}">
-            <span>${htmlEscape(item.label)}</span>
-            <strong>${htmlEscape(item.value)}</strong>
-            <small>${htmlEscape(item.detail)}</small>
-          </article>`,
-        )
-        .join("")}
+      <span>Draft setup</span>
+      <strong>${htmlEscape(firstPick ? "Ready for your pick" : "Room is ready")}</strong>
+      <p>${htmlEscape(`${slotText} ${orderText}. ${format}. ${tierText}`)}</p>
     </div>
     <div class="pre-draft-actions">
       <button class="secondary-action pre-draft-nav" type="button" data-jump="simulator">Practice This Room</button>
@@ -6510,7 +6932,7 @@ function renderCheatcodeMode() {
       <div>
         <span>Next pick</span>
         <strong>${nextPick ? `R${nextPick.round} P${nextPick.roundPick}` : teamId ? "Complete" : "Select team"}</strong>
-        <small>${nextPick ? `Overall ${nextPick.overall}, ${until} picks away` : teamId ? "No remaining ESPN picks found" : "Use the team selector in Draft Room"}</small>
+        <small>${nextPick ? `Overall ${nextPick.overall}, ${until} picks away` : teamId ? "No remaining ESPN picks found" : "Use SoS Heat Map for schedule context"}</small>
       </div>
       <div>
         <span>Roster shape</span>
@@ -8037,6 +8459,7 @@ function loadLiveDraft(force = false) {
 }
 
 function startLiveSync() {
+  if (document.querySelector("#live")?.classList.contains("sos-panel")) return;
   if (!liveSyncToggle?.checked) return;
   if (!ensureCustomerAccess()) return;
   stopLiveSyncTimer();
@@ -8059,6 +8482,8 @@ function applyBoardPayload(data) {
   renderLeagueProfile();
   renderBoard();
   renderDraftPrep();
+  renderSosHeatMap();
+  loadSosHeatMap();
   renderCheatcodeMode();
   renderLiveDraft();
   renderLiveTierBoard();
@@ -8185,6 +8610,28 @@ liveTierButtons.forEach((button) => {
     liveTierButtons.forEach((item) => item.classList.toggle("active", item === button));
     renderLiveTierBoard();
   });
+});
+
+[sosPosition, sosPlayerSearch, sosRange].forEach((control) => {
+  control?.addEventListener("input", renderSosHeatMap);
+  control?.addEventListener("change", renderSosHeatMap);
+});
+sosWeekToggles?.querySelectorAll("button").forEach((button) => {
+  button.addEventListener("click", () => {
+    button.classList.toggle("active");
+    if (sosRange) sosRange.value = "custom";
+    renderSosHeatMap();
+  });
+});
+sosTableHead?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-sos-sort]");
+  if (!button) return;
+  const key = button.dataset.sosSort || "avg";
+  sosSort = {
+    key,
+    direction: sosSort.key === key && sosSort.direction === "asc" ? "desc" : "asc",
+  };
+  renderSosHeatMap();
 });
 
 const savedSimSlot = localStorage.getItem(loadoutStorageKey("sim-slot"));

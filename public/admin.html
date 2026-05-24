@@ -89,6 +89,7 @@
             <button class="secondary" id="refresh-ops" type="button">Refresh ops</button>
             <button class="primary dark" id="smoke-admin" type="button">Run checkout smoke</button>
             <button class="secondary" id="clean-admin" type="button">Clean stale setup</button>
+            <button class="secondary" id="refresh-sos" type="button">Refresh SoS heat map</button>
             <a class="secondary" href="./setup.html">Validate a setup</a>
           </div>
           <div class="result-panel" id="admin-result">Admin data has not been loaded.</div>
@@ -104,6 +105,7 @@
       const statusFilter = document.querySelector("#admin-status-filter");
       const cleanButton = document.querySelector("#clean-admin");
       const smokeButton = document.querySelector("#smoke-admin");
+      const refreshSosButton = document.querySelector("#refresh-sos");
       const refreshOpsButton = document.querySelector("#refresh-ops");
       const adminGateLogout = document.querySelector("#admin-gate-logout");
       const opsSearch = document.querySelector("#ops-search");
@@ -344,6 +346,17 @@
           );
           await loadAdmin();
         }
+        if (action === "refresh_sos_heatmap") {
+          const sources = payload.sources || {};
+          const odds = payload.providerMeta?.odds || {};
+          const oddsDetail = odds.configured
+            ? `${escapeHtml(odds.combinedTeams || 0)} teams / ${escapeHtml(odds.liveEvents || 0)} live events / ${escapeHtml(odds.historicalSnapshots || 0)} historical snapshots`
+            : "odds not configured";
+          result.insertAdjacentHTML(
+            "afterbegin",
+            `<div class="result-panel"><strong>SoS Heat Map refreshed.</strong><p>${escapeHtml(payload.rows || 0)} rows / ${escapeHtml(payload.cache?.layer || "fresh")} / ${escapeHtml(sources.odds || "odds source unknown")} / ${oddsDetail}</p></div>`,
+          );
+        }
       }
 
       async function refreshOpsEvents() {
@@ -422,6 +435,13 @@
           await runAdminAction("self_serve_smoke_test");
         } catch (error) {
           result.insertAdjacentHTML("afterbegin", `<div class="result-panel"><strong>Smoke test failed.</strong><p>${escapeHtml(error.message)}</p></div>`);
+        }
+      });
+      refreshSosButton.addEventListener("click", async () => {
+        try {
+          await runAdminAction("refresh_sos_heatmap");
+        } catch (error) {
+          result.insertAdjacentHTML("afterbegin", `<div class="result-panel"><strong>SoS refresh failed.</strong><p>${escapeHtml(error.message)}</p></div>`);
         }
       });
       refreshOpsButton.addEventListener("click", async () => {

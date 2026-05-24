@@ -7,7 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
     <link rel="shortcut icon" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260521-premium-3" />
-    <link rel="stylesheet" href="./styles.css?v=20260522_live_override_3" />
+    <link rel="stylesheet" href="./styles.css?v=20260523_heatmap_market_1" />
   </head>
   <body>
     <div class="field-overlay" aria-hidden="true">
@@ -73,7 +73,7 @@
       <nav class="sidebar" aria-label="Dashboard sections">
         <button class="nav-item active" data-section="command">Command</button>
         <button class="nav-item" data-section="draft">Draft Prep</button>
-        <button class="nav-item" data-section="live">Draft Room</button>
+        <button class="nav-item" data-section="live">SoS Heat Map</button>
         <button class="nav-item" data-section="simulator">Mock Simulator</button>
         <button class="nav-item" data-section="trade">Trade Calculator</button>
         <button class="nav-item" data-section="workbooks">Big Board</button>
@@ -88,7 +88,7 @@
               <h2>Draft smarter. Trade cleaner. Win your league.</h2>
               <p>Draft prep, player values, mock tracking, live room sync, and trade discipline in one command center.</p>
               <div class="hero-actions">
-                <button class="primary-action nav-jump" type="button" data-jump="live">Open Draft Room</button>
+                <button class="primary-action nav-jump" type="button" data-jump="live">Open SoS Heat Map</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="workbooks">Big Board</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="draft">Draft Plan</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="simulator">Mock Simulator</button>
@@ -123,7 +123,7 @@
 
           <div class="league-profile-strip" id="league-profile-strip">
             <strong>League engine active</strong>
-            <span>Draft Room, Mock Simulator, Big Board values, and Trade Calculator are using this league profile.</span>
+            <span>SoS Heat Map, Mock Simulator, Big Board values, and Trade Calculator are using this league profile.</span>
           </div>
 
           <section class="intelligence-os-panel" id="intelligence-os-panel" aria-label="FantasyIQ intelligence operating system">
@@ -207,7 +207,7 @@
             <article>
               <span>2</span>
               <strong>Select your team</strong>
-              <small>Draft Room personalizes timing after team selection.</small>
+              <small>SoS Heat Map highlights schedule leverage by position.</small>
             </article>
             <article>
               <span>3</span>
@@ -229,8 +229,8 @@
             </article>
             <article class="command-tile">
               <span>Draft Mode</span>
-              <strong id="live-sync-status">ESPN auto sync</strong>
-              <small>Polls your public league draft feed</small>
+              <strong id="live-sync-status">SoS heat map</strong>
+              <small>Weekly matchup leverage by position</small>
             </article>
             <article class="command-tile">
               <span>Mock Intelligence</span>
@@ -264,7 +264,7 @@
               <h3>Next Actions</h3>
               <label><input type="checkbox" data-save="draft-order" /> Live random draft order decided</label>
               <label><input type="checkbox" data-save="playoff-seed" /> Confirm playoff seeding rules</label>
-              <label><input type="checkbox" data-save="draft-tool" /> Test live draft sync before draft day</label>
+              <label><input type="checkbox" data-save="draft-tool" /> Review playoff matchup leverage</label>
               <label><input type="checkbox" data-save="first-mock" /> Run first mock draft</label>
             </div>
             <div class="box">
@@ -305,7 +305,7 @@
             <section class="draft-prep-panel" id="draft-prep-slot">
               <p class="eyebrow">Pick Slot Strategy</p>
               <h3>Waiting for room data</h3>
-              <p>Choose your ESPN team in Draft Room to personalize pick timing.</p>
+              <p>Use the SoS Heat Map to pair draft value with schedule leverage.</p>
             </section>
             <section class="draft-prep-panel" id="draft-prep-settings">
               <p class="eyebrow">League Settings Intelligence</p>
@@ -388,20 +388,94 @@
             <div><strong>16</strong><span>Kicker last.</span></div>
           </div>
 
-          <button class="primary-action nav-jump" type="button" data-jump="live">Open Live Draft Room</button>
+          <button class="primary-action nav-jump" type="button" data-jump="live">Open SoS Heat Map</button>
         </section>
 
-        <section class="panel" id="live">
+        <section class="panel sos-panel" id="live">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Draft Room</p>
-              <h2>Live ESPN draft sync</h2>
+              <p class="eyebrow">Matchup Intelligence</p>
+              <h2>Dynamic SoS Heat Map</h2>
             </div>
-            <div class="live-switches">
-              <label><input id="live-sync-toggle" type="checkbox" checked /> Auto sync</label>
-              <button id="manual-sync" type="button">Sync Now</button>
+            <div class="live-switches sos-status-pill">
+              <strong id="sos-selected-summary">Weeks 1-18 / All positions</strong>
             </div>
           </div>
+
+          <section class="sos-command" aria-label="Dynamic strength of schedule heat map">
+            <div class="sos-toolbar">
+              <label>
+                Position
+                <select id="sos-position">
+                  <option value="ALL">All</option>
+                  <option value="QB">QB</option>
+                  <option value="RB">RB</option>
+                  <option value="WR">WR</option>
+                  <option value="TE">TE</option>
+                  <option value="DST">D/ST</option>
+                  <option value="K">K</option>
+                </select>
+              </label>
+              <label>
+                Player or Team
+                <input id="sos-player-search" type="search" placeholder="Search player or NFL team" />
+              </label>
+              <label>
+                Weeks
+                <select id="sos-range">
+                  <option value="1-18">Full season</option>
+                  <option value="1-4">Weeks 1-4</option>
+                  <option value="5-8">Weeks 5-8</option>
+                  <option value="9-14">Weeks 9-14</option>
+                  <option value="15-17">Playoffs: 15-17</option>
+                  <option value="custom">Custom playoff weeks</option>
+                </select>
+              </label>
+              <div class="sos-week-toggles" id="sos-week-toggles" aria-label="Custom playoff weeks">
+                <button type="button" data-sos-week="14">14</button>
+                <button type="button" data-sos-week="15" class="active">15</button>
+                <button type="button" data-sos-week="16" class="active">16</button>
+                <button type="button" data-sos-week="17" class="active">17</button>
+              </div>
+            </div>
+
+            <div class="sos-score-strip">
+              <article>
+                <span>Best Stretch</span>
+                <strong id="sos-best-stretch">Loading</strong>
+                <small>Easiest selected window</small>
+              </article>
+              <article>
+                <span>Brutal Fade</span>
+                <strong id="sos-brutal-stretch">Loading</strong>
+                <small>Hardest selected window</small>
+              </article>
+              <article>
+                <span>Playoff Edge</span>
+                <strong id="sos-playoff-edge">Weeks 15-17</strong>
+                <small>Customize to match your league</small>
+              </article>
+              <article>
+                <span>Coverage</span>
+                <strong>QB RB WR TE D/ST K</strong>
+                <small>Position-specific matchup scoring</small>
+              </article>
+            </div>
+
+            <div class="sos-legend" aria-label="Heat map legend">
+              <span class="sos-cell tier-easy">Easy</span>
+              <span class="sos-cell tier-good">Favorable</span>
+              <span class="sos-cell tier-hard">Tough</span>
+              <span class="sos-cell tier-brutal">Brutal</span>
+            </div>
+
+            <div class="sos-table-shell">
+              <table class="sos-table">
+                <thead id="sos-table-head"></thead>
+                <tbody id="sos-table-body"></tbody>
+              </table>
+            </div>
+          </section>
 
           <div class="result live-alert" id="live-status">
             Connecting to ESPN public draft sync...
@@ -433,7 +507,7 @@
           </div>
 
           <div class="draft-bridge-sync" id="draft-bridge-sync">
-            <button id="draft-bridge-open" type="button">Open ESPN Draft Room</button>
+            <button id="draft-bridge-open" type="button">Open ESPN Draft</button>
             <a id="draft-companion-install" href="/draft-sync-companion/install.html" target="_blank" rel="noopener">Install Companion</a>
             <button id="draft-bridge-copy" class="draft-bridge-emergency" type="button">Emergency Script</button>
             <span id="draft-bridge-status">Automatic sync uses the Draft Sync Companion when ESPN hides live picks.</span>
@@ -1146,6 +1220,6 @@
     </main>
 
     <script src="./config.js?v=20260522_live_override_3"></script>
-    <script src="./app.js?v=20260522_live_override_3"></script>
+    <script src="./app.js?v=20260523_heatmap_market_1"></script>
   </body>
 </html>

@@ -296,6 +296,49 @@ def admin_action(raw: dict[str, Any]) -> dict[str, Any]:
             "syncedAt": utc_now(),
         }
 
+    if action == "refresh_sos_heatmap":
+        season = int(raw.get("season") or 2026)
+        try:
+            try:
+                from sos_heatmap import force_refresh_payload
+            except ImportError:
+                from api.sos_heatmap import force_refresh_payload
+            refreshed = force_refresh_payload(season)
+        except Exception as exc:
+            raise ConfigError(f"Could not refresh SoS Heat Map: {exc}") from exc
+        try:
+            try:
+                from database import record_ops_event
+            except ImportError:
+                from api.database import record_ops_event
+            record_ops_event(
+                event_type="admin.refresh_sos_heatmap",
+                severity="info",
+                source="admin_customers",
+                message=f"SoS Heat Map refreshed manually for {season}.",
+                payload={
+                    "season": refreshed.get("season"),
+                    "rows": len(refreshed.get("rows") or []),
+                    "sources": refreshed.get("sources") or {},
+                    "cache": refreshed.get("cache") or {},
+                    "providerMeta": refreshed.get("providerMeta") or {},
+                },
+            )
+        except Exception:
+            pass
+        return {
+            "ok": True,
+            "action": action,
+            "season": refreshed.get("season"),
+            "rows": len(refreshed.get("rows") or []),
+            "sources": refreshed.get("sources") or {},
+            "cache": refreshed.get("cache") or {},
+            "providerMeta": refreshed.get("providerMeta") or {},
+            "updatedAt": refreshed.get("updatedAt"),
+            "refreshCadence": refreshed.get("refreshCadence"),
+            "syncedAt": utc_now(),
+        }
+
     if action == "apply_database_schema":
         schema_path = Path(__file__).resolve().parents[1] / "database" / "schema.sql"
         if not schema_path.exists():

@@ -20,11 +20,6 @@
       "permanent": false
     },
     {
-      "source": "/FantasyIQ",
-      "destination": "/FantasyIQ/",
-      "permanent": false
-    },
-    {
       "source": "/fantasyiq",
       "destination": "/FantasyIQ/",
       "permanent": false
@@ -59,6 +54,14 @@
     {
       "source": "/api/live-boards.json",
       "destination": "/api/live_boards"
+    },
+    {
+      "source": "/api/sos-heatmap",
+      "destination": "/api/sos_heatmap"
+    },
+    {
+      "source": "/api/sos-heatmap.json",
+      "destination": "/api/sos_heatmap"
     },
     {
       "source": "/api/trade-history",

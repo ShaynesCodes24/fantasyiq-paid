@@ -1150,6 +1150,320 @@ textarea {
   line-height: 1.35;
 }
 
+#live.sos-panel > :not(.panel-head):not(.sos-command) {
+  display: none !important;
+}
+
+.sos-status-pill {
+  align-items: center;
+  min-height: 42px;
+  border: 1px solid rgba(255, 248, 232, 0.12);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(9, 28, 45, 0.94), rgba(24, 44, 56, 0.9));
+  color: #fff8e8;
+  padding: 0 14px;
+  font-size: 13px;
+}
+
+.sos-command {
+  display: grid;
+  gap: 14px;
+}
+
+.sos-toolbar {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.6fr) minmax(220px, 1fr) minmax(160px, 0.75fr) auto;
+  gap: 10px;
+  align-items: end;
+  border: 1px solid rgba(255, 248, 232, 0.1);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(7, 25, 40, 0.98), rgba(20, 44, 54, 0.92));
+  padding: 12px;
+}
+
+.sos-toolbar label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  color: rgba(255, 248, 232, 0.72);
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.sos-toolbar select,
+.sos-toolbar input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid rgba(255, 248, 232, 0.14);
+  border-radius: 8px;
+  background: rgba(3, 13, 24, 0.72);
+  color: #fff8e8;
+  padding: 0 12px;
+  font: inherit;
+  font-weight: 850;
+}
+
+.sos-week-toggles {
+  display: grid;
+  grid-template-columns: repeat(4, 42px);
+  gap: 6px;
+}
+
+.sos-week-toggles button,
+.sos-table th button {
+  border: 1px solid rgba(255, 248, 232, 0.14);
+  border-radius: 8px;
+  background: rgba(8, 24, 38, 0.86);
+  color: #fff8e8;
+  font-weight: 950;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.sos-week-toggles button {
+  min-height: 42px;
+}
+
+.sos-week-toggles button.active {
+  border-color: rgba(226, 158, 60, 0.68);
+  background: #c98128;
+  color: #fff8e8;
+}
+
+.sos-score-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sos-score-strip article {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid rgba(255, 248, 232, 0.1);
+  border-radius: 8px;
+  background: linear-gradient(145deg, #081a2c, #132d38);
+  color: #fff8e8;
+  padding: 14px;
+}
+
+.sos-score-strip span,
+.sos-score-strip small {
+  color: rgba(255, 248, 232, 0.78);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.sos-score-strip strong {
+  overflow: hidden;
+  color: var(--gold);
+  font-size: 18px;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sos-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sos-legend .tier-easy {
+  --sos-heat-bg: #da4530;
+  --sos-heat-border: rgba(218, 69, 48, 0.72);
+  --sos-text: #fff8e8;
+}
+
+.sos-legend .tier-good {
+  --sos-heat-bg: #ca8128;
+  --sos-heat-border: rgba(202, 129, 40, 0.72);
+  --sos-text: #1b1208;
+}
+
+.sos-legend .tier-hard {
+  --sos-heat-bg: #575b58;
+  --sos-heat-border: rgba(135, 139, 136, 0.72);
+  --sos-text: #fff8e8;
+}
+
+.sos-legend .tier-brutal {
+  --sos-heat-bg: #1f3e53;
+  --sos-heat-border: rgba(54, 93, 119, 0.72);
+  --sos-text: #fff8e8;
+}
+
+.sos-table-shell {
+  overflow: auto;
+  border: 1px solid rgba(255, 248, 232, 0.1);
+  border-radius: 8px;
+  background: #071523;
+  box-shadow: 0 18px 46px rgba(0, 14, 24, 0.22);
+}
+
+.sos-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+
+.sos-table th,
+.sos-table td {
+  border-bottom: 1px solid rgba(255, 248, 232, 0.07);
+  padding: 7px 8px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.sos-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #0c1d2d;
+  color: rgba(255, 248, 232, 0.78);
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.sos-table th button {
+  min-height: 30px;
+  padding: 0 8px;
+}
+
+.sos-table td:first-child {
+  min-width: 190px;
+  color: #fff8e8;
+}
+
+.sos-table td strong,
+.sos-table td small {
+  display: block;
+}
+
+.sos-table td small {
+  color: rgba(255, 248, 232, 0.58);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.sos-table td {
+  color: rgba(255, 248, 232, 0.82);
+  font-weight: 850;
+}
+
+.sos-cell {
+  --sos-heat-bg: #253d52;
+  --sos-heat-border: rgba(255, 248, 232, 0.16);
+  --sos-heat-glow: rgba(198, 129, 40, 0.22);
+  --sos-text: #fff8e8;
+  --sos-glow-size: 18px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  min-height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--sos-heat-border);
+  background: var(--sos-heat-bg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  color: var(--sos-text);
+  font-weight: 950;
+  line-height: 1;
+  transition: border-color 140ms ease, box-shadow 140ms ease, filter 140ms ease, transform 140ms ease;
+  isolation: isolate;
+}
+
+.sos-cell:hover,
+.sos-cell:focus-visible {
+  z-index: 5;
+  border-color: rgba(255, 248, 232, 0.58);
+  box-shadow: 0 0 var(--sos-glow-size) var(--sos-heat-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  filter: saturate(1.08) brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.sos-cell[data-tooltip]:hover::after,
+.sos-cell[data-tooltip]:focus-visible::after {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  z-index: 20;
+  width: max-content;
+  max-width: 260px;
+  border: 1px solid rgba(255, 248, 232, 0.16);
+  border-radius: 8px;
+  background: rgba(3, 12, 22, 0.98);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.36);
+  color: #fff8e8;
+  content: attr(data-tooltip);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.45;
+  padding: 10px 11px;
+  text-align: left;
+  text-transform: none;
+  transform: translateX(-50%);
+  white-space: pre-line;
+  pointer-events: none;
+}
+
+.sos-cell[data-tooltip]:hover::before,
+.sos-cell[data-tooltip]:focus-visible::before {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 4px);
+  z-index: 21;
+  width: 10px;
+  height: 10px;
+  background: rgba(3, 12, 22, 0.98);
+  border-right: 1px solid rgba(255, 248, 232, 0.16);
+  border-bottom: 1px solid rgba(255, 248, 232, 0.16);
+  content: "";
+  transform: translateX(-50%) rotate(45deg);
+  pointer-events: none;
+}
+
+.sos-cell.tier-easy {
+  background: var(--sos-heat-bg);
+}
+
+.sos-cell.tier-good {
+  background: var(--sos-heat-bg);
+}
+
+.sos-cell.tier-hard {
+  background: var(--sos-heat-bg);
+}
+
+.sos-cell.tier-brutal {
+  background: var(--sos-heat-bg);
+  color: var(--sos-text);
+}
+
+.sos-cell.tier-bye {
+  border-color: rgba(255, 248, 232, 0.08);
+  background: #172230;
+  color: rgba(255, 248, 232, 0.46);
+  box-shadow: none;
+}
+
+@media (max-width: 900px) {
+  .sos-toolbar,
+  .sos-score-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .sos-week-toggles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 .league-health-panel {
   display: grid;
   gap: 12px;
@@ -3155,52 +3469,53 @@ code {
   order: 3;
 }
 
-#live > .pre-draft-panel {
+#live > .draft-league-override {
   order: 4;
 }
 
-#live > .live-hero-grid {
+#live > .draft-bridge-sync {
   order: 5;
 }
 
-#live > .alpha-strip {
+#live > .pre-draft-panel {
   order: 6;
 }
 
-#live > .war-room-command {
+#live > .live-hero-grid {
   order: 7;
 }
 
-#live > .draft-primary-grid {
+#live > .alpha-strip {
   order: 8;
 }
 
-#live > .all-teams-draft-panel {
+#live > .war-room-command {
   order: 9;
 }
 
-#live > .draft-room-cheatcode {
+#live > .draft-primary-grid {
   order: 10;
 }
 
 #live > .cheat-grid {
-  order: 10;
+  order: 11;
 }
 
+#live > .all-teams-draft-panel,
 #live > .live-tier-panel {
-  order: 10;
+  order: 11;
 }
 
 #live > .draft-feed-grid {
-  order: 11;
-}
-
-#live > .draft-order-panel {
   order: 12;
 }
 
+#live > .draft-order-panel {
+  order: 13;
+}
+
 #live > .draft-room-advanced {
-  order: 11;
+  order: 12;
 }
 
 .live-grid {
@@ -6528,4 +6843,220 @@ small,
   color: rgba(255, 253, 247, 0.94);
   font-weight: 850;
   text-shadow: 0 2px 12px rgba(0, 8, 7, 0.42);
+}
+
+/* Draft Room focus pass: keep the live page calm and draft-day actionable. */
+#live.panel.active {
+  gap: 12px;
+}
+
+#live .panel-head {
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+#live .panel-head h2 {
+  font-size: clamp(30px, 3vw, 42px);
+}
+
+#live-status.live-alert {
+  margin-bottom: 0;
+  padding: 14px 16px;
+}
+
+#live > .league-room-note {
+  margin-bottom: 0;
+  padding: 12px 16px;
+}
+
+#live > .draft-bridge-sync {
+  margin: 0;
+}
+
+#live > .draft-paste-sync,
+#live > .alpha-strip,
+#live > .all-teams-draft-panel,
+#live > .post-draft-panel,
+#live > .live-tier-panel {
+  display: none;
+}
+
+#live > .draft-league-override {
+  display: none;
+  margin: 0;
+}
+
+#live > .draft-league-override[data-bridge-ready="false"] {
+  display: grid;
+}
+
+#live > .pre-draft-panel {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  margin-bottom: 0;
+  padding: 14px 16px;
+}
+
+#live > .pre-draft-panel .pre-draft-checks {
+  display: none;
+}
+
+#live > .pre-draft-panel .pre-draft-copy p {
+  max-width: 920px;
+  margin-bottom: 0;
+}
+
+#live > .pre-draft-panel .pre-draft-actions {
+  align-self: center;
+}
+
+#live > .live-hero-grid {
+  grid-template-columns: minmax(280px, 1.25fr) minmax(180px, 0.7fr) minmax(220px, 0.9fr);
+  margin-bottom: 0;
+}
+
+#live > .live-hero-grid .live-stat:nth-of-type(2),
+#live > .live-hero-grid .live-stat:nth-of-type(3) {
+  display: none;
+}
+
+#live > .live-hero-grid .live-clock,
+#live > .live-hero-grid .live-stat,
+#live > .live-hero-grid .live-select {
+  min-height: 150px;
+}
+
+#live > .war-room-command.live-panel {
+  grid-template-columns: 1fr;
+  margin-bottom: 0;
+}
+
+#live > .war-room-command .war-room-signals,
+#live > .war-room-command .war-room-secondary {
+  display: none;
+}
+
+#live > .draft-core-grid {
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  margin-bottom: 0;
+}
+
+#live > .draft-room-advanced {
+  margin-top: 0;
+}
+
+@media (max-width: 980px) {
+  #live > .pre-draft-panel,
+  #live > .live-hero-grid,
+  #live > .draft-core-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #live > .pre-draft-panel .pre-draft-actions {
+    width: 100%;
+  }
+}
+
+/* Final heat-map skin: keep this late so cached legacy dashboard rules cannot win the cascade. */
+#live.sos-panel .sos-status-pill {
+  border-color: rgba(255, 248, 232, 0.12);
+  background: linear-gradient(135deg, rgba(9, 28, 45, 0.96), rgba(24, 44, 56, 0.92));
+  color: #fff8e8;
+}
+
+#live.sos-panel .sos-toolbar,
+#live.sos-panel .sos-table-shell {
+  border-color: rgba(255, 248, 232, 0.11);
+  background: #071523;
+  box-shadow: 0 18px 46px rgba(0, 14, 24, 0.22);
+}
+
+#live.sos-panel .sos-toolbar {
+  background: linear-gradient(135deg, rgba(7, 25, 40, 0.98), rgba(20, 44, 54, 0.92));
+}
+
+#live.sos-panel .sos-toolbar label,
+#live.sos-panel .sos-score-strip span,
+#live.sos-panel .sos-score-strip small {
+  color: rgba(255, 248, 232, 0.72);
+}
+
+#live.sos-panel .sos-toolbar select,
+#live.sos-panel .sos-toolbar input,
+#live.sos-panel .sos-week-toggles button,
+#live.sos-panel .sos-table th button {
+  border-color: rgba(255, 248, 232, 0.14);
+  background: rgba(3, 13, 24, 0.72);
+  color: #fff8e8;
+}
+
+#live.sos-panel .sos-week-toggles button.active {
+  border-color: rgba(226, 158, 60, 0.68);
+  background: #c98128;
+}
+
+#live.sos-panel .sos-score-strip article {
+  border-color: rgba(255, 248, 232, 0.1);
+  background: linear-gradient(145deg, #081a2c, #132d38);
+}
+
+#live.sos-panel .sos-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+#live.sos-panel .sos-table th {
+  background: #0c1d2d;
+  color: rgba(255, 248, 232, 0.78);
+}
+
+#live.sos-panel .sos-table td {
+  border-bottom-color: rgba(255, 248, 232, 0.07);
+  color: rgba(255, 248, 232, 0.82);
+}
+
+#live.sos-panel .sos-table td:first-child {
+  color: #fff8e8;
+}
+
+#live.sos-panel .sos-table td small {
+  color: rgba(255, 248, 232, 0.58);
+}
+
+#live.sos-panel .sos-cell {
+  width: 56px;
+  min-height: 30px;
+  border: 1px solid var(--sos-heat-border, rgba(255, 248, 232, 0.16));
+  background: var(--sos-heat-bg, #253d52);
+  color: var(--sos-text, #fff8e8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+#live.sos-panel .sos-cell.tier-easy,
+#live.sos-panel .sos-cell.tier-good,
+#live.sos-panel .sos-cell.tier-hard,
+#live.sos-panel .sos-cell.tier-brutal {
+  background: var(--sos-heat-bg, #253d52);
+  color: var(--sos-text, #fff8e8);
+}
+
+#live.sos-panel .sos-legend .tier-easy {
+  --sos-heat-bg: #da4530;
+  --sos-heat-border: rgba(218, 69, 48, 0.72);
+}
+
+#live.sos-panel .sos-legend .tier-good {
+  --sos-heat-bg: #ca8128;
+  --sos-heat-border: rgba(202, 129, 40, 0.72);
+  --sos-text: #1b1208;
+}
+
+#live.sos-panel .sos-legend .tier-hard {
+  --sos-heat-bg: #575b58;
+  --sos-heat-border: rgba(135, 139, 136, 0.72);
+}
+
+#live.sos-panel .sos-legend .tier-brutal {
+  --sos-heat-bg: #1f3e53;
+  --sos-heat-border: rgba(54, 93, 119, 0.72);
 }
