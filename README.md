@@ -298,9 +298,9 @@ Multi-customer and multi-league API calls can include a customer slug and a
 league key:
 
 ```text
-/api/live-draft?customer=katelyn
-/api/live-draft?customer=shayne&league=home
-/api/trade-history?customer=katelyn
+/api/live-draft?customer=demo-manager
+/api/live-draft?customer=sample-owner&league=home
+/api/trade-history?customer=demo-manager
 ```
 
 Customer dashboard URLs use the same slug and are treated as official customer
@@ -308,9 +308,9 @@ dashboards automatically, even when the slug is only defined in
 `FANTASY_IQ_CUSTOMERS_JSON` and not prelisted in `public/FantasyIQ/config.js`:
 
 ```text
-/FantasyIQ/?customer=katelyn
+/FantasyIQ/?customer=demo-manager
 /FantasyIQ/?customer=new-customer-slug
-/FantasyIQ/?customer=shayne&league=home
+/FantasyIQ/?customer=sample-owner&league=home
 ```
 
 Any requested customer slug enables customer access handling, removes demo
@@ -326,10 +326,10 @@ to an object keyed by customer slug:
 
 ```json
 {
-  "katelyn": {
-    "customerName": "Katelyn Holladay",
+  "demo-manager": {
+    "customerName": "Demo Manager",
     "teamId": 5,
-    "teamName": "KatAttack",
+    "teamName": "Sample Team",
     "leagueId": 584856941,
     "season": 2026,
     "status": "configured",
@@ -352,8 +352,8 @@ a top league switcher and all API calls include the active `league` key.
 
 ```json
 {
-  "shayne": {
-    "customerName": "Shayne Holladay",
+  "sample-owner": {
+    "customerName": "Demo Owner",
     "status": "configured",
     "accessCode": "customer_code_here",
     "defaultLeague": "home",
@@ -362,7 +362,7 @@ a top league switcher and all API calls include the active `league` key.
         "label": "Home League",
         "leagueId": 123456789,
         "teamId": 1,
-        "teamName": "Gronk if you like TDs",
+        "teamName": "Sample Team",
         "season": 2026,
         "leagueSettings": {
           "teamCount": 12,

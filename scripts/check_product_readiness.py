@@ -26,7 +26,7 @@ SETUP_VALIDATE_URL = os.environ.get(
     "FANTASYIQ_SETUP_VALIDATE_URL",
     f"{SITE_URL}/api/setup-validate?leagueId=584856941&teamId=5&season=2026",
 )
-CUSTOMER_STATUS_URL = os.environ.get("FANTASYIQ_CUSTOMER_STATUS_URL", f"{SITE_URL}/api/customer-status?customer=katelyn")
+CUSTOMER_STATUS_URL = os.environ.get("FANTASYIQ_CUSTOMER_STATUS_URL", f"{SITE_URL}/api/customer-status")
 WEBHOOK_URL = os.environ.get("FANTASYIQ_WEBHOOK_URL", f"{SITE_URL}/api/stripe-webhook")
 SUCCESS_URL = os.environ.get("FANTASYIQ_SUCCESS_URL", f"{SITE_URL}/success.html")
 PASSWORD_RESET_URL = os.environ.get("FANTASYIQ_PASSWORD_RESET_URL", f"{SITE_URL}/api/customer-password-reset")

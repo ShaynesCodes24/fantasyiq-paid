@@ -12,6 +12,8 @@
     "test:phase4": "tsc -p tsconfig.json --noEmit",
     "test:phase5": "tsc -p tsconfig.json --noEmit",
     "test:visual": "node scripts/visual_smoke.js",
+    "test:api": "python scripts/check_api_imports.py",
+    "predeploy": "npm run typecheck && npm run test:api && npm run test:readiness",
     "test:readiness": "python scripts/check_product_readiness.py"
   },
   "devDependencies": {

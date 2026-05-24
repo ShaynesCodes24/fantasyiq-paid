@@ -17,6 +17,8 @@ const files = [
   path.join("data", "boards_data.js"),
 ];
 
+const directories = ["js"];
+
 for (const relativePath of files) {
   const source = path.join(sourceRoot, relativePath);
   const target = path.join(mirrorRoot, relativePath);
@@ -27,4 +29,27 @@ for (const relativePath of files) {
   fs.copyFileSync(source, target);
 }
 
-console.log(`Synced ${files.length} dashboard mirror files from public/FantasyIQ.`);
+for (const relativePath of directories) {
+  const source = path.join(sourceRoot, relativePath);
+  const target = path.join(mirrorRoot, relativePath);
+  if (!fs.existsSync(source)) {
+    throw new Error(`Missing dashboard source directory: ${source}`);
+  }
+  fs.rmSync(target, { recursive: true, force: true });
+  copyDirectory(source, target);
+}
+
+function copyDirectory(from, to) {
+  fs.mkdirSync(to, { recursive: true });
+  for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+    const sourcePath = path.join(from, entry.name);
+    const targetPath = path.join(to, entry.name);
+    if (entry.isDirectory()) {
+      copyDirectory(sourcePath, targetPath);
+    } else {
+      fs.copyFileSync(sourcePath, targetPath);
+    }
+  }
+}
+
+console.log(`Synced ${files.length} dashboard mirror files and ${directories.length} dashboard directories from public/FantasyIQ.`);

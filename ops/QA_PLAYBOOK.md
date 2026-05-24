@@ -34,7 +34,7 @@ python scripts\check_email_delivery.py
 Dashboard:
 - `/FantasyIQ/` loads without console-breaking errors.
 - Public demo still shows subscribe messaging.
-- Customer URL with `?customer=shayne` or a configured customer prompts for access when required.
+- Customer URL with `?customer=sample-owner` or a configured customer prompts for access when required.
 - Sign in works with a valid access code.
 - Sign out locks the customer dashboard again.
 - Refresh keeps signed-in customer dashboards signed in.

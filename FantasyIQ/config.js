@@ -49,15 +49,15 @@ window.FANTASY_IQ_CONFIG = {
     source: "MyFantasyIQ default profile",
   },
   loadouts: {
-    katelyn: {
-      customerName: "Katelyn Holladay",
-      customerTeamName: "KatAttack",
+    "demo-manager": {
+      customerName: "Demo Manager",
+      customerTeamName: "Sample Team",
       customerTeamId: "5",
       isDemoPreview: false,
       showSubscribeButton: false,
       draftCardLabel: "Customer Dashboard",
       draftCardValue: "Active",
-      draftCardNote: "Katelyn Holladay / KatAttack",
+      draftCardNote: "Demo Manager / Sample Team",
       demoLabel: "Customer dashboard",
       demoMessage: "Signed-in customer league loaded.",
       leagueSettings: {
@@ -70,17 +70,17 @@ window.FANTASY_IQ_CONFIG = {
         source: "Customer setup profile",
       },
       heroSubtitle:
-        "Katelyn's KatAttack command center for matchup leverage, player values, mock tracking, and trade discipline.",
+        "Demo Manager's Sample Team command center for matchup leverage, player values, mock tracking, and trade discipline.",
     },
-    shayne: {
-      customerName: "Shayne Holladay",
-      customerTeamName: "Gronk if you like TDs",
+    "sample-owner": {
+      customerName: "Demo Owner",
+      customerTeamName: "Demo League",
       customerTeamId: "1",
       isDemoPreview: false,
       showSubscribeButton: false,
       draftCardLabel: "Owner Dashboard",
       draftCardValue: "Owner",
-      draftCardNote: "Shayne Holladay / Gronk if you like TDs",
+      draftCardNote: "Demo Owner / Demo League",
       demoLabel: "Owner dashboard",
       demoMessage: "Signed-in owner league loaded.",
       leagueSettings: {
@@ -93,7 +93,7 @@ window.FANTASY_IQ_CONFIG = {
         source: "Customer setup profile",
       },
       heroSubtitle:
-        "Shayne's Gronk if you like TDs command center for matchup leverage, player values, mock tracking, and trade discipline.",
+        "Demo Owner's Demo League command center for matchup leverage, player values, mock tracking, and trade discipline.",
     },
   },
 };
