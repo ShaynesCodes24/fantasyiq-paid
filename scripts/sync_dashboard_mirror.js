@@ -20,6 +20,9 @@ const files = [
 for (const relativePath of files) {
   const source = path.join(sourceRoot, relativePath);
   const target = path.join(mirrorRoot, relativePath);
+  if (!fs.existsSync(source)) {
+    throw new Error(`Missing dashboard source file: ${source}`);
+  }
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.copyFileSync(source, target);
 }

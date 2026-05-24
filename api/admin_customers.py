@@ -321,6 +321,7 @@ def admin_action(raw: dict[str, Any]) -> dict[str, Any]:
                     "rows": len(refreshed.get("rows") or []),
                     "sources": refreshed.get("sources") or {},
                     "cache": refreshed.get("cache") or {},
+                    "providerMeta": refreshed.get("providerMeta") or {},
                 },
             )
         except Exception:
@@ -332,6 +333,7 @@ def admin_action(raw: dict[str, Any]) -> dict[str, Any]:
             "rows": len(refreshed.get("rows") or []),
             "sources": refreshed.get("sources") or {},
             "cache": refreshed.get("cache") or {},
+            "providerMeta": refreshed.get("providerMeta") or {},
             "updatedAt": refreshed.get("updatedAt"),
             "refreshCadence": refreshed.get("refreshCadence"),
             "syncedAt": utc_now(),

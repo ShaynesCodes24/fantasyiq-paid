@@ -20,11 +20,6 @@
       "permanent": false
     },
     {
-      "source": "/FantasyIQ",
-      "destination": "/FantasyIQ/",
-      "permanent": false
-    },
-    {
       "source": "/fantasyiq",
       "destination": "/FantasyIQ/",
       "permanent": false

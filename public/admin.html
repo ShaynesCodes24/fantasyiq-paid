@@ -348,9 +348,13 @@
         }
         if (action === "refresh_sos_heatmap") {
           const sources = payload.sources || {};
+          const odds = payload.providerMeta?.odds || {};
+          const oddsDetail = odds.configured
+            ? `${escapeHtml(odds.combinedTeams || 0)} teams / ${escapeHtml(odds.liveEvents || 0)} live events / ${escapeHtml(odds.historicalSnapshots || 0)} historical snapshots`
+            : "odds not configured";
           result.insertAdjacentHTML(
             "afterbegin",
-            `<div class="result-panel"><strong>SoS Heat Map refreshed.</strong><p>${escapeHtml(payload.rows || 0)} rows / ${escapeHtml(payload.cache?.layer || "fresh")} / ${escapeHtml(sources.odds || "odds source unknown")}</p></div>`,
+            `<div class="result-panel"><strong>SoS Heat Map refreshed.</strong><p>${escapeHtml(payload.rows || 0)} rows / ${escapeHtml(payload.cache?.layer || "fresh")} / ${escapeHtml(sources.odds || "odds source unknown")} / ${oddsDetail}</p></div>`,
           );
         }
       }

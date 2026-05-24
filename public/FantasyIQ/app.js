@@ -4244,6 +4244,12 @@ let sosApiData = null;
 let sosApiLoading = false;
 let sosApiError = "";
 sosRuntimeReady = true;
+window.setTimeout(() => {
+  if (document.querySelector("#live")?.classList.contains("active")) {
+    renderSosHeatMap();
+    loadSosHeatMap();
+  }
+}, 0);
 
 function sosHash(value = "") {
   let hash = 0;
@@ -4293,6 +4299,27 @@ function sosTierLabel(score, apiTier = "") {
   return score <= 1.75 ? "Easy" : score <= 2.5 ? "Good" : score <= 3.25 ? "Tough" : "Brutal";
 }
 
+function sosNumber(value, fallback = null) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function sosFormat(value, digits = 1, fallback = "N/A") {
+  const number = sosNumber(value);
+  return number === null ? fallback : number.toFixed(digits);
+}
+
+function sosPercent(value, fallback = "N/A") {
+  const number = sosNumber(value);
+  return number === null ? fallback : `${Math.round(number * 100)}%`;
+}
+
+function sosMoneyline(value) {
+  const number = sosNumber(value);
+  if (number === null) return "N/A";
+  return number > 0 ? `+${Math.round(number)}` : `${Math.round(number)}`;
+}
+
 function sosNormalizePosition(value = "") {
   const position = String(value || "").toUpperCase().replace(/[^A-Z/]/g, "");
   if (position.includes("DST") || position.includes("D/ST")) return "DST";
@@ -4336,13 +4363,33 @@ function sosRows() {
       const scores = weeks.map((week) => {
         const apiCell = sourceCells.find((cell) => Number(cell.week) === Number(week));
         if (apiCell) {
-          const score = typeof apiCell.score === "number" ? apiCell.score : 2.5;
-          return { week, opponent: apiCell.opponent || "BYE", score, apiTier: apiCell.tier || "" };
+          const score = sosNumber(apiCell.score);
+          const fallbackHeat = score === null ? null : (5 - score) * 6.5;
+          return {
+            week,
+            opponent: apiCell.opponent || "BYE",
+            score,
+            apiTier: apiCell.tier || "",
+            fpa: sosNumber(apiCell.fpa),
+            fpaScore: sosNumber(apiCell.fpaScore),
+            heatValue: sosNumber(apiCell.heatValue, sosNumber(apiCell.impliedTotal, fallbackHeat)),
+            impliedTotal: sosNumber(apiCell.impliedTotal),
+            opponentImpliedTotal: sosNumber(apiCell.opponentImpliedTotal),
+            gameTotal: sosNumber(apiCell.gameTotal),
+            spread: sosNumber(apiCell.spread),
+            moneyline: sosNumber(apiCell.moneyline),
+            noVigWinProbability: sosNumber(apiCell.noVigWinProbability),
+            oddsSource: apiCell.oddsSource || sourceRow.oddsSource || "",
+            bookmakers: sosNumber(apiCell.bookmakers),
+            oddsSamples: sosNumber(apiCell.oddsSamples),
+          };
         }
-        return { week, opponent: sosOpponent(team, week), score: sosScore(team, position, week) };
+        const score = sosScore(team, position, week);
+        return { week, opponent: sosOpponent(team, week), score, heatValue: (5 - score) * 6.5, oddsSource: "modeled fallback" };
       });
-      const avg = scores.reduce((sum, item) => sum + item.score, 0) / scores.length;
-      const brutal = scores.filter((item) => item.score >= 3).length;
+      const validScores = scores.map((item) => item.score).filter((score) => Number.isFinite(score));
+      const avg = validScores.length ? validScores.reduce((sum, score) => sum + score, 0) / validScores.length : 2.5;
+      const brutal = validScores.filter((score) => score >= 3).length;
       rows.push({ team, position, player, rank: Number(boardRow?.Rank || 999), scores, avg, brutal, source: sourceRow.source || "modeled" });
   });
   return rows.sort((left, right) => {
@@ -4353,6 +4400,80 @@ function sosRows() {
     if (sosSort.key === "brutal") return direction * (right.brutal - left.brutal || right.avg - left.avg);
     return direction * (left.avg - right.avg || left.rank - right.rank);
   });
+}
+
+function sosHeatValues(rows) {
+  return rows
+    .flatMap((row) => row.scores.map((item) => item.heatValue))
+    .filter((value) => Number.isFinite(value))
+    .sort((left, right) => left - right);
+}
+
+function sosPercentileRank(value, values) {
+  if (!Number.isFinite(value) || !values.length) return 0.5;
+  if (values.length === 1) return 0.5;
+  let below = 0;
+  while (below < values.length && values[below] < value) below += 1;
+  let equal = below;
+  while (equal < values.length && values[equal] === value) equal += 1;
+  return Math.max(0, Math.min(1, (below + (equal - below) / 2) / (values.length - 1)));
+}
+
+function sosInterpolateColor(left, right, amount) {
+  return left.map((channel, index) => Math.round(channel + (right[index] - channel) * amount));
+}
+
+function sosHeatColor(percentile) {
+  const stops = [
+    [0, [13, 27, 46]],
+    [0.28, [31, 62, 83]],
+    [0.52, [87, 91, 88]],
+    [0.74, [202, 129, 40]],
+    [1, [218, 69, 48]],
+  ];
+  const pct = Math.max(0, Math.min(1, percentile));
+  for (let index = 1; index < stops.length; index += 1) {
+    const [stop, color] = stops[index];
+    const [previousStop, previousColor] = stops[index - 1];
+    if (pct <= stop) {
+      const amount = (pct - previousStop) / (stop - previousStop || 1);
+      return sosInterpolateColor(previousColor, color, amount).join(", ");
+    }
+  }
+  return stops[stops.length - 1][1].join(", ");
+}
+
+function sosCellStyle(item, heatValues) {
+  if (item.apiTier === "bye") return "";
+  const percentile = sosPercentileRank(item.heatValue, heatValues);
+  const color = sosHeatColor(percentile);
+  const glow = Math.round(10 + percentile * 28);
+  const text = percentile > 0.6 && percentile < 0.86 ? "#1b1208" : "#fff8e8";
+  return `--sos-heat-bg: rgb(${color}); --sos-heat-border: rgba(${color}, 0.72); --sos-heat-glow: rgba(${color}, ${percentile > 0.72 ? 0.46 : 0.2}); --sos-text: ${text}; --sos-glow-size: ${glow}px;`;
+}
+
+function sosSourceLabel(value = "") {
+  const clean = String(value || "").replace(/[-_]/g, " ").trim();
+  if (!clean) return "Fallback";
+  return clean.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function sosCellTooltip(row, item, percentile) {
+  if (item.apiTier === "bye") return `${row.team} Week ${item.week}\nBye`;
+  const lines = [
+    `${row.player} (${row.team} ${row.position})`,
+    `Week ${item.week} vs ${item.opponent}`,
+    `Heat percentile: ${Math.round(percentile * 100)}`,
+    `Implied team total: ${sosFormat(item.impliedTotal)}`,
+    `Game total: ${sosFormat(item.gameTotal)}`,
+    `Spread: ${sosFormat(item.spread, 1)}`,
+    `Moneyline: ${sosMoneyline(item.moneyline)}`,
+    `No-vig win prob: ${sosPercent(item.noVigWinProbability)}`,
+    `FPA: ${sosFormat(item.fpa, 1)}`,
+    `Source: ${sosSourceLabel(item.oddsSource)}`,
+  ];
+  if (Number.isFinite(item.bookmakers)) lines.push(`Books: ${sosFormat(item.bookmakers, 0)}`);
+  return lines.join("\n");
 }
 
 function loadSosHeatMap(force = false) {
@@ -4387,10 +4508,11 @@ function renderSosHeatMap() {
   if (!sosTableHead || !sosTableBody) return;
   const weeks = sosWeeks();
   const rows = sosRows();
+  const heatValues = sosHeatValues(rows);
   const weekLabel = weeks.length === 1 ? `Week ${weeks[0]}` : `Weeks ${weeks[0]}-${weeks[weeks.length - 1]}`;
   if (sosSelectedSummary) {
     const sourceLabel = sosApiData
-      ? "ESPN/Sleeper data"
+      ? "market-adjusted projections"
       : sosApiLoading
         ? "loading real data"
         : sosApiError
@@ -4416,12 +4538,23 @@ function renderSosHeatMap() {
   </tr>`;
   sosTableBody.innerHTML = rows.slice(0, 140).map((row) => {
     const ease = Math.round((5 - row.avg) * 25);
+    const rowAverageTotal = row.scores
+      .map((item) => item.impliedTotal)
+      .filter((value) => Number.isFinite(value));
+    const averageTotal = rowAverageTotal.length
+      ? rowAverageTotal.reduce((sum, value) => sum + value, 0) / rowAverageTotal.length
+      : null;
     return `<tr>
       <td><strong>${htmlEscape(row.player)}</strong><small>${htmlEscape(SOS_TEAM_NAMES[row.team] || row.team)}</small></td>
       <td>${htmlEscape(row.team)}</td>
       <td>${htmlEscape(row.position)}</td>
-      ${row.scores.map((item) => `<td><span class="sos-cell ${sosTier(item.score, item.apiTier)}" title="${htmlEscape(sosTierLabel(item.score, item.apiTier))}${item.apiTier === "bye" ? "" : ` vs ${htmlEscape(item.opponent)}`}">${htmlEscape(item.opponent)}</span></td>`).join("")}
-      <td><strong>${ease}</strong></td>
+      ${row.scores.map((item) => {
+        const percentile = sosPercentileRank(item.heatValue, heatValues);
+        const tooltip = sosCellTooltip(row, item, percentile);
+        const label = item.apiTier === "bye" ? "BYE" : item.opponent;
+        return `<td><span class="sos-cell ${sosTier(item.score ?? 2.5, item.apiTier)}" style="${sosCellStyle(item, heatValues)}" data-tooltip="${htmlEscape(tooltip)}" title="${htmlEscape(tooltip)}">${htmlEscape(label)}</span></td>`;
+      }).join("")}
+      <td><strong>${ease}</strong><small>${averageTotal === null ? "No total" : `${sosFormat(averageTotal)} ITT`}</small></td>
       <td>${row.brutal}</td>
     </tr>`;
   }).join("") || `<tr><td colspan="${weeks.length + 5}">No players match this filter.</td></tr>`;

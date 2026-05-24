@@ -70,7 +70,7 @@ window.FANTASY_IQ_CONFIG = {
         source: "Customer setup profile",
       },
       heroSubtitle:
-        "Katelyn's KatAttack command center for live draft sync, player values, mock tracking, and trade discipline.",
+        "Katelyn's KatAttack command center for matchup leverage, player values, mock tracking, and trade discipline.",
     },
     shayne: {
       customerName: "Shayne Holladay",
@@ -93,7 +93,7 @@ window.FANTASY_IQ_CONFIG = {
         source: "Customer setup profile",
       },
       heroSubtitle:
-        "Shayne's Gronk if you like TDs command center for live draft sync, player values, mock tracking, and trade discipline.",
+        "Shayne's Gronk if you like TDs command center for matchup leverage, player values, mock tracking, and trade discipline.",
     },
   },
 };

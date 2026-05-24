@@ -31,7 +31,7 @@ def database_url() -> str:
 def load_psycopg() -> Any | None:
     try:
         import psycopg  # type: ignore
-    except ModuleNotFoundError:
+    except Exception:
         return None
     return psycopg
 
