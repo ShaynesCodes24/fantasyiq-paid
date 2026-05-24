@@ -199,27 +199,59 @@ def email_readiness() -> dict[str, Any]:
         return {"provider": "resend", "configured": False, "error": str(exc)}
 
 
+def customer_key(row: dict[str, Any]) -> str:
+    for field in ("slug", "customerSlug", "customer_slug"):
+        value = str(row.get(field) or "").strip().lower()
+        if value:
+            return f"slug:{value}"
+    dashboard = str(row.get("dashboard_url") or row.get("dashboardUrl") or "").strip().lower()
+    if dashboard:
+        parsed = urllib.parse.urlparse(dashboard)
+        requested = urllib.parse.parse_qs(parsed.query).get("customer", [""])[0]
+        if requested:
+            return f"slug:{requested.strip().lower()}"
+        return f"dashboard:{dashboard}"
+    for field in ("email", "customerEmail"):
+        value = str(row.get(field) or "").strip().lower()
+        if value:
+            return f"email:{value}"
+    return f"row:{id(row)}"
+
+
+def customer_totals(*sources: list[dict[str, Any]]) -> tuple[int, int]:
+    statuses: dict[str, set[str]] = {}
+    for rows in sources:
+        for row in rows:
+            statuses.setdefault(customer_key(row), set()).add(str(row.get("status") or "").strip().lower())
+    configured_statuses = {"configured", "active"}
+    configured = 0
+    needs_setup = 0
+    for row_statuses in statuses.values():
+        if row_statuses & configured_statuses:
+            configured += 1
+        else:
+            needs_setup += 1
+    return configured, needs_setup
+
+
 def admin_payload() -> dict[str, Any]:
     csv_rows = csv_customers()
     registry_rows = registry_customers()
     database_status, database_rows = database_customers()
     ops_status, ops_events = database_ops()
-    configured_count = len([row for row in csv_rows if row.get("status") == "configured"])
-    configured_count += len([row for row in registry_rows if row.get("status") == "configured"])
-    configured_count += len([row for row in database_rows if row.get("status") == "configured"])
-    needs_setup = [row for row in csv_rows if row.get("status") != "configured"]
-    needs_setup += [row for row in database_rows if row.get("status") != "configured"]
+    configured_count, needs_setup_count = customer_totals(csv_rows, registry_rows, database_rows)
     return {
         "ok": True,
         "syncedAt": utc_now(),
         "csvCustomerCount": len(csv_rows),
+        "registryCustomerCount": len(registry_rows),
         "databaseCustomerCount": len(database_rows),
         "database": database_status,
         "email": email_readiness(),
         "opsSummary": ops_status,
         "opsEvents": ops_events,
         "configuredCount": configured_count,
-        "needsSetupCount": len(needs_setup),
+        "needsSetupCount": needs_setup_count,
         "customers": csv_rows,
         "databaseCustomers": database_rows,
         "registry": registry_rows,
