@@ -7,7 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
     <link rel="shortcut icon" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260521-premium-3" />
-    <link rel="stylesheet" href="./styles.css?v=20260523_heatmap_market_1" />
+    <link rel="stylesheet" href="./styles.css?v=20260524_heatmap_upgrade_1" />
   </head>
   <body>
     <div class="field-overlay" aria-hidden="true">
@@ -417,6 +417,15 @@
                 </select>
               </label>
               <label>
+                View
+                <select id="sos-view">
+                  <option value="all">All edges</option>
+                  <option value="targets">Targets</option>
+                  <option value="fades">Fades</option>
+                  <option value="streamers">Streamers</option>
+                </select>
+              </label>
+              <label>
                 Player or Team
                 <input id="sos-player-search" type="search" placeholder="Search player or NFL team" />
               </label>
@@ -456,11 +465,13 @@
                 <small>Customize to match your league</small>
               </article>
               <article>
-                <span>Coverage</span>
-                <strong>QB RB WR TE D/ST K</strong>
-                <small>Position-specific matchup scoring</small>
+                <span>Market Layer</span>
+                <strong id="sos-market-status">Loading</strong>
+                <small id="sos-market-detail">Position-specific matchup scoring</small>
               </article>
             </div>
+
+            <div class="sos-insights" id="sos-insights" aria-label="Heat map insights"></div>
 
             <div class="sos-legend" aria-label="Heat map legend">
               <span class="sos-cell tier-easy">Easy</span>
@@ -1220,6 +1231,6 @@
     </main>
 
     <script src="./config.js?v=20260522_live_override_3"></script>
-    <script src="./app.js?v=20260523_heatmap_market_1"></script>
+    <script src="./app.js?v=20260524_heatmap_upgrade_1"></script>
   </body>
 </html>

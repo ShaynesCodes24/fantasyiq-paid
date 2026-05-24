@@ -1172,7 +1172,7 @@ textarea {
 
 .sos-toolbar {
   display: grid;
-  grid-template-columns: minmax(130px, 0.6fr) minmax(220px, 1fr) minmax(160px, 0.75fr) auto;
+  grid-template-columns: minmax(112px, 0.5fr) minmax(132px, 0.55fr) minmax(220px, 1fr) minmax(150px, 0.7fr) auto;
   gap: 10px;
   align-items: end;
   border: 1px solid rgba(255, 248, 232, 0.1);
@@ -1265,6 +1265,62 @@ textarea {
   white-space: nowrap;
 }
 
+.sos-insights {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sos-insight-card {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid rgba(255, 248, 232, 0.1);
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: rgba(5, 18, 31, 0.82);
+  padding: 12px 13px;
+}
+
+.sos-insight-card span {
+  color: rgba(255, 248, 232, 0.62);
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.sos-insight-card strong {
+  overflow: hidden;
+  color: #fff8e8;
+  font-size: 15px;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sos-insight-card small {
+  color: rgba(255, 248, 232, 0.68);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.sos-insight-target {
+  border-left-color: #46b276;
+}
+
+.sos-insight-stream {
+  border-left-color: #d6b84d;
+}
+
+.sos-insight-fade {
+  border-left-color: #d95b48;
+}
+
+.sos-insight-neutral {
+  border-left-color: rgba(255, 248, 232, 0.32);
+}
+
 .sos-legend {
   display: flex;
   flex-wrap: wrap;
@@ -1305,7 +1361,7 @@ textarea {
 
 .sos-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 1120px;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 13px;
@@ -1354,6 +1410,70 @@ textarea {
 .sos-table td {
   color: rgba(255, 248, 232, 0.82);
   font-weight: 850;
+}
+
+.sos-mini-bars {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 6px;
+  align-items: end;
+  gap: 3px;
+  width: max-content;
+  min-width: 54px;
+  height: 42px;
+}
+
+.sos-mini-bars span {
+  display: block;
+  width: 6px;
+  height: var(--sos-bar-h, 16px);
+  min-height: 7px;
+  border-radius: 999px;
+  background: var(--sos-bar-bg, #657384);
+  box-shadow: 0 0 12px rgba(255, 248, 232, 0.08);
+}
+
+.sos-mini-bars span.bye {
+  height: 7px;
+  background: rgba(255, 248, 232, 0.18);
+  box-shadow: none;
+}
+
+.sos-call {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border: 1px solid rgba(255, 248, 232, 0.14);
+  border-radius: 999px;
+  padding: 0 9px;
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sos-call-target {
+  border-color: rgba(70, 178, 118, 0.42);
+  background: rgba(70, 178, 118, 0.16);
+  color: #9ff0bf;
+}
+
+.sos-call-stream {
+  border-color: rgba(214, 184, 77, 0.44);
+  background: rgba(214, 184, 77, 0.16);
+  color: #ffe38a;
+}
+
+.sos-call-fade {
+  border-color: rgba(217, 91, 72, 0.46);
+  background: rgba(217, 91, 72, 0.15);
+  color: #ffb2a6;
+}
+
+.sos-call-neutral {
+  border-color: rgba(255, 248, 232, 0.13);
+  background: rgba(255, 248, 232, 0.06);
+  color: rgba(255, 248, 232, 0.74);
 }
 
 .sos-cell {
@@ -1455,6 +1575,7 @@ textarea {
 
 @media (max-width: 900px) {
   .sos-toolbar,
+  .sos-insights,
   .sos-score-strip {
     grid-template-columns: 1fr;
   }
@@ -6972,6 +7093,7 @@ small,
 }
 
 #live.sos-panel .sos-toolbar {
+  grid-template-columns: minmax(112px, 0.5fr) minmax(132px, 0.55fr) minmax(220px, 1fr) minmax(150px, 0.7fr) auto;
   background: linear-gradient(135deg, rgba(7, 25, 40, 0.98), rgba(20, 44, 54, 0.92));
 }
 
@@ -6998,6 +7120,31 @@ small,
 #live.sos-panel .sos-score-strip article {
   border-color: rgba(255, 248, 232, 0.1);
   background: linear-gradient(145deg, #081a2c, #132d38);
+}
+
+#live.sos-panel .sos-insights {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+#live.sos-panel .sos-insight-card {
+  border-color: rgba(255, 248, 232, 0.1);
+  background: rgba(5, 18, 31, 0.82);
+}
+
+#live.sos-panel .sos-insight-target {
+  border-left-color: #46b276;
+}
+
+#live.sos-panel .sos-insight-stream {
+  border-left-color: #d6b84d;
+}
+
+#live.sos-panel .sos-insight-fade {
+  border-left-color: #d95b48;
+}
+
+#live.sos-panel .sos-insight-neutral {
+  border-left-color: rgba(255, 248, 232, 0.32);
 }
 
 #live.sos-panel .sos-table {
@@ -7040,6 +7187,38 @@ small,
   color: var(--sos-text, #fff8e8);
 }
 
+#live.sos-panel .sos-mini-bars span {
+  background: var(--sos-bar-bg, #657384);
+}
+
+#live.sos-panel .sos-mini-bars span.bye {
+  background: rgba(255, 248, 232, 0.18);
+}
+
+#live.sos-panel .sos-call-target {
+  border-color: rgba(70, 178, 118, 0.42);
+  background: rgba(70, 178, 118, 0.16);
+  color: #9ff0bf;
+}
+
+#live.sos-panel .sos-call-stream {
+  border-color: rgba(214, 184, 77, 0.44);
+  background: rgba(214, 184, 77, 0.16);
+  color: #ffe38a;
+}
+
+#live.sos-panel .sos-call-fade {
+  border-color: rgba(217, 91, 72, 0.46);
+  background: rgba(217, 91, 72, 0.15);
+  color: #ffb2a6;
+}
+
+#live.sos-panel .sos-call-neutral {
+  border-color: rgba(255, 248, 232, 0.13);
+  background: rgba(255, 248, 232, 0.06);
+  color: rgba(255, 248, 232, 0.74);
+}
+
 #live.sos-panel .sos-legend .tier-easy {
   --sos-heat-bg: #da4530;
   --sos-heat-border: rgba(218, 69, 48, 0.72);
@@ -7059,4 +7238,11 @@ small,
 #live.sos-panel .sos-legend .tier-brutal {
   --sos-heat-bg: #1f3e53;
   --sos-heat-border: rgba(54, 93, 119, 0.72);
+}
+
+@media (max-width: 900px) {
+  #live.sos-panel .sos-toolbar,
+  #live.sos-panel .sos-insights {
+    grid-template-columns: 1fr;
+  }
 }

@@ -180,6 +180,7 @@ const draftWatchlistInput = document.querySelector("#draft-watchlist-input");
 const draftWatchlistAdd = document.querySelector("#draft-watchlist-add");
 const draftWatchlistList = document.querySelector("#draft-watchlist-list");
 const sosPosition = document.querySelector("#sos-position");
+const sosView = document.querySelector("#sos-view");
 const sosPlayerSearch = document.querySelector("#sos-player-search");
 const sosRange = document.querySelector("#sos-range");
 const sosWeekToggles = document.querySelector("#sos-week-toggles");
@@ -189,6 +190,9 @@ const sosSelectedSummary = document.querySelector("#sos-selected-summary");
 const sosBestStretch = document.querySelector("#sos-best-stretch");
 const sosBrutalStretch = document.querySelector("#sos-brutal-stretch");
 const sosPlayoffEdge = document.querySelector("#sos-playoff-edge");
+const sosMarketStatus = document.querySelector("#sos-market-status");
+const sosMarketDetail = document.querySelector("#sos-market-detail");
+const sosInsights = document.querySelector("#sos-insights");
 const leagueHealthPanel = document.querySelector("#league-health-panel");
 const leagueHealthTitle = document.querySelector("#league-health-title");
 const leagueHealthScore = document.querySelector("#league-health-score");
@@ -4341,7 +4345,85 @@ function primaryRowsByTeamPosition() {
   return byKey;
 }
 
-function sosRows() {
+function sosAverage(values, fallback = null) {
+  const clean = values.filter((value) => Number.isFinite(value));
+  return clean.length ? clean.reduce((sum, value) => sum + value, 0) / clean.length : fallback;
+}
+
+function sosHasMarketSignal(item) {
+  const source = String(item?.oddsSource || "").toLowerCase();
+  return Boolean(
+    Number.isFinite(item?.impliedTotal)
+      || Number.isFinite(item?.opponentImpliedTotal)
+      || Number.isFinite(item?.gameTotal)
+      || Number.isFinite(item?.spread)
+      || Number.isFinite(item?.moneyline)
+      || source.includes("odds")
+      || source.includes("market")
+      || source.includes("historical")
+  );
+}
+
+function sosRowMetrics(scores, position) {
+  const playable = scores.filter((item) => item.apiTier !== "bye" && Number.isFinite(item.score));
+  const validScores = playable.map((item) => item.score);
+  const avg = sosAverage(validScores, 2.5);
+  const ease = clampNumber(Math.round((5 - avg) * 25), 0, 100);
+  const easy = validScores.filter((score) => score <= 2.05).length;
+  const brutal = validScores.filter((score) => score >= 3.25).length;
+  const averageTotal = sosAverage(scores.map((item) => item.impliedTotal));
+  const marketCells = scores.filter(sosHasMarketSignal).length;
+  const sortedByScore = [...playable].sort((left, right) => left.score - right.score);
+  const bestCell = sortedByScore[0] || null;
+  const worstCell = sortedByScore[sortedByScore.length - 1] || null;
+  const windowSize = Math.max(1, validScores.length);
+  const easyNeeded = Math.max(1, Math.ceil(windowSize * 0.28));
+  const brutalLimit = Math.max(1, Math.floor(windowSize * 0.22));
+  const marketBoost = Number.isFinite(averageTotal) ? clampNumber((averageTotal - 21) * 1.4, -8, 10) : 0;
+  const edgeScore = clampNumber(Math.round(ease + easy * 3.5 - brutal * 6 + marketBoost), 0, 100);
+  const streamerPosition = ["DST", "K", "TE"].includes(position);
+  const isStreamer = streamerPosition && edgeScore >= 62 && easy >= easyNeeded && brutal <= brutalLimit;
+  const isTarget = edgeScore >= 68 && brutal <= Math.max(2, brutalLimit + 1);
+  const isFade = edgeScore <= 48 || brutal >= Math.max(2, Math.ceil(windowSize * 0.34));
+  let call = "Neutral";
+  let callClass = "neutral";
+  if (isFade) {
+    call = "Fade risk";
+    callClass = "fade";
+  } else if (isStreamer) {
+    call = "Stream";
+    callClass = "stream";
+  } else if (isTarget) {
+    call = "Draft bump";
+    callClass = "target";
+  }
+  return {
+    avg,
+    ease,
+    easy,
+    brutal,
+    averageTotal,
+    marketCells,
+    bestCell,
+    worstCell,
+    edgeScore,
+    call,
+    callClass,
+    isTarget,
+    isFade,
+    isStreamer,
+  };
+}
+
+function sosViewMatches(metrics) {
+  const view = sosView?.value || "all";
+  if (view === "targets") return metrics.isTarget;
+  if (view === "fades") return metrics.isFade;
+  if (view === "streamers") return metrics.isStreamer;
+  return true;
+}
+
+function sosRows(options = {}) {
   const primary = primaryRowsByTeamPosition();
   const positionFilterValue = sosPosition?.value || "ALL";
   const search = normalizePlayerName(sosPlayerSearch?.value || "");
@@ -4387,17 +4469,17 @@ function sosRows() {
         const score = sosScore(team, position, week);
         return { week, opponent: sosOpponent(team, week), score, heatValue: (5 - score) * 6.5, oddsSource: "modeled fallback" };
       });
-      const validScores = scores.map((item) => item.score).filter((score) => Number.isFinite(score));
-      const avg = validScores.length ? validScores.reduce((sum, score) => sum + score, 0) / validScores.length : 2.5;
-      const brutal = validScores.filter((score) => score >= 3).length;
-      rows.push({ team, position, player, rank: Number(boardRow?.Rank || 999), scores, avg, brutal, source: sourceRow.source || "modeled" });
+      const metrics = sosRowMetrics(scores, position);
+      if (!options.ignoreView && !sosViewMatches(metrics)) return;
+      rows.push({ team, position, player, rank: Number(boardRow?.Rank || 999), scores, source: sourceRow.source || "modeled", ...metrics });
   });
   return rows.sort((left, right) => {
     const direction = sosSort.direction === "desc" ? -1 : 1;
     if (sosSort.key === "player") return direction * left.player.localeCompare(right.player);
     if (sosSort.key === "position") return direction * left.position.localeCompare(right.position);
     if (sosSort.key === "team") return direction * left.team.localeCompare(right.team);
-    if (sosSort.key === "brutal") return direction * (right.brutal - left.brutal || right.avg - left.avg);
+    if (sosSort.key === "edge") return direction * (left.edgeScore - right.edgeScore || left.avg - right.avg);
+    if (sosSort.key === "brutal") return direction * (left.brutal - right.brutal || left.avg - right.avg);
     return direction * (left.avg - right.avg || left.rank - right.rank);
   });
 }
@@ -4476,10 +4558,108 @@ function sosCellTooltip(row, item, percentile) {
   return lines.join("\n");
 }
 
+function sosWeekSummary(item) {
+  if (!item) return "No matchup";
+  if (item.apiTier === "bye" || item.opponent === "BYE") return `W${item.week} bye`;
+  return `W${item.week} vs ${item.opponent}`;
+}
+
+function sosMarketCoverage(rows) {
+  const cells = rows.flatMap((row) => row.scores).filter((item) => item.apiTier !== "bye");
+  const marketCells = cells.filter(sosHasMarketSignal).length;
+  return {
+    total: cells.length,
+    marketCells,
+    percent: cells.length ? Math.round((marketCells / cells.length) * 100) : 0,
+  };
+}
+
+function sosRelativeTime(value) {
+  const timestamp = Date.parse(value || "");
+  if (!Number.isFinite(timestamp)) return "";
+  const seconds = Math.max(0, Math.round((Date.now() - timestamp) / 1000));
+  if (seconds < 90) return "just updated";
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 90) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 48) return `${hours} hr ago`;
+  return `${Math.round(hours / 24)} days ago`;
+}
+
+function sosCacheLabel() {
+  if (sosApiLoading) return "loading data";
+  if (sosApiError) return sosApiError;
+  if (!sosApiData) return "modeled fallback";
+  const cache = sosApiData.cache || {};
+  const updatedAt = sosApiData.updatedAt || sosApiData.generatedAt || cache.updatedAt || cache.createdAt || cache.storedAt;
+  const relative = sosRelativeTime(updatedAt);
+  const state = cache.hit ? "cache hit" : "fresh build";
+  return relative ? `${state} / ${relative}` : state;
+}
+
+function sosMiniBars(row, heatValues) {
+  const label = `${row.player} selected-window trend`;
+  return `<div class="sos-mini-bars" aria-label="${htmlEscape(label)}">${row.scores.map((item) => {
+    if (item.apiTier === "bye") {
+      return `<span class="bye" title="${htmlEscape(sosWeekSummary(item))}"></span>`;
+    }
+    const percentile = sosPercentileRank(item.heatValue, heatValues);
+    const height = 12 + Math.round(percentile * 28);
+    const color = sosHeatColor(percentile);
+    return `<span style="--sos-bar-bg: rgb(${color}); --sos-bar-h: ${height}px;" title="${htmlEscape(sosWeekSummary(item))}"></span>`;
+  }).join("")}</div>`;
+}
+
+function sosCallBadge(row) {
+  const focusCell = row.callClass === "fade" ? row.worstCell : row.bestCell;
+  const detail = row.callClass === "neutral"
+    ? `Edge ${row.edgeScore}`
+    : `${sosWeekSummary(focusCell)} / Edge ${row.edgeScore}`;
+  return `<span class="sos-call sos-call-${htmlEscape(row.callClass)}">${htmlEscape(row.call)}</span><small>${htmlEscape(detail)}</small>`;
+}
+
+function sosInsightCard(kind, label, row, emptyText) {
+  if (!row) {
+    return `<article class="sos-insight-card sos-insight-${kind}">
+      <span>${htmlEscape(label)}</span>
+      <strong>${htmlEscape(emptyText)}</strong>
+      <small>Try a wider week range or position filter.</small>
+    </article>`;
+  }
+  const focusCell = kind === "fade" ? row.worstCell : row.bestCell;
+  const metric = kind === "fade" ? `${row.brutal} brutal spots` : `Edge ${row.edgeScore}`;
+  return `<article class="sos-insight-card sos-insight-${kind}">
+    <span>${htmlEscape(label)}</span>
+    <strong>${htmlEscape(row.player)}</strong>
+    <small>${htmlEscape(`${row.team} ${row.position} / ${metric} / ${sosWeekSummary(focusCell)}`)}</small>
+  </article>`;
+}
+
+function sosInsightCards(rows) {
+  if (!rows.length) {
+    return `<article class="sos-insight-card sos-insight-neutral">
+      <span>No matches</span>
+      <strong>Adjust filters</strong>
+      <small>No heat map rows match the current player, position, or week window.</small>
+    </article>`;
+  }
+  const byEdge = [...rows].sort((left, right) => right.edgeScore - left.edgeScore || left.avg - right.avg);
+  const target = rows.filter((row) => row.isTarget).sort((left, right) => right.edgeScore - left.edgeScore || left.avg - right.avg)[0] || byEdge[0];
+  const streamer = rows.filter((row) => row.isStreamer).sort((left, right) => right.edgeScore - left.edgeScore || left.avg - right.avg)[0] || null;
+  const fade = rows.filter((row) => row.isFade).sort((left, right) => right.brutal - left.brutal || right.avg - left.avg)[0]
+    || [...rows].sort((left, right) => right.avg - left.avg || right.brutal - left.brutal)[0];
+  return [
+    sosInsightCard("target", "Best draft bump", target, "No target edge"),
+    sosInsightCard("stream", "Best streamer", streamer, "No streamer edge"),
+    sosInsightCard("fade", "Fade risk", fade, "No fade risk"),
+  ].join("");
+}
+
 function loadSosHeatMap(force = false) {
   if (sosApiLoading || (!force && sosApiData)) return Promise.resolve(sosApiData);
   sosApiLoading = true;
   sosApiError = "";
+  renderSosHeatMap();
   return fetch(apiUrl("/api/sos-heatmap", { season: appConfig.season || "2026", v: force ? Date.now() : "" }), {
     cache: "no-store",
     headers: apiHeaders(),
@@ -4507,9 +4687,12 @@ function loadSosHeatMap(force = false) {
 function renderSosHeatMap() {
   if (!sosTableHead || !sosTableBody) return;
   const weeks = sosWeeks();
+  const allRows = sosRows({ ignoreView: true });
   const rows = sosRows();
-  const heatValues = sosHeatValues(rows);
+  const heatValues = sosHeatValues(rows.length ? rows : allRows);
   const weekLabel = weeks.length === 1 ? `Week ${weeks[0]}` : `Weeks ${weeks[0]}-${weeks[weeks.length - 1]}`;
+  const viewLabels = { all: "All edges", targets: "Targets", fades: "Fades", streamers: "Streamers" };
+  const viewLabel = viewLabels[sosView?.value || "all"] || "All edges";
   if (sosSelectedSummary) {
     const sourceLabel = sosApiData
       ? "market-adjusted projections"
@@ -4518,46 +4701,63 @@ function renderSosHeatMap() {
         : sosApiError
           ? "modeled fallback"
           : "modeled fallback";
-    sosSelectedSummary.textContent = `${weekLabel} / ${sosPosition?.value === "ALL" ? "All positions" : sosPosition?.value} / ${sourceLabel}`;
+    sosSelectedSummary.textContent = `${weekLabel} / ${sosPosition?.value === "ALL" ? "All positions" : sosPosition?.value} / ${viewLabel} / ${sourceLabel}`;
   }
   if (sosPlayoffEdge) {
     sosPlayoffEdge.textContent = (sosRange?.value || "") === "custom" ? weeks.join(", ") : "Weeks 15-17";
   }
-  const best = rows[0];
-  const brutal = [...rows].sort((left, right) => right.brutal - left.brutal || right.avg - left.avg)[0];
+  const best = [...allRows].sort((left, right) => right.edgeScore - left.edgeScore || left.avg - right.avg)[0];
+  const brutal = [...allRows].sort((left, right) => right.brutal - left.brutal || right.avg - left.avg)[0];
   if (sosBestStretch) sosBestStretch.textContent = best ? `${best.player} (${best.team})` : "No match";
   if (sosBrutalStretch) sosBrutalStretch.textContent = brutal ? `${brutal.player} (${brutal.team})` : "No match";
+  if (sosMarketStatus || sosMarketDetail) {
+    const coverage = sosMarketCoverage(allRows);
+    if (sosMarketStatus) {
+      sosMarketStatus.textContent = sosApiLoading
+        ? "Loading"
+        : sosApiError
+          ? "Fallback"
+          : sosApiData
+            ? `${coverage.percent}% market`
+            : "Fallback";
+    }
+    if (sosMarketDetail) {
+      sosMarketDetail.textContent = coverage.total
+        ? `${coverage.marketCells}/${coverage.total} selected cells / ${sosCacheLabel()}`
+        : sosCacheLabel();
+    }
+  }
+  if (sosInsights) {
+    sosInsights.innerHTML = sosInsightCards(allRows);
+  }
   const sortButton = (key, label) => `<button type="button" data-sos-sort="${key}">${htmlEscape(label)}${sosSort.key === key ? (sosSort.direction === "asc" ? " +" : " -") : ""}</button>`;
   sosTableHead.innerHTML = `<tr>
     <th>${sortButton("player", "Player")}</th>
     <th>${sortButton("team", "Team")}</th>
     <th>${sortButton("position", "Pos")}</th>
+    <th>Trend</th>
     ${weeks.map((week) => `<th>W${week}</th>`).join("")}
-    <th>${sortButton("avg", "Ease")}</th>
+    <th>${sortButton("edge", "Edge")}</th>
+    <th>Call</th>
     <th>${sortButton("brutal", "Brutal")}</th>
   </tr>`;
   sosTableBody.innerHTML = rows.slice(0, 140).map((row) => {
-    const ease = Math.round((5 - row.avg) * 25);
-    const rowAverageTotal = row.scores
-      .map((item) => item.impliedTotal)
-      .filter((value) => Number.isFinite(value));
-    const averageTotal = rowAverageTotal.length
-      ? rowAverageTotal.reduce((sum, value) => sum + value, 0) / rowAverageTotal.length
-      : null;
     return `<tr>
       <td><strong>${htmlEscape(row.player)}</strong><small>${htmlEscape(SOS_TEAM_NAMES[row.team] || row.team)}</small></td>
       <td>${htmlEscape(row.team)}</td>
       <td>${htmlEscape(row.position)}</td>
+      <td>${sosMiniBars(row, heatValues)}</td>
       ${row.scores.map((item) => {
         const percentile = sosPercentileRank(item.heatValue, heatValues);
         const tooltip = sosCellTooltip(row, item, percentile);
         const label = item.apiTier === "bye" ? "BYE" : item.opponent;
         return `<td><span class="sos-cell ${sosTier(item.score ?? 2.5, item.apiTier)}" style="${sosCellStyle(item, heatValues)}" data-tooltip="${htmlEscape(tooltip)}" title="${htmlEscape(tooltip)}">${htmlEscape(label)}</span></td>`;
       }).join("")}
-      <td><strong>${ease}</strong><small>${averageTotal === null ? "No total" : `${sosFormat(averageTotal)} ITT`}</small></td>
+      <td><strong>${row.edgeScore}</strong><small>${row.averageTotal === null ? "No total" : `${sosFormat(row.averageTotal)} ITT`}</small></td>
+      <td>${sosCallBadge(row)}</td>
       <td>${row.brutal}</td>
     </tr>`;
-  }).join("") || `<tr><td colspan="${weeks.length + 5}">No players match this filter.</td></tr>`;
+  }).join("") || `<tr><td colspan="${weeks.length + 7}">No players match this filter.</td></tr>`;
 }
 
 function liveLeagueTeams() {
@@ -8612,7 +8812,7 @@ liveTierButtons.forEach((button) => {
   });
 });
 
-[sosPosition, sosPlayerSearch, sosRange].forEach((control) => {
+[sosPosition, sosView, sosPlayerSearch, sosRange].forEach((control) => {
   control?.addEventListener("input", renderSosHeatMap);
   control?.addEventListener("change", renderSosHeatMap);
 });
@@ -8627,9 +8827,10 @@ sosTableHead?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-sos-sort]");
   if (!button) return;
   const key = button.dataset.sosSort || "avg";
+  const descendingDefault = ["edge", "brutal"].includes(key);
   sosSort = {
     key,
-    direction: sosSort.key === key && sosSort.direction === "asc" ? "desc" : "asc",
+    direction: sosSort.key === key ? (sosSort.direction === "asc" ? "desc" : "asc") : (descendingDefault ? "desc" : "asc"),
   };
   renderSosHeatMap();
 });
