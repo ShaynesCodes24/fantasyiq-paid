@@ -21,7 +21,7 @@ DEFAULT_SITE_URL = os.environ.get("FANTASYIQ_SITE_URL", "https://myfantasyiq.com
 EXPECTED_ASSETS = {
     "auth": "js/auth.js?v=20260524_email_login_1",
     "dashboard": "js/dashboard.js?v=20260525_big_board_adp_1",
-    "draft": "js/draft.js?v=20260525_score_balance_1",
+    "draft": "js/draft.js?v=20260525_trade_empty_state_1",
 }
 EXPECTED_DASHBOARD_MARKERS = [
     "Fantasy IQ Data",
@@ -173,9 +173,22 @@ def data_freshness_check(site_url: str) -> Check:
         return Check("data freshness", "FAIL", f"HTTP {status}: {payload.get('error') or payload.get('message')}")
     if payload.get("databaseBacked") is not True:
         return Check("data freshness", "FAIL", "databaseBacked is not true")
-    stale_count = payload.get("staleCount")
-    if isinstance(stale_count, int) and stale_count > 0:
-        return Check("data freshness", "FAIL", f"{stale_count} stale data source(s)")
+    rows = payload.get("freshness") if isinstance(payload.get("freshness"), list) else []
+    stale_rows = [row for row in rows if isinstance(row, dict) and row.get("is_stale")]
+    healthy_sources = {
+        str(row.get("source") or "")
+        for row in rows
+        if isinstance(row, dict) and not row.get("is_stale") and row.get("last_success_at")
+    }
+    blocking_stale = [
+        row
+        for row in stale_rows
+        if str(row.get("source") or "") == "fantasyiq-cron"
+        or str(row.get("source") or "") not in healthy_sources
+    ]
+    if blocking_stale:
+        scopes = ", ".join(str(row.get("source_scope") or row.get("source") or "unknown") for row in blocking_stale[:4])
+        return Check("data freshness", "FAIL", f"{len(blocking_stale)} stale required data source(s): {scopes}")
     summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
     source_counts = summary.get("sourceCounts") if isinstance(summary.get("sourceCounts"), dict) else {}
     cron_steps = summary.get("cronSteps") if isinstance(summary.get("cronSteps"), list) else []

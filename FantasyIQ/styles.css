@@ -2730,6 +2730,22 @@ li + li {
   color: var(--logo-gold);
 }
 
+.trade-empty-state {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  border: 1px solid rgba(18, 63, 52, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.72);
+  padding: 13px;
+}
+
+.trade-empty-state p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .intelligence-os-panel {
   display: grid;
   gap: 12px;

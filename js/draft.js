@@ -1213,10 +1213,11 @@ function renderTradeFinder(snapshot = activeRosterSnapshot({ preferPasted: true 
   const topNeed = needs[0]?.pos || "starter upgrade";
   queueTradeDatabaseSamplesForSnapshot(snapshot);
   const leagueIdeas = snapshot.source === "espn" ? leagueTradeIdeas(snapshot) : [];
+  const hasVerifiedTradeData = fantasyCalcTradeDatabaseReady() && !fantasyCalcTradeSamples.loadingKeys?.size;
   const databaseStatus = fantasyCalcTradeDatabaseReady()
     ? fantasyCalcTradeSamples.loadingKeys?.size
       ? "Fantasy IQ Data is validating exact 1-for-1 and 2-for-1 accepted-trade samples for your roster."
-      : "No exact accepted-trade database match cleared the value and roster-fit filters. Use the lanes below as negotiation filters."
+      : "No exact accepted-trade database match cleared the value and roster-fit filters."
     : fantasyCalcTradeDatabaseLoading || fantasyCalcMarketLoading
       ? "Fantasy IQ Data is still loading accepted-trade context. Package ideas will appear only after the real-trade database is ready."
       : "Fantasy IQ Data is unavailable, so package ideas are disabled instead of guessing from local roster values.";
@@ -1228,6 +1229,19 @@ function renderTradeFinder(snapshot = activeRosterSnapshot({ preferPasted: true 
       </div>
       <div class="trade-idea-list">
         ${leagueIdeas.map(renderTradeIdeaCard).join("")}
+      </div>
+    `;
+    return;
+  }
+  if (liveLeagueHasRosters() && hasVerifiedTradeData) {
+    tradeFinder.innerHTML = `
+      <div class="trade-lane-summary">
+        <strong>No verified Fantasy IQ Data trade ideas yet</strong>
+        <span>${htmlEscape(databaseStatus)} FantasyIQ is holding back trade suggestions instead of showing loose or unrealistic offers.</span>
+      </div>
+      <div class="trade-empty-state">
+        <p>For this roster, the accepted-trade database did not find a clean 1-for-1 or 2-for-1 match that also helps both managers.</p>
+        <p>Use the manual trade checker for a specific offer, or check back after rosters/trade market data move.</p>
       </div>
     `;
     return;
