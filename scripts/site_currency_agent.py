@@ -21,7 +21,8 @@ DEFAULT_SITE_URL = os.environ.get("FANTASYIQ_SITE_URL", "https://myfantasyiq.com
 EXPECTED_ASSETS = {
     "auth": "js/auth.js?v=20260524_email_login_1",
     "dashboard": "js/dashboard.js?v=20260525_big_board_adp_1",
-    "draft": "js/draft.js?v=20260525_trade_quality_4",
+    "trade": "js/trade.js?v=20260525_trade_quality_5",
+    "draft": "js/draft.js?v=20260525_trade_quality_5",
     "sos": "js/sos.js?v=20260525_schedule_iq_1",
 }
 EXPECTED_DASHBOARD_MARKERS = [
@@ -33,10 +34,14 @@ EXPECTED_DASHBOARD_MARKERS = [
 EXPECTED_DRAFT_MARKERS = [
     "Fantasy IQ Data is validating exact 1-for-1 and 2-for-1",
     "market-backed ideas stay available",
-    "matched FantasyCalc.com market values",
+    "tradeIdeaQualityGate",
     "tradeDatabaseExactSupport",
     "consensusPlayerScore",
-    "Math.max(rosterScore - 3",
+    "consensus-score-v2",
+]
+EXPECTED_TRADE_MARKERS = [
+    "Fantasy IQ Data real-trade value",
+    "Real-world acceptance",
 ]
 EXPECTED_SOS_MARKERS = [
     "tier-elite",
@@ -313,6 +318,7 @@ def production_checks(site_url: str) -> list[Check]:
     return [
         dashboard_page_check(site_url),
         asset_marker_check(site_url, "dashboard", EXPECTED_ASSETS["dashboard"], EXPECTED_DASHBOARD_MARKERS),
+        asset_marker_check(site_url, "Trade IQ", EXPECTED_ASSETS["trade"], EXPECTED_TRADE_MARKERS),
         asset_marker_check(site_url, "draft", EXPECTED_ASSETS["draft"], EXPECTED_DRAFT_MARKERS),
         asset_marker_check(site_url, "Schedule IQ", EXPECTED_ASSETS["sos"], EXPECTED_SOS_MARKERS),
         data_freshness_check(site_url),

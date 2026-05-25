@@ -51,11 +51,13 @@ def response_payload(query: dict[str, list[str]], body: dict[str, Any] | None = 
             "starterQuality": engine["starterQuality"],
             "benchDepth": engine["benchDepth"],
             "byeWeekRisk": engine["byeWeekRisk"],
+            "scoreBreakdown": engine.get("scoreBreakdown", {}),
             "tradeValue": engine["tradeValue"],
             "waiverPriority": engine["waiverPriority"],
             "draftRecommendation": engine["draftRecommendation"],
             "fantasyIqScore": engine["fantasyIqScore"],
         },
+        "scoreBreakdown": engine.get("scoreBreakdown", {}),
         "recommendation": engine["recommendation"],
         "phases": {
             "liveDraftRoom": {

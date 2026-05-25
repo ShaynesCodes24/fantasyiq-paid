@@ -30,7 +30,7 @@ function tradePositionSummary(players) {
 }
 
 function marketTotalLabel(totals) {
-  if (!totals.marketCount) return "No FantasyCalc match";
+  if (!totals.marketCount) return "No Fantasy IQ Data match";
   return totals.marketValue.toFixed(1);
 }
 
@@ -43,12 +43,12 @@ function tradeMarketCalibration(giveTotals, getTotals, give, get) {
   const coverage = total ? matched / total : 0;
   let label = "FantasyIQ only";
   let className = "watch";
-  let detail = "Trade IQ is using FantasyIQ league-fit values while the FantasyCalc market feed is unavailable.";
+  let detail = "Trade IQ is using FantasyIQ league-fit values while Fantasy IQ Data is unavailable.";
   if (marketReady && coverage >= 0.75) {
     if (Math.abs(netMarket - netFantasyIq) <= 5) {
       label = "Market agrees";
       className = "good";
-      detail = "FantasyCalc real-trade value and FantasyIQ roster-fit value are pointing in the same direction.";
+      detail = "Fantasy IQ Data real-trade value and FantasyIQ roster-fit value are pointing in the same direction.";
     } else if (netMarket < netFantasyIq - 5) {
       label = "Market colder";
       className = "watch";
@@ -56,11 +56,11 @@ function tradeMarketCalibration(giveTotals, getTotals, give, get) {
     } else {
       label = "Market discount";
       className = "good";
-      detail = "FantasyCalc market value likes the incoming side more than the local board does.";
+      detail = "Fantasy IQ Data market value likes the incoming side more than the local board does.";
     }
   } else if (marketReady) {
     label = "Partial market";
-    detail = "Some players do not have a FantasyCalc match yet, so the verdict blends market value with FantasyIQ values.";
+    detail = "Some players do not have a Fantasy IQ Data match yet, so the verdict blends market value with FantasyIQ values.";
   }
   return {
     label,
@@ -742,7 +742,7 @@ function renderTradeCalc() {
     </div>
     <div class="trade-score-grid">
       <div><span>Net Value</span><strong>${net >= 0 ? "+" : ""}${net.toFixed(1)}</strong></div>
-      <div><span>FantasyCalc Market</span><strong>${marketTotalLabel(getTotals)} / ${marketTotalLabel(giveTotals)}</strong><small>${htmlEscape(breakdown.marketRead.label)}</small></div>
+      <div><span>Fantasy IQ Data</span><strong>${marketTotalLabel(getTotals)} / ${marketTotalLabel(giveTotals)}</strong><small>${htmlEscape(breakdown.marketRead.label)}</small></div>
       <div><span>${scoringProjectionLabel()}</span><strong>${projectionDelta >= 0 ? "+" : ""}${projectionDelta.toFixed(1)}</strong></div>
       <div><span>Incoming Risk</span><strong class="${riskRead.className}">${getTotals.risk.toFixed(1)}/10</strong><small>${htmlEscape(riskRead.label)}</small></div>
       <div><span>Roster Fit</span><strong class="${breakdown.fit.className}">${htmlEscape(breakdown.fit.label)}</strong></div>
@@ -764,7 +764,7 @@ function renderTradeCalc() {
         <p>${htmlEscape(dealShape.detail)}</p>
       </article>
       <article class="${breakdown.marketRead.className}">
-        <span>FantasyCalc market</span>
+        <span>Fantasy IQ Data</span>
         <strong>${htmlEscape(breakdown.marketRead.label)}</strong>
         <p>${htmlEscape(breakdown.marketRead.detail)} ${htmlEscape(breakdown.marketRead.source)}.</p>
       </article>

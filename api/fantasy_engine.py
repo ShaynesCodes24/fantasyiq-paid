@@ -48,9 +48,9 @@ def player_value(player: dict[str, Any]) -> float:
     rank_score = max(22.0, min(98.0, 100.0 - max(0.0, rank - 1.0) * 0.55)) if rank < 999 else value or 55.0
     pos_multiplier = 2.2 if position in {"QB", "TE"} else 4.0 if position in {"DST", "K"} else 1.45
     pos_rank_score = max(25.0, min(96.0, 101.0 - pos_rank * pos_multiplier)) if pos_rank < 99 else value or 55.0
-    projection_score = max(45.0, min(95.0, projection / 3.4)) if projection else 55.0
+    projection_score = max(48.0, min(96.0, projection / 3.25)) if projection else 55.0
     base = value or (rank_score * 0.65 + projection_score * 0.25 + upside * 0.1)
-    return round(base * 0.58 + rank_score * 0.18 + pos_rank_score * 0.1 + projection_score * 0.08 + upside * 0.06 - risk * 0.25, 2)
+    return round(base * 0.56 + rank_score * 0.18 + pos_rank_score * 0.1 + projection_score * 0.1 + upside * 0.06 - risk * 0.18, 2)
 
 
 @dataclass
@@ -62,6 +62,9 @@ class RosterProfile:
     bench_depth: float
     bye_week_risk: float
     team_strength: float
+    construction_penalty: float
+    depth_penalty: float
+    completeness_penalty: float
 
 
 def roster_counts(roster: list[dict[str, Any]]) -> dict[str, int]:
@@ -107,8 +110,8 @@ def evaluate_roster(roster: list[dict[str, Any]]) -> RosterProfile:
 
         starter_gap = max(0, starter_target - len(starters))
         depth_gap = max(0, depth_target - len(ranked))
-        starter_gap_penalty += starter_gap * (0.5 if position in {"DST", "K"} else 2.0)
-        depth_gap_penalty += depth_gap * (0.0 if position in {"DST", "K"} else 0.45)
+        starter_gap_penalty += starter_gap * (0.2 if position in {"DST", "K"} else 1.45)
+        depth_gap_penalty += depth_gap * (0.0 if position in {"DST", "K"} else 0.25)
         position_score = starter_score + depth_score * 0.35 - starter_gap * 7 - depth_gap * 2
         profile = {
             "pos": position,
@@ -126,19 +129,22 @@ def evaluate_roster(roster: list[dict[str, Any]]) -> RosterProfile:
     starter_quality = sum(starter_values) / max(1, len(starter_values))
     bench_depth = sum(bench_values) / max(1, len(bench_values))
     bye_week_risk = max(bye_weeks.values(), default=0) * 8.0
-    roster_size_bonus = min(6.0, len(roster) * 0.35)
+    roster_size_bonus = min(7.0, len(roster) * 0.42)
+    target_roster_size = sum(STARTER_TARGETS.values()) + 4
+    completeness_penalty = max(0.0, target_roster_size - len(roster)) * 0.9
     team_strength = max(
         0.0,
         min(
             100.0,
-            10.0
-            + starter_quality * 0.78
-            + bench_depth * 0.12
+            16.0
+            + starter_quality * 0.74
+            + bench_depth * 0.10
             + roster_size_bonus
-            + (4.0 if bench_depth == 0 and starter_quality > 0 else 0.0)
-            - starter_gap_penalty * 0.75
-            - depth_gap_penalty * 0.55
-            - bye_week_risk * 0.1,
+            + (3.0 if bench_depth == 0 and starter_quality > 0 else 0.0)
+            - starter_gap_penalty
+            - min(4.0, depth_gap_penalty)
+            - completeness_penalty
+            - bye_week_risk * 0.05,
         ),
     )
 
@@ -150,6 +156,9 @@ def evaluate_roster(roster: list[dict[str, Any]]) -> RosterProfile:
         bench_depth=round(bench_depth, 2),
         bye_week_risk=round(bye_week_risk, 2),
         team_strength=round(team_strength, 2),
+        construction_penalty=round(starter_gap_penalty, 2),
+        depth_penalty=round(min(4.0, depth_gap_penalty), 2),
+        completeness_penalty=round(completeness_penalty, 2),
     )
 
 
@@ -219,11 +228,33 @@ def best_draft_pick(board: list[dict[str, Any]], profile: RosterProfile) -> dict
 def fantasy_iq_score(profile: RosterProfile, waiver: dict[str, Any] | None, trade: dict[str, Any] | None) -> int:
     score = profile.team_strength
     if waiver and waiver["priority"] == "high":
-        score -= 2
+        score -= 1
     if trade and trade["valueDelta"] > 4:
-        score += 2
-    score -= min(4, profile.bye_week_risk * 0.08)
-    return int(max(45, min(99, round(score))))
+        score += 1.5
+    score -= min(2, profile.bye_week_risk * 0.04)
+    return int(max(52, min(99, round(score))))
+
+
+def score_breakdown(profile: RosterProfile, score: int) -> dict[str, Any]:
+    return {
+        "modelVersion": "consensus-score-v2",
+        "score": score,
+        "consensusStarterAvg": profile.starter_quality,
+        "consensusRosterAvg": round(profile.team_strength, 2),
+        "benchDepth": profile.bench_depth,
+        "constructionPenalty": profile.construction_penalty,
+        "depthPenalty": profile.depth_penalty,
+        "completenessPenalty": profile.completeness_penalty,
+        "riskPenalty": round(min(2, profile.bye_week_risk * 0.04), 2),
+        "marketSupport": "client Fantasy IQ Data market coverage applied when roster rows include it",
+        "calibration": {
+            "elite": "90+",
+            "strongContender": "82-89",
+            "solidTeam": "74-81",
+            "playableButFlawed": "66-73",
+            "needsWork": "58-65",
+        },
+    }
 
 
 def recommendation(payload: dict[str, Any]) -> dict[str, Any]:
@@ -292,12 +323,14 @@ def analyze(payload: dict[str, Any]) -> dict[str, Any]:
     )
     draft = best_draft_pick(payload.get("draftBoard") if isinstance(payload.get("draftBoard"), list) else [], profile)
     score = fantasy_iq_score(profile, waiver, trade)
+    breakdown = score_breakdown(profile, score)
     return {
         "teamStrength": profile.team_strength,
         "rosterWeakness": profile.weaknesses,
         "starterQuality": profile.starter_quality,
         "benchDepth": profile.bench_depth,
         "byeWeekRisk": profile.bye_week_risk,
+        "scoreBreakdown": breakdown,
         "tradeValue": trade,
         "waiverPriority": waiver,
         "draftRecommendation": draft,

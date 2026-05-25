@@ -116,7 +116,10 @@ function rosterWeaknesses(snapshot) {
     .map((pos) => {
       const starterGap = Math.max(0, Number(starters[pos] || 0) - Number(counts[pos] || 0));
       const depthGap = Math.max(0, Number(targets[pos] || 0) - Number(counts[pos] || 0));
-      const weight = starterGap * 10 + depthGap;
+      const specialTeams = ["DST", "K"].includes(pos);
+      const weight = specialTeams
+        ? starterGap * 2 + depthGap * 0.2
+        : starterGap * 8 + depthGap * 0.75;
       return { pos, starterGap, depthGap, weight };
     })
     .filter((item) => item.weight > 0)
@@ -203,7 +206,21 @@ function rosterStrengths(snapshot) {
 
 function postDraftGrade(snapshot) {
   if (!snapshot.rows.length) {
-    return { score: 0, grade: "Pending", label: "Select roster", notes: ["Select your ESPN team or paste a roster to grade it."] };
+    return {
+      score: 0,
+      grade: "Pending",
+      label: "Select roster",
+      notes: ["Select your ESPN team or paste a roster to grade it."],
+      scoreBreakdown: {
+        modelVersion: "consensus-score-v2",
+        consensusStarterAvg: 0,
+        consensusRosterAvg: 0,
+        constructionPenalty: 0,
+        depthPenalty: 0,
+        riskPenalty: 0,
+        marketSupport: "pending",
+      },
+    };
   }
   const rows = snapshot.rows;
   const consensus = consensusRosterBreakdown(snapshot);
@@ -211,36 +228,60 @@ function postDraftGrade(snapshot) {
   const avgRisk = rows.reduce((sum, row) => sum + Number(row.Risk || 0), 0) / rows.length;
   const rbWr = Number(snapshot.counts.RB || 0) + Number(snapshot.counts.WR || 0);
   const weaknesses = rosterWeaknesses(snapshot);
-  const starterGaps = weaknesses.reduce((sum, item) => sum + item.starterGap, 0);
-  const depthGaps = weaknesses.reduce((sum, item) => sum + item.depthGap, 0);
+  const coreWeaknesses = weaknesses.filter((item) => !["DST", "K"].includes(item.pos));
+  const starterGaps = coreWeaknesses.reduce((sum, item) => sum + item.starterGap, 0);
+  const depthGaps = coreWeaknesses.reduce((sum, item) => sum + item.depthGap, 0);
+  const constructionPenalty = starterGaps * 1.55;
+  const depthPenalty = Math.min(4.5, Math.max(0, depthGaps - starterGaps) * 0.25);
+  const riskPenalty = avgRisk > 5.8 ? 1 : avgRisk < 3.2 && rows.length >= 7 ? -0.8 : 0;
+  const marketMatches = rows.filter((row) => Number.isFinite(Number(fantasyCalcMarketScore(row)))).length;
+  const marketCoverage = rows.length ? marketMatches / rows.length : 0;
   let score =
-    66 +
-    (consensus.starterAvg - 58) * 0.44 +
-    (consensus.depthAvg ? (consensus.depthAvg - 52) * 0.12 : 0) +
-    (avgValue - 55) * 0.08 +
-    consensus.coverage * 5;
+    68 +
+    (consensus.starterAvg - 58) * 0.38 +
+    (consensus.depthAvg ? (consensus.depthAvg - 52) * 0.08 : 0) +
+    (avgValue - 55) * 0.06 +
+    consensus.coverage * 4 +
+    marketCoverage * 1.5;
 
   if (snapshot.picks.length) {
     const pickGrades = snapshot.picks.map((pick) => valueForPick(pick).label);
     score += pickGrades.filter((label) => label === "Steal").length * 1.5;
     score += pickGrades.filter((label) => label === "Good value").length;
-    score -= pickGrades.filter((label) => label === "Reach").length * 2;
+    score -= pickGrades.filter((label) => label === "Reach").length * 1.25;
   }
-  score -= starterGaps * 2.25;
-  score -= Math.max(0, depthGaps - starterGaps) * 0.45;
+  score -= constructionPenalty;
+  score -= depthPenalty;
   if (rbWr >= Math.max(5, starterTargetCounts().RB + starterTargetCounts().WR + flexStarterTarget())) score += 2;
-  if (avgRisk > 5.8) score -= 1.5;
-  if (avgRisk < 3.2 && rows.length >= 7) score += 1;
-  if (activeLineupSlots().SUPERFLEX && Number(snapshot.counts.QB || 0) < 2) score -= 3;
-  score = Math.round(clampNumber(score, 58, 98));
+  score -= riskPenalty;
+  if (activeLineupSlots().SUPERFLEX && Number(snapshot.counts.QB || 0) < 2) score -= 2;
+  score = Math.round(clampNumber(score, 56, 98));
+  const scoreBreakdown = {
+    modelVersion: "consensus-score-v2",
+    consensusStarterAvg: Math.round((consensus.starterAvg || 0) * 10) / 10,
+    consensusRosterAvg: Math.round((avgValue || 0) * 10) / 10,
+    consensusDepthAvg: Math.round((consensus.depthAvg || 0) * 10) / 10,
+    starterCoverage: Math.round((consensus.coverage || 0) * 100),
+    constructionPenalty: Math.round(constructionPenalty * 10) / 10,
+    depthPenalty: Math.round(depthPenalty * 10) / 10,
+    riskPenalty: Math.round(Math.max(0, riskPenalty) * 10) / 10,
+    riskBonus: riskPenalty < 0 ? Math.round(Math.abs(riskPenalty) * 10) / 10 : 0,
+    marketSupport: `${Math.round(marketCoverage * 100)}% Fantasy IQ Data coverage`,
+  };
   const notes = [
     `Consensus score ${avgValue.toFixed(1)} using board value, projections, rank, and market support.`,
-    weaknesses.length
-      ? `Main need: ${weaknesses.slice(0, 2).map((item) => item.pos).join(" / ")}.`
+    coreWeaknesses.length
+      ? `Main need: ${coreWeaknesses.slice(0, 2).map((item) => item.pos).join(" / ")}.`
       : "Starter and bench targets are mostly covered.",
     `${consensus.starterRows.length}/${consensus.starterLimit} consensus-weighted starter slots matched.`,
   ];
-  return { score, grade: `${gradeLetter(score)} (${score})`, label: score >= 83 ? "Contender build" : score >= 72 ? "Playable build" : "Needs work", notes };
+  return {
+    score,
+    grade: `${gradeLetter(score)} (${score})`,
+    label: score >= 90 ? "Elite build" : score >= 82 ? "Strong contender" : score >= 74 ? "Solid team" : score >= 66 ? "Playable build" : "Needs work",
+    notes,
+    scoreBreakdown,
+  };
 }
 
 function postDraftActions(snapshot) {
@@ -414,8 +455,8 @@ function bestTradePair(giveRows, getRows) {
         Math.abs(diff) * 1.15 -
         Math.max(0, marketDiff) * 1.1 +
         Math.min(5, Math.max(0, marketDiff + 2)) +
-        Math.min(5, tradePackageMarketActivity([give]) / 400) +
-        Math.min(5, tradePackageMarketActivity([get]) / 400) +
+        Math.min(5, tradePackageRealActivity([give]) / 400) +
+        Math.min(5, tradePackageRealActivity([get]) / 400) +
         evidence.score +
         tradeMarketEdgeScore([1, 1], marketDiff, diff) +
         Math.max(-4, Math.min(4, projectionDiff / 18));
@@ -425,6 +466,8 @@ function bestTradePair(giveRows, getRows) {
           get,
           diff,
           marketDiff,
+          projectionDiff,
+          bestDelta: tradeAssetValue(get) - tradeAssetValue(give),
           score,
           databaseSampleCount: evidence.exactCount,
           databaseEvidence: evidence.tier,
@@ -474,7 +517,7 @@ function tradePackageMarketValue(rows) {
 }
 
 function tradePackageHasDatabaseCoverage(rows) {
-  return rows.every((row) => fantasyCalcPlayer(row) && fantasyCalcTradeDatabasePlayer(row));
+  return rows.every((row) => fantasyCalcPlayerId(row) && Number.isFinite(Number(fantasyCalcMarketScore(row))));
 }
 
 function tradePackageProjection(rows) {
@@ -491,6 +534,21 @@ function tradePackageKey(rows) {
 
 function tradePackageMarketActivity(rows) {
   return rows.reduce((sum, row) => sum + Number(fantasyCalcTradeDatabasePlayer(row)?.activity || 0), 0);
+}
+
+function tradePackageRealActivity(rows) {
+  return rows.reduce((sum, row) => {
+    const support = fantasyCalcTradeDatabasePlayer(row);
+    if (!support || support.sampleRequired) return sum;
+    return sum + Number(support.activity || 0);
+  }, 0);
+}
+
+function tradePackageAllHaveRealActivity(rows) {
+  return rows.every((row) => {
+    const support = fantasyCalcTradeDatabasePlayer(row);
+    return Boolean(support && !support.sampleRequired && Number(support.activity || 0) > 0);
+  });
 }
 
 function tradePackageDatabaseIds(rows) {
@@ -633,10 +691,10 @@ function tradePackageMakesSense(shape, diff, marketDiff, bestDelta, projectionDi
   const [giveCount, getCount] = shape;
   if (!Number.isFinite(Number(marketDiff))) return false;
   if (giveCount === 1 && getCount === 1) {
-    return diff >= -2 && diff <= 6.5 && marketDiff >= -2.5 && marketDiff <= 4.5 && projectionDiff >= -10;
+    return diff >= -1.5 && diff <= 5 && marketDiff >= -1 && marketDiff <= 4 && projectionDiff >= -6;
   }
   if (giveCount === 2 && getCount === 1) {
-    return bestDelta >= 1 && diff >= -36 && diff <= 5 && marketDiff >= -12 && marketDiff <= 4.5 && projectionDiff >= -190;
+    return bestDelta >= 5 && diff >= -14 && diff <= 3 && marketDiff >= -7 && marketDiff <= 2.5 && projectionDiff >= -80;
   }
   return false;
 }
@@ -658,14 +716,17 @@ function tradePackageEvidence(givePackage, getPackage, requestExact = false) {
   const databaseSupport = tradeDatabaseExactSupport(givePackage, getPackage);
   if (!databaseSupport.ready && requestExact) requestTradeDatabaseSamples(givePackage, getPackage);
   const exactCount = databaseSupport.ready ? Number(databaseSupport.count || 0) : 0;
-  const activity = tradePackageMarketActivity(givePackage) + tradePackageMarketActivity(getPackage);
+  const activity = tradePackageRealActivity(givePackage) + tradePackageRealActivity(getPackage);
+  const allRealActivity = tradePackageAllHaveRealActivity(givePackage) && tradePackageAllHaveRealActivity(getPackage);
   return {
     exactCount,
     activity,
-    tier: exactCount > 0 ? "exact" : "market",
+    allRealActivity,
+    sampleStatus: databaseSupport.ready ? "ready" : databaseSupport.count ? "ready" : requestExact ? "loading" : "missing",
+    tier: exactCount > 0 ? "exact" : activity > 0 ? "market-backed" : "insufficient",
     score: exactCount > 0
       ? 7 + Math.min(8, exactCount * 1.6)
-      : Math.min(4, activity / 450),
+      : Math.min(4, activity / 550),
   };
 }
 
@@ -675,6 +736,174 @@ function queueExactSamplesForTradeIdeas(ideas) {
     const getPackage = idea.getPackage || [idea.get];
     tradePackageEvidence(givePackage, getPackage, true);
   });
+}
+
+function tradeRowsAfterPackage(snapshot, outgoingRows, incomingRows) {
+  const outgoingKeys = new Set((outgoingRows || []).map((row) => normalizePlayerName(row?.Player || "")));
+  return (snapshot?.rows || [])
+    .filter((row) => !outgoingKeys.has(normalizePlayerName(row?.Player || "")))
+    .concat((incomingRows || []).filter(Boolean));
+}
+
+function tradeCountsFromRows(rows) {
+  const counts = emptyPositionCounts();
+  (rows || []).forEach((row) => {
+    if (counts[row?.Pos] !== undefined) counts[row.Pos] += 1;
+  });
+  return counts;
+}
+
+function tradeNeedScoreForRows(rows) {
+  return rosterWeaknesses({ rows, counts: tradeCountsFromRows(rows) }).reduce((sum, item) => sum + Number(item.weight || 0), 0);
+}
+
+function tradeFitScore(beforeRows, afterRows, addressedNeed, receivingRows) {
+  const beforeNeed = tradeNeedScoreForRows(beforeRows);
+  const afterNeed = tradeNeedScoreForRows(afterRows);
+  const needDelta = beforeNeed - afterNeed;
+  const lineupDelta = lineupValue(fillLineup(afterRows)) - lineupValue(fillLineup(beforeRows));
+  const needBonus = addressedNeed ? Math.min(18, Number(addressedNeed.weight || 0) * 1.35) : 0;
+  const starterBonus = receivingRows?.some((row) => addressedNeed?.pos && row?.Pos === addressedNeed.pos) ? 6 : 0;
+  return Math.round(clampNumber(58 + needDelta * 2.2 + lineupDelta * 0.35 + needBonus + starterBonus, 0, 100));
+}
+
+function tradeDepthRisk(snapshot, outgoingRows, incomingRows) {
+  const afterRows = tradeRowsAfterPackage(snapshot, outgoingRows, incomingRows);
+  const counts = tradeCountsFromRows(afterRows);
+  const starters = starterTargetCounts();
+  const thin = ["QB", "RB", "WR", "TE"].filter((pos) => (counts[pos] || 0) < Number(starters[pos] || 0));
+  if (thin.length) return { level: "thin", positions: thin };
+  const watch = ["RB", "WR"].filter((pos) => (counts[pos] || 0) <= Number(starters[pos] || 0) + 1);
+  return { level: watch.length ? "watch" : "none", positions: watch };
+}
+
+function tradeAcceptanceRead(shape, marketDiff, userFitScore, partnerFitScore, evidence, bestDelta) {
+  const [giveCount, getCount] = shape.split("-for-").map((value) => Number(value || 1));
+  let probability =
+    42 +
+    (partnerFitScore - 55) * 0.42 +
+    Math.min(8, Math.max(0, Number(evidence.exactCount || 0)) * 2) +
+    Math.min(8, Number(evidence.activity || 0) / 650) -
+    Math.max(0, Number(marketDiff || 0) - 1.5) * 3.5;
+  if (giveCount > getCount) probability += Math.min(8, Math.max(0, Number(bestDelta || 0) - 5) * 0.9);
+  if (userFitScore < 55) probability -= 6;
+  probability = Math.round(clampNumber(probability, 5, 92));
+  return {
+    probability,
+    label: probability >= 66 ? "likely" : probability >= 42 ? "negotiable" : "long shot",
+    reasons: [
+      `partner fit ${partnerFitScore}/100`,
+      evidence.exactCount > 0 ? `${evidence.exactCount} exact accepted sample${evidence.exactCount === 1 ? "" : "s"}` : `${Math.round(evidence.activity).toLocaleString()} accepted-trade activity`,
+    ],
+  };
+}
+
+function tradeIdeaQualityGate(idea, context = {}) {
+  const givePackage = idea.givePackage || [idea.give].filter(Boolean);
+  const getPackage = idea.getPackage || [idea.get].filter(Boolean);
+  const shape = idea.shape || tradeShapeLabel(givePackage.length, getPackage.length);
+  const shapeParts = shape.split("-for-").map((value) => Number(value || 0));
+  const reasons = [];
+  const warnings = [];
+  const blocked = [];
+  const evidence = tradePackageEvidence(givePackage, getPackage, true);
+  const marketGive = tradePackageMarketValue(givePackage);
+  const marketGet = tradePackageMarketValue(getPackage);
+  const marketDiff = Number.isFinite(Number(idea.marketDiff)) ? Number(idea.marketDiff) : Number(marketGet) - Number(marketGive);
+  const localDiff = Number(idea.diff || tradePackageValue(getPackage) - tradePackageValue(givePackage));
+  const projectionDiff = Number(idea.projectionDiff ?? tradePackageProjection(getPackage) - tradePackageProjection(givePackage));
+  const bestDelta = Number(idea.bestDelta ?? tradePackageBestValue(getPackage) - tradePackageBestValue(givePackage));
+  const allowedShape = (shapeParts[0] === 1 && shapeParts[1] === 1) || (shapeParts[0] === 2 && shapeParts[1] === 1);
+  if (!allowedShape) blocked.push("Only realistic 1-for-1 and 2-for-1 ideas are enabled.");
+  if (!fantasyCalcTradeDatabaseReady()) blocked.push("Fantasy IQ Data accepted-trade database is not ready.");
+  if (!tradePackageHasDatabaseCoverage(givePackage) || !tradePackageHasDatabaseCoverage(getPackage)) {
+    blocked.push("Every player must have a Fantasy IQ Data market value.");
+  }
+  if (!evidence.allRealActivity && evidence.exactCount <= 0) {
+    blocked.push("One or more players lack accepted-trade activity.");
+  }
+  const meaningfulActivity = evidence.activity >= (shapeParts[0] + shapeParts[1] >= 3 ? 900 : 450);
+  if (evidence.exactCount <= 0 && !meaningfulActivity) {
+    blocked.push("Accepted-trade activity is too thin for a proactive suggestion.");
+  }
+  if (!idea.yourNeed?.pos) blocked.push("The incoming side must address a real user roster need.");
+  if (!idea.theirNeed?.pos) blocked.push("The outgoing side must address a real partner roster need.");
+  if (!tradePackageMakesSense(shapeParts, localDiff, marketDiff, bestDelta, projectionDiff, idea.yourNeed)) {
+    blocked.push("Market value, projection, or package shape is outside the realistic trade band.");
+  }
+
+  const userBefore = context.userSnapshot?.rows || [];
+  const partnerBefore = idea.team?.rows || [];
+  const userAfter = userBefore.length ? tradeRowsAfterPackage(context.userSnapshot, givePackage, getPackage) : [];
+  const partnerAfter = partnerBefore.length ? tradeRowsAfterPackage(idea.team, getPackage, givePackage) : [];
+  const userFitScore = userBefore.length ? tradeFitScore(userBefore, userAfter, idea.yourNeed, getPackage) : 62;
+  const partnerFitScore = partnerBefore.length ? tradeFitScore(partnerBefore, partnerAfter, idea.theirNeed, givePackage) : 58;
+  const userDepthRisk = context.userSnapshot ? tradeDepthRisk(context.userSnapshot, givePackage, getPackage) : { level: "none", positions: [] };
+  const partnerDepthRisk = idea.team ? tradeDepthRisk(idea.team, getPackage, givePackage) : { level: "none", positions: [] };
+  if (userDepthRisk.level === "thin") blocked.push(`This creates a thin ${userDepthRisk.positions.join("/")} room.`);
+  if (partnerDepthRisk.level === "thin") warnings.push(`Partner may hesitate because ${partnerDepthRisk.positions.join("/")} gets thin.`);
+  if (userFitScore < 60) blocked.push("User roster fit is not strong enough.");
+  if (partnerFitScore < 55) blocked.push("Partner roster fit is not strong enough.");
+
+  const acceptance = tradeAcceptanceRead(shape, marketDiff, userFitScore, partnerFitScore, evidence, bestDelta);
+  const minAcceptance = shape === "2-for-1" ? 38 : 45;
+  if (acceptance.probability < minAcceptance) blocked.push("Acceptance likelihood is too low.");
+  if (evidence.exactCount > 0) reasons.push("Exact accepted-trade samples support the package.");
+  else reasons.push("Accepted-trade activity supports every player in the package.");
+  reasons.push(`Market edge stays realistic at ${marketDiff >= 0 ? "+" : ""}${marketDiff.toFixed(1)}.`);
+  reasons.push(`Your fit ${userFitScore}/100; partner fit ${partnerFitScore}/100.`);
+
+  let score =
+    54 +
+    (userFitScore - 60) * 0.22 +
+    (partnerFitScore - 55) * 0.2 +
+    tradeMarketEdgeScore(shapeParts, marketDiff, bestDelta) +
+    Math.min(8, Number(evidence.exactCount || 0) * 1.8) +
+    Math.min(7, Number(evidence.activity || 0) / 700) +
+    (acceptance.probability - minAcceptance) * 0.18 -
+    warnings.length * 2;
+  score = Math.round(clampNumber(score, 0, 100));
+  const minQuality = shape === "2-for-1" ? 72 : 70;
+  if (score < minQuality) blocked.push(`Quality score ${score} is below the ${minQuality} gate.`);
+
+  const pass = blocked.length === 0;
+  return {
+    pass,
+    quality: {
+      pass,
+      score,
+      tier: pass ? (score >= 84 ? "elite" : score >= 76 ? "strong" : "acceptable") : "blocked",
+      reasons,
+      warnings: warnings.concat(blocked),
+      gateVersion: "trade-quality-v2",
+    },
+    userFit: {
+      score: userFitScore,
+      needAddressed: idea.yourNeed?.pos || "",
+      lineupDelta: userBefore.length ? Math.round((lineupValue(fillLineup(userAfter)) - lineupValue(fillLineup(userBefore))) * 10) / 10 : 0,
+      depthRisk: userDepthRisk.level,
+    },
+    partnerFit: {
+      score: partnerFitScore,
+      needAddressed: idea.theirNeed?.pos || "",
+      rosterBalanceDelta: partnerBefore.length ? Math.round((tradeNeedScoreForRows(partnerBefore) - tradeNeedScoreForRows(partnerAfter)) * 10) / 10 : 0,
+      givesUpStarterRisk: partnerDepthRisk.level === "thin" ? "high" : partnerDepthRisk.level === "watch" ? "medium" : "low",
+    },
+    acceptance,
+    market: {
+      giveValue: Number.isFinite(Number(marketGive)) ? Math.round(Number(marketGive) * 10) / 10 : 0,
+      getValue: Number.isFinite(Number(marketGet)) ? Math.round(Number(marketGet) * 10) / 10 : 0,
+      deltaForUser: Math.round(marketDiff * 10) / 10,
+      edgeBand: marketDiff > 3 ? "too rich" : marketDiff >= 0.5 ? "slight" : "fair",
+    },
+    evidence: {
+      source: "Fantasy IQ Data",
+      tier: evidence.tier,
+      exactAcceptedCount: evidence.exactCount,
+      activity: evidence.activity,
+      sampleStatus: evidence.sampleStatus,
+    },
+  };
 }
 
 function bestTradePackage(giveRows, getRows, shape, myNeeds, theirNeeds) {
@@ -713,8 +942,8 @@ function bestTradePackage(giveRows, getRows, shape, myNeeds, theirNeeds) {
         Math.min(5, Math.max(0, marketDiff + 2)) +
         Number(yourNeed.weight || 0) * 0.7 +
         Number(theirNeed.weight || 0) * 0.55 +
-        Math.min(5, tradePackageMarketActivity(givePackage) / 400) +
-        Math.min(5, tradePackageMarketActivity(getPackage) / 400) +
+        Math.min(5, tradePackageRealActivity(givePackage) / 400) +
+        Math.min(5, tradePackageRealActivity(getPackage) / 400) +
         evidence.score +
         tradeMarketEdgeScore(shape, marketDiff, bestDelta) +
         shapeBonus +
@@ -749,14 +978,29 @@ function teamSnapshotLabel(snapshot) {
   return `${snapshot.teamName || `Team ${snapshot.teamId}`}${snapshot.manager ? ` (${snapshot.manager})` : ""}`;
 }
 
-function finalizeLeagueTradeIdeas(ideas, limit) {
+function finalizeLeagueTradeIdeas(ideas, limit, context = {}) {
   const seen = new Set();
   const selected = [];
   const repeats = [];
   const usedGive = new Set();
   const usedGet = new Set();
   ideas
-    .sort((a, b) => b.score - a.score)
+    .map((idea) => {
+      const gate = tradeIdeaQualityGate(idea, context);
+      return {
+        ...idea,
+        quality: gate.quality,
+        userFit: gate.userFit,
+        partnerFit: gate.partnerFit,
+        acceptance: gate.acceptance,
+        market: gate.market,
+        evidence: gate.evidence,
+        score: gate.pass ? Math.max(Number(idea.score || 0), gate.quality.score) : Number(idea.score || 0),
+        qualityPass: gate.pass,
+      };
+    })
+    .filter((idea) => idea.qualityPass)
+    .sort((a, b) => (b.quality?.score || 0) - (a.quality?.score || 0) || b.score - a.score)
     .forEach((idea) => {
       const givePackage = idea.givePackage || [idea.give];
       const getPackage = idea.getPackage || [idea.get];
@@ -853,7 +1097,7 @@ function leagueTradeIdeas(snapshot, limit = 3) {
       });
     });
 
-  return finalizeLeagueTradeIdeas(ideas, limit);
+  return finalizeLeagueTradeIdeas(ideas, limit, { userSnapshot: snapshot });
 }
 
 function tradeAwayCandidates(snapshot, limit = 3) {
@@ -910,18 +1154,18 @@ function renderTradePackageMiniCards(rows, label = "") {
 }
 
 function tradeIdeaEvidenceLabel(idea) {
-  const samples = Number(idea.databaseSampleCount || 0);
+  const samples = Number(idea.evidence?.exactAcceptedCount || idea.databaseSampleCount || 0);
   if (samples > 0) return `${samples} exact accepted sample${samples === 1 ? "" : "s"}`;
-  const activity = Number(idea.databaseActivity || 0);
+  const activity = Number(idea.evidence?.activity || idea.databaseActivity || 0);
   if (activity > 0) return `market-backed / ${Math.round(activity).toLocaleString()} player activity`;
   return "market-backed by Fantasy IQ Data";
 }
 
 function tradeIdeaEvidenceDetail(idea, shape) {
-  if (Number(idea.databaseSampleCount || 0) > 0) {
+  if (Number(idea.evidence?.exactAcceptedCount || idea.databaseSampleCount || 0) > 0) {
     return `found this exact ${shape} in accepted-trade database samples`;
   }
-  return "matched FantasyCalc.com market values, accepted-trade activity, and both rosters' needs";
+  return "matched Fantasy IQ Data market values, accepted-trade activity, and both rosters' needs";
 }
 
 function renderTradeIdeaCard(idea) {
@@ -932,11 +1176,21 @@ function renderTradeIdeaCard(idea) {
   const marketDiff = Number(idea.marketDiff || 0);
   const marketLabel = Math.abs(marketDiff) < 1 ? "market even" : `${marketDiff > 0 ? "+" : ""}${marketDiff.toFixed(1)} market`;
   const shape = idea.shape || tradeShapeLabel(givePackage.length, getPackage.length);
+  const quality = idea.quality || {};
+  const acceptance = idea.acceptance || {};
+  const userFit = idea.userFit || {};
+  const partnerFit = idea.partnerFit || {};
   return `<article class="trade-idea-card">
     <div class="trade-idea-head">
       <span>${htmlEscape(teamSnapshotLabel(idea.team))}</span>
       <strong>${htmlEscape(tradePackageName(givePackage))} for ${htmlEscape(tradePackageName(getPackage))}</strong>
-      <small>${htmlEscape(shape)} / ${htmlEscape(diffLabel)} / ${htmlEscape(marketLabel)} / ${htmlEscape(tradeIdeaEvidenceLabel(idea))}</small>
+      <small>${htmlEscape(shape)} / ${htmlEscape(diffLabel)} / ${htmlEscape(marketLabel)} / Quality ${htmlEscape(quality.score || "70+")} / ${htmlEscape(tradeIdeaEvidenceLabel(idea))}</small>
+    </div>
+    <div class="trade-quality-grid">
+      <div><span>Your fit</span><strong>${htmlEscape(userFit.score || "--")}/100</strong><small>${htmlEscape(userFit.needAddressed || idea.yourNeed?.pos || "Need")}</small></div>
+      <div><span>Their fit</span><strong>${htmlEscape(partnerFit.score || "--")}/100</strong><small>${htmlEscape(partnerFit.needAddressed || idea.theirNeed?.pos || "Need")}</small></div>
+      <div><span>Acceptance</span><strong>${htmlEscape(acceptance.probability || "--")}%</strong><small>${htmlEscape(acceptance.label || "negotiable")}</small></div>
+      <div><span>Evidence</span><strong>${htmlEscape(idea.evidence?.tier || idea.databaseEvidence || "market-backed")}</strong><small>${htmlEscape(tradeIdeaEvidenceLabel(idea))}</small></div>
     </div>
     <div class="trade-idea-flow">
       <section>
@@ -949,6 +1203,7 @@ function renderTradeIdeaCard(idea) {
       </section>
     </div>
     <p>${htmlEscape(`Why it fits: you need ${idea.yourNeed?.pos || idea.get.Pos}, and ${teamSnapshotLabel(idea.team)} needs ${idea.theirNeed?.pos || idea.give.Pos}. FantasyIQ ${tradeIdeaEvidenceDetail(idea, shape)}, then checked for a slight value edge before showing it.`)}</p>
+    ${quality.reasons?.length ? `<ul class="trade-quality-reasons">${quality.reasons.slice(0, 3).map((reason) => `<li>${htmlEscape(reason)}</li>`).join("")}</ul>` : ""}
   </article>`;
 }
 
@@ -1300,7 +1555,7 @@ function renderTradeFinder(snapshot = activeRosterSnapshot({ preferPasted: true 
   const databaseStatus = fantasyCalcTradeDatabaseReady()
     ? fantasyCalcTradeSamples.loadingKeys?.size
       ? "Fantasy IQ Data is validating exact 1-for-1 and 2-for-1 accepted-trade samples while market-backed ideas stay available."
-      : "No package cleared the FantasyCalc.com market value, accepted-trade activity, and roster-fit filters."
+      : "No package cleared the Fantasy IQ Data market value, accepted-trade activity, acceptance, and roster-fit quality gate."
     : fantasyCalcTradeDatabaseLoading || fantasyCalcMarketLoading
       ? "Fantasy IQ Data is still loading accepted-trade context. Package ideas will appear only after the real-trade database is ready."
       : "Fantasy IQ Data is unavailable, so package ideas are disabled instead of guessing from local roster values.";
@@ -1308,7 +1563,7 @@ function renderTradeFinder(snapshot = activeRosterSnapshot({ preferPasted: true 
     tradeFinder.innerHTML = `
       <div class="trade-lane-summary">
         <strong>${leagueIdeas.length} active-league trade idea${leagueIdeas.length === 1 ? "" : "s"}</strong>
-        <span>${htmlEscape(tradeMarketSourceLabel())}. FantasyIQ shows the best realistic 1-for-1 and 2-for-1 ideas after FantasyCalc.com value, trade activity, and both-team roster fit clear the filters.</span>
+        <span>${htmlEscape(tradeMarketSourceLabel())}. FantasyIQ shows the best realistic 1-for-1 and 2-for-1 ideas after market value, accepted-trade activity, both-team fit, and acceptance likelihood clear the quality gate.</span>
       </div>
       <div class="trade-idea-list">
         ${leagueIdeas.map(renderTradeIdeaCard).join("")}
@@ -1323,7 +1578,7 @@ function renderTradeFinder(snapshot = activeRosterSnapshot({ preferPasted: true 
         <span>${htmlEscape(databaseStatus)} FantasyIQ is holding back trade suggestions instead of showing loose or unrealistic offers.</span>
       </div>
       <div class="trade-empty-state">
-        <p>For this roster, Fantasy IQ Data did not find three clean 1-for-1 or 2-for-1 ideas that help both managers.</p>
+        <p>For this roster, Fantasy IQ Data did not find three clean 1-for-1 or 2-for-1 ideas that help both managers and pass the quality gate.</p>
         <p>Use the manual trade checker for a specific offer, or check back after rosters/trade market data move.</p>
       </div>
     `;
@@ -1570,13 +1825,12 @@ function commandScoreFromData(data, rec, snapshot) {
   if (Number.isFinite(rosterScore) && rosterScore > 0) {
     let score = rosterScore;
     if (Number.isFinite(backendScore) && backendScore > 20) {
-      score = Math.max(rosterScore - 3, rosterScore * 0.86 + backendScore * 0.14);
+      score = Math.max(rosterScore - 1, rosterScore * 0.92 + backendScore * 0.08);
     } else {
       const confidence = Number(rec?.confidenceScore);
-      if (Number.isFinite(confidence)) score = Math.max(rosterScore - 2, rosterScore * 0.88 + confidence * 0.12);
+      if (Number.isFinite(confidence)) score = Math.max(rosterScore - 1, rosterScore * 0.94 + confidence * 0.06);
     }
-    if (rec?.action === "WAIT") score += 1;
-    if (rec?.action === "ACT_NOW") score -= 1;
+    if (rec?.action === "WAIT") score += 0.5;
     return Math.round(clampNumber(score, 1, 99));
   }
   if (Number.isFinite(backendScore) && backendScore > 20) return Math.round(clampNumber(backendScore, 1, 99));
@@ -1619,8 +1873,15 @@ function commandWeaknessFromData(data, snapshot) {
 function commandScoreDetailText(score, data, snapshot) {
   if (!score) return "Needs roster or board context";
   if (snapshot?.rows?.length) {
-    const consensus = consensusRosterBreakdown(snapshot);
-    return `Consensus starters ${consensus.starterAvg.toFixed(1)} / roster ${consensus.rosterAvg.toFixed(1)}`;
+    const grade = postDraftGrade(snapshot);
+    const breakdown = grade.scoreBreakdown || {};
+    const penalties = Number(breakdown.constructionPenalty || 0) + Number(breakdown.depthPenalty || 0) + Number(breakdown.riskPenalty || 0);
+    const penaltyText = penalties > 0 ? ` / ${penalties.toFixed(1)} construction drag` : " / clean construction";
+    return `Consensus starters ${Number(breakdown.consensusStarterAvg || 0).toFixed(1)} / roster ${Number(breakdown.consensusRosterAvg || 0).toFixed(1)}${penaltyText}`;
+  }
+  const backendBreakdown = data?.engine?.scoreBreakdown || data?.scoreBreakdown;
+  if (backendBreakdown?.consensusStarterAvg || backendBreakdown?.consensusRosterAvg) {
+    return `Consensus starters ${Number(backendBreakdown.consensusStarterAvg || 0).toFixed(1)} / roster ${Number(backendBreakdown.consensusRosterAvg || 0).toFixed(1)}`;
   }
   const strength = Number(data?.engine?.teamStrength);
   const starterQuality = Number(data?.engine?.starterQuality);
@@ -1713,7 +1974,7 @@ function buildClientIntelligenceData(serverData = {}) {
 
   let recommendation = serverData.recommendation || {};
   const waiverIsActionable = topWaiver && waiverDrop && waiverGain >= 3;
-  const tradeIsActionable = tradeIdea && tradeIdea.score >= 56;
+  const tradeIsActionable = tradeIdea && tradeIdea.quality?.pass && Number(tradeIdea.quality.score || 0) >= 70;
 
   if (waiverIsActionable) {
     recommendation = {
@@ -1739,11 +2000,13 @@ function buildClientIntelligenceData(serverData = {}) {
     recommendation = {
       action: "ACT_NOW",
       mainMove: `Offer ${compactTradeIdeaSide(tradeIdea, "give")} for ${compactTradeIdeaSide(tradeIdea, "get")}`,
-      confidenceScore: Math.round(clampNumber(61 + tradeIdea.score / 5 + Math.max(0, gain), 50, 84)),
+      confidenceScore: Math.round(clampNumber(60 + Number(tradeIdea.quality?.score || tradeIdea.score || 0) / 5 + Math.max(0, gain) + Number(tradeIdea.acceptance?.probability || 0) / 18, 52, 88)),
       supportingQuantitativeReasons: [
-        `User value delta is ${gain > 0 ? "+" : ""}${gain.toFixed(1)} before roster-fit adjustment.`,
+        `Trade quality gate cleared at ${tradeIdea.quality.score}/100 with ${tradeIdea.acceptance?.probability || "--"}% acceptance likelihood.`,
         tradeIdea.yourNeed ? `Incoming player attacks your ${tradeIdea.yourNeed.pos} need: ${tradeIdea.yourNeed.detail}.` : "Incoming player improves the highest available lineup lane.",
-        tradeIdea.theirNeed ? `Opponent acceptance angle: your outgoing player fills their ${tradeIdea.theirNeed.pos} need.` : "Trade shape is built around surplus for need rather than raw rank swapping.",
+        tradeIdea.evidence?.exactAcceptedCount
+          ? `Fantasy IQ Data found ${tradeIdea.evidence.exactAcceptedCount} exact accepted sample${tradeIdea.evidence.exactAcceptedCount === 1 ? "" : "s"}.`
+          : `Fantasy IQ Data shows ${Math.round(Number(tradeIdea.evidence?.activity || 0)).toLocaleString()} accepted-trade activity on the package.`,
       ],
       riskWarning: incomingRisk >= 6 ? `Incoming risk peaks at ${incomingRisk}/10, so keep the ask flexible.` : "Trade acceptance depends on opponent preference and recent news.",
       alternativePath: topWaiver ? `Fallback waiver path: add ${compactIntelligenceRow(topWaiver)} if the manager declines.` : "Fallback path is to hold and wait for waiver or injury leverage.",

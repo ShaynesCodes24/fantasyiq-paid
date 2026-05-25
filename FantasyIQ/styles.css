@@ -2378,6 +2378,13 @@ li + li {
   margin: 14px 0;
 }
 
+.trade-quality-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+
 .trade-score-grid div {
   border: 1px solid rgba(216, 195, 146, 0.72);
   border-radius: 8px;
@@ -2385,10 +2392,26 @@ li + li {
   padding: 10px;
 }
 
+.trade-quality-grid div {
+  min-width: 0;
+  border: 1px solid rgba(17, 70, 56, 0.18);
+  border-radius: 8px;
+  background: #f3fbf7;
+  padding: 9px;
+}
+
 .trade-score-grid span {
   display: block;
   color: var(--muted);
   font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.trade-quality-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
   font-weight: 900;
   text-transform: uppercase;
 }
@@ -2400,11 +2423,34 @@ li + li {
   font-size: 22px;
 }
 
+.trade-quality-grid strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink);
+  font-size: 18px;
+}
+
 .trade-score-grid small {
   display: block;
   margin-top: 3px;
   color: var(--muted);
   font-size: 12px;
+  font-weight: 800;
+}
+
+.trade-quality-grid small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.trade-quality-reasons {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 13px;
   font-weight: 800;
 }
 
@@ -5494,6 +5540,7 @@ code {
   .trade-shell,
   .trade-command-bar,
   .trade-score-grid,
+  .trade-quality-grid,
   .trade-breakdown-grid,
   .trade-detail-grid,
   .trade-lineup-grid,
@@ -5743,7 +5790,8 @@ code {
     line-height: 1.05;
   }
 
-  .trade-score-grid strong {
+  .trade-score-grid strong,
+  .trade-quality-grid strong {
     font-size: 20px;
   }
 
@@ -6321,6 +6369,7 @@ h1 {
 .command-tile,
 .live-stat,
 .trade-score-grid div,
+.trade-quality-grid div,
 .analysis-chip {
   background:
     linear-gradient(180deg, #fffdf7, #f8f3e7);
@@ -7225,6 +7274,7 @@ small,
 .trade-player-chip span,
 .trade-player-chip small,
 .trade-score-grid small,
+.trade-quality-grid small,
 .post-draft-hero small,
 .post-draft-grid p,
 .trade-finder-grid p,

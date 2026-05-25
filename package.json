@@ -18,6 +18,8 @@
     "test:security-boundaries": "python scripts/test_security_boundaries.py",
     "test:schedule-iq": "python scripts/test_schedule_iq_validation.py",
     "test:data-health": "python scripts/test_data_health.py",
+    "test:trade-quality": "python scripts/test_trade_quality_static.py",
+    "test:score-calibration": "python scripts/test_score_calibration.py",
     "agent:audit": "python scripts/run_agent_audit.py",
     "agent:health": "python scripts/daily_league_intelligence_health.py",
     "agent:site-currency": "python scripts/site_currency_agent.py",
@@ -25,7 +27,7 @@
     "agent:site-currency:collaborator": "python scripts/site_currency_peer_agent.py --role collaborator",
     "agent:site-currency:verifier-data": "python scripts/site_currency_peer_agent.py --role verifier-data",
     "agent:site-currency:verifier-flow": "python scripts/site_currency_peer_agent.py --role verifier-flow",
-    "predeploy": "npm run typecheck && npm run test:api && npm run test:security-boundaries && npm run test:schedule-iq && npm run test:data-health && npm run test:mirrors && npm run test:csp && npm run build",
+    "predeploy": "npm run typecheck && npm run test:api && npm run test:security-boundaries && npm run test:schedule-iq && npm run test:data-health && npm run test:trade-quality && npm run test:score-calibration && npm run test:mirrors && npm run test:csp && npm run build",
     "test:readiness": "python scripts/check_product_readiness.py",
     "test:production-readiness": "python scripts/check_product_readiness.py"
   },
