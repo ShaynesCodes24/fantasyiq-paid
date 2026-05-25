@@ -2,9 +2,15 @@
 
 ## Frontend
 
-Static HTML/CSS/JS in public/FantasyIQ.
+Static HTML/CSS/JS in `public/`.
 
-The dashboard JavaScript is split across public/FantasyIQ/js and loaded in order by public/FantasyIQ/index.html. The root FantasyIQ directory is a mirror for the dashboard bundle.
+The production app is served from the apex domain, `https://myfantasyiq.com/`.
+The `/FantasyIQ/` path remains as a compatibility copy, but it is not the
+primary product URL.
+
+The dashboard JavaScript is split across `public/js` for the root app and
+`public/FantasyIQ/js` for the compatibility copy. The root `FantasyIQ/`
+directory mirrors the dashboard bundle for legacy static hosting fallbacks.
 
 ## Backend
 
@@ -34,4 +40,4 @@ ESPN public league API.
 4. User creates password or uses access code
 5. User validates ESPN league
 6. Dashboard loads ESPN data
-7. FantasyIQ generates dashboard recommendations
+7. FantasyIQ generates the Main Move, FantasyIQ Score, supporting reasons, risk warning, and alternative path

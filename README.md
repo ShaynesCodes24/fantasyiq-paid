@@ -1,9 +1,25 @@
-# FantasyIQ Paid Customer Deploy
+# MyFantasyIQ Decision Engine
 
-White-label deploy package for a paid FantasyIQ league dashboard. The platform
-now supports a self-serve-ready flow: Stripe checkout creates a durable customer
-record, the customer validates public ESPN leagues, and the dashboard reads the
-active league profile from Postgres with env/customer registry fallback.
+MyFantasyIQ is a paid ESPN fantasy football decision engine. The product opens
+at the Command Center and answers the north-star question first: what should I
+do next to improve my fantasy team?
+
+The platform supports a self-serve-ready flow: Stripe checkout creates a durable
+customer record, the customer validates public ESPN leagues, and FantasyIQ reads
+league context from Postgres with env/customer registry fallback.
+
+## Product Decision Rule
+
+Read [docs/PRODUCT_VISION.md](docs/PRODUCT_VISION.md) before making product or
+feature decisions. Every new feature must support the north-star question:
+
+```text
+What should I do next to improve my fantasy team?
+```
+
+If a proposed feature does not improve the Main Move, FantasyIQ Score,
+supporting reasons, risk warning, alternative path, or a tool that proves or
+executes the recommendation, do not build it yet.
 
 Price model:
 
@@ -42,13 +58,13 @@ https://myfantasyiq.com/
 Stripe accepted business website URL:
 
 ```text
-https://myfantasyiq.com/FantasyIQ/
+https://myfantasyiq.com/
 ```
 
 Paid dashboard URL shape:
 
 ```text
-https://myfantasyiq.com/FantasyIQ/
+https://myfantasyiq.com/
 ```
 
 The repo also keeps a root-level static copy of the site files so Vercel can
@@ -95,9 +111,9 @@ npm run preview:static
 Use this positioning for the paid offer:
 
 ```text
-FantasyIQ gives your ESPN fantasy football league a custom draft command
-center with live public-league draft sync, ranked boards, mock draft practice,
-trade discipline, and league branding.
+MyFantasyIQ tells serious ESPN fantasy football managers their smartest next
+move using league settings, roster structure, player values, schedule context,
+trade logic, waiver opportunities, and data confidence.
 ```
 
 Recommended checkout/onboarding flow:
@@ -109,9 +125,18 @@ Recommended checkout/onboarding flow:
 5. Customer switches active leagues from the dashboard.
 6. Owner unlocks `/admin-login.html`, then uses `/admin.html` for customer detail, setup email resend, and access-code reset.
 
-## Current Dashboard Experience
+## Current Command Center Experience
 
-The dashboard now includes a customer-confidence layer and stronger draft
+The root app at `https://myfantasyiq.com/` now starts with the product hierarchy:
+
+- Main Move
+- FantasyIQ Score
+- Supporting Reasons
+- Risk Warning
+- Alternative Path
+- Feature tools that prove or execute the recommendation
+
+The dashboard also includes a customer-confidence layer and stronger draft
 practice loop:
 
 - League Health summarizes account access, ESPN sync, team match, scoring, and
@@ -203,7 +228,7 @@ https://buy.stripe.com/dRmcN5aAV1GX0Cc7X3efC02
 
 ## Public Demo
 
-The live `myfantasyiq.com/FantasyIQ/` dashboard is a public demo
+The live `myfantasyiq.com/` dashboard is a public demo
 preview. When `FANTASY_IQ_LEAGUE_ID` is not set, `/api/live-draft` connects to
 a known public ESPN demo league so the product does not look broken during a
 first checkout test.
@@ -308,9 +333,9 @@ dashboards automatically, even when the slug is only defined in
 `FANTASY_IQ_CUSTOMERS_JSON` and not prelisted in `public/FantasyIQ/config.js`:
 
 ```text
-/FantasyIQ/?customer=demo-manager
-/FantasyIQ/?customer=new-customer-slug
-/FantasyIQ/?customer=sample-owner&league=home
+/?customer=demo-manager
+/?customer=new-customer-slug
+/?customer=sample-owner&league=home
 ```
 
 Any requested customer slug enables customer access handling, removes demo
@@ -423,7 +448,7 @@ fallback if ESPN or the serverless endpoint is temporarily unavailable.
 FantasyIQ now keeps a league profile for every dashboard. The profile controls
 team count, scoring format, lineup slots, bench/IR, draft rounds, playoff
 teams, and raw stat scoring items. Draft Room recommendations, Mock Simulator
-team count/rounds, Big Board projection labels, and Trade Calculator values
+team count/rounds, Big Board projection labels, and Trade IQ values
 read from that profile instead of assuming a 12-team full-PPR league.
 
 Supported setup examples:

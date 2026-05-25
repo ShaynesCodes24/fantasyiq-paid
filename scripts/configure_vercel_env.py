@@ -30,6 +30,10 @@ OPTIONAL_ENV_KEYS = [
     "FANTASYIQ_ADMIN_GATE_SECRET",
     "FANTASYIQ_ADMIN_GATE_MAX_AGE_SECONDS",
     "FANTASYIQ_DASHBOARD_URL",
+    "FANTASYIQ_STRIPE_LIVEMODE",
+    "FANTASYIQ_STRIPE_ALLOWED_PAYMENT_LINK_IDS",
+    "FANTASYIQ_STRIPE_ALLOWED_PRICE_IDS",
+    "FANTASYIQ_STRIPE_ALLOWED_PRODUCT_IDS",
     "STRIPE_WEBHOOK_SECRET",
 ]
 
@@ -100,8 +104,12 @@ def main() -> int:
     leagues_json = env("FANTASY_IQ_LEAGUES_JSON")
     league_id = env("FANTASY_IQ_LEAGUE_ID")
     season = env("FANTASY_IQ_SEASON", DEFAULT_SEASON)
-    if not customers_json and not leagues_json and not league_id:
-        raise SystemExit("Set FANTASY_IQ_CUSTOMERS_JSON for customer/league profiles, FANTASY_IQ_LEAGUES_JSON for one customer with multiple leagues, or FANTASY_IQ_LEAGUE_ID for one customer.")
+    optional_values = {key: env(key) for key in OPTIONAL_ENV_KEYS}
+    if not customers_json and not leagues_json and not league_id and not any(optional_values.values()):
+        raise SystemExit(
+            "Set FANTASY_IQ_CUSTOMERS_JSON, FANTASY_IQ_LEAGUES_JSON, "
+            "FANTASY_IQ_LEAGUE_ID, or at least one optional environment variable."
+        )
 
     results = []
     if league_id:
@@ -112,7 +120,7 @@ def main() -> int:
             ]
         )
     for key in OPTIONAL_ENV_KEYS:
-        value = env(key)
+        value = optional_values[key]
         if value:
             results.append(upsert_env_var(token, project, key, value))
 
@@ -134,7 +142,7 @@ def main() -> int:
     if leagues_json:
         print("FANTASY_IQ_LEAGUES_JSON=set")
     for key in OPTIONAL_ENV_KEYS:
-        if env(key) and key not in ("FANTASY_IQ_CUSTOMERS_JSON", "FANTASY_IQ_LEAGUES_JSON"):
+        if optional_values[key] and key not in ("FANTASY_IQ_CUSTOMERS_JSON", "FANTASY_IQ_LEAGUES_JSON"):
             print(f"{key}=set")
     print("Redeploy the Vercel project after changing env vars.")
     return 0

@@ -1,11 +1,11 @@
 window.FANTASY_IQ_CONFIG = {
   siteName: "MyFantasyIQ",
   leagueName: "Public Demo League",
-  leagueSubtitle: "ESPN public demo / season 2026",
+  leagueSubtitle: "ESPN decision engine demo / season 2026",
   defaultLoadout: "",
-  customerName: "",
-  customerTeamName: "",
-  customerTeamId: "",
+  customerName: "Demo Manager",
+  customerTeamName: "FantasyIQ Demo Squad",
+  customerTeamId: "5",
   logoUrl: "./assets/myfantasyiq-wordmark.svg?v=20260522-wordmark-safe-1",
   logoAlt: "MyFantasyIQ league logo",
   draftCardLabel: "Subscription",
@@ -21,12 +21,12 @@ window.FANTASY_IQ_CONFIG = {
   isDemoPreview: true,
   demoLabel: "Demo Mode",
   demoMessage:
-    "Sample league only. No customer account is loaded.",
+    "Full sample league with roster, waiver, trade, schedule, and draft-prep examples.",
   fieldLeftLabel: "Fantasy",
   fieldRightLabel: "IQ",
-  heroTitle: "Draft smarter. Trade cleaner. Win your league.",
+  heroTitle: "Your smartest next move, explained.",
   heroSubtitle:
-    "Live draft sync, player values, mock tracking, and trade discipline in one command center.",
+    "FantasyIQ reads league context, roster shape, player values, schedule leverage, trade lanes, and waiver opportunities before recommending what to do next.",
   useEspnLeagueBranding: false,
   leagueSettings: {
     teamCount: 12,
@@ -70,7 +70,7 @@ window.FANTASY_IQ_CONFIG = {
         source: "Customer setup profile",
       },
       heroSubtitle:
-        "Demo Manager's Sample Team command center for matchup leverage, player values, mock tracking, and trade discipline.",
+        "Demo Manager's Sample Team command center for next-move recommendations, roster weakness, confidence, and risk.",
     },
     "sample-owner": {
       customerName: "Demo Owner",
@@ -93,7 +93,7 @@ window.FANTASY_IQ_CONFIG = {
         source: "Customer setup profile",
       },
       heroSubtitle:
-        "Demo Owner's Demo League command center for matchup leverage, player values, mock tracking, and trade discipline.",
+        "Demo Owner's Demo League command center for next-move recommendations, roster weakness, confidence, and risk.",
     },
   },
 };

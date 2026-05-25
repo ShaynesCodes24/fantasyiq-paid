@@ -121,6 +121,158 @@ function valueDisplay(row) {
   return leagueValueScore(row).toFixed(1);
 }
 
+function normalizeFantasyCalcMarket(payload) {
+  const players = Array.isArray(payload?.players) ? payload.players : [];
+  const maxValue = Number(payload?.maxValue || Math.max(...players.map((player) => Number(player.value || 0)), 0));
+  const playersByKey = new Map();
+  players.forEach((player) => {
+    const key = normalizePlayerName(player.name || "");
+    if (!key) return;
+    const value = Number(player.value || 0);
+    const marketScore = maxValue > 0 ? Math.round((value / maxValue) * 1000) / 10 : 0;
+    playersByKey.set(key, { ...player, marketScore });
+    if (player.espnId) playersByKey.set(`espn:${player.espnId}`, { ...player, marketScore });
+  });
+  return {
+    ok: Boolean(payload?.ok),
+    source: payload?.source || "FantasyCalc trade-value market",
+    sourceUrl: payload?.sourceUrl || "https://fantasycalc.com/trade-value-chart",
+    databaseUrl: payload?.databaseUrl || "https://fantasycalc.com/database",
+    tradeCount: payload?.tradeCount || null,
+    syncedAt: payload?.syncedAt || "",
+    settings: payload?.settings || {},
+    maxValue,
+    playersByKey,
+    playerCount: players.length,
+  };
+}
+
+function normalizeFantasyCalcTradeDatabase(payload) {
+  const mostTraded = Array.isArray(payload?.mostTraded) ? payload.mostTraded : [];
+  const mostTradedById = new Map();
+  const mostTradedByKey = new Map();
+  mostTraded.forEach((item) => {
+    const player = item?.player || {};
+    const id = String(player.id || item.id || "").trim();
+    const key = normalizePlayerName(player.name || item.name || "");
+    const normalized = {
+      id,
+      name: player.name || item.name || "",
+      position: player.position || item.position || "",
+      team: player.maybeTeam || item.team || "",
+      espnId: player.espnId || "",
+      activity: Number(item.value || item.tradeCount || item.count || 0),
+    };
+    if (id) mostTradedById.set(id, normalized);
+    if (key) mostTradedByKey.set(key, normalized);
+    if (normalized.espnId) mostTradedById.set(`espn:${normalized.espnId}`, normalized);
+  });
+  return {
+    ok: Boolean(payload?.ok),
+    source: payload?.source || "FantasyCalc real-trade database",
+    sourceUrl: payload?.sourceUrl || "https://fantasycalc.com/database",
+    syncedAt: payload?.syncedAt || "",
+    tradeCount: payload?.tradeCount || null,
+    settings: payload?.settings || {},
+    mostTraded,
+    mostTradedById,
+    mostTradedByKey,
+  };
+}
+
+function fantasyCalcPlayer(row) {
+  if (!row || !fantasyCalcMarket?.playersByKey) return null;
+  const espnId = row.PlayerId || row.EspnId || row.ESPNID || "";
+  if (espnId && fantasyCalcMarket.playersByKey.has(`espn:${espnId}`)) {
+    return fantasyCalcMarket.playersByKey.get(`espn:${espnId}`);
+  }
+  const key = normalizePlayerName(row.Player || "");
+  if (fantasyCalcMarket.playersByKey.has(key)) return fantasyCalcMarket.playersByKey.get(key);
+  return null;
+}
+
+function fantasyCalcPlayerId(row) {
+  const market = fantasyCalcPlayer(row);
+  const id = market?.id || row?.FantasyCalcId || row?.fantasyCalcId || "";
+  return String(id || "").trim();
+}
+
+function fantasyCalcTradeDatabasePlayer(row) {
+  if (!row || !fantasyCalcTradeDatabase?.ok) return null;
+  const id = fantasyCalcPlayerId(row);
+  if (id && fantasyCalcTradeDatabase.mostTradedById?.has(id)) return fantasyCalcTradeDatabase.mostTradedById.get(id);
+  const espnId = row.PlayerId || row.EspnId || row.ESPNID || fantasyCalcPlayer(row)?.espnId || "";
+  if (espnId && fantasyCalcTradeDatabase.mostTradedById?.has(`espn:${espnId}`)) return fantasyCalcTradeDatabase.mostTradedById.get(`espn:${espnId}`);
+  const mostTraded = fantasyCalcTradeDatabase.mostTradedByKey?.get(normalizePlayerName(row.Player || ""));
+  if (mostTraded) return mostTraded;
+  const market = fantasyCalcPlayer(row);
+  return market?.id ? { id: String(market.id), name: market.name || row.Player || "", activity: 0, sampleRequired: true } : null;
+}
+
+function fantasyCalcTradeDatabaseReady() {
+  return Boolean(
+    fantasyCalcMarket?.ok &&
+      fantasyCalcMarket.playerCount &&
+      fantasyCalcTradeDatabase?.ok &&
+      fantasyCalcTradeDatabase.tradeCount &&
+      fantasyCalcTradeDatabase.mostTradedByKey?.size,
+  );
+}
+
+function fantasyCalcPlayerByName(name) {
+  if (!fantasyCalcMarket?.playersByKey) return null;
+  return fantasyCalcMarket.playersByKey.get(normalizePlayerName(name || "")) || null;
+}
+
+function fantasyCalcMarketScore(row) {
+  const market = fantasyCalcPlayer(row);
+  return Number.isFinite(Number(market?.marketScore)) ? Number(market.marketScore) : null;
+}
+
+function fantasyCalcMarketOnlyRow(market) {
+  if (!market) return null;
+  const volatility = Number(market.volatility || 0);
+  return {
+    Player: market.name,
+    Pos: market.position || "",
+    Team: market.team || "",
+    Rank: market.overallRank || 999,
+    "Pos Rank": market.positionRank || "",
+    "Value Score": Number(market.marketScore || 0),
+    "Pos Tier": market.tier ? `Market T${market.tier}` : "Market",
+    Category: "Market",
+    Risk: clampNumber(4.5 + volatility * 0.25, 2.5, 8),
+    Action: "Market-only player",
+    Analysis: "FantasyCalc market match. Full FantasyIQ board context will fill in when the complete board is loaded.",
+    MarketOnly: true,
+  };
+}
+
+function tradeAssetValue(row) {
+  const local = leagueValueScore(row);
+  const market = fantasyCalcMarketScore(row);
+  if (!Number.isFinite(Number(market))) return local;
+  return Math.round((local * 0.58 + Number(market) * 0.42) * 10) / 10;
+}
+
+function tradeValueDisplay(row) {
+  return tradeAssetValue(row).toFixed(1);
+}
+
+function tradeMarketSourceLabel() {
+  if (fantasyCalcTradeDatabaseReady()) {
+    const count = Number(fantasyCalcTradeDatabase.tradeCount || fantasyCalcMarket.tradeCount || 0).toLocaleString();
+    return `Fantasy IQ Data from ${count} accepted trades`;
+  }
+  if (fantasyCalcTradeDatabaseLoading || fantasyCalcMarketLoading) {
+    return "Fantasy IQ Data loading";
+  }
+  if (fantasyCalcMarket?.ok && fantasyCalcMarket.playerCount) {
+    return "Fantasy IQ Data value chart loaded; accepted-trade database pending";
+  }
+  return "Fantasy IQ Data unavailable";
+}
+
 function formatMarketCount(value) {
   const number = Number(value || 0);
   if (!Number.isFinite(number)) return "0";
@@ -256,11 +408,13 @@ function renderLeagueProfile() {
   if (leagueDraftRounds) leagueDraftRounds.textContent = `${rounds} rounds`;
   if (leagueDraftNote) leagueDraftNote.textContent = `${settings.playoffTeams || 0} playoff teams`;
   if (leagueProfileStrip) {
-    const overrideText = draftLeagueOverrideState?.leagueId ? ` Live draft override: ESPN league ${draftLeagueOverrideState.leagueId}.` : "";
+    const draftOverride = activeDraftLeagueOverride();
+    const overrideText = draftOverride?.leagueId ? ` Live draft override: ESPN league ${draftOverride.leagueId}.` : "";
     leagueProfileStrip.innerHTML = `<strong>League engine active</strong><span>${htmlEscape(teamText)} / ${htmlEscape(scoringText)} / ${htmlEscape(lineupText)}. Source: ${htmlEscape(source)}.${htmlEscape(overrideText)}</span>`;
   }
   if (leagueRoomNote) {
-    const roomLeague = draftLeagueOverrideState?.leagueId ? `ESPN league ${draftLeagueOverrideState.leagueId}` : "saved ESPN league";
+    const draftOverride = activeDraftLeagueOverride();
+    const roomLeague = draftOverride?.leagueId ? `ESPN league ${draftOverride.leagueId}` : "saved ESPN league";
     leagueRoomNote.innerHTML = `<strong>${htmlEscape(scoringText)} league profile</strong><span>${htmlEscape(teamText)} with ${htmlEscape(lineupText)}. Live sync is using the ${htmlEscape(roomLeague)}.</span>`;
   }
   if (boardMethodNote) {
@@ -314,6 +468,8 @@ function leagueHealthItems() {
     ? `Stale fallback: ${liveDraft.staleError}`
     : liveDraft
       ? `${liveDraft.demoMode ? "Demo league" : "Public ESPN league"} synced ${formatSyncTime(liveDraft.syncedAt)}`
+      : liveSyncInFlight
+        ? "Connecting to the selected ESPN league now"
       : appConfig.leagueId
         ? "Waiting for first ESPN sync"
         : requiresCustomerAccess()
@@ -329,7 +485,7 @@ function leagueHealthItems() {
     },
     {
       label: "ESPN Sync",
-      value: liveDraft?.staleError ? "Needs review" : liveDraft ? "Connected" : appConfig.leagueId ? "Pending" : requiresCustomerAccess() ? "Setup needed" : "Demo pending",
+      value: liveDraft?.staleError ? "Needs review" : liveDraft ? "Connected" : liveSyncInFlight ? "Syncing" : appConfig.leagueId ? "Pending" : requiresCustomerAccess() ? "Setup needed" : "Demo pending",
       detail: publicSyncDetail,
       state: liveDraft?.staleError ? "danger" : liveDraft ? "good" : "warn",
     },
@@ -409,6 +565,90 @@ function accountStatusText() {
   if (!requiresCustomerAccess()) return "Demo Mode: sample league only. No customer account is loaded.";
   if (hasCustomerAccess()) return "Signed in. Refresh will keep this dashboard unlocked on this device.";
   return "Signed out. Use your password or setup access code to unlock saved leagues.";
+}
+
+function accountFreshnessTime(value) {
+  if (!value) return "Waiting";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Recorded";
+  return date.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function accountFreshnessLabel(row) {
+  const source = String(row?.source || "").toLowerCase();
+  if (source.includes("fantasycalc")) return "Fantasy IQ Data";
+  if (source === "live-boards") return "Live board";
+  if (source === "daily-cron" || source === "fantasyiq-cron") return "Daily refresh";
+  return "Data refresh";
+}
+
+function accountFreshnessDetail(row) {
+  const warning = String(row?.warning || "").trim();
+  if (warning) return warning;
+  const source = String(row?.source || "").toLowerCase();
+  const scope = String(row?.source_scope || "").toLowerCase();
+  if (source.includes("fantasycalc") || scope.includes("fantasycalc")) return "Player values and trade signals";
+  if (source === "live-boards") return "Player board and league scoring";
+  if (source === "daily-cron" || source === "fantasyiq-cron") return "Scheduled production refresh";
+  return "Latest successful update";
+}
+
+function accountFreshnessPriority(row) {
+  const source = String(row?.source || "").toLowerCase();
+  if (source.includes("fantasycalc")) return 1;
+  if (source === "live-boards") return 2;
+  if (source === "daily-cron" || source === "fantasyiq-cron") return 3;
+  return 4;
+}
+
+function accountFreshnessDateValue(row) {
+  const date = new Date(row?.last_success_at || row?.last_attempt_at || 0);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function accountFreshnessCards(rows) {
+  const grouped = new Map();
+  rows.filter((row) => row?.source).forEach((row) => {
+    const label = accountFreshnessLabel(row);
+    const existing = grouped.get(label);
+    if (!existing || accountFreshnessDateValue(row) > accountFreshnessDateValue(existing)) {
+      grouped.set(label, { ...row, is_stale: Boolean(row.is_stale || existing?.is_stale) });
+    } else if (existing && row.is_stale) {
+      existing.is_stale = true;
+    }
+  });
+  return Array.from(grouped.values())
+    .sort((left, right) => accountFreshnessPriority(left) - accountFreshnessPriority(right))
+    .slice(0, 4);
+}
+
+function renderDataFreshnessPanel() {
+  if (!dataFreshness) {
+    return `<section class="account-progress" aria-label="Data freshness">
+      <article class="pending"><span>Daily data</span><strong>Checking</strong></article>
+      <article class="pending"><span>Fantasy IQ Data</span><strong>Checking</strong></article>
+      <article class="pending"><span>Live board</span><strong>Checking</strong></article>
+    </section>`;
+  }
+  const rows = Array.isArray(dataFreshness.freshness) ? dataFreshness.freshness : [];
+  if (!dataFreshness.ok) {
+    return `<section class="account-progress" aria-label="Data freshness">
+      <article class="pending"><span>Daily data</span><strong>Unavailable</strong></article>
+      <article class="pending"><span>Status</span><strong>${htmlEscape(dataFreshness.error || "Retry later")}</strong></article>
+    </section>`;
+  }
+  const important = accountFreshnessCards(rows);
+  const cards = important.length
+    ? important.map((row) => {
+      const stale = Boolean(row.is_stale);
+      return `<article class="${stale ? "pending" : "complete"}">
+        <span>${htmlEscape(accountFreshnessLabel(row))}</span>
+        <strong>${htmlEscape(stale ? "Needs retry" : accountFreshnessTime(row.last_success_at || row.last_attempt_at))}</strong>
+        <small>${htmlEscape(accountFreshnessDetail(row))}</small>
+      </article>`;
+    }).join("")
+    : `<article class="pending"><span>Daily data</span><strong>Ready after first cron</strong><small>${htmlEscape(dataFreshness.message || "Production cron will record status.")}</small></article>`;
+  return `<section class="account-progress" aria-label="Data freshness">${cards}</section>`;
 }
 
 function leagueSetupUrl(league = null) {
@@ -492,7 +732,7 @@ function renderAccountPanel() {
           <p>Subscribe to connect FantasyIQ to your own ESPN league profile.</p>
         </div>
       </article>`;
-  accountLeagueList.innerHTML = `${statusSteps}${leagueMarkup}`;
+  accountLeagueList.innerHTML = `${statusSteps}${renderDataFreshnessPanel()}${leagueMarkup}`;
 
   accountLeagueList.querySelectorAll("[data-account-switch]").forEach((button) => {
     button.addEventListener("click", () => setActiveLeague(button.dataset.accountSwitch));
@@ -650,6 +890,11 @@ function renderLeagueSwitcher() {
     addLeagueAction.textContent = requiresCustomerAccess() && count <= 0 ? "Set up" : "+";
     addLeagueAction.title = addLeagueActionTitle(count);
   }
+  if (removeLeagueAction) {
+    removeLeagueAction.hidden = count <= 0;
+    removeLeagueAction.disabled = count <= 1;
+    removeLeagueAction.title = count <= 1 ? "Keep at least one active league" : "Remove selected league";
+  }
   leagueSwitcher.classList.toggle("needs-setup", requiresCustomerAccess() && count <= 0);
   if (options.length <= 1) {
     leagueSelect.innerHTML = "";
@@ -690,8 +935,9 @@ function setActiveLeague(leagueKey) {
   if (myTeamSelect) myTeamSelect.value = appConfig.customerTeamId || "";
   if (boardStatus) boardStatus.textContent = "Switching league profile...";
   if (liveStatus) {
-    liveStatus.textContent = draftLeagueOverrideState?.leagueId
-      ? `Connecting to ESPN draft override ${draftLeagueOverrideState.leagueId} for this league profile...`
+    const draftOverride = activeDraftLeagueOverride();
+    liveStatus.textContent = draftOverride?.leagueId
+      ? `Connecting to ESPN draft override ${draftOverride.leagueId} for this league profile...`
       : "Connecting to selected ESPN league...";
   }
   applyAppConfig();
@@ -701,6 +947,47 @@ function setActiveLeague(leagueKey) {
   pingDraftCompanion();
   loadBoards();
   startLiveSync();
+}
+
+async function removeActiveLeague() {
+  const active = activeLeagueOption();
+  const count = configuredLeagueCount();
+  if (!active || count <= 1) return;
+  const label = active.label || active.leagueName || active.key;
+  const confirmed = window.confirm(`Remove ${label} from this FantasyIQ account? This archives the league profile and switches you to another saved league.`);
+  if (!confirmed) return;
+  if (!hasCustomerAccess()) {
+    showCustomerAccessGate("Sign in before removing a league profile.");
+    return;
+  }
+  if (removeLeagueAction) {
+    removeLeagueAction.disabled = true;
+    removeLeagueAction.textContent = "...";
+  }
+  try {
+    const response = await fetch(apiUrl("/api/remove-league", { v: Date.now() }), {
+      method: "POST",
+      cache: "no-store",
+      headers: apiHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ leagueKey: active.key }),
+    });
+    const payload = await jsonOrAccessError(response, "Could not remove league profile.");
+    if (payload.customer) {
+      applyServerCustomerContext(payload.customer);
+    }
+    const nextKey = payload.nextLeagueKey || activeLeagueOption()?.key || "";
+    if (nextKey && nextKey !== appConfig.leagueKey) {
+      setActiveLeague(nextKey);
+    } else {
+      renderLeagueSwitcher();
+      loadBoards();
+    }
+  } catch (error) {
+    window.alert(error.message || "Could not remove league profile.");
+    renderLeagueSwitcher();
+  } finally {
+    if (removeLeagueAction) removeLeagueAction.textContent = "-";
+  }
 }
 
 function closeAddLeagueDialog() {
@@ -798,9 +1085,11 @@ function openAddLeagueDialog() {
 
 const boardColumns = [
   "Rank",
+  "True ADP",
   "Player",
   "Pos",
   "Team",
+  "Tier",
   "Proj PPR Pts",
   "Projection Edge",
   "Last Year PPR",
@@ -1045,7 +1334,7 @@ function isUdkBoard() {
 
 function visibleBoardColumns() {
   const columns = isTrendBoard() ? [...trendColumns] : isUdkBoard() ? [...udkColumns] : [...boardColumns];
-  if (positionFilter?.value) {
+  if (positionFilter?.value && !columns.includes("Tier")) {
     const insertAt = isTrendBoard() ? 5 : 6;
     columns.splice(insertAt, 0, "Tier");
   }
@@ -1053,12 +1342,157 @@ function visibleBoardColumns() {
 }
 
 function columnHeader(column) {
-  if (column === "Tier") return "Pos Tier";
+  if (column === "Rank" && !isTrendBoard() && !isUdkBoard()) return "ADP Rank";
+  if (column === "True ADP") return "ESPN ADP";
+  if (column === "Tier") return "Tier";
   if (column === "Proj PPR Pts") return scoringProjectionLabel();
   if (column === "Projection Edge") return "League Edge";
   if (column === "Last Year PPR") return lastYearScoringLabel();
   if (column === "Value Score") return "League Value";
   return column;
+}
+
+let precisionTierCacheKey = "";
+let precisionTierCache = null;
+
+function boardAdpValue(row) {
+  const adp = Number(row?.["True ADP"] || row?.["ESPN ADP"] || row?.Rank || 9999);
+  return Number.isFinite(adp) && adp > 0 ? adp : 9999;
+}
+
+function boardAdpCompare(a, b) {
+  return boardAdpValue(a) - boardAdpValue(b) ||
+    Number(a?.Rank || 9999) - Number(b?.Rank || 9999) ||
+    String(a?.Player || "").localeCompare(String(b?.Player || ""));
+}
+
+function simplifiedPositionTier(pos, posRank) {
+  const rank = Number(posRank || 999);
+  if (pos === "QB") {
+    if (rank <= 6) return "QB Elite";
+    if (rank <= 12) return "QB Starter";
+    if (rank <= 24) return "QB Bench";
+    return "QB Deep";
+  }
+  if (pos === "RB") {
+    if (rank <= 12) return "RB Elite";
+    if (rank <= 24) return "RB Starter";
+    if (rank <= 36) return "RB Flex";
+    if (rank <= 50) return "RB Bench";
+    return "RB Deep";
+  }
+  if (pos === "WR") {
+    if (rank <= 12) return "WR Elite";
+    if (rank <= 24) return "WR Starter";
+    if (rank <= 36) return "WR Flex";
+    if (rank <= 60) return "WR Bench";
+    return "WR Deep";
+  }
+  if (pos === "TE") {
+    if (rank <= 6) return "TE Elite";
+    if (rank <= 12) return "TE Starter";
+    if (rank <= 24) return "TE Bench";
+    return "TE Deep";
+  }
+  if (pos === "DST") return "DST Stream";
+  if (pos === "K") return "K Stream";
+  return "Watch";
+}
+
+function assignPrecisionTiers(rows, mode, pos = "") {
+  const sorted = rows
+    .filter((row) => row && row.Player)
+    .slice()
+    .sort(boardAdpCompare);
+  const map = new Map();
+
+  sorted.forEach((row, index) => {
+    const label = simplifiedPositionTier(row.Pos || pos, row["Pos Rank"] || index + 1);
+    map.set(normalizePlayerName(row.Player), {
+      label,
+      tier: Math.ceil((index + 1) / 12),
+      range: `${index + 1}`,
+      score: boardAdpValue(row),
+    });
+  });
+  return map;
+}
+
+function precisionTierMaps() {
+  const rows = boardData?.boards?.combined?.rows || [];
+  const settings = activeLeagueSettings();
+  const cacheKey = [
+    boardData?.syncedAt || boardData?.updated || "",
+    rows.length,
+    settings.scoringType,
+    settings.teamCount,
+    JSON.stringify(settings.lineupSlots || {}),
+  ].join("|");
+  if (precisionTierCache && precisionTierCacheKey === cacheKey) return precisionTierCache;
+  const overall = assignPrecisionTiers(rows, "overall");
+  const positions = {};
+  ["QB", "RB", "WR", "TE", "DST", "K"].forEach((pos) => {
+    positions[pos] = assignPrecisionTiers(rows.filter((row) => row.Pos === pos), "position", pos);
+  });
+  precisionTierCacheKey = cacheKey;
+  precisionTierCache = { overall, positions };
+  return precisionTierCache;
+}
+
+function preciseTierInfo(row) {
+  if (!row) return null;
+  const key = normalizePlayerName(row.Player);
+  const maps = precisionTierMaps();
+  const overall = maps.overall.get(key);
+  const position = maps.positions[row.Pos]?.get(key);
+  const fallback = simplifiedPositionTier(row.Pos, row["Pos Rank"]);
+  return {
+    overall,
+    position,
+    display: position?.label || overall?.label || fallback || row["Pos Tier"] || row.Category || "Tier",
+  };
+}
+
+function preciseTierDisplay(row, pos = "") {
+  const info = preciseTierInfo(row);
+  if (!info) return row?.["Pos Tier"] || row?.Category || "Tier";
+  if (pos && pos !== "FLEX" && pos !== "SUPERFLEX") return info.position?.label || info.display;
+  if (pos === "FLEX" && row?.Pos) return info.position?.label || info.display;
+  return info.display;
+}
+
+function fallbackSleeperRows() {
+  const rows = boardData?.boards?.combined?.rows || [];
+  return rows
+    .filter((row) => {
+      const rank = Number(row.Rank || 999);
+      const value = Number(row["Value Score"] || 0);
+      const sleeperActivity = Number(row["Sleeper Add Count"] || 0) + Number(row["Sleeper Drop Count"] || 0);
+      const sleeperNet = Number(row["Sleeper Net Adds"] || 0);
+      const trendScore = Number(row["External Trend Score"] || 0);
+      return row.Pos !== "K" && row.Pos !== "DST" && (
+        row.Category === "Sleeper" ||
+        (value >= 52 && rank > 55) ||
+        (rank > 45 && sleeperActivity > 0 && sleeperNet >= 0) ||
+        (rank > 80 && trendScore >= 4)
+      );
+    })
+    .sort((a, b) => {
+      const categoryDelta = (a.Category === "Sleeper" ? 0 : 1) - (b.Category === "Sleeper" ? 0 : 1);
+      if (categoryDelta) return categoryDelta;
+      return Number(b["External Trend Score"] || 0) - Number(a["External Trend Score"] || 0) ||
+        leagueValueScore(b) - leagueValueScore(a) ||
+        Number(a.Rank || 999) - Number(b.Rank || 999);
+    })
+    .slice(0, 45);
+}
+
+function activeBoardPayload() {
+  const board = boardData?.boards?.[activeBoard] || boardData?.boards?.combined || { rows: [] };
+  if (activeBoard === "sleepers" && !(board.rows || []).length) {
+    return { ...board, title: board.title || "Live Sleeper Board", rows: fallbackSleeperRows() };
+  }
+  return board;
 }
 
 function setActive(items, activeItem) {
@@ -1144,6 +1578,7 @@ function scrollDashboardTop(behavior = "auto") {
 navItems.forEach((button) => {
   button.addEventListener("click", () => {
     const section = button.dataset.section;
+    if (button.classList.contains("active") && document.querySelector(`#${section}.panel.active`)) return;
     history.replaceState(null, "", dashboardUrlWithHash(`#${section}`));
     setActive(navItems, button);
     panels.forEach((panel) => panel.classList.toggle("active", panel.id === section));
@@ -1226,8 +1661,10 @@ savedInputs.forEach((input) => {
 });
 
 function cellValue(row, key) {
+  if (key === "Tier") return preciseTierDisplay(row, positionFilter?.value || "");
   if (key === "Proj PPR Pts") return projectionDisplay(row);
   if (key === "Projection Edge") return projectionEdgeDisplay(row);
+  if (key === "True ADP") return row[key] ? Number(row[key]).toFixed(1) : "N/A";
   if (key === "Value Score") return valueDisplay(row);
   if (key === "Sleeper Net Adds") return formatMarketCount(row[key]);
   if (key === "Market Signal") return compactText(row[key], 90);
@@ -1423,13 +1860,16 @@ function filteredRows() {
   const query = boardSearch.value.trim().toLowerCase();
   const pos = positionFilter.value;
   const drafted = liveDraftedKeys();
-  const board = boardData.boards[activeBoard] || boardData.boards.combined || { rows: [] };
-  return (board.rows || []).filter((row) => {
+  const board = activeBoardPayload();
+  const rows = (board.rows || []).filter((row) => {
     const matchesPosition = !pos || (pos === "FLEX" ? ["RB", "WR", "TE"].includes(row.Pos) : row.Pos === pos);
     const searchable = `${row.Player} ${row.Pos} ${row.Team} ${row.Category} ${row.Tier} ${row["Pos Tier"]} ${row.Action} ${row.Analysis} ${row["Projection Edge"]} ${row["Daily Synopsis"]} ${row["Player Outlook"]} ${row["Risk Notes"]} ${row.Trend} ${row["Source Signal"]} ${row["External Signal"]} ${row.Catalyst} ${row["Why Rising/Falling"]} ${row["Draft Action"]} ${row["UDK Alignment"]} ${row["UDK Signal"]} ${row["UDK Tier"]}`.toLowerCase();
     const matchesDraftStatus = !hideDraftedEnabled() || !drafted.has(normalizePlayerName(row.Player));
     return matchesPosition && matchesDraftStatus && (!query || searchable.includes(query));
   });
+
+  if (isTrendBoard() || isUdkBoard()) return rows;
+  return rows.sort(boardAdpCompare);
 }
 
 function renderBoard() {
@@ -1441,7 +1881,7 @@ function renderBoard() {
   }
   const rows = filteredRows();
   if (boardStatus) {
-    const title = boardData.boards[activeBoard]?.title || "Board";
+    const title = activeBoardPayload()?.title || "Board";
     const updated = boardData.live
       ? ` Live ${boardData.source || "board"} synced ${formatSyncTime(boardData.syncedAt)}.`
       : boardData.updated
@@ -1453,8 +1893,8 @@ function renderBoard() {
       : rosteredCount
         ? ` ESPN roster sync is filtering ${rosteredCount} rostered players.`
         : "";
-    const tierHint = positionFilter?.value ? " Tier dividers are on for this position view." : "";
-    boardStatus.innerHTML = `<strong>${title}</strong>: showing ${rows.length} players. Click any player name for analysis.${tierHint}${updated}${drafted}`;
+    const tierHint = positionFilter?.value ? " Tier dividers are grouped by simplified position tiers." : "";
+    boardStatus.innerHTML = `<strong>${title}</strong>: showing ${rows.length} players in ESPN ADP order. Click any player name for analysis.${tierHint}${updated}${drafted}`;
   }
   const thead = boardTable.querySelector("thead");
   const tbody = boardTable.querySelector("tbody");
@@ -1491,8 +1931,11 @@ function renderBoard() {
             if (column === "Player") {
               return `<td><button class="player-link" data-index="${index}">${htmlEscape(row.Player)}</button>${draftedBadge}</td>`;
             }
+            if (column === "Rank" && !isTrendBoard() && !isUdkBoard()) {
+              return `<td class="number">${row.Rank || index + 1}</td>`;
+            }
             if (column === "Tier") {
-              return `<td><span class="tier-pill">${htmlEscape(row["Pos Tier"] || cellValue(row, column))}</span></td>`;
+              return `<td><span class="tier-pill precise-tier-pill">${htmlEscape(cellValue(row, column))}</span></td>`;
             }
             if (column === "Last Year PPR") {
               return `<td class="number">${lastYearValue(row)}</td>`;
@@ -1509,7 +1952,8 @@ function renderBoard() {
     button.addEventListener("click", () => {
       const row = rows[Number(button.dataset.index)];
       showAnalysis(row);
-      renderBoard();
+      tbody.querySelectorAll("tr.selected-row").forEach((item) => item.classList.remove("selected-row"));
+      button.closest("tr")?.classList.add("selected-row");
     });
   });
 
@@ -1535,10 +1979,16 @@ function syncUdkTabVisibility() {
   }
 }
 
+let playerIndexCacheData = null;
+let playerIndexCache = null;
+
 function playerIndex() {
+  if (playerIndexCacheData === boardData && playerIndexCache) return playerIndexCache;
   const rows = boardData?.boards?.combined?.rows || [];
   const index = new Map();
   rows.forEach((row) => index.set(normalizePlayerName(row.Player), row));
+  playerIndexCacheData = boardData;
+  playerIndexCache = index;
   return index;
 }
 
@@ -1547,8 +1997,13 @@ function findPlayer(name) {
   if (!clean || !boardData) return null;
   const index = playerIndex();
   if (index.has(clean)) return index.get(clean);
+  const dstClean = clean.replace(/dst$/, "");
   return (boardData.boards.combined.rows || []).find((row) => {
     const rowName = normalizePlayerName(row.Player);
+    if (row.Pos === "DST") {
+      const dstRowName = rowName.replace(/dst$/, "");
+      if (dstRowName.includes(dstClean) || dstClean.includes(dstRowName)) return true;
+    }
     return rowName.includes(clean) || clean.includes(rowName);
   });
 }
@@ -1691,6 +2146,8 @@ function refreshActivePlayerAutocomplete() {
 
 function setupPlayerAutocomplete() {
   const configs = [
+    ...Array.from(tradeGiveSlots || []).map((input) => ({ input, mode: "single" })),
+    ...Array.from(tradeGetSlots || []).map((input) => ({ input, mode: "single" })),
     { input: tradeGive, mode: "line" },
     { input: tradeGet, mode: "line" },
     { input: tradeRoster, mode: "line" },
@@ -1756,6 +2213,7 @@ function showAnalysis(row) {
     <h3>${row.Player}</h3>
     <div class="analysis-grid">
       <div class="analysis-chip"><span>Rank</span><strong>${row.Rank}</strong></div>
+      <div class="analysis-chip"><span>Precise Tier</span><strong>${htmlEscape(preciseTierDisplay(row))}</strong></div>
       <div class="analysis-chip"><span>Position Tier</span><strong>${row["Pos Tier"]}</strong></div>
       <div class="analysis-chip"><span>Pos Rank</span><strong>${row.Pos}${row["Pos Rank"]}</strong></div>
       <div class="analysis-chip"><span>${scoringProjectionLabel()}</span><strong>${projectionDisplay(row)}</strong></div>
@@ -1794,6 +2252,7 @@ function showTrendAnalysis(row) {
     <h3>${row.Player}</h3>
     <div class="analysis-grid">
       <div class="analysis-chip ${trendClass}"><span>Trend</span><strong>${row.Trend}</strong></div>
+      <div class="analysis-chip"><span>Precise Tier</span><strong>${htmlEscape(preciseTierDisplay(row))}</strong></div>
       <div class="analysis-chip"><span>Trend Score</span><strong>${row["Trend Score"]}</strong></div>
       <div class="analysis-chip ${marketMomentum.className}"><span>Sleeper Net</span><strong>${formatMarketCount(sleeperCounts.net)}</strong></div>
       <div class="analysis-chip"><span>Confidence</span><strong>${row.Confidence}</strong></div>
@@ -1962,11 +2421,19 @@ function parseLines(text) {
 
 function tradeSideValue(text) {
   return parseLines(text).map((name) => {
-    const row = findPlayer(name);
+    const foundRow = findPlayer(name);
+    const market = foundRow ? fantasyCalcPlayer(foundRow) : fantasyCalcPlayerByName(name);
+    const row = foundRow || fantasyCalcMarketOnlyRow(market);
     return {
       name,
       row,
-      value: row ? leagueValueScore(row) : 0,
+      value: row ? tradeAssetValue(row) : 0,
+      fantasyIqValue: row ? leagueValueScore(row) : 0,
+      marketValue: market ? Number(market.marketScore || 0) : null,
+      rawMarketValue: market ? Number(market.value || 0) : null,
+      marketRank: market?.overallRank || null,
+      marketTrend: market?.trend30Day ?? null,
+      marketVolatility: market?.volatility ?? null,
       risk: row ? Number(row.Risk || 0) : 0,
       projection: row ? projectionValue(row) : 0,
     };

@@ -4,10 +4,29 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>MyFantasyIQ</title>
+    <meta name="description" content="Your ESPN fantasy football command center for roster sync, waiver reads, trade lanes, schedule edges, draft prep, and mock draft decisions." />
+    <link rel="canonical" href="https://myfantasyiq.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MyFantasyIQ" />
+    <meta property="og:title" content="MyFantasyIQ" />
+    <meta property="og:description" content="Your ESPN fantasy football command center for smarter roster, waiver, trade, schedule, and draft decisions." />
+    <meta property="og:url" content="https://myfantasyiq.com/" />
+    <meta property="og:image" content="https://myfantasyiq.com/social-preview.png?v=20260524-link-preview-1" />
+    <meta property="og:image:secure_url" content="https://myfantasyiq.com/social-preview.png?v=20260524-link-preview-1" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="MyFantasyIQ fantasy football decision engine preview card" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="MyFantasyIQ" />
+    <meta name="twitter:description" content="Your ESPN fantasy football command center for smarter roster, waiver, trade, schedule, and draft decisions." />
+    <meta name="twitter:image" content="https://myfantasyiq.com/social-preview.png?v=20260524-link-preview-1" />
+    <link rel="image_src" href="https://myfantasyiq.com/social-preview.png?v=20260524-link-preview-1" />
+    <meta name="theme-color" content="#001915" />
     <link rel="icon" type="image/svg+xml" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
     <link rel="shortcut icon" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260521-premium-3" />
-    <link rel="stylesheet" href="./styles.css?v=20260524_sos_rank_model_1" />
+    <link rel="stylesheet" href="./styles.css?v=20260524_account_trade_packages_1" />
   </head>
   <body>
     <div class="field-overlay" aria-hidden="true">
@@ -36,16 +55,16 @@
       <a class="brand-lockup" href="./" aria-label="Go to your FantasyIQ dashboard home">
         <img src="./assets/fantasy-iq-logo.svg" alt="MyFantasyIQ league logo" />
         <div>
-          <p class="eyebrow">League Command Center</p>
+          <p class="eyebrow">Command Center</p>
           <h1>MyFantasyIQ</h1>
-          <small>Configurable ESPN Fantasy Platform</small>
+          <small>ESPN fantasy football decision engine</small>
         </div>
       </a>
       <div class="draft-card">
         <span>Subscription</span>
         <strong>Active</strong>
         <small>Demo League</small>
-        <a class="subscribe-button" href="../setup.html?mode=precheck">Start Season Pass</a>
+        <a class="subscribe-button" href="/setup.html?mode=precheck">Start Season Pass</a>
       </div>
       <div class="league-switcher" id="league-switcher" hidden>
         <span>Active League</span>
@@ -53,11 +72,12 @@
         <select id="league-select" aria-label="Switch active league"></select>
         <div class="league-switcher-actions">
           <small id="league-slot-note">Up to 3 included</small>
+          <button id="remove-league-action" class="remove-league-action" type="button" aria-label="Remove selected league">-</button>
           <button id="add-league-action" type="button" aria-label="Add additional league">+</button>
         </div>
       </div>
       <div class="account-card" id="account-card">
-        <span id="account-label">Dashboard Access</span>
+        <span id="account-label">Account Access</span>
         <strong id="account-state">Demo</strong>
         <button id="account-action" type="button">Sign In</button>
       </div>
@@ -66,17 +86,19 @@
     <div class="demo-banner" data-demo-banner>
       <strong>Demo Mode</strong>
       <span>Sample league only. No customer account is loaded.</span>
-      <a href="../setup.html?mode=precheck">Check ESPN first</a>
+      <a href="/setup.html?mode=precheck">Check ESPN first</a>
     </div>
 
     <main class="layout">
       <nav class="sidebar" aria-label="Dashboard sections">
-        <button class="nav-item active" data-section="command">Command</button>
-        <button class="nav-item" data-section="draft">Draft Prep</button>
-        <button class="nav-item" data-section="live">SoS Heat Map</button>
-        <button class="nav-item" data-section="simulator">Mock Simulator</button>
-        <button class="nav-item" data-section="trade">Trade Calculator</button>
+        <button class="nav-item active" data-section="command">Command Center</button>
+        <button class="nav-item" data-section="my-team">My Team</button>
         <button class="nav-item" data-section="workbooks">Big Board</button>
+        <button class="nav-item" data-section="draft">Draft Prep IQ</button>
+        <button class="nav-item" data-section="simulator">Mock Simulator</button>
+        <button class="nav-item" data-section="live">Schedule IQ</button>
+        <button class="nav-item" data-section="waivers">Waivers IQ</button>
+        <button class="nav-item" data-section="trade">Trade IQ</button>
         <button class="nav-item" data-section="account">Account</button>
       </nav>
 
@@ -85,18 +107,58 @@
           <div class="command-hero">
             <div>
               <p class="eyebrow">Command Center</p>
-              <h2>Draft smarter. Trade cleaner. Win your league.</h2>
-              <p>Draft prep, player values, mock tracking, live room sync, and trade discipline in one command center.</p>
+              <h2>Your smartest next move, explained.</h2>
+              <p>FantasyIQ reads the league profile, roster shape, player values, schedule context, trade lanes, and waiver pressure, then tells you what to do next.</p>
               <div class="hero-actions">
-                <button class="primary-action nav-jump" type="button" data-jump="live">Open SoS Heat Map</button>
+                <button class="primary-action" id="command-refresh" type="button">Refresh Recommendation</button>
+                <button class="secondary-action nav-jump" type="button" data-jump="my-team">My Team</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="workbooks">Big Board</button>
-                <button class="secondary-action nav-jump" type="button" data-jump="draft">Draft Plan</button>
+                <button class="secondary-action nav-jump" type="button" data-jump="draft">Draft Prep IQ</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="simulator">Mock Simulator</button>
-                <button class="secondary-action nav-jump" type="button" data-jump="trade">Trade Calculator</button>
-                <button class="secondary-action nav-jump" type="button" data-jump="account">Account</button>
+                <button class="secondary-action nav-jump" type="button" data-jump="live">Schedule IQ</button>
+                <button class="secondary-action nav-jump" type="button" data-jump="waivers">Waivers IQ</button>
+                <button class="secondary-action nav-jump" type="button" data-jump="trade">Trade IQ</button>
               </div>
             </div>
           </div>
+
+          <section class="next-move-panel" aria-label="FantasyIQ next move">
+            <article class="next-move-primary" id="command-main-move-card">
+              <span>Main Move</span>
+              <strong id="command-main-move">Loading league-aware recommendation</strong>
+              <p id="command-main-reason">FantasyIQ is comparing action against doing nothing.</p>
+            </article>
+            <article class="next-move-score">
+              <span>FantasyIQ Score</span>
+              <strong id="command-fantasyiq-score">--</strong>
+              <small id="command-score-detail">Team strength and decision confidence</small>
+            </article>
+            <article class="next-move-score">
+              <span>Biggest Weakness</span>
+              <strong id="command-roster-weakness">Checking</strong>
+              <small id="command-weakness-detail">Roster context is still loading</small>
+            </article>
+            <article class="next-move-score">
+              <span>Confidence</span>
+              <strong id="command-confidence">Pending</strong>
+              <small id="command-confidence-detail">Updates after sync</small>
+            </article>
+          </section>
+
+          <section class="decision-support-grid" aria-label="Recommendation support">
+            <article>
+              <span>Why This Move</span>
+              <div id="command-supporting-reasons">Waiting for league data.</div>
+            </article>
+            <article>
+              <span>Risk Warning</span>
+              <strong id="command-risk-warning">Pending</strong>
+            </article>
+            <article>
+              <span>Alternative Path</span>
+              <strong id="command-alternative-path">Pending</strong>
+            </article>
+          </section>
 
           <div class="metric-grid">
             <div class="metric">
@@ -123,20 +185,20 @@
 
           <div class="league-profile-strip" id="league-profile-strip">
             <strong>League engine active</strong>
-            <span>SoS Heat Map, Mock Simulator, Big Board values, and Trade Calculator are using this league profile.</span>
+            <span>Schedule IQ, Mock Simulator, Big Board values, Trade IQ, and Waiver IQ are using this league profile.</span>
           </div>
 
           <section class="intelligence-os-panel" id="intelligence-os-panel" aria-label="FantasyIQ intelligence operating system">
             <div class="intelligence-os-head">
               <div>
-                <p class="eyebrow">FantasyIQ Intelligence OS</p>
+                <p class="eyebrow">Decision Engine</p>
                 <h3 id="intelligence-main-move">Loading league-aware decision engine</h3>
                 <p id="intelligence-freshness">Syncing draft, roster, waiver, trade, and opponent context.</p>
               </div>
               <button id="intelligence-refresh" type="button">Refresh</button>
             </div>
             <div class="intelligence-main-card" id="intelligence-main-card">
-              <strong>Best move right now</strong>
+              <strong>Main move</strong>
               <span>Waiting for intelligence API.</span>
             </div>
             <div class="intelligence-reasons" id="intelligence-reasons">
@@ -144,22 +206,22 @@
             </div>
             <div class="intelligence-grid" id="intelligence-grid">
               <article>
-                <span>Weekly</span>
+                <span>Roster IQ</span>
                 <strong>Loading</strong>
                 <small>Lineup, waiver, and hold logic</small>
               </article>
               <article>
-                <span>Waivers</span>
+                <span>Waiver IQ</span>
                 <strong>Loading</strong>
                 <small>Add/drop and FAAB logic</small>
               </article>
               <article>
-                <span>Trades</span>
+                <span>Trade IQ</span>
                 <strong>Loading</strong>
                 <small>Generated proposal lane</small>
               </article>
               <article>
-                <span>Opponents</span>
+                <span>League IQ</span>
                 <strong>Loading</strong>
                 <small>Manager personas</small>
               </article>
@@ -207,7 +269,7 @@
             <article>
               <span>2</span>
               <strong>Select your team</strong>
-              <small>SoS Heat Map highlights schedule leverage by position.</small>
+              <small>Schedule IQ highlights matchup leverage by position.</small>
             </article>
             <article>
               <span>3</span>
@@ -219,6 +281,15 @@
               <strong>Mock from slot</strong>
               <small>Practice the build before the room is live.</small>
             </article>
+          </div>
+
+          <div class="command-sync-controls live-switches" aria-label="ESPN sync controls">
+            <button id="manual-sync" type="button">Sync Now</button>
+            <label>
+              <input id="live-sync-toggle" type="checkbox" checked />
+              Auto sync
+            </label>
+            <span>Use Sync Now before draft day to verify ESPN access.</span>
           </div>
 
           <div class="command-grid">
@@ -238,9 +309,9 @@
               <small>Simulated draft reps with live-style tools</small>
             </article>
             <article class="command-tile">
-              <span>Trade Calculator</span>
-              <strong>Net value check</strong>
-              <small>Roster-fit ready after draft</small>
+              <span>Trade IQ</span>
+              <strong>Roster-fit check</strong>
+              <small>Value, risk, and need in one verdict</small>
             </article>
             <article class="command-tile">
               <span>Data Audit</span>
@@ -248,7 +319,7 @@
               <small>ESPN projections plus Sleeper add/drop risers and fallers</small>
             </article>
             <article class="command-tile">
-              <span>Alpha Signal</span>
+              <span>Main Move Signal</span>
               <strong id="alpha-command-signal">Loading</strong>
               <small id="alpha-command-meta">Best move, scarcity, and room pressure in one read</small>
             </article>
@@ -279,11 +350,150 @@
           </div>
         </section>
 
+        <section class="panel" id="my-team">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Roster IQ</p>
+              <h2>My Team</h2>
+            </div>
+            <div class="live-switches">
+              <button class="secondary-action nav-jump" type="button" data-jump="waivers">Waivers IQ</button>
+              <button class="secondary-action nav-jump" type="button" data-jump="trade">Trade IQ</button>
+              <button class="secondary-action nav-jump" type="button" data-jump="live">Schedule IQ</button>
+            </div>
+          </div>
+
+          <section class="my-team-command" aria-label="My Team roster command">
+            <div class="my-team-hero" id="my-team-hero">
+              <article>
+                <span>Roster IQ</span>
+                <strong>Loading</strong>
+                <small>Checking selected ESPN team</small>
+              </article>
+              <article>
+                <span>Biggest Weakness</span>
+                <strong>Checking</strong>
+                <small>Needs roster context</small>
+              </article>
+              <article>
+                <span>Next Move</span>
+                <strong>Sync</strong>
+                <small>Connect roster first</small>
+              </article>
+            </div>
+            <div class="my-team-position-grid" id="my-team-position-grid">
+              <article><span>QB</span><strong>--</strong><small>Loading</small></article>
+              <article><span>RB</span><strong>--</strong><small>Loading</small></article>
+              <article><span>WR</span><strong>--</strong><small>Loading</small></article>
+              <article><span>TE</span><strong>--</strong><small>Loading</small></article>
+              <article><span>DST</span><strong>--</strong><small>Loading</small></article>
+              <article><span>K</span><strong>--</strong><small>Loading</small></article>
+            </div>
+          </section>
+
+          <div class="my-team-layout">
+            <section class="my-team-card">
+              <div>
+                <p class="eyebrow">Likely Starters</p>
+                <h3>Best lineup by value</h3>
+              </div>
+              <div class="my-team-list" id="my-team-starters">Waiting for roster.</div>
+            </section>
+            <section class="my-team-card">
+              <div>
+                <p class="eyebrow">Bench / Depth</p>
+                <h3>Players outside the starter build</h3>
+              </div>
+              <div class="my-team-list" id="my-team-bench">Waiting for roster.</div>
+            </section>
+            <section class="my-team-card my-team-action-card">
+              <div>
+                <p class="eyebrow">FantasyIQ Read</p>
+                <h3>Action path</h3>
+              </div>
+              <div class="my-team-actions" id="my-team-actions">Waiting for roster.</div>
+            </section>
+          </div>
+        </section>
+
+        <section class="panel" id="waivers">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Waivers IQ</p>
+              <h2>Claims, drops, and watchlist priority.</h2>
+            </div>
+            <div class="live-switches">
+              <button class="secondary-action nav-jump" type="button" data-jump="my-team">My Team</button>
+              <button class="secondary-action nav-jump" type="button" data-jump="workbooks">Big Board</button>
+              <button class="secondary-action nav-jump" type="button" data-jump="trade">Trade IQ</button>
+            </div>
+          </div>
+
+          <section class="waiver-iq-command" aria-label="Waivers IQ command">
+            <div class="waiver-iq-hero" id="waiver-iq-hero">
+              <article>
+                <span>Main Claim</span>
+                <strong>Waiting</strong>
+                <small>Select your ESPN team or paste a roster.</small>
+              </article>
+              <article>
+                <span>Drop Candidate</span>
+                <strong>Pending</strong>
+                <small>Needs roster context</small>
+              </article>
+              <article>
+                <span>Confidence</span>
+                <strong>--</strong>
+                <small>Updates after board sync</small>
+              </article>
+            </div>
+          </section>
+
+          <section class="decision-support-grid waiver-iq-support" aria-label="Waiver recommendation support">
+            <article>
+              <span>Why This Claim</span>
+              <div id="waiver-iq-supporting-reasons">Waiting for roster and board data.</div>
+            </article>
+            <article>
+              <span>Risk Warning</span>
+              <strong id="waiver-iq-risk-warning">Pending</strong>
+            </article>
+            <article>
+              <span>Alternative Path</span>
+              <strong id="waiver-iq-alternative-path">Pending</strong>
+            </article>
+          </section>
+
+          <div class="waiver-iq-layout">
+            <section class="waiver-iq-card">
+              <div class="trade-card-head">
+                <span>Priority Claims</span>
+                <strong>Best Adds</strong>
+              </div>
+              <div class="waiver-iq-list" id="waiver-iq-watchlist">Waiting for waiver pool.</div>
+            </section>
+            <section class="waiver-iq-card">
+              <div class="trade-card-head">
+                <span>Drop Candidates</span>
+                <strong>Roster Cuts</strong>
+              </div>
+              <div class="waiver-iq-list" id="waiver-iq-drops">Waiting for roster.</div>
+            </section>
+            <section class="waiver-iq-card">
+              <div class="trade-card-head">
+                <span>Claim Plan</span>
+                <strong>Execution</strong>
+              </div>
+              <div class="waiver-iq-plan" id="waiver-iq-plan">FantasyIQ will turn the best available add into a claim, bid, risk warning, and fallback.</div>
+            </section>
+          </div>
+        </section>
+
         <section class="panel" id="draft">
           <div class="panel-head">
             <div>
               <p class="eyebrow">Draft Prep</p>
-              <h2>Draft plan command board</h2>
+              <h2>Draft Prep IQ</h2>
             </div>
           </div>
 
@@ -305,7 +515,7 @@
             <section class="draft-prep-panel" id="draft-prep-slot">
               <p class="eyebrow">Pick Slot Strategy</p>
               <h3>Waiting for room data</h3>
-              <p>Use the SoS Heat Map to pair draft value with schedule leverage.</p>
+              <p>Use Schedule IQ to pair draft value with schedule leverage.</p>
             </section>
             <section class="draft-prep-panel" id="draft-prep-settings">
               <p class="eyebrow">League Settings Intelligence</p>
@@ -388,14 +598,14 @@
             <div><strong>16</strong><span>Kicker last.</span></div>
           </div>
 
-          <button class="primary-action nav-jump" type="button" data-jump="live">Open SoS Heat Map</button>
+          <button class="primary-action nav-jump" type="button" data-jump="live">Open Schedule IQ</button>
         </section>
 
         <section class="panel sos-panel" id="live">
           <div class="panel-head">
             <div>
               <p class="eyebrow">Matchup Intelligence</p>
-              <h2>Dynamic SoS Heat Map</h2>
+              <h2>Schedule IQ heat map</h2>
             </div>
             <div class="live-switches sos-status-pill">
               <strong id="sos-selected-summary">Weeks 1-18 / All positions</strong>
@@ -561,7 +771,7 @@
 
           <div class="alpha-strip compact-alpha-strip" aria-label="FantasyIQ alpha signals">
             <article>
-              <span>Alpha Signal</span>
+              <span>Main Move Signal</span>
               <strong id="alpha-signal">Loading</strong>
               <small>Best current edge</small>
             </article>
@@ -1017,8 +1227,8 @@
         <section class="panel" id="trade">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Trade Calculator</p>
-              <h2>Trade decision desk</h2>
+              <p class="eyebrow">Trade IQ</p>
+              <h2>Roster-aware trade decision desk</h2>
             </div>
           </div>
 
@@ -1040,7 +1250,21 @@
                 <span>You Send</span>
                 <strong id="trade-give-total">0.0</strong>
               </div>
-              <textarea id="trade-give" placeholder="One player per line&#10;Example: DK Metcalf"></textarea>
+              <div class="trade-package-builder" aria-label="Players you send">
+                <label>
+                  <span>Give 1</span>
+                  <input data-trade-side="give" data-trade-slot="1" type="text" placeholder="Player you send" />
+                </label>
+                <label>
+                  <span>Give 2</span>
+                  <input data-trade-side="give" data-trade-slot="2" type="text" placeholder="Optional add-on" />
+                </label>
+                <label>
+                  <span>Give 3</span>
+                  <input data-trade-side="give" data-trade-slot="3" type="text" placeholder="Optional add-on" />
+                </label>
+              </div>
+              <textarea id="trade-give" class="trade-source-textarea" aria-hidden="true" tabindex="-1"></textarea>
               <div class="trade-chip-list" id="trade-give-list">No outgoing players yet.</div>
             </section>
 
@@ -1049,8 +1273,37 @@
                 <span>You Receive</span>
                 <strong id="trade-get-total">0.0</strong>
               </div>
-              <textarea id="trade-get" placeholder="One player per line&#10;Example: Chuba Hubbard"></textarea>
+              <div class="trade-package-builder" aria-label="Players you receive">
+                <label>
+                  <span>Receive 1</span>
+                  <input data-trade-side="get" data-trade-slot="1" type="text" placeholder="Player you receive" />
+                </label>
+                <label>
+                  <span>Receive 2</span>
+                  <input data-trade-side="get" data-trade-slot="2" type="text" placeholder="Optional add-on" />
+                </label>
+                <label>
+                  <span>Receive 3</span>
+                  <input data-trade-side="get" data-trade-slot="3" type="text" placeholder="Optional add-on" />
+                </label>
+              </div>
+              <textarea id="trade-get" class="trade-source-textarea" aria-hidden="true" tabindex="-1"></textarea>
               <div class="trade-chip-list" id="trade-get-list">No incoming players yet.</div>
+            </section>
+
+            <section class="trade-card trade-package-card">
+              <div class="trade-card-head">
+                <span>Package Shape</span>
+                <strong id="trade-package-label">1-for-1</strong>
+              </div>
+              <div class="trade-package-options" aria-label="Trade package shapes">
+                <button type="button" data-trade-package="1-1">1 for 1</button>
+                <button type="button" data-trade-package="2-1">2 for 1</button>
+                <button type="button" data-trade-package="1-2">1 for 2</button>
+                <button type="button" data-trade-package="2-2">2 for 2</button>
+                <button type="button" data-trade-package="3-2">3 for 2</button>
+                <button type="button" data-trade-package="3-3">3 for 3</button>
+              </div>
             </section>
 
             <section class="trade-card trade-card-roster">
@@ -1081,7 +1334,7 @@
             </section>
             <section class="trade-card waiver-card">
               <div class="trade-card-head">
-                <span>Waiver Assistant</span>
+                <span>Waiver IQ</span>
                 <strong>Watchlist</strong>
               </div>
               <div id="waiver-assistant" class="waiver-assistant">
@@ -1112,13 +1365,13 @@
             <article>
               <span>Roster fit</span>
               <strong>Paste your roster for context</strong>
-              <p>The calculator checks whether the deal creates a thin RB/WR/TE room or fixes a real need.</p>
+              <p>Trade IQ checks whether the deal creates a thin RB/WR/TE room or fixes a real need.</p>
             </article>
           </div>
 
           <div class="result trade-season-note">
             <strong>Live-season trade intelligence stays ready.</strong>
-            <span>When current-season trades are available, FantasyIQ can add manager tendencies and roster-fit reads. For now, the calculator handles value, risk, and fit.</span>
+            <span>When current-season trades are available, FantasyIQ can add manager tendencies and roster-fit reads. For now, Trade IQ handles value, risk, and fit.</span>
           </div>
         </section>
 
@@ -1196,7 +1449,7 @@
               <h2>Leagues and access</h2>
             </div>
             <div class="live-switches">
-              <a class="secondary-action" href="../help.html">Help Center</a>
+              <a class="secondary-action" href="/help.html">Help Center</a>
               <button class="secondary-action" id="account-manage-billing" type="button">Manage Billing</button>
               <button class="secondary-action" id="account-add-league" type="button">Add League</button>
             </div>
@@ -1231,16 +1484,16 @@
       </section>
     </main>
 
-    <script src="./config.js?v=20260522_live_override_3"></script>
+    <script src="./config.js?v=20260524_demo_full_roster_1"></script>
     <script src="./js/state.js?v=20260524_split_1"></script>
-    <script src="./js/api.js?v=20260524_split_1"></script>
-    <script src="./js/auth.js?v=20260524_split_1"></script>
-    <script src="./js/dashboard.js?v=20260524_split_1"></script>
-    <script src="./js/trade.js?v=20260524_split_1"></script>
+    <script src="./js/api.js?v=20260524_trade_database_1"></script>
+    <script src="./js/auth.js?v=20260524_email_login_1"></script>
+    <script src="./js/dashboard.js?v=20260525_big_board_adp_1"></script>
+    <script src="./js/trade.js?v=20260524_trade_market_3"></script>
     <script src="./js/sos.js?v=20260524_split_1"></script>
-    <script src="./js/draft.js?v=20260524_split_1"></script>
+    <script src="./js/draft.js?v=20260525_trade_iq_exact_1"></script>
     <script src="./js/simulator.js?v=20260524_split_1"></script>
-    <script src="./js/ui.js?v=20260524_split_1"></script>
+    <script src="./js/ui.js?v=20260524_trade_database_1"></script>
     <script src="./app.js?v=20260524_split_1"></script>
   </body>
 </html>

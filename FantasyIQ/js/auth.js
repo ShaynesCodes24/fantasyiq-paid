@@ -2,18 +2,19 @@
   if (customerAccessGate()) return;
   document.body.classList.add("access-locked");
   const customerLabel = appConfig.customerName || appConfig.customerTeamName || "your dashboard";
-  const needsIdentity = !requiresCustomerAccess();
+  const needsIdentity = true;
   const gate = document.createElement("section");
   gate.id = "customer-access-gate";
   gate.className = "access-gate";
   gate.innerHTML = `
     <form class="access-card">
+      <button type="button" class="access-close" id="customer-access-close" aria-label="Close sign in and view public demo" title="View public demo">×</button>
       <p class="eyebrow">Customer Login</p>
       <h2>${needsIdentity ? "Log in to your dashboard" : `Open ${htmlEscape(customerLabel)}`}</h2>
       <p>${needsIdentity ? "Use the email from checkout and your FantasyIQ password." : "Use your FantasyIQ password to open your saved leagues."}</p>
       <label ${needsIdentity ? "" : "hidden"}>
-        Email or dashboard slug
-        <input id="customer-login-identity" type="text" autocomplete="username" ${needsIdentity ? "required" : ""} />
+        Email
+        <input id="customer-login-identity" type="email" autocomplete="username" inputmode="email" ${needsIdentity ? "required" : ""} />
       </label>
       <label>
         Password
@@ -56,7 +57,8 @@
   const recoveryPanel = gate.querySelector(".access-recovery");
   const output = gate.querySelector(".access-message");
   const authButtons = Array.from(gate.querySelectorAll("button"));
-  const identityValue = () => (needsIdentity ? identityInput.value.trim() : appConfig.loadoutKey);
+  const identityValue = () => (needsIdentity ? identityInput.value.trim() : appConfig.customerEmail || appConfig.email || "");
+  const identityIsEmail = () => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(identityValue());
   const passwordSetupMessage =
     "This account does not have a saved password yet. Use the access code from the setup email below, enter the password twice, then click Create / Reset Password. You can also click Unlock With Code for one-time access.";
   const friendlyAuthMessage = (message = "") => {
@@ -64,8 +66,8 @@
       return "Could not reach the FantasyIQ login service. Check your connection and try again.";
     }
     if (/create a password/i.test(message)) return passwordSetupMessage;
-    if (/customer account was not found|could not find that checkout email|could not find that customer dashboard/i.test(message)) {
-      return "We could not find that customer account. Use the exact email from checkout, or open the dashboard link from the setup email.";
+    if (/valid email|customer account was not found|could not find that checkout email|could not find that customer dashboard/i.test(message)) {
+      return "Use the exact email from checkout.";
     }
     if (/access code does not match/i.test(message)) {
       return "That access code does not match this checkout email. Check your setup email or contact support.";
@@ -118,13 +120,13 @@
     if (text) output.scrollIntoView({ block: "nearest", behavior: "smooth" });
   };
   const customerBody = (extra = {}) => ({
-    customer: identityValue(),
+    email: identityValue(),
     league: appConfig.leagueKey || "",
     ...extra,
   });
   const requireIdentity = () => {
-    if (!needsIdentity || identityValue()) return true;
-    showAuthMessage("Enter the email from checkout or your dashboard slug.", "error");
+    if (!needsIdentity || identityIsEmail()) return true;
+    showAuthMessage("Enter the email from checkout.", "error");
     return false;
   };
   const postAuth = async (path, body) => {
@@ -152,6 +154,13 @@
     }
   };
   (needsIdentity ? identityInput : passwordInput)?.focus();
+  gate.querySelector("#customer-access-close")?.addEventListener("click", () => {
+    if (requiresCustomerAccess() || loginRequested()) {
+      window.location.href = "/";
+      return;
+    }
+    removeCustomerAccessGate();
+  });
   gate.querySelector("form")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const password = passwordInput.value.trim();
@@ -286,6 +295,9 @@ async function bootCustomerDashboard() {
       loginRequested: loginRequested() ? "1" : "0",
     });
   }
+  if (typeof renderCommandDecision === "function") {
+    renderCommandDecision();
+  }
   loadBoards();
   startLiveSync();
 }
@@ -335,7 +347,7 @@ function customerBrandSubtitle(fallbackLeagueName) {
   if (appConfig.customerName && fallbackLeagueName) {
     return `${appConfig.customerName} / ${fallbackLeagueName}`;
   }
-  return appConfig.leagueSubtitle || "Configurable ESPN Fantasy Platform";
+  return appConfig.leagueSubtitle || "ESPN fantasy football decision engine";
 }
 
 function applyAppConfig() {
@@ -357,7 +369,7 @@ function applyAppConfig() {
   const demoBanner = document.querySelector("[data-demo-banner]");
 
   if (brandTitle) brandTitle.textContent = siteName;
-  if (brandEyebrow) brandEyebrow.textContent = appConfig.customerTeamName || appConfig.leagueName || "League Command Center";
+  if (brandEyebrow) brandEyebrow.textContent = appConfig.customerTeamName || appConfig.leagueName || "Command Center";
   if (brandSubtitle) {
     brandSubtitle.textContent = customerBrandSubtitle(appConfig.leagueName);
   }
@@ -369,11 +381,11 @@ function applyAppConfig() {
   if (subscribeButton && appConfig.showSubscribeButton === false) {
     subscribeButton.remove();
   }
-  if (heroTitle) heroTitle.textContent = appConfig.heroTitle || "Draft smarter. Trade cleaner. Win your league.";
+  if (heroTitle) heroTitle.textContent = appConfig.heroTitle || "Your smartest next move, explained.";
   if (heroSubtitle) {
     heroSubtitle.textContent =
       appConfig.heroSubtitle ||
-      "Draft prep, player values, mock tracking, live room sync, and trade discipline in one command center.";
+      "FantasyIQ reads league context, roster shape, player values, schedule leverage, trade lanes, and waiver opportunities before recommending what to do next.";
   }
   if (leftEndzone) leftEndzone.textContent = appConfig.fieldLeftLabel || "Fantasy";
   if (rightEndzone) rightEndzone.textContent = appConfig.fieldRightLabel || "IQ";
@@ -399,7 +411,7 @@ function applyEspnLeagueBranding() {
   const brandSubtitle = document.querySelector(".brand-lockup small");
   const logo = document.querySelector(".brand-lockup img");
 
-  if (brandEyebrow) brandEyebrow.textContent = appConfig.customerTeamName || liveDraft.leagueName || "League Command Center";
+  if (brandEyebrow) brandEyebrow.textContent = appConfig.customerTeamName || liveDraft.leagueName || "Command Center";
   if (brandSubtitle && liveDraft.leagueId) {
     brandSubtitle.textContent = appConfig.customerName
       ? customerBrandSubtitle(liveDraft.leagueName || "ESPN league")

@@ -36,13 +36,12 @@ function stopLiveSyncTimer() {
 
 function scheduleNextLiveSync() {
   stopLiveSyncTimer();
-  if (!liveSyncToggle?.checked) return;
+  if (liveSyncToggle && !liveSyncToggle.checked) return;
   if (requiresCustomerAccess() && !hasCustomerAccess()) return;
   liveTimer = window.setTimeout(() => loadLiveDraft(), liveSyncIntervalMs());
 }
 
 function loadLiveDraft(force = false) {
-  if (!liveStatus) return Promise.resolve();
   if (!ensureCustomerAccess()) return Promise.resolve();
   if (liveSyncInFlight) {
     return Promise.resolve();
@@ -77,8 +76,6 @@ function loadLiveDraft(force = false) {
 }
 
 function startLiveSync() {
-  if (document.querySelector("#live")?.classList.contains("sos-panel")) return;
-  if (!liveSyncToggle?.checked) return;
   if (!ensureCustomerAccess()) return;
   stopLiveSyncTimer();
   loadLiveDraft();
@@ -97,6 +94,8 @@ function liveBoardRequestUrl(limit = "") {
 function applyBoardPayload(data) {
   boardData = data;
   applyServerCustomerContext(data.customer);
+  loadFantasyCalcMarket();
+  loadFantasyCalcTradeDatabase();
   renderLeagueProfile();
   renderBoard();
   renderDraftPrep();
@@ -111,6 +110,122 @@ function applyBoardPayload(data) {
   renderRosterEngines();
   refreshActivePlayerAutocomplete();
   loadIntelligence(false);
+}
+
+function fantasyCalcMarketRequestUrl() {
+  const settings = activeLeagueSettings();
+  const slots = settings.lineupSlots || {};
+  const ppr = settings.scoringType === "standard" ? 0 : settings.scoringType === "half-ppr" ? 0.5 : Number(settings.receptionPoints ?? 1);
+  return apiUrl("/api/fantasycalc-market", {
+    v: Date.now(),
+    isDynasty: settings.leagueType === "dynasty" || settings.isDynasty ? "true" : "false",
+    numQbs: Number(slots.SUPERFLEX || 0) > 0 ? 2 : 1,
+    numTeams: settings.teamCount || 12,
+    ppr,
+  });
+}
+
+function fantasyCalcTradeDatabaseRequestUrl() {
+  const settings = activeLeagueSettings();
+  const slots = settings.lineupSlots || {};
+  const ppr = settings.scoringType === "standard" ? 0 : settings.scoringType === "half-ppr" ? 0.5 : Number(settings.receptionPoints ?? 1);
+  return apiUrl("/api/fantasycalc-trades", {
+    v: Date.now(),
+    isDynasty: settings.leagueType === "dynasty" || settings.isDynasty ? "true" : "false",
+    numQbs: Number(slots.SUPERFLEX || 0) > 0 ? 2 : 1,
+    numTeams: settings.teamCount || 12,
+    ppr,
+  });
+}
+
+function loadFantasyCalcMarket() {
+  const settings = activeLeagueSettings();
+  const slots = settings.lineupSlots || {};
+  const key = [
+    settings.leagueType === "dynasty" || settings.isDynasty ? "dynasty" : "redraft",
+    Number(slots.SUPERFLEX || 0) > 0 ? 2 : 1,
+    settings.teamCount || 12,
+    settings.scoringType || settings.receptionPoints || "ppr",
+  ].join("|");
+  if (fantasyCalcMarketLoading || fantasyCalcMarketKey === key) return;
+  fantasyCalcMarketLoading = true;
+  fantasyCalcMarketKey = key;
+  fetch(fantasyCalcMarketRequestUrl(), { cache: "no-store", headers: apiHeaders() })
+    .then((response) => {
+      if (!response.ok) throw new Error(`FantasyCalc market returned HTTP ${response.status}`);
+      return response.json();
+    })
+    .then((payload) => {
+      fantasyCalcMarket = normalizeFantasyCalcMarket(payload);
+      renderTradeCalc();
+      renderRosterEngines();
+    })
+    .catch((error) => {
+      fantasyCalcMarket = { ok: false, playersByKey: new Map(), error: error.message, source: "FantasyIQ fallback" };
+      fantasyCalcMarketKey = "";
+      console.warn("FantasyCalc market unavailable; Trade IQ is using FantasyIQ values only.", error);
+      renderTradeCalc();
+      renderRosterEngines();
+    })
+    .finally(() => {
+      fantasyCalcMarketLoading = false;
+    });
+}
+
+function loadFantasyCalcTradeDatabase() {
+  const settings = activeLeagueSettings();
+  const slots = settings.lineupSlots || {};
+  const key = [
+    settings.leagueType === "dynasty" || settings.isDynasty ? "dynasty" : "redraft",
+    Number(slots.SUPERFLEX || 0) > 0 ? 2 : 1,
+    settings.teamCount || 12,
+    settings.scoringType || settings.receptionPoints || "ppr",
+  ].join("|");
+  if (fantasyCalcTradeDatabaseLoading || fantasyCalcTradeDatabaseKey === key) return;
+  fantasyCalcTradeDatabaseLoading = true;
+  fantasyCalcTradeDatabaseKey = key;
+  fetch(fantasyCalcTradeDatabaseRequestUrl(), { cache: "no-store", headers: apiHeaders() })
+    .then((response) => {
+      if (!response.ok) throw new Error(`FantasyCalc trade database returned HTTP ${response.status}`);
+      return response.json();
+    })
+    .then((payload) => {
+      fantasyCalcTradeDatabase = normalizeFantasyCalcTradeDatabase(payload);
+      renderRosterEngines();
+      loadIntelligence(false);
+    })
+    .catch((error) => {
+      fantasyCalcTradeDatabase = { ok: false, mostTradedById: new Map(), mostTradedByKey: new Map(), error: error.message };
+      fantasyCalcTradeDatabaseKey = "";
+      console.warn("FantasyCalc trade database unavailable; Trade IQ package ideas are disabled.", error);
+      renderRosterEngines();
+    })
+    .finally(() => {
+      fantasyCalcTradeDatabaseLoading = false;
+    });
+}
+
+function loadDataFreshness() {
+  if (dataFreshnessLoading) return Promise.resolve(dataFreshness);
+  dataFreshnessLoading = true;
+  return fetch(apiUrl("/api/data-freshness", { v: Date.now() }), { cache: "no-store", headers: apiHeaders() })
+    .then((response) => {
+      if (!response.ok) throw new Error(`Freshness check returned HTTP ${response.status}`);
+      return response.json();
+    })
+    .then((payload) => {
+      dataFreshness = payload;
+      renderAccountPanel();
+      return payload;
+    })
+    .catch((error) => {
+      dataFreshness = { ok: false, rows: [], error: error.message };
+      renderAccountPanel();
+      return dataFreshness;
+    })
+    .finally(() => {
+      dataFreshnessLoading = false;
+    });
 }
 
 function combinedBoardCount(data = boardData) {
@@ -187,6 +302,7 @@ window.setTimeout(pingDraftCompanion, 800);
 
 if (boardTable) {
   bootCustomerDashboard();
+  loadDataFreshness();
 }
 
 setupPlayerAutocomplete();
@@ -204,6 +320,7 @@ positionButtons.forEach((button) => {
   });
 });
 reloadBoards?.addEventListener("click", loadBoards);
+removeLeagueAction?.addEventListener("click", removeActiveLeague);
 navJumps.forEach((button) => {
   button.addEventListener("click", () => activateSection(button.dataset.jump));
 });
@@ -301,6 +418,14 @@ simPositionButtons.forEach((button) => {
 calculateTrade?.addEventListener("click", renderTradeCalc);
 tradeGive?.addEventListener("input", renderTradeCalc);
 tradeGet?.addEventListener("input", renderTradeCalc);
+tradeGiveSlots.forEach((input) => input.addEventListener("input", renderTradeCalc));
+tradeGetSlots.forEach((input) => input.addEventListener("input", renderTradeCalc));
+tradePackageButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    applyTradePackageShape(button.dataset.tradePackage || "1-1");
+    renderTradeCalc();
+  });
+});
 tradeRoster?.addEventListener("input", renderTradeCalc);
 tradeModeButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -310,6 +435,7 @@ tradeModeButtons.forEach((button) => {
 });
 tradeSaveNote?.addEventListener("click", saveCurrentTradeNote);
 intelligenceRefresh?.addEventListener("click", () => loadIntelligence(true));
+commandRefresh?.addEventListener("click", () => loadIntelligence(true));
 
 const savedHideDrafted = localStorage.getItem(loadoutStorageKey("hide-drafted"));
 const initialHideDrafted = savedHideDrafted === null ? true : savedHideDrafted === "true";
@@ -339,6 +465,7 @@ myTeamSelect?.addEventListener("change", () => {
   renderDraftPrep();
   renderLiveDraft();
   renderCheatcodeMode();
+  renderRosterEngines();
 });
 manualSync?.addEventListener("click", () => loadLiveDraft(true));
 draftLeagueApply?.addEventListener("click", applyDraftLeagueOverrideFromInputs);

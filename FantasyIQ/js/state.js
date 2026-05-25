@@ -13,6 +13,10 @@ const reloadBoards = document.querySelector("#reload-boards");
 const navJumps = document.querySelectorAll(".nav-jump");
 const tradeGive = document.querySelector("#trade-give");
 const tradeGet = document.querySelector("#trade-get");
+const tradeGiveSlots = document.querySelectorAll("[data-trade-side='give']");
+const tradeGetSlots = document.querySelectorAll("[data-trade-side='get']");
+const tradePackageButtons = document.querySelectorAll("[data-trade-package]");
+const tradePackageLabel = document.querySelector("#trade-package-label");
 const tradeRoster = document.querySelector("#trade-roster");
 const calculateTrade = document.querySelector("#calculate-trade");
 const tradeOutput = document.querySelector("#trade-output");
@@ -27,6 +31,13 @@ const tradeModeButtons = document.querySelectorAll(".trade-mode-toggle");
 const tradeSaveNote = document.querySelector("#trade-save-note");
 const tradeSavedNotes = document.querySelector("#trade-saved-notes");
 const waiverAssistant = document.querySelector("#waiver-assistant");
+const waiverIqHero = document.querySelector("#waiver-iq-hero");
+const waiverIqSupportingReasons = document.querySelector("#waiver-iq-supporting-reasons");
+const waiverIqRiskWarning = document.querySelector("#waiver-iq-risk-warning");
+const waiverIqAlternativePath = document.querySelector("#waiver-iq-alternative-path");
+const waiverIqWatchlist = document.querySelector("#waiver-iq-watchlist");
+const waiverIqDrops = document.querySelector("#waiver-iq-drops");
+const waiverIqPlan = document.querySelector("#waiver-iq-plan");
 const cheatcodeStatus = document.querySelector("#cheatcode-status");
 const cheatcodeHero = document.querySelector("#cheatcode-hero");
 const cheatcodeNow = document.querySelector("#cheatcode-now");
@@ -41,6 +52,19 @@ const intelligencePanel = document.querySelector("#intelligence-os-panel");
 const intelligenceMainMove = document.querySelector("#intelligence-main-move");
 const intelligenceFreshness = document.querySelector("#intelligence-freshness");
 const intelligenceRefresh = document.querySelector("#intelligence-refresh");
+const commandRefresh = document.querySelector("#command-refresh");
+const commandMainMoveCard = document.querySelector("#command-main-move-card");
+const commandMainMove = document.querySelector("#command-main-move");
+const commandMainReason = document.querySelector("#command-main-reason");
+const commandFantasyIqScore = document.querySelector("#command-fantasyiq-score");
+const commandScoreDetail = document.querySelector("#command-score-detail");
+const commandRosterWeakness = document.querySelector("#command-roster-weakness");
+const commandWeaknessDetail = document.querySelector("#command-weakness-detail");
+const commandConfidence = document.querySelector("#command-confidence");
+const commandConfidenceDetail = document.querySelector("#command-confidence-detail");
+const commandSupportingReasons = document.querySelector("#command-supporting-reasons");
+const commandRiskWarning = document.querySelector("#command-risk-warning");
+const commandAlternativePath = document.querySelector("#command-alternative-path");
 const intelligenceMainCard = document.querySelector("#intelligence-main-card");
 const intelligenceReasons = document.querySelector("#intelligence-reasons");
 const intelligenceGrid = document.querySelector("#intelligence-grid");
@@ -85,6 +109,11 @@ const liveTierBoard = document.querySelector("#live-tier-board");
 const liveTierButtons = document.querySelectorAll(".live-tier-toggle");
 const liveMyRoster = document.querySelector("#live-my-roster");
 const postDraftPlan = document.querySelector("#post-draft-plan");
+const myTeamHero = document.querySelector("#my-team-hero");
+const myTeamPositionGrid = document.querySelector("#my-team-position-grid");
+const myTeamStarters = document.querySelector("#my-team-starters");
+const myTeamBench = document.querySelector("#my-team-bench");
+const myTeamActions = document.querySelector("#my-team-actions");
 const liveRecentPicks = document.querySelector("#live-recent-picks");
 const liveNextPicks = document.querySelector("#live-next-picks");
 const draftOrderGrid = document.querySelector("#draft-order-grid");
@@ -137,6 +166,7 @@ const leagueSwitcher = document.querySelector("#league-switcher");
 const leagueSwitcherLabel = document.querySelector("#league-switcher-label");
 const leagueSelect = document.querySelector("#league-select");
 const addLeagueAction = document.querySelector("#add-league-action");
+const removeLeagueAction = document.querySelector("#remove-league-action");
 const leagueSlotNote = document.querySelector("#league-slot-note");
 const draftLeagueOverride = document.querySelector("#draft-league-override");
 const draftLeagueInput = document.querySelector("#draft-league-input");
@@ -379,11 +409,11 @@ function leagueStorageSegment() {
 function rememberedCustomerLoadout(loadouts) {
   try {
     const lastLoadout = localStorage.getItem("fantasy-dashboard:last-loadout") || "";
-    if (lastLoadout && localStorage.getItem(`fantasy-dashboard:${lastLoadout}:access-code`)) {
+    if (lastLoadout && localStorage.getItem(`fantasy-dashboard:${lastLoadout}:password-session`)) {
       return lastLoadout;
     }
     const savedLoadouts = Object.keys(loadouts).filter((key) =>
-      localStorage.getItem(`fantasy-dashboard:${key}:access-code`)
+      localStorage.getItem(`fantasy-dashboard:${key}:password-session`)
     );
     return savedLoadouts.length === 1 ? savedLoadouts[0] : "";
   } catch (error) {

@@ -32,13 +32,25 @@ def player_position(player: dict[str, Any]) -> str:
 
 
 def player_value(player: dict[str, Any]) -> float:
-    projection = as_number(player.get("Projection") or player.get("projected") or player.get("points"))
-    value = as_number(player.get("Value") or player.get("VOR") or player.get("value"))
+    projection = as_number(
+        player.get("Native Projection")
+        or player.get("Proj PPR Pts")
+        or player.get("Projection")
+        or player.get("projected")
+        or player.get("points")
+    )
+    value = as_number(player.get("Value Score") or player.get("Value") or player.get("VOR") or player.get("value"))
     upside = as_number(player.get("Upside") or player.get("Ceiling") or player.get("upside"))
     risk = as_number(player.get("Risk") or player.get("risk"))
     rank = as_number(player.get("Rank") or player.get("rank"), 999)
-    rank_bonus = max(0.0, 80.0 - min(rank, 80.0)) * 0.18
-    return round(value + projection * 0.55 + upside * 0.12 + rank_bonus - risk * 0.7, 2)
+    pos_rank = as_number(player.get("Pos Rank") or player.get("positionRank"), 99)
+    position = player_position(player)
+    rank_score = max(22.0, min(98.0, 100.0 - max(0.0, rank - 1.0) * 0.55)) if rank < 999 else value or 55.0
+    pos_multiplier = 2.2 if position in {"QB", "TE"} else 4.0 if position in {"DST", "K"} else 1.45
+    pos_rank_score = max(25.0, min(96.0, 101.0 - pos_rank * pos_multiplier)) if pos_rank < 99 else value or 55.0
+    projection_score = max(45.0, min(95.0, projection / 3.4)) if projection else 55.0
+    base = value or (rank_score * 0.65 + projection_score * 0.25 + upside * 0.1)
+    return round(base * 0.58 + rank_score * 0.18 + pos_rank_score * 0.1 + projection_score * 0.08 + upside * 0.06 - risk * 0.25, 2)
 
 
 @dataclass
@@ -74,6 +86,8 @@ def evaluate_roster(roster: list[dict[str, Any]]) -> RosterProfile:
     starter_values = []
     bench_values = []
     bye_weeks: dict[int, int] = {}
+    starter_gap_penalty = 0.0
+    depth_gap_penalty = 0.0
 
     for position, players in by_position.items():
         ranked = sorted(players, key=player_value, reverse=True)
@@ -93,7 +107,9 @@ def evaluate_roster(roster: list[dict[str, Any]]) -> RosterProfile:
 
         starter_gap = max(0, starter_target - len(starters))
         depth_gap = max(0, depth_target - len(ranked))
-        position_score = starter_score + depth_score * 0.45 - starter_gap * 14 - depth_gap * 5
+        starter_gap_penalty += starter_gap * (0.5 if position in {"DST", "K"} else 2.0)
+        depth_gap_penalty += depth_gap * (0.0 if position in {"DST", "K"} else 0.45)
+        position_score = starter_score + depth_score * 0.35 - starter_gap * 7 - depth_gap * 2
         profile = {
             "pos": position,
             "count": len(ranked),
@@ -110,7 +126,20 @@ def evaluate_roster(roster: list[dict[str, Any]]) -> RosterProfile:
     starter_quality = sum(starter_values) / max(1, len(starter_values))
     bench_depth = sum(bench_values) / max(1, len(bench_values))
     bye_week_risk = max(bye_weeks.values(), default=0) * 8.0
-    team_strength = max(0.0, min(100.0, starter_quality * 1.8 + bench_depth * 0.55 - bye_week_risk * 0.4))
+    roster_size_bonus = min(6.0, len(roster) * 0.35)
+    team_strength = max(
+        0.0,
+        min(
+            100.0,
+            starter_quality * 0.86
+            + bench_depth * 0.14
+            + roster_size_bonus
+            + (4.0 if bench_depth == 0 and starter_quality > 0 else 0.0)
+            - starter_gap_penalty
+            - depth_gap_penalty
+            - bye_week_risk * 0.15,
+        ),
+    )
 
     return RosterProfile(
         counts=counts,
@@ -189,10 +218,10 @@ def best_draft_pick(board: list[dict[str, Any]], profile: RosterProfile) -> dict
 def fantasy_iq_score(profile: RosterProfile, waiver: dict[str, Any] | None, trade: dict[str, Any] | None) -> int:
     score = profile.team_strength
     if waiver and waiver["priority"] == "high":
-        score -= 7
+        score -= 3
     if trade and trade["valueDelta"] > 4:
-        score += 3
-    score -= min(15, profile.bye_week_risk * 0.25)
+        score += 2
+    score -= min(6, profile.bye_week_risk * 0.12)
     return int(max(1, min(99, round(score))))
 
 

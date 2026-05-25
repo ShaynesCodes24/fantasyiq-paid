@@ -1,4 +1,4 @@
-﻿function liveLeagueTeams() {
+function liveLeagueTeams() {
   return Array.isArray(liveDraft?.teams) ? liveDraft.teams : [];
 }
 
@@ -123,6 +123,70 @@ function rosterWeaknesses(snapshot) {
     .sort((a, b) => b.weight - a.weight);
 }
 
+function consensusProjectionScore(row) {
+  const projection = Number(projectionValue(row) || row?.["Proj PPR Pts"] || 0);
+  if (!projection) return 55;
+  const peers = (boardData?.boards?.combined?.rows || [])
+    .filter((peer) => peer?.Pos === row?.Pos)
+    .map((peer) => Number(projectionValue(peer) || peer?.["Proj PPR Pts"] || 0))
+    .filter((value) => Number.isFinite(value) && value > 0)
+    .sort((a, b) => b - a);
+  if (peers.length < 2) return clampNumber(projection / 3.4, 45, 92);
+  const betterCount = peers.filter((value) => value > projection).length;
+  const percentile = 1 - betterCount / Math.max(1, peers.length - 1);
+  return clampNumber(45 + percentile * 50, 45, 95);
+}
+
+function consensusPlayerScore(row) {
+  if (!row) return 0;
+  const boardValue = Number(row["Value Score"] || 0);
+  const leagueValue = Number(leagueValueScore(row) || boardValue || 0);
+  const rank = Number(row.Rank || 999);
+  const posRank = Number(row["Pos Rank"] || 99);
+  const rankScore = rank < 999 ? clampNumber(100 - (rank - 1) * 0.55, 22, 98) : leagueValue || 55;
+  const posMultiplier = row.Pos === "QB" || row.Pos === "TE" ? 2.2 : row.Pos === "DST" || row.Pos === "K" ? 4 : 1.45;
+  const posRankScore = posRank < 99 ? clampNumber(101 - posRank * posMultiplier, 25, 96) : leagueValue || 55;
+  const projectionScore = consensusProjectionScore(row);
+  const stability = Number(row.Stability || row.Floor || 55);
+  const market = Number(fantasyCalcMarketScore(row));
+  const riskPenalty = clampNumber((Number(row.Risk || 4.5) - 5) * 1.2, -2, 4);
+  let score =
+    (boardValue || leagueValue) * 0.46 +
+    leagueValue * 0.2 +
+    rankScore * 0.14 +
+    posRankScore * 0.08 +
+    projectionScore * 0.08 +
+    stability * 0.04 -
+    riskPenalty;
+  if (Number.isFinite(market) && market > 0) {
+    score = score * 0.86 + market * 0.14;
+  }
+  return Math.round(clampNumber(score, 28, 99) * 10) / 10;
+}
+
+function averageConsensusScore(rows) {
+  return rows.length ? rows.reduce((sum, row) => sum + consensusPlayerScore(row), 0) / rows.length : 0;
+}
+
+function consensusRosterBreakdown(snapshot) {
+  const rows = snapshot.rows || [];
+  const slots = activeLineupSlots();
+  const starterLimit = Math.max(
+    1,
+    starterSlotTotal() - Number(slots.DST || 0) - Number(slots.K || 0),
+  );
+  const fantasyRows = rows
+    .filter((row) => !["DST", "K"].includes(row.Pos))
+    .sort((a, b) => consensusPlayerScore(b) - consensusPlayerScore(a));
+  const starterRows = fantasyRows.slice(0, Math.min(starterLimit, fantasyRows.length));
+  const depthRows = fantasyRows.slice(starterRows.length);
+  const starterAvg = averageConsensusScore(starterRows) || averageConsensusScore(fantasyRows);
+  const depthAvg = averageConsensusScore(depthRows);
+  const rosterAvg = averageConsensusScore(fantasyRows.length ? fantasyRows : rows);
+  const coverage = Math.min(1, starterRows.length / starterLimit);
+  return { starterAvg, depthAvg, rosterAvg, coverage, starterLimit, starterRows, depthRows };
+}
+
 function rosterStrengths(snapshot) {
   const counts = snapshot.counts || emptyPositionCounts();
   const targets = draftTargetCounts();
@@ -142,33 +206,39 @@ function postDraftGrade(snapshot) {
     return { score: 0, grade: "Pending", label: "Select roster", notes: ["Select your ESPN team or paste a roster to grade it."] };
   }
   const rows = snapshot.rows;
-  const values = rows.map((row) => leagueValueScore(row));
-  const avgValue = values.reduce((sum, value) => sum + value, 0) / values.length;
+  const consensus = consensusRosterBreakdown(snapshot);
+  const avgValue = consensus.rosterAvg || averageConsensusScore(rows);
   const avgRisk = rows.reduce((sum, row) => sum + Number(row.Risk || 0), 0) / rows.length;
   const rbWr = Number(snapshot.counts.RB || 0) + Number(snapshot.counts.WR || 0);
   const weaknesses = rosterWeaknesses(snapshot);
   const starterGaps = weaknesses.reduce((sum, item) => sum + item.starterGap, 0);
   const depthGaps = weaknesses.reduce((sum, item) => sum + item.depthGap, 0);
-  let score = 68 + (avgValue - 50) * 0.45;
+  let score =
+    58 +
+    (consensus.starterAvg - 60) * 0.52 +
+    (consensus.depthAvg ? (consensus.depthAvg - 55) * 0.18 : 0) +
+    (avgValue - 55) * 0.12 +
+    consensus.coverage * 4;
 
   if (snapshot.picks.length) {
     const pickGrades = snapshot.picks.map((pick) => valueForPick(pick).label);
-    score += pickGrades.filter((label) => label === "Steal").length * 3;
-    score += pickGrades.filter((label) => label === "Good value").length * 2;
-    score -= pickGrades.filter((label) => label === "Reach").length * 4;
+    score += pickGrades.filter((label) => label === "Steal").length * 1.5;
+    score += pickGrades.filter((label) => label === "Good value").length;
+    score -= pickGrades.filter((label) => label === "Reach").length * 2;
   }
-  score -= starterGaps * 8;
-  score -= Math.max(0, depthGaps - starterGaps) * 1.5;
-  if (rbWr >= Math.max(5, starterTargetCounts().RB + starterTargetCounts().WR + flexStarterTarget())) score += 4;
-  if (avgRisk > 5.2) score -= 4;
-  if (avgRisk < 3.2 && rows.length >= 7) score += 2;
-  if (activeLineupSlots().SUPERFLEX && Number(snapshot.counts.QB || 0) < 2) score -= 8;
-  score = Math.round(clampNumber(score, 45, 98));
+  score -= starterGaps * 3.5;
+  score -= Math.max(0, depthGaps - starterGaps) * 0.75;
+  if (rbWr >= Math.max(5, starterTargetCounts().RB + starterTargetCounts().WR + flexStarterTarget())) score += 2;
+  if (avgRisk > 5.8) score -= 2;
+  if (avgRisk < 3.2 && rows.length >= 7) score += 1;
+  if (activeLineupSlots().SUPERFLEX && Number(snapshot.counts.QB || 0) < 2) score -= 4;
+  score = Math.round(clampNumber(score, 52, 98));
   const notes = [
-    `Average league value ${avgValue.toFixed(1)} with ${avgRisk.toFixed(1)}/10 average risk.`,
+    `Consensus score ${avgValue.toFixed(1)} using board value, projections, rank, and market support.`,
     weaknesses.length
       ? `Main need: ${weaknesses.slice(0, 2).map((item) => item.pos).join(" / ")}.`
       : "Starter and bench targets are mostly covered.",
+    `${consensus.starterRows.length}/${consensus.starterLimit} consensus-weighted starter slots matched.`,
   ];
   return { score, grade: `${gradeLetter(score)} (${score})`, label: score >= 83 ? "Contender build" : score >= 72 ? "Playable build" : "Needs work", notes };
 }
@@ -218,9 +288,14 @@ function waiverPoolRows() {
   return availableRows();
 }
 
+function waiverPoolIsReliable() {
+  return liveLeagueHasRosters() || Boolean(liveDraft?.draftedNames?.length) || Boolean(liveDraft?.rosteredNames?.length);
+}
+
 function waiverPoolSourceLabel() {
   if (liveLeagueHasRosters()) return "Filtered against active ESPN rosters.";
   if (liveDraft?.draftedNames?.length) return "Filtered against the synced draft board.";
+  if (liveDraft?.rosteredNames?.length) return "Filtered against synced league rosters.";
   return "Using the league-adjusted player board.";
 }
 
@@ -235,6 +310,7 @@ function waiverCandidates(snapshot, limit = 6) {
   return waiverPoolRows()
     .filter((row) => !rostered.has(normalizePlayerName(row.Player)))
     .filter((row) => positionHasDraftSlot(row.Pos) && !["K", "DST"].includes(row.Pos))
+    .filter((row) => waiverPoolIsReliable() || Number(row.Rank || 999) > 90 || row.Category === "Sleeper")
     .map((row) => {
       const score =
         leagueValueScore(row) +
@@ -323,17 +399,305 @@ function bestTradePair(giveRows, getRows) {
   let best = null;
   giveRows.slice(0, 5).forEach((give) => {
     getRows.slice(0, 5).forEach((get) => {
-      const diff = leagueValueScore(get) - leagueValueScore(give);
-      if (diff > 16 || diff < -12) return;
+      if (!fantasyCalcTradeDatabasePlayer(give) || !fantasyCalcTradeDatabasePlayer(get)) return;
+      const diff = tradeAssetValue(get) - tradeAssetValue(give);
+      const marketGive = fantasyCalcMarketScore(give);
+      const marketGet = fantasyCalcMarketScore(get);
+      if (!Number.isFinite(Number(marketGive)) || !Number.isFinite(Number(marketGet))) return;
+      const marketDiff = Number(marketGet) - Number(marketGive);
       const projectionDiff = projectionValue(get) - projectionValue(give);
+      if (!tradePackageMakesSense([1, 1], diff, marketDiff, tradeAssetValue(get) - tradeAssetValue(give), projectionDiff, { weight: 8 })) return;
+      const databaseSupport = tradeDatabaseExactSupport([give], [get]);
+      if (!databaseSupport.ready) {
+        requestTradeDatabaseSamples([give], [get]);
+        return;
+      }
+      if (databaseSupport.count <= 0) return;
       const score =
-        50 -
-        Math.abs(diff) * 2 +
-        (diff >= -2 ? 5 : 0) +
+        58 -
+        Math.abs(diff) * 1.15 -
+        Math.max(0, marketDiff) * 1.1 +
+        Math.min(5, Math.max(0, marketDiff + 2)) +
+        Math.min(5, tradePackageMarketActivity([give]) / 400) +
+        Math.min(5, tradePackageMarketActivity([get]) / 400) +
+        Math.min(6, databaseSupport.count * 1.4) +
         Math.max(-4, Math.min(4, projectionDiff / 18));
-      if (!best || score > best.score) best = { give, get, diff, score };
+      if (!best || score > best.score) best = { give, get, diff, marketDiff, score, databaseSampleCount: databaseSupport.count };
     });
   });
+  return best;
+}
+
+function uniqueTradeRows(rows) {
+  const seen = new Set();
+  return rows.filter((row) => {
+    const key = normalizePlayerName(row?.Player || "");
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function tradePackageCombinations(rows, count, limit = 10) {
+  const pool = uniqueTradeRows(rows)
+    .sort((a, b) => tradeAssetValue(b) - tradeAssetValue(a))
+    .slice(0, 8);
+  if (count <= 1) return pool.map((row) => [row]).slice(0, limit);
+  const combos = [];
+  for (let left = 0; left < pool.length; left += 1) {
+    for (let right = left + 1; right < pool.length; right += 1) {
+      combos.push([pool[left], pool[right]]);
+    }
+  }
+  return combos
+    .sort((a, b) => tradePackageValue(b) - tradePackageValue(a))
+    .slice(0, limit);
+}
+
+function tradePackageValue(rows) {
+  return rows.reduce((sum, row) => sum + tradeAssetValue(row), 0);
+}
+
+function tradePackageMarketValue(rows) {
+  const values = rows.map((row) => fantasyCalcMarketScore(row));
+  return values.every((value) => Number.isFinite(Number(value)))
+    ? values.reduce((sum, value) => sum + Number(value), 0)
+    : null;
+}
+
+function tradePackageHasDatabaseCoverage(rows) {
+  return rows.every((row) => fantasyCalcPlayer(row) && fantasyCalcTradeDatabasePlayer(row));
+}
+
+function tradePackageProjection(rows) {
+  return rows.reduce((sum, row) => sum + projectionValue(row), 0);
+}
+
+function tradePackageBestValue(rows) {
+  return rows.reduce((best, row) => Math.max(best, tradeAssetValue(row)), 0);
+}
+
+function tradePackageKey(rows) {
+  return rows.map((row) => normalizePlayerName(row.Player)).sort().join("+");
+}
+
+function tradePackageMarketActivity(rows) {
+  return rows.reduce((sum, row) => sum + Number(fantasyCalcTradeDatabasePlayer(row)?.activity || 0), 0);
+}
+
+function tradePackageDatabaseIds(rows) {
+  return rows
+    .map((row) => fantasyCalcPlayerId(row))
+    .filter(Boolean)
+    .sort();
+}
+
+function tradePackageDatabaseKey(rows) {
+  const ids = tradePackageDatabaseIds(rows);
+  return ids.length === rows.length ? ids.join("+") : "";
+}
+
+function tradeDatabaseSampleKey(giveRows, getRows = []) {
+  const giveKey = tradePackageDatabaseKey(giveRows);
+  const getKey = tradePackageDatabaseKey(getRows);
+  return giveKey && (!getRows.length || getKey) ? `${giveKey}=>${getKey || "*"}` : "";
+}
+
+function tradeDatabaseSamplesRequestUrl(giveRows, getRows = []) {
+  const giveIds = tradePackageDatabaseIds(giveRows);
+  const getIds = tradePackageDatabaseIds(getRows);
+  const settings = activeLeagueSettings();
+  const slots = settings.lineupSlots || {};
+  const ppr = settings.scoringType === "standard" ? 0 : settings.scoringType === "half-ppr" ? 0.5 : Number(settings.receptionPoints ?? 1);
+  const totalPlayers = giveRows.length + getRows.length;
+  const params = {
+    v: Date.now(),
+    isDynasty: settings.leagueType === "dynasty" || settings.isDynasty ? "true" : "false",
+    numQbs: Number(slots.SUPERFLEX || 0) > 0 ? 2 : 1,
+    numTeams: settings.teamCount || 12,
+    ppr,
+    minPlayers: Math.max(2, totalPlayers),
+    maxPlayers: Math.max(2, totalPlayers),
+  };
+  const url = new URL(apiUrl("/api/fantasycalc-trades", params), window.location.origin);
+  giveIds.forEach((id) => url.searchParams.append("side1", id));
+  getIds.forEach((id) => url.searchParams.append("side2", id));
+  return `${url.pathname}${url.search}`;
+}
+
+function requestTradeDatabaseSamples(giveRows, getRows = []) {
+  const key = tradeDatabaseSampleKey(giveRows, getRows);
+  if (!key || fantasyCalcTradeSamples.bySideKey.has(key) || fantasyCalcTradeSamples.loadingKeys.has(key)) return;
+  if (fantasyCalcTradeSamples.loadingKeys.size >= 36) return;
+  fantasyCalcTradeSamples.loadingKeys.add(key);
+  fetch(tradeDatabaseSamplesRequestUrl(giveRows, getRows), { cache: "no-store", headers: apiHeaders() })
+    .then((response) => {
+      if (!response.ok) throw new Error(`Trade sample lookup returned HTTP ${response.status}`);
+      return response.json();
+    })
+    .then((payload) => {
+      fantasyCalcTradeSamples.bySideKey.set(key, Array.isArray(payload?.trades) ? payload.trades : []);
+    })
+    .catch((error) => {
+      fantasyCalcTradeSamples.bySideKey.set(key, []);
+      console.warn("FantasyCalc trade sample lookup failed.", error);
+    })
+    .finally(() => {
+      fantasyCalcTradeSamples.loadingKeys.delete(key);
+      renderRosterEngines();
+      loadIntelligence(false);
+    });
+}
+
+function queueTradeDatabaseSamplesForSnapshot(snapshot) {
+  if (!snapshot?.rows?.length || !liveLeagueHasRosters() || !fantasyCalcTradeDatabaseReady()) return;
+  const rows = uniqueTradeRows(tradeStrengthProfiles(snapshot).flatMap((strength) => strength.rows))
+    .filter((row) => fantasyCalcPlayer(row) && fantasyCalcTradeDatabasePlayer(row))
+    .sort((a, b) => tradeAssetValue(b) - tradeAssetValue(a))
+    .slice(0, 6);
+  tradePackageCombinations(rows, 1, 5).forEach((givePackage) => requestTradeDatabaseSamples(givePackage));
+  tradePackageCombinations(rows, 2, 6).forEach((givePackage) => requestTradeDatabaseSamples(givePackage));
+}
+
+function tradeSideAssetKeys(side) {
+  const ids = new Set();
+  const names = new Set();
+  (Array.isArray(side) ? side : []).forEach((asset) => {
+    if (typeof asset === "string" || typeof asset === "number") {
+      const value = String(asset || "").trim();
+      if (value) ids.add(value);
+      return;
+    }
+    const player = asset?.player || asset?.Player || asset || {};
+    const id = String(player.id || player.playerId || asset?.id || asset?.playerId || "").trim();
+    const espnId = String(player.espnId || asset?.espnId || "").trim();
+    const name = normalizePlayerName(player.name || player.fullName || asset?.name || asset?.playerName || "");
+    if (id) ids.add(id);
+    if (espnId) ids.add(`espn:${espnId}`);
+    if (name) names.add(name);
+  });
+  return { ids, names };
+}
+
+function tradeSideContainsRows(side, rows) {
+  const keys = tradeSideAssetKeys(side);
+  return rows.every((row) => {
+    const id = fantasyCalcPlayerId(row);
+    const espnId = row.PlayerId || row.EspnId || row.ESPNID || fantasyCalcPlayer(row)?.espnId || "";
+    const name = normalizePlayerName(row.Player || "");
+    return (id && keys.ids.has(id)) || (espnId && keys.ids.has(`espn:${espnId}`)) || (name && keys.names.has(name));
+  });
+}
+
+function tradeDatabaseExactSupport(givePackage, getPackage) {
+  const key = tradeDatabaseSampleKey(givePackage, getPackage);
+  if (!key || !fantasyCalcTradeSamples.bySideKey.has(key)) return { ready: false, count: 0 };
+  const trades = fantasyCalcTradeSamples.bySideKey.get(key) || [];
+  const count = trades.filter((trade) => {
+    const side1 = Array.isArray(trade.side1) ? trade.side1 : [];
+    const side2 = Array.isArray(trade.side2) ? trade.side2 : [];
+    return (
+      side1.length === givePackage.length &&
+      side2.length === getPackage.length &&
+      tradeSideContainsRows(side1, givePackage) &&
+      tradeSideContainsRows(side2, getPackage)
+    );
+  }).length;
+  return { ready: true, count };
+}
+
+function tradePackageNeed(needs, rows) {
+  const positions = new Set(rows.map((row) => row.Pos));
+  return needs
+    .filter((need) => positions.has(need.pos))
+    .sort((a, b) => Number(b.weight || 0) - Number(a.weight || 0))[0] || null;
+}
+
+function tradePackageName(rows) {
+  return rows.map((row) => row.Player).join(" + ");
+}
+
+function tradeShapeLabel(giveCount, getCount) {
+  return `${giveCount}-for-${getCount}`;
+}
+
+function tradePackageMakesSense(shape, diff, marketDiff, bestDelta, projectionDiff, yourNeed) {
+  const [giveCount, getCount] = shape;
+  if (!Number.isFinite(Number(marketDiff))) return false;
+  if (giveCount === 1 && getCount === 1) {
+    return diff >= -2 && diff <= 7 && marketDiff >= -2 && marketDiff <= 5 && projectionDiff >= -8;
+  }
+  if (giveCount === 2 && getCount === 1) {
+    return bestDelta >= 4 && diff >= -12 && diff <= 4 && marketDiff >= -10 && marketDiff <= 3 && projectionDiff >= -22;
+  }
+  return false;
+}
+
+function bestTradePackage(giveRows, getRows, shape, myNeeds, theirNeeds) {
+  const [giveCount, getCount] = shape;
+  const givePackages = tradePackageCombinations(giveRows, giveCount);
+  const getPackages = tradePackageCombinations(getRows, getCount);
+  let best = null;
+
+  givePackages.forEach((givePackage) => {
+    getPackages.forEach((getPackage) => {
+      if (!tradePackageHasDatabaseCoverage(givePackage) || !tradePackageHasDatabaseCoverage(getPackage)) return;
+      const giveValue = tradePackageValue(givePackage);
+      const getValue = tradePackageValue(getPackage);
+      const diff = getValue - giveValue;
+      const marketGive = tradePackageMarketValue(givePackage);
+      const marketGet = tradePackageMarketValue(getPackage);
+      if (marketGive === null || marketGet === null) return;
+      const marketDiff = marketGet - marketGive;
+      const projectionDiff = tradePackageProjection(getPackage) - tradePackageProjection(givePackage);
+      const bestDelta = tradePackageBestValue(getPackage) - tradePackageBestValue(givePackage);
+      const yourNeed = tradePackageNeed(myNeeds, getPackage);
+      const theirNeed = tradePackageNeed(theirNeeds, givePackage);
+      if (!yourNeed || !theirNeed) return;
+      if (!tradePackageMakesSense(shape, diff, marketDiff, bestDelta, projectionDiff, yourNeed)) return;
+      const databaseSupport = tradeDatabaseExactSupport(givePackage, getPackage);
+      if (!databaseSupport.ready) {
+        requestTradeDatabaseSamples(givePackage, getPackage);
+        return;
+      }
+      if (databaseSupport.count <= 0) return;
+
+      const shapeBonus =
+        giveCount > getCount
+          ? Math.max(-2, Math.min(9, bestDelta * 0.55 + 4))
+          : 3;
+      const score =
+        58 -
+        Math.abs(diff) * (giveCount > getCount ? 0.55 : 1.15) -
+        Math.max(0, marketDiff) * 1.1 +
+        Math.min(5, Math.max(0, marketDiff + 2)) +
+        Number(yourNeed.weight || 0) * 0.7 +
+        Number(theirNeed.weight || 0) * 0.55 +
+        Math.min(5, tradePackageMarketActivity(givePackage) / 400) +
+        Math.min(5, tradePackageMarketActivity(getPackage) / 400) +
+        Math.min(6, databaseSupport.count * 1.4) +
+        shapeBonus +
+        Math.max(-4, Math.min(4, projectionDiff / 18));
+      if (!best || score > best.score) {
+        best = {
+          give: givePackage[0],
+          get: getPackage[0],
+          givePackage,
+          getPackage,
+          diff,
+          marketDiff,
+          projectionDiff,
+          bestDelta,
+          score,
+          shape: tradeShapeLabel(giveCount, getCount),
+          yourNeed,
+          theirNeed,
+          databaseSampleCount: databaseSupport.count,
+        };
+      }
+    });
+  });
+
   return best;
 }
 
@@ -344,6 +708,7 @@ function teamSnapshotLabel(snapshot) {
 
 function leagueTradeIdeas(snapshot, limit = 6) {
   if (!snapshot?.teamId || !liveLeagueHasRosters()) return [];
+  if (!fantasyCalcTradeDatabaseReady()) return [];
   const myNeeds = tradeNeedProfiles(snapshot);
   const myStrengths = tradeStrengthProfiles(snapshot);
   if (!myNeeds.length || !myStrengths.length) return [];
@@ -356,6 +721,14 @@ function leagueTradeIdeas(snapshot, limit = 6) {
       const theirStrengths = tradeStrengthProfiles(other);
       const giveMatches = myStrengths.filter((strength) => theirNeeds.some((need) => need.pos === strength.pos));
       const getMatches = theirStrengths.filter((strength) => myNeeds.some((need) => need.pos === strength.pos));
+      const givePool = uniqueTradeRows(giveMatches.flatMap((strength) => strength.rows));
+      const getConsolidationPool = uniqueTradeRows(getMatches.flatMap((strength) => {
+        const keep = tradeKeepCount(strength.pos);
+        return other.rows
+          .filter((row) => row.Pos === strength.pos)
+          .sort((a, b) => tradeAssetValue(b) - tradeAssetValue(a))
+          .slice(Math.max(0, keep - 3), keep + 3);
+      }));
 
       giveMatches.forEach((giveStrength) => {
         getMatches.forEach((getStrength) => {
@@ -368,18 +741,36 @@ function leagueTradeIdeas(snapshot, limit = 6) {
             pair.score +
             Number(myNeed?.weight || 0) * 0.7 +
             Number(theirNeed?.weight || 0) * 0.55 +
-            Math.min(8, giveStrength.surplus + getStrength.surplus);
+            Math.min(8, giveStrength.surplus + getStrength.surplus) -
+            Math.max(0, pair.diff) * 0.9;
           ideas.push({
             team: other,
             give: pair.give,
             get: pair.get,
             diff: pair.diff,
+            marketDiff: pair.marketDiff,
             score,
+            shape: "1-for-1",
+            databaseSampleCount: pair.databaseSampleCount,
             yourNeed: myNeed,
             theirNeed,
             giveStrength,
             getStrength,
           });
+        });
+      });
+
+      [
+        { shape: [2, 1], sourcePool: givePool, targetPool: getConsolidationPool },
+      ].forEach(({ shape, sourcePool, targetPool }) => {
+        if (sourcePool.length < shape[0] || targetPool.length < shape[1]) return;
+        const tradePackage = bestTradePackage(sourcePool, targetPool, shape, myNeeds, theirNeeds);
+        if (!tradePackage) return;
+        ideas.push({
+          team: other,
+          ...tradePackage,
+          giveStrength: giveMatches[0],
+          getStrength: getMatches[0],
         });
       });
     });
@@ -388,7 +779,7 @@ function leagueTradeIdeas(snapshot, limit = 6) {
   return ideas
     .sort((a, b) => b.score - a.score)
     .filter((idea) => {
-      const key = `${idea.team.teamId}-${normalizePlayerName(idea.give.Player)}-${normalizePlayerName(idea.get.Player)}`;
+      const key = `${idea.team.teamId}-${idea.shape || "1-for-1"}-${tradePackageKey(idea.givePackage || [idea.give])}-${tradePackageKey(idea.getPackage || [idea.get])}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -421,7 +812,7 @@ function tradeTargetCandidates(snapshot, limit = 5) {
     );
   if (leagueTargets.length) {
     return leagueTargets
-      .sort((a, b) => leagueValueScore(b.row) - leagueValueScore(a.row) || Number(a.row.Rank) - Number(b.row.Rank))
+      .sort((a, b) => tradeAssetValue(b.row) - tradeAssetValue(a.row) || Number(a.row.Rank) - Number(b.row.Rank))
       .slice(0, limit);
   }
   const draftedTargets = (liveDraft?.picks || [])
@@ -433,7 +824,7 @@ function tradeTargetCandidates(snapshot, limit = 5) {
         .filter((row) => !rostered.has(normalizePlayerName(row.Player)) && needPositions.has(row.Pos))
         .map((row) => ({ pick: null, row }));
   return pool
-    .sort((a, b) => leagueValueScore(b.row) - leagueValueScore(a.row) || Number(a.row.Rank) - Number(b.row.Rank))
+    .sort((a, b) => tradeAssetValue(b.row) - tradeAssetValue(a.row) || Number(a.row.Rank) - Number(b.row.Rank))
     .slice(0, limit);
 }
 
@@ -441,31 +832,252 @@ function renderPlayerMiniCard(row, label = "") {
   return `<div class="trade-player-chip">
     ${playerFocusButton(row)}
     <span>${htmlEscape(label || `${row.Pos}${row["Pos Rank"] || ""} / #${row.Rank}`)}</span>
-    <small>Value ${valueDisplay(row)} / ${scoringProjectionLabel()} ${projectionDisplay(row)} / Risk ${row.Risk}/10</small>
+    <small>Trade value ${tradeValueDisplay(row)} / ${scoringProjectionLabel()} ${projectionDisplay(row)} / Risk ${row.Risk}/10</small>
   </div>`;
 }
 
+function renderTradePackageMiniCards(rows, label = "") {
+  return rows.map((row) => renderPlayerMiniCard(row, label)).join("");
+}
+
 function renderTradeIdeaCard(idea) {
+  const givePackage = idea.givePackage || [idea.give];
+  const getPackage = idea.getPackage || [idea.get];
   const diff = Number(idea.diff || 0);
   const diffLabel = Math.abs(diff) < 1 ? "even value" : `${diff > 0 ? "+" : ""}${diff.toFixed(1)} value`;
+  const marketDiff = Number(idea.marketDiff || 0);
+  const marketLabel = Math.abs(marketDiff) < 1 ? "market even" : `${marketDiff > 0 ? "+" : ""}${marketDiff.toFixed(1)} market`;
+  const shape = idea.shape || tradeShapeLabel(givePackage.length, getPackage.length);
   return `<article class="trade-idea-card">
     <div class="trade-idea-head">
       <span>${htmlEscape(teamSnapshotLabel(idea.team))}</span>
-      <strong>Ask for ${htmlEscape(idea.get.Player)}</strong>
-      <small>${htmlEscape(diffLabel)} on the FantasyIQ board</small>
+      <strong>${htmlEscape(tradePackageName(givePackage))} for ${htmlEscape(tradePackageName(getPackage))}</strong>
+      <small>${htmlEscape(shape)} / ${htmlEscape(diffLabel)} / ${htmlEscape(marketLabel)} / ${Number(idea.databaseSampleCount || 0)} accepted sample${Number(idea.databaseSampleCount || 0) === 1 ? "" : "s"}</small>
     </div>
     <div class="trade-idea-flow">
       <section>
         <h4>You offer</h4>
-        ${renderPlayerMiniCard(idea.give, `${idea.give.Pos} depth you can shop`)}
+        ${renderTradePackageMiniCards(givePackage, `${idea.theirNeed?.pos || idea.give.Pos} need for them`)}
       </section>
       <section>
         <h4>You target</h4>
-        ${renderPlayerMiniCard(idea.get, `${idea.get.Pos} fills your ${idea.yourNeed?.label || "need"}`)}
+        ${renderTradePackageMiniCards(getPackage, `${idea.yourNeed?.pos || idea.get.Pos} fills your need`)}
       </section>
     </div>
-    <p>${htmlEscape(`Why it fits: you need ${idea.get.Pos}, and ${teamSnapshotLabel(idea.team)} needs ${idea.give.Pos}. This turns your surplus into a cleaner starter/depth lane.`)}</p>
+    <p>${htmlEscape(`Why it fits: you need ${idea.yourNeed?.pos || idea.get.Pos}, and ${teamSnapshotLabel(idea.team)} needs ${idea.theirNeed?.pos || idea.give.Pos}. FantasyIQ found this exact ${shape} in accepted-trade database samples, then checked market value and roster need before showing it.`)}</p>
   </article>`;
+}
+
+function myTeamSourceLabel(snapshot) {
+  if (snapshot?.source === "espn") return "ESPN Team";
+  if (snapshot?.source === "pasted") return "Pasted Roster";
+  if (snapshot?.source === "loading") return "Loading";
+  return "Needed";
+}
+
+function myTeamPositionState(count, starterTarget, depthTarget) {
+  if (count < starterTarget) return "danger";
+  if (count < depthTarget) return "warn";
+  return "good";
+}
+
+function renderMyTeamEmpty(message = "Select your ESPN team or paste a roster in Trade IQ.") {
+  if (myTeamHero) {
+    myTeamHero.innerHTML = `
+      <article>
+        <span>Roster IQ</span>
+        <strong>Pending</strong>
+        <small>${htmlEscape(message)}</small>
+      </article>
+      <article>
+        <span>Biggest Weakness</span>
+        <strong>Unknown</strong>
+        <small>Needs roster context</small>
+      </article>
+      <article>
+        <span>Next Move</span>
+        <strong>Connect</strong>
+        <small>Roster unlocks the move</small>
+      </article>
+    `;
+  }
+  if (myTeamPositionGrid) {
+    myTeamPositionGrid.innerHTML = ["QB", "RB", "WR", "TE", "DST", "K"]
+      .filter((pos) => positionHasDraftSlot(pos))
+      .map((pos) => `<article class="my-team-position-card"><span>${pos}</span><strong>--</strong><small>Waiting</small></article>`)
+      .join("");
+  }
+  if (myTeamStarters) myTeamStarters.textContent = message;
+  if (myTeamBench) myTeamBench.textContent = "Bench depth appears after FantasyIQ has a matched roster.";
+  if (myTeamActions) myTeamActions.textContent = "FantasyIQ needs a roster before it can call out the next move.";
+}
+
+function renderMyTeamLineup(lineup) {
+  if (!lineup.length) return "<p>No lineup slots found for this league profile.</p>";
+  return lineup
+    .map(
+      (item) => `<article class="my-team-lineup-row">
+        <span>${htmlEscape(item.slot)}</span>
+        <strong>${item.row ? htmlEscape(item.row.Player) : "Open slot"}</strong>
+        <small>${item.row ? `${htmlEscape(item.row.Pos)} / value ${valueDisplay(item.row)} / ${scoringProjectionLabel()} ${projectionDisplay(item.row)}` : "Starter gap"}</small>
+      </article>`,
+    )
+    .join("");
+}
+
+function rosterEntryName(entry) {
+  return String(entry?.player || entry?.name || "").trim();
+}
+
+function rosterEntryPosition(entry) {
+  return String(entry?.pos || entry?.row?.Pos || "Player").trim();
+}
+
+function rosterEntrySlot(entry) {
+  return String(entry?.lineupSlot || "").trim();
+}
+
+function rosterEntryDetail(entry) {
+  const bits = [rosterEntryPosition(entry), entry?.proTeam, rosterEntrySlot(entry)].filter(Boolean);
+  return bits.length ? bits.join(" / ") : "ESPN roster";
+}
+
+function renderRosterEntryRows(entries) {
+  if (!entries.length) return "<p>No ESPN roster players found for this group.</p>";
+  return entries
+    .map((entry) => {
+      const name = rosterEntryName(entry) || "Roster player";
+      return `<article class="my-team-lineup-row">
+        <span>${htmlEscape(rosterEntrySlot(entry) || rosterEntryPosition(entry))}</span>
+        <strong>${htmlEscape(name)}</strong>
+        <small>${htmlEscape(rosterEntryDetail(entry))}</small>
+      </article>`;
+    })
+    .join("");
+}
+
+function renderMyTeam(snapshot = activeRosterSnapshot({ preferPasted: false })) {
+  if (!myTeamHero && !myTeamPositionGrid && !myTeamStarters && !myTeamBench && !myTeamActions) return;
+  if (!boardData) {
+    renderMyTeamEmpty("Waiting for board data.");
+    return;
+  }
+  const rosterEntries = Array.isArray(snapshot?.rosterEntries) ? snapshot.rosterEntries.filter((entry) => rosterEntryName(entry)) : [];
+  const matchedRows = snapshot?.rows || [];
+  const hasRosterContext = matchedRows.length || rosterEntries.length;
+  if (!hasRosterContext) {
+    renderMyTeamEmpty(isPreDraftLeague() ? "Draft or paste players to build My Team." : "Select your ESPN team or paste a roster in Trade IQ.");
+    return;
+  }
+
+  const grade = postDraftGrade(snapshot);
+  const actions = postDraftActions(snapshot);
+  const weaknesses = rosterWeaknesses(snapshot);
+  const strengths = rosterStrengths(snapshot);
+  const topNeed = weaknesses[0] || null;
+  const topStrength = strengths[0] || null;
+  const cleanStrength = strengths.find((item) => item.pos !== topNeed?.pos && item.surplus > 0) || strengths.find((item) => item.pos !== topNeed?.pos) || null;
+  const sourceLabel = myTeamSourceLabel(snapshot);
+  const starterTargets = starterTargetCounts();
+  const depthTargets = draftTargetCounts();
+  const nextMove = topNeed
+    ? topStrength?.surplus > 0
+      ? `Shop ${topStrength.pos} depth for ${topNeed.pos}`
+      : `Add ${topNeed.pos} depth`
+    : "Hold the core";
+  const matchedRoster = Boolean(matchedRows.length);
+  const entryCount = rosterEntries.length || snapshot.players?.length || matchedRows.length;
+
+  if (myTeamHero) {
+    myTeamHero.innerHTML = `
+      <article>
+        <span>Roster IQ</span>
+        <strong>${htmlEscape(matchedRoster ? grade.grade : "Synced")}</strong>
+        <small>${htmlEscape(matchedRoster ? `${grade.label} / ${matchedRows.length} matched / ${sourceLabel}` : `${entryCount} ESPN players / value matching pending`)}</small>
+      </article>
+      <article>
+        <span>Biggest Weakness</span>
+        <strong>${htmlEscape(topNeed?.pos || "Balanced")}</strong>
+        <small>${htmlEscape(topNeed ? `${topNeed.starterGap} starter gap / ${topNeed.depthGap} depth gap` : "No forced roster gap")}</small>
+      </article>
+      <article>
+        <span>Next Move</span>
+        <strong>${htmlEscape(matchedRoster ? nextMove : topNeed ? `Review ${topNeed.pos}` : "Review roster")}</strong>
+        <small>${htmlEscape(matchedRoster ? (cleanStrength ? `Best clean strength: ${cleanStrength.pos}` : topNeed && topStrength?.pos === topNeed.pos ? `${topNeed.pos} starters are strong; depth is still short` : "No obvious surplus") : "ESPN roster is loaded; board values need a match")}</small>
+      </article>
+    `;
+  }
+
+  if (myTeamPositionGrid) {
+    myTeamPositionGrid.innerHTML = ["QB", "RB", "WR", "TE", "DST", "K"]
+      .filter((pos) => positionHasDraftSlot(pos))
+      .map((pos) => {
+        const count = Number(snapshot.counts?.[pos] || 0);
+        const starterTarget = Number(starterTargets[pos] || 0);
+        const depthTarget = Number(depthTargets[pos] || 0);
+        const state = myTeamPositionState(count, starterTarget, depthTarget);
+        const topRows = snapshot.rows
+          .filter((row) => row.Pos === pos)
+          .sort((a, b) => leagueValueScore(b) - leagueValueScore(a))
+          .slice(0, 2)
+          .map((row) => row.Player)
+          .join(", ");
+        const topEntries = rosterEntries
+          .filter((entry) => rosterEntryPosition(entry) === pos)
+          .slice(0, 2)
+          .map(rosterEntryName)
+          .join(", ");
+        return `<article class="my-team-position-card ${state}">
+          <span>${pos}</span>
+          <strong>${count}/${depthTarget || starterTarget || 1}</strong>
+          <small>${htmlEscape(topRows || topEntries || "Open slot")}</small>
+        </article>`;
+      })
+      .join("");
+  }
+
+  const lineup = typeof fillLineup === "function" ? fillLineup(snapshot.rows) : [];
+  const starterKeys = new Set(lineup.filter((item) => item.row).map((item) => normalizePlayerName(item.row.Player)));
+  const benchRows = snapshot.rows
+    .filter((row) => !starterKeys.has(normalizePlayerName(row.Player)))
+    .sort((a, b) => leagueValueScore(b) - leagueValueScore(a));
+  const rosterStarters = rosterEntries.filter((entry) => !["BE", "IR"].includes(rosterEntrySlot(entry)));
+  const rosterBench = rosterEntries.filter((entry) => ["BE", "IR"].includes(rosterEntrySlot(entry)));
+
+  if (myTeamStarters) {
+    myTeamStarters.innerHTML = matchedRoster ? renderMyTeamLineup(lineup) : renderRosterEntryRows(rosterStarters.length ? rosterStarters : rosterEntries);
+  }
+  if (myTeamBench) {
+    if (matchedRoster) {
+      myTeamBench.innerHTML = benchRows.length
+        ? benchRows.map((row) => renderPlayerMiniCard(row, `${row.Pos} depth / ${marketSignal(row).label}`)).join("")
+        : "<p>No bench players outside the current starter build.</p>";
+    } else {
+      myTeamBench.innerHTML = renderRosterEntryRows(rosterBench);
+    }
+  }
+  if (myTeamActions) {
+    if (!matchedRoster) {
+      myTeamActions.innerHTML = `
+        <div class="trade-lane-summary">
+          <strong>${htmlEscape(`${entryCount} ESPN players synced`)}</strong>
+          <span>${htmlEscape("FantasyIQ can read roster construction now; value grading will improve as player matching completes.")}</span>
+        </div>
+        <p>${htmlEscape(topNeed ? `Primary count gap: ${topNeed.pos} needs ${topNeed.depthGap} more depth slot(s).` : "Roster counts do not show a forced positional gap.")}</p>
+        <p>Open Trade IQ to paste the roster if you want immediate value matching for unmatched ESPN names.</p>
+      `;
+      return;
+    }
+    myTeamActions.innerHTML = `
+      <div class="trade-lane-summary">
+        <strong>${htmlEscape(nextMove)}</strong>
+        <span>${htmlEscape(grade.notes[0] || "Roster score is based on value, risk, and construction.")}</span>
+      </div>
+      ${actions.map((item) => `<p>${htmlEscape(item)}</p>`).join("")}
+      <p><strong>Risk:</strong> ${htmlEscape(topNeed ? `Do not overpay for ${topNeed.pos}; fix the gap through value first.` : "No forced move means patience is part of the edge.")}</p>
+      <p><strong>Alternative:</strong> ${htmlEscape(topNeed ? "Use Trade IQ if the waiver pool does not clear replacement value." : "Watch waivers for news-driven role changes.")}</p>
+    `;
+  }
 }
 
 function renderPostDraftPlan(snapshot = activeRosterSnapshot()) {
@@ -540,7 +1152,7 @@ function renderPostDraftPlan(snapshot = activeRosterSnapshot()) {
         </section>
         <section>
           <h4>Backup setup</h4>
-          <p>You can paste a roster in the Trade Calculator when ESPN data is not available yet.</p>
+          <p>You can paste a roster in the Trade IQ when ESPN data is not available yet.</p>
         </section>
       </div>
     `;
@@ -599,12 +1211,20 @@ function renderTradeFinder(snapshot = activeRosterSnapshot({ preferPasted: true 
   const targets = tradeTargetCandidates(snapshot);
   const needs = rosterWeaknesses(snapshot);
   const topNeed = needs[0]?.pos || "starter upgrade";
+  queueTradeDatabaseSamplesForSnapshot(snapshot);
   const leagueIdeas = snapshot.source === "espn" ? leagueTradeIdeas(snapshot) : [];
+  const databaseStatus = fantasyCalcTradeDatabaseReady()
+    ? fantasyCalcTradeSamples.loadingKeys?.size
+      ? "Fantasy IQ Data is validating exact 1-for-1 and 2-for-1 accepted-trade samples for your roster."
+      : "No exact accepted-trade database match cleared the value and roster-fit filters. Use the lanes below as negotiation filters."
+    : fantasyCalcTradeDatabaseLoading || fantasyCalcMarketLoading
+      ? "Fantasy IQ Data is still loading accepted-trade context. Package ideas will appear only after the real-trade database is ready."
+      : "Fantasy IQ Data is unavailable, so package ideas are disabled instead of guessing from local roster values.";
   if (leagueIdeas.length) {
     tradeFinder.innerHTML = `
       <div class="trade-lane-summary">
         <strong>${leagueIdeas.length} active-league trade idea${leagueIdeas.length === 1 ? "" : "s"}</strong>
-        <span>FantasyIQ compared your strengths and needs against every roster in this league.</span>
+        <span>${htmlEscape(tradeMarketSourceLabel())}. FantasyIQ only shows 1-for-1 and 2-for-1 ideas after an exact accepted-trade database match clears roster need and market value.</span>
       </div>
       <div class="trade-idea-list">
         ${leagueIdeas.map(renderTradeIdeaCard).join("")}
@@ -617,7 +1237,7 @@ function renderTradeFinder(snapshot = activeRosterSnapshot({ preferPasted: true 
       <strong>${away.length ? `Shop ${away[0].Pos} depth` : "Hold core"}</strong>
       <span>${
         liveLeagueHasRosters()
-          ? "No clean team-to-team match yet. Use the lanes below as negotiation filters."
+          ? databaseStatus
           : needs.length
             ? `Primary target lane: ${topNeed}`
             : "No forced target lane. Look for value discounts."
@@ -652,14 +1272,305 @@ function renderWaiverAssistant(snapshot = activeRosterSnapshot({ preferPasted: t
     : "<p>No strong waiver adds from the current board. Hold roster spots for news-driven role changes.</p>";
 }
 
+function waiverClaimBidRange(row, dropRow, gain) {
+  if (!row) return null;
+  const risk = Number(row.Risk || 0);
+  const upside = Number(row.Upside || row.Ceiling || 0);
+  const needBoost = dropRow && row.Pos === dropRow.Pos ? 1 : 0;
+  let min = gain >= 10 ? 10 : gain >= 6 ? 6 : gain >= 3 ? 3 : 0;
+  let max = gain >= 10 ? 18 : gain >= 6 ? 12 : gain >= 3 ? 7 : 3;
+  if (upside >= 70) max += 3;
+  if (risk >= 7) max -= 3;
+  min += needBoost;
+  max += needBoost;
+  return {
+    min: Math.max(0, Math.round(min)),
+    max: Math.max(0, Math.round(Math.max(min, max))),
+  };
+}
+
+function waiverConfidence(row, dropRow, gain, snapshot) {
+  if (!row) return 0;
+  const fit = leagueFitSignal(row, snapshot.counts || emptyPositionCounts());
+  const fitBoost = fit.className === "good" ? 10 : fit.className === "watch" ? 4 : -6;
+  const riskPenalty = Number(row.Risk || 0) * 2;
+  const trendBoost = clampNumber(externalTrendScore(row) * 1.3, -8, 10);
+  const dropBoost = dropRow ? clampNumber(gain * 2.2, -8, 18) : -8;
+  return Math.round(clampNumber(58 + fitBoost + dropBoost + trendBoost - riskPenalty, 34, 91));
+}
+
+function waiverActionLabel(gain, confidence) {
+  if (gain >= 8 && confidence >= 70) return "Claim aggressively";
+  if (gain >= 3 && confidence >= 58) return "Claim at fair price";
+  if (gain > 0) return "Watchlist";
+  return "Hold";
+}
+
+function waiverClaimProfile(row, snapshot) {
+  const dropRow = weakestRosterRow(snapshot, row.Pos) || weakestRosterRow(snapshot);
+  const gain = dropRow ? rosterValueDelta(row, dropRow) : 0;
+  const confidence = waiverConfidence(row, dropRow, gain, snapshot);
+  const bid = waiverClaimBidRange(row, dropRow, gain);
+  return {
+    row,
+    dropRow,
+    gain,
+    confidence,
+    bid,
+    action: waiverActionLabel(gain, confidence),
+  };
+}
+
+function waiverClaimCard(profile) {
+  const row = profile.row;
+  const dropText = profile.dropRow ? `Drop ${profile.dropRow.Player}` : "No clean drop";
+  const gainText = profile.dropRow ? `${profile.gain > 0 ? "+" : ""}${profile.gain.toFixed(1)} value` : "Needs roster";
+  const faab = profile.bid ? `FAAB ${profile.bid.min}-${profile.bid.max}%` : "FAAB TBD";
+  const fit = leagueFitSignal(row, activeRosterSnapshot({ preferPasted: true }).counts || emptyPositionCounts());
+  return `<article class="waiver-claim-card">
+    <div class="waiver-claim-head">
+      <span>${htmlEscape(profile.action)}</span>
+      <strong>${playerFocusButton(row)}</strong>
+      <small>${htmlEscape(`${row.Pos} / ${gainText} / ${faab}`)}</small>
+    </div>
+    <div class="waiver-claim-meta">
+      <span>${htmlEscape(dropText)}</span>
+      <span>${htmlEscape(`${profile.confidence}% confidence`)}</span>
+      <span>${htmlEscape(fit.label)}</span>
+    </div>
+  </article>`;
+}
+
+function renderWaiversIqEmpty(message) {
+  if (waiverIqHero) {
+    waiverIqHero.innerHTML = `
+      <article>
+        <span>Main Claim</span>
+        <strong>Waiting</strong>
+        <small>${htmlEscape(message)}</small>
+      </article>
+      <article>
+        <span>Drop Candidate</span>
+        <strong>Pending</strong>
+        <small>Needs roster context</small>
+      </article>
+      <article>
+        <span>Confidence</span>
+        <strong>--</strong>
+        <small>Updates after sync</small>
+      </article>
+    `;
+  }
+  if (waiverIqSupportingReasons) waiverIqSupportingReasons.innerHTML = `<p>${htmlEscape(message)}</p>`;
+  if (waiverIqRiskWarning) waiverIqRiskWarning.textContent = "FantasyIQ will not recommend a claim until the add clears the replacement-value threshold.";
+  if (waiverIqAlternativePath) waiverIqAlternativePath.textContent = "Connect an ESPN team, paste a roster in Trade IQ, or use the Big Board as a temporary watchlist.";
+  if (waiverIqWatchlist) waiverIqWatchlist.textContent = "Waiting for waiver pool.";
+  if (waiverIqDrops) waiverIqDrops.textContent = "Waiting for roster.";
+  if (waiverIqPlan) waiverIqPlan.textContent = "No claim plan yet.";
+}
+
+function renderWaiversIQ(snapshot = activeRosterSnapshot({ preferPasted: true })) {
+  if (!waiverIqHero && !waiverIqWatchlist && !waiverIqPlan) return;
+  if (!boardData) {
+    renderWaiversIqEmpty("Waiting for board data.");
+    return;
+  }
+  if (!snapshot.rows.length) {
+    renderWaiversIqEmpty("Select your ESPN team or paste your roster in Trade IQ to generate real waiver claims.");
+    return;
+  }
+
+  const profiles = waiverCandidates(snapshot, 8).map((row) => waiverClaimProfile(row, snapshot));
+  const top = profiles[0] || null;
+  const topNeed = rosterWeaknesses(snapshot)[0] || null;
+  const dropCandidates = snapshot.rows
+    .slice()
+    .sort((a, b) => leagueValueScore(a) - leagueValueScore(b) || Number(b.Risk || 0) - Number(a.Risk || 0))
+    .slice(0, 5);
+
+  if (!top) {
+    renderWaiversIqEmpty("No available player clears FantasyIQ's waiver threshold right now.");
+    return;
+  }
+
+  const faab = top.bid ? `${top.bid.min}-${top.bid.max}%` : "TBD";
+  const dropLabel = top.dropRow ? top.dropRow.Player : "Hold roster spot";
+  const gainLabel = top.dropRow ? `${top.gain > 0 ? "+" : ""}${top.gain.toFixed(1)} roster value` : "No clean drop";
+  const fit = leagueFitSignal(top.row, snapshot.counts);
+  const risk = riskSignal(top.row);
+  const market = marketSignal(top.row);
+  const claimReasons = [
+    `${top.row.Player} is the top available add after roster need, league value, upside, and risk are weighted.`,
+    top.dropRow ? `The claim projects ${gainLabel} versus ${top.dropRow.Player}.` : "FantasyIQ does not see a clean cut yet, so treat this as a watchlist add.",
+    topNeed ? `${top.row.Pos} is measured against your top roster gap: ${topNeed.pos}.` : "Your roster has no forced gap, so waiver action must beat replacement value.",
+    `${waiverPoolSourceLabel()} ${fit.detail}`,
+  ];
+
+  if (waiverIqHero) {
+    waiverIqHero.innerHTML = `
+      <article>
+        <span>Main Claim</span>
+        <strong>Add ${htmlEscape(top.row.Player)}</strong>
+        <small>${htmlEscape(`${top.action} / ${top.row.Pos} / ${gainLabel}`)}</small>
+      </article>
+      <article>
+        <span>Drop Candidate</span>
+        <strong>${htmlEscape(dropLabel)}</strong>
+        <small>${htmlEscape(top.dropRow ? `${top.dropRow.Pos} / value ${valueDisplay(top.dropRow)} / risk ${top.dropRow.Risk}/10` : "Hold if price climbs")}</small>
+      </article>
+      <article>
+        <span>Confidence</span>
+        <strong>${top.confidence}%</strong>
+        <small>${htmlEscape(`Suggested FAAB ${faab}`)}</small>
+      </article>
+    `;
+  }
+
+  if (waiverIqSupportingReasons) {
+    waiverIqSupportingReasons.innerHTML = claimReasons.map((reason) => `<p>${htmlEscape(reason)}</p>`).join("");
+  }
+  if (waiverIqRiskWarning) {
+    waiverIqRiskWarning.textContent =
+      Number(top.row.Risk || 0) >= 6
+        ? `${risk.label}. Keep the bid under ${faab} unless late news confirms the role.`
+        : `${risk.label}. Waiver value still depends on role/news before claims process.`;
+  }
+  if (waiverIqAlternativePath) {
+    waiverIqAlternativePath.textContent =
+      top.gain >= 3 ? `If ${top.row.Player} is claimed, pivot to ${profiles[1]?.row?.Player || "the next same-position value"} or hold priority.` : "Hold priority and monitor news-driven roles.";
+  }
+  if (waiverIqWatchlist) {
+    waiverIqWatchlist.innerHTML = profiles.length
+      ? profiles.map(waiverClaimCard).join("")
+      : "<p>No priority claims right now.</p>";
+  }
+  if (waiverIqDrops) {
+    waiverIqDrops.innerHTML = dropCandidates.length
+      ? dropCandidates.map((row) => renderPlayerMiniCard(row, `Cut line / ${row.Pos} / value ${valueDisplay(row)}`)).join("")
+      : "<p>No cut candidates found.</p>";
+  }
+  if (waiverIqPlan) {
+    waiverIqPlan.innerHTML = `
+      <div class="trade-lane-summary waiver-summary">
+        <strong>${htmlEscape(top.action)}</strong>
+        <span>${htmlEscape(`Add ${top.row.Player}. Suggested FAAB ${faab}. ${market.label}.`)}</span>
+      </div>
+      <p><strong>Claim:</strong> Add ${htmlEscape(top.row.Player)}${top.dropRow ? `, drop ${htmlEscape(top.dropRow.Player)}` : ""}.</p>
+      <p><strong>Bid:</strong> ${htmlEscape(faab)}. Do not chase past the top of the range without confirmed role news.</p>
+      <p><strong>Fallback:</strong> ${htmlEscape(profiles[1]?.row ? `Pivot to ${profiles[1].row.Player}` : "Hold the roster spot for the next news cycle")}.</p>
+    `;
+  }
+}
+
 function phaseSummaryLabel(phase) {
   if (!phase) return "Waiting";
   return phase.action ? `${phase.action}: ${phase.mainMove || "Ready"}` : phase.mainMove || "Ready";
 }
 
+function commandScoreFromData(data, rec, snapshot) {
+  const rosterScore = snapshot?.rows?.length ? postDraftGrade(snapshot).score : null;
+  const backendScore = Number(data?.engine?.fantasyIqScore);
+  if (Number.isFinite(rosterScore) && rosterScore > 0) {
+    let score = rosterScore;
+    if (Number.isFinite(backendScore) && backendScore > 20) {
+      score = rosterScore * 0.72 + backendScore * 0.28;
+    } else {
+      const confidence = Number(rec?.confidenceScore);
+      if (Number.isFinite(confidence)) score = rosterScore * 0.76 + confidence * 0.24;
+    }
+    if (rec?.action === "WAIT") score += 2;
+    if (rec?.action === "ACT_NOW") score -= 1;
+    return Math.round(clampNumber(score, 1, 99));
+  }
+  if (Number.isFinite(backendScore) && backendScore > 20) return Math.round(clampNumber(backendScore, 1, 99));
+  const confidence = Number(rec?.confidenceScore);
+  if (Number.isFinite(confidence)) {
+    const actionAdjustment = rec.action === "WAIT" ? 4 : rec.action === "ACT_NOW" ? -1 : 0;
+    return Math.round(clampNumber(confidence + actionAdjustment, 1, 99));
+  }
+  if (snapshot?.rows?.length) return 64;
+  return null;
+}
+
+function commandWeaknessFromData(data, snapshot) {
+  const clientWeakness = snapshot?.rows?.length ? rosterWeaknesses(snapshot)[0] : null;
+  if (clientWeakness) {
+    return {
+      label: clientWeakness.pos || "Roster",
+      detail: clientWeakness.detail || `${clientWeakness.pos} is the first roster-fit concern.`,
+    };
+  }
+  const backendWeakness = (data?.engine?.rosterWeakness || [])[0];
+  if (backendWeakness?.pos) {
+    return {
+      label: backendWeakness.pos,
+      detail: backendWeakness.detail || `${backendWeakness.pos} needs the most attention.`,
+    };
+  }
+  if (boardData) {
+    return {
+      label: "Draft context",
+      detail: "Roster weakness needs ESPN team or pasted roster data.",
+    };
+  }
+  return {
+    label: "Needs data",
+    detail: "Load a roster, draft board, or ESPN sync to identify the weak spot.",
+  };
+}
+
+function commandScoreDetailText(score, data, snapshot) {
+  if (!score) return "Needs roster or board context";
+  if (snapshot?.rows?.length) {
+    const consensus = consensusRosterBreakdown(snapshot);
+    return `Consensus starters ${consensus.starterAvg.toFixed(1)} / roster ${consensus.rosterAvg.toFixed(1)}`;
+  }
+  const strength = Number(data?.engine?.teamStrength);
+  const starterQuality = Number(data?.engine?.starterQuality);
+  if (Number.isFinite(strength) && strength > 0) return `Team strength ${strength.toFixed(1)} / starter quality ${starterQuality.toFixed(1)}`;
+  return "Draft-board score until roster sync is available";
+}
+
+function renderCommandDecision(data = null) {
+  const rec = data?.recommendation || {};
+  const snapshot = activeRosterSnapshot({ preferPasted: true });
+  const score = commandScoreFromData(data, rec, snapshot);
+  const weakness = commandWeaknessFromData(data, snapshot);
+  const reasons = rec.supportingQuantitativeReasons || [];
+  const action = rec.action || (intelligenceInFlight ? "RUNNING" : "WAIT");
+  const mainMove = rec.mainMove || (intelligenceInFlight ? "Calculating best move" : "Waiting for recommendation sync");
+
+  if (commandMainMoveCard) commandMainMoveCard.dataset.action = action.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  if (commandMainMove) commandMainMove.textContent = mainMove;
+  if (commandMainReason) {
+    commandMainReason.textContent =
+      reasons[0] || (intelligenceInFlight ? "FantasyIQ is checking roster, board, schedule, trade, and waiver signals." : "Refresh to compare action against doing nothing.");
+  }
+  if (commandFantasyIqScore) commandFantasyIqScore.textContent = score ? String(score) : "--";
+  if (commandScoreDetail) commandScoreDetail.textContent = commandScoreDetailText(score, data, snapshot);
+  if (commandRosterWeakness) commandRosterWeakness.textContent = weakness.label;
+  if (commandWeaknessDetail) commandWeaknessDetail.textContent = weakness.detail;
+  if (commandConfidence) commandConfidence.textContent = rec.confidenceScore ? `${rec.confidenceScore}%` : "Pending";
+  if (commandConfidenceDetail) {
+    commandConfidenceDetail.textContent = rec.dataFreshnessStatus || (data?.syncedAt ? `Synced ${formatSyncTime(data.syncedAt)}` : "No recommendation run yet");
+  }
+  if (commandSupportingReasons) {
+    commandSupportingReasons.innerHTML = reasons.length
+      ? reasons.slice(0, 3).map((reason) => `<p>${htmlEscape(reason)}</p>`).join("")
+      : "<p>FantasyIQ needs a roster, board, or ESPN sync before it can explain the move.</p>";
+  }
+  if (commandRiskWarning) commandRiskWarning.textContent = rec.riskWarning || "No risk warning yet.";
+  if (commandAlternativePath) commandAlternativePath.textContent = rec.alternativePath || "Refresh after ESPN sync or board changes.";
+}
+
 function compactIntelligenceRow(row) {
   if (!row) return null;
   return `${row.Player} (${row.Pos}, ${row.Team || "FA"})`;
+}
+
+function compactTradeIdeaSide(idea, side) {
+  const rows = side === "give" ? idea?.givePackage || [idea?.give] : idea?.getPackage || [idea?.get];
+  return rows.filter(Boolean).map(compactIntelligenceRow).filter(Boolean).join(" + ");
 }
 
 function actionFromDecision(decision) {
@@ -719,22 +1630,25 @@ function buildClientIntelligenceData(serverData = {}) {
       ],
       riskWarning: Number(topWaiver.Risk || 0) >= 6 ? `Risk is elevated at ${topWaiver.Risk}/10, so do not overpay FAAB.` : "Waiver value can evaporate quickly if role/news changes before claims process.",
       alternativePath: tradeIsActionable
-        ? `Instead, shop ${compactIntelligenceRow(tradeIdea.give)} for ${compactIntelligenceRow(tradeIdea.get)}.`
+        ? `Instead, shop ${compactTradeIdeaSide(tradeIdea, "give")} for ${compactTradeIdeaSide(tradeIdea, "get")}.`
         : "Hold waiver priority/FAAB if news flow weakens the role before lock.",
       dataFreshnessStatus: `Client synthesis from dashboard data. Board synced ${formatSyncTime(boardFreshness)}.`,
     };
   } else if (tradeIsActionable) {
-    const gain = Math.round((leagueValueScore(tradeIdea.get) - leagueValueScore(tradeIdea.give)) * 10) / 10;
+    const givePackage = tradeIdea.givePackage || [tradeIdea.give];
+    const getPackage = tradeIdea.getPackage || [tradeIdea.get];
+    const gain = Math.round((tradePackageValue(getPackage) - tradePackageValue(givePackage)) * 10) / 10;
+    const incomingRisk = getPackage.reduce((max, row) => Math.max(max, Number(row?.Risk || 0)), 0);
     recommendation = {
       action: "ACT_NOW",
-      mainMove: `Offer ${compactIntelligenceRow(tradeIdea.give)} for ${compactIntelligenceRow(tradeIdea.get)}`,
+      mainMove: `Offer ${compactTradeIdeaSide(tradeIdea, "give")} for ${compactTradeIdeaSide(tradeIdea, "get")}`,
       confidenceScore: Math.round(clampNumber(61 + tradeIdea.score / 5 + Math.max(0, gain), 50, 84)),
       supportingQuantitativeReasons: [
         `User value delta is ${gain > 0 ? "+" : ""}${gain.toFixed(1)} before roster-fit adjustment.`,
         tradeIdea.yourNeed ? `Incoming player attacks your ${tradeIdea.yourNeed.pos} need: ${tradeIdea.yourNeed.detail}.` : "Incoming player improves the highest available lineup lane.",
         tradeIdea.theirNeed ? `Opponent acceptance angle: your outgoing player fills their ${tradeIdea.theirNeed.pos} need.` : "Trade shape is built around surplus for need rather than raw rank swapping.",
       ],
-      riskWarning: Number(tradeIdea.get.Risk || 0) >= 6 ? `Incoming risk is ${tradeIdea.get.Risk}/10, so keep the ask flexible.` : "Trade acceptance depends on opponent preference and recent news.",
+      riskWarning: incomingRisk >= 6 ? `Incoming risk peaks at ${incomingRisk}/10, so keep the ask flexible.` : "Trade acceptance depends on opponent preference and recent news.",
       alternativePath: topWaiver ? `Fallback waiver path: add ${compactIntelligenceRow(topWaiver)} if the manager declines.` : "Fallback path is to hold and wait for waiver or injury leverage.",
       dataFreshnessStatus: `Client synthesis from ESPN roster context. Synced ${formatSyncTime(boardFreshness)}.`,
     };
@@ -793,7 +1707,7 @@ function buildClientIntelligenceData(serverData = {}) {
       },
       tradeFinder: {
         action: tradeIsActionable ? "ACT_NOW" : "WAIT",
-        mainMove: tradeIdea ? `Offer ${compactIntelligenceRow(tradeIdea.give)} for ${compactIntelligenceRow(tradeIdea.get)}` : "No clean trade lane",
+        mainMove: tradeIdea ? `Offer ${compactTradeIdeaSide(tradeIdea, "give")} for ${compactTradeIdeaSide(tradeIdea, "get")}` : "No clean trade lane",
         opponentTeam: tradeIdea ? teamSnapshotLabel(tradeIdea.team) : "",
       },
       opponentIntelligence: {
@@ -814,10 +1728,11 @@ function buildClientIntelligenceData(serverData = {}) {
 function renderIntelligenceOS() {
   if (!intelligencePanel) return;
   if (!intelligenceData) {
+    renderCommandDecision();
     if (intelligenceMainMove) intelligenceMainMove.textContent = intelligenceInFlight ? "Running league-aware engine" : "Intelligence engine ready";
     if (intelligenceFreshness) intelligenceFreshness.textContent = intelligenceInFlight ? "Syncing ESPN and board context." : "Refresh to scan draft, weekly, waiver, trade, and opponent context.";
     if (intelligenceMainCard) {
-      intelligenceMainCard.innerHTML = `<strong>Best move right now</strong><span>${intelligenceInFlight ? "Calculating..." : "Waiting for sync."}</span>`;
+      intelligenceMainCard.innerHTML = `<strong>Main move</strong><span>${intelligenceInFlight ? "Calculating..." : "Waiting for sync."}</span>`;
     }
     if (intelligenceReasons) intelligenceReasons.innerHTML = "<p>FantasyIQ compares every action against doing nothing once data loads.</p>";
     return;
@@ -826,6 +1741,7 @@ function renderIntelligenceOS() {
   const phases = intelligenceData.phases || {};
   const warnings = intelligenceData.missingDataWarnings || [];
   const fallback = intelligenceData.fallbackLogicUsed || [];
+  renderCommandDecision(intelligenceData);
   if (intelligenceMainMove) intelligenceMainMove.textContent = rec.mainMove || "No forced move";
   if (intelligenceFreshness) {
     intelligenceFreshness.textContent = rec.dataFreshnessStatus || `Synced ${formatSyncTime(intelligenceData.syncedAt)}.`;
@@ -853,22 +1769,22 @@ function renderIntelligenceOS() {
     const opponentCount = phases.opponentIntelligence?.managerProfiles?.length || phases.opponentIntelligence?.strongestSignals?.length || 0;
     intelligenceGrid.innerHTML = `
       <article>
-        <span>Weekly</span>
+        <span>Roster IQ</span>
         <strong>${htmlEscape(phaseSummaryLabel(phases.weeklyCommandCenter))}</strong>
         <small>${htmlEscape((phases.weeklyCommandCenter?.supportingQuantitativeReasons || [])[0] || "Lineup and hold logic")}</small>
       </article>
       <article>
-        <span>Waivers</span>
+        <span>Waiver IQ</span>
         <strong>${htmlEscape(phaseSummaryLabel(phases.waiverSniper))}</strong>
         <small>${htmlEscape(phases.waiverSniper?.faabBidRange ? `FAAB ${phases.waiverSniper.faabBidRange.min}-${phases.waiverSniper.faabBidRange.max}` : "Add/drop scan")}</small>
       </article>
       <article>
-        <span>Trades</span>
+        <span>Trade IQ</span>
         <strong>${htmlEscape(phaseSummaryLabel(phases.tradeFinder))}</strong>
         <small>${htmlEscape(phases.tradeFinder?.opponentTeam ? `Partner: ${phases.tradeFinder.opponentTeam}` : "Generated proposal lane")}</small>
       </article>
       <article>
-        <span>Opponents</span>
+        <span>League IQ</span>
         <strong>${opponentCount} profile${opponentCount === 1 ? "" : "s"}</strong>
         <small>${htmlEscape((phases.opponentIntelligence?.strongestSignals || [])[0]?.primaryPersona || "Persona tracking")}</small>
       </article>
@@ -900,7 +1816,7 @@ function loadIntelligence(force = false) {
           confidenceScore: 20,
           supportingQuantitativeReasons: ["The dashboard is still usable.", "Live boards and draft room can continue independently.", "Retry after ESPN/API sync recovers."],
           riskWarning: error.message || "Unknown intelligence API error.",
-          alternativePath: "Use SoS Heat Map, Waiver Assistant, and Trade Calculator manually for now.",
+          alternativePath: "Use Schedule IQ, Waiver IQ, and Trade IQ manually for now.",
           dataFreshnessStatus: "Intelligence API unavailable.",
         },
         phases: {},
@@ -916,10 +1832,12 @@ function loadIntelligence(force = false) {
 }
 
 function renderRosterEngines() {
+  renderMyTeam(activeRosterSnapshot({ preferPasted: false }));
   renderPostDraftPlan(activeRosterSnapshot());
   const tradeSnapshot = activeRosterSnapshot({ preferPasted: true });
   renderTradeFinder(tradeSnapshot);
   renderWaiverAssistant(tradeSnapshot);
+  renderWaiversIQ(tradeSnapshot);
   renderIntelligenceOS();
 }
 
@@ -956,7 +1874,7 @@ function rosterCountsFor(teamId) {
 }
 
 function selectedTeamId() {
-  return myTeamSelect?.value || draftLeagueOverrideState?.teamId || appConfig.customerTeamId || "";
+  return myTeamSelect?.value || activeDraftLeagueOverride()?.teamId || appConfig.customerTeamId || "";
 }
 
 function currentRound() {
@@ -1287,7 +2205,7 @@ function positionMatches(row, pos) {
 }
 
 function tierLabel(row, pos) {
-  const tier = row["Pos Tier"] || row.Category || "Tier";
+  const tier = typeof preciseTierDisplay === "function" ? preciseTierDisplay(row, pos) : row["Pos Tier"] || row.Category || "Tier";
   return pos === "FLEX" && row.Pos ? `${row.Pos} / ${tier}` : tier;
 }
 
@@ -1376,6 +2294,40 @@ function preDraftSlotSummary(teamId = selectedTeamId()) {
   return `Live ESPN slot: Round ${pick.round}, Pick ${pick.roundPick}, Overall ${pick.overall}.`;
 }
 
+function draftScheduleDate() {
+  const iso = liveDraft?.draftScheduledAt || liveDraft?.draftAvailableAt || "";
+  if (!iso) return null;
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function draftScheduleValue() {
+  const date = draftScheduleDate();
+  if (!date) return "Pending";
+  return date.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+}
+
+function draftScheduleDetail() {
+  const date = draftScheduleDate();
+  if (!date) return liveDraft ? "ESPN has not published a scheduled draft time yet." : "Sync ESPN to detect the scheduled draft.";
+  const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+  const seconds = Number(liveDraft?.draftTimePerSelection || 0);
+  const perPick = seconds ? ` / ${seconds} sec per pick` : "";
+  const draftType = liveDraft?.draftType ? ` / ${String(liveDraft.draftType).toLowerCase()} draft` : "";
+  return `${time}${perPick}${draftType}`;
+}
+
+function draftPositionValue(firstPick = firstRoundPickForTeam()) {
+  return firstPick ? `Pick ${firstPick.roundPick}` : "Pending";
+}
+
+function draftPositionDetail(firstPick = firstRoundPickForTeam()) {
+  if (!firstPick) return selectedTeamId() ? "ESPN has not published your draft order yet." : "Choose your ESPN team to lock the slot.";
+  const team = selectedEspnTeam();
+  const teamText = team?.teamName ? `${team.teamName} / ` : "";
+  return `${teamText}Round 1 / Overall ${firstPick.overall}`;
+}
+
 function emptyStateHtml(title, detail, items = [], tone = "neutral") {
   return `<div class="pre-draft-empty ${tone}">
     <strong>${htmlEscape(title)}</strong>
@@ -1445,7 +2397,7 @@ function slotPlan(firstPick) {
   }
   return {
     title: "Pick slot needed",
-    detail: "Use SoS Heat Map with mock practice so FantasyIQ can pair value with schedule leverage.",
+    detail: "Use Schedule IQ with mock practice so FantasyIQ can pair value with schedule leverage.",
     bullets: ["Enter the ESPN draft room before trusting the slot.", "Click Sync Now after ESPN publishes order.", "If ESPN reshuffles, FantasyIQ updates the slot from live draft order."],
   };
 }
@@ -1588,6 +2540,7 @@ function renderDraftPrep() {
   const settings = activeLeagueSettings();
   const teamId = selectedTeamId();
   const firstPick = firstRoundPickForTeam(teamId);
+  const scheduleDate = draftScheduleDate();
   const watchlist = draftWatchlistItems();
   const boardReady = Boolean(boardData && availableRows().length);
   const orderReady = Boolean((liveDraft?.draftOrder || []).length);
@@ -1596,7 +2549,8 @@ function renderDraftPrep() {
   const checks = [
     { label: "League Public", ok: Boolean(liveDraft), value: liveDraft ? "Verified" : "Pending", detail: liveDraft ? "ESPN public sync reached this league" : "Run Sync Now before draft day" },
     { label: "League IDs", ok: Boolean(appConfig.leagueId && (appConfig.customerTeamId || teamId)), value: appConfig.leagueId ? "Saved" : "Missing", detail: teamId ? `Team ${teamId}` : "Save ESPN league and team IDs" },
-    { label: "Draft Date", ok: Boolean(liveDraft), value: liveDraft?.drafted ? "Complete" : liveDraft?.inProgress ? "Live" : liveDraft ? "Detected" : "Pending", detail: liveDraft ? "Draft state is reachable from ESPN" : "Sync once after ESPN publishes the room" },
+    { label: "Draft Date", ok: Boolean(scheduleDate || liveDraft?.drafted || liveDraft?.inProgress), value: liveDraft?.drafted ? "Complete" : liveDraft?.inProgress ? "Live" : draftScheduleValue(), detail: draftScheduleDetail() },
+    { label: "Draft Position", ok: Boolean(firstPick), value: draftPositionValue(firstPick), detail: draftPositionDetail(firstPick) },
     { label: "Scoring", ok: Boolean(settings.scoringType || settings.scoringLabel), value: settings.scoringLabel || settings.scoringType || "Missing", detail: settings.source || "ESPN scoring profile" },
     { label: "Roster Slots", ok: rosterDetected, value: rosterDetected ? lineupSummary(settings) : "Missing", detail: rosterDetected ? "Lineup shape loaded" : "Open setup to detect roster slots" },
     { label: "Draft Rounds", ok: Boolean(draftRoundTotal(settings)), value: `${draftRoundTotal(settings)} rounds`, detail: "Used for mock and live pick pacing" },
@@ -1626,7 +2580,12 @@ function renderDraftPrep() {
 
   const slot = slotPlan(firstPick);
   if (draftPrepSlot) {
-    draftPrepSlot.innerHTML = `<p class="eyebrow">Pick Slot Strategy</p><h3>${htmlEscape(slot.title)}</h3><p>${htmlEscape(slot.detail)}</p><ul>${slot.bullets.map((item) => `<li>${htmlEscape(item)}</li>`).join("")}</ul>`;
+    draftPrepSlot.innerHTML = `<p class="eyebrow">Pick Slot Strategy</p><h3>${htmlEscape(slot.title)}</h3>
+      <div class="draft-prep-meta" aria-label="Draft schedule and position">
+        <span><strong>${htmlEscape(draftPositionValue(firstPick))}</strong>${htmlEscape(draftPositionDetail(firstPick))}</span>
+        <span><strong>${htmlEscape(draftScheduleValue())}</strong>${htmlEscape(draftScheduleDetail())}</span>
+      </div>
+      <p>${htmlEscape(slot.detail)}</p><ul>${slot.bullets.map((item) => `<li>${htmlEscape(item)}</li>`).join("")}</ul>`;
   }
   if (draftPrepSettings) {
     const notes = settingsDraftIntel(settings);
@@ -1843,7 +2802,7 @@ function renderLiveTierBoard() {
 function renderTeamOptions() {
   if (!myTeamSelect || !liveDraft?.teams) return;
   const teamStorageKey = loadoutStorageKey("my-team");
-  const saved = draftLeagueOverrideState?.teamId || localStorage.getItem(teamStorageKey) || myTeamSelect.value || appConfig.customerTeamId || "";
+  const saved = activeDraftLeagueOverride()?.teamId || localStorage.getItem(teamStorageKey) || myTeamSelect.value || appConfig.customerTeamId || "";
   const validIds = new Set((liveDraft.teams || []).map((team) => String(team.teamId)));
   myTeamSelect.innerHTML = `<option value="">Choose your team</option>${liveDraft.teams
     .map((team) => `<option value="${htmlEscape(team.teamId)}">${htmlEscape(team.teamName)}${team.manager ? ` (${htmlEscape(team.manager)})` : ""}</option>`)
@@ -2370,7 +3329,7 @@ function renderCheatcodeMode() {
       <div>
         <span>Next pick</span>
         <strong>${nextPick ? `R${nextPick.round} P${nextPick.roundPick}` : teamId ? "Complete" : "Select team"}</strong>
-        <small>${nextPick ? `Overall ${nextPick.overall}, ${until} picks away` : teamId ? "No remaining ESPN picks found" : "Use SoS Heat Map for schedule context"}</small>
+        <small>${nextPick ? `Overall ${nextPick.overall}, ${until} picks away` : teamId ? "No remaining ESPN picks found" : "Use Schedule IQ for schedule context"}</small>
       </div>
       <div>
         <span>Roster shape</span>
@@ -2613,6 +3572,8 @@ function liveDraftRenderSignature(data = liveDraft) {
     drafted: Boolean(data.drafted),
     inProgress: Boolean(data.inProgress),
     syncMode: data.draftSyncMode || "",
+    draftScheduledAt: data.draftScheduledAt || "",
+    draftTimePerSelection: Number(data.draftTimePerSelection || 0),
     rosteredCount: (data.rosteredNames || []).length,
     fallbackStates: (data.fallbackStates || []).join("|"),
     currentOverall: Number(current.overall || 0),
@@ -2649,11 +3610,11 @@ function liveSyncCadenceLabel(data = liveDraft) {
 }
 
 function renderLiveDraftSummary() {
-  if (!liveStatus) return;
   if (!liveDraft) {
-    liveStatus.textContent = "Connecting to ESPN public draft sync...";
+    if (liveStatus) liveStatus.textContent = "Connecting to ESPN public draft sync...";
     renderPreDraftPanel();
     renderDraftPrep();
+    renderLeagueHealth();
     return;
   }
 
@@ -2675,8 +3636,9 @@ function renderLiveDraftSummary() {
     : liveDraft.draftSyncMode === "espnLiveHidden"
       ? " ESPN has started this draft but is not exposing live picks through the public feed. Use the drafted-player paste importer below."
     : "";
-  const overrideNote = draftLeagueOverrideState?.leagueId
-    ? ` Draft-room override is using ESPN league ${draftLeagueOverrideState.leagueId}.`
+  const draftOverride = activeDraftLeagueOverride();
+  const overrideNote = draftOverride?.leagueId
+    ? ` Draft-room override is using ESPN league ${draftOverride.leagueId}.`
     : "";
   const manualNote = manualDraftOverrides.length
     ? ` Manual tracker has ${manualDraftOverrides.length} pick${manualDraftOverrides.length === 1 ? "" : "s"}. <button type="button" class="inline-sync-action" data-clear-manual-draft>Clear manual picks</button>`
@@ -2687,7 +3649,9 @@ function renderLiveDraftSummary() {
       ? " ESPN order is loaded; keep auto sync on when the room opens."
       : ` ${liveSyncCadenceLabel()}`;
 
-  liveStatus.innerHTML = `<strong>${state}</strong>: ${completed}/${total || totalFallback} picks completed.${syncContext}${overrideNote}${sourceNote}${syncWarnings}${manualNote}${stale}`;
+  if (liveStatus) {
+    liveStatus.innerHTML = `<strong>${state}</strong>: ${completed}/${total || totalFallback} picks completed.${syncContext}${overrideNote}${sourceNote}${syncWarnings}${manualNote}${stale}`;
+  }
   if (liveSyncStatus) {
     liveSyncStatus.textContent = liveDraft.demoMode ? "Demo league connected" : liveDraft.inProgress ? "Draft live" : preDraft ? "Pre-draft ready" : "ESPN connected";
   }
@@ -2714,8 +3678,8 @@ function renderLiveDraftSummary() {
           ? "ESPN draft-room bridge"
         : liveDraft.draftSyncMode === "espnLiveHidden"
           ? "ESPN live picks hidden"
-        : draftLeagueOverrideState?.leagueId
-          ? `ESPN override ${draftLeagueOverrideState.leagueId}`
+        : activeDraftLeagueOverride()?.leagueId
+          ? `ESPN override ${activeDraftLeagueOverride().leagueId}`
         : liveDraft.source || "ESPN public league API";
   }
   renderLiveDraftSlot();
@@ -2725,7 +3689,6 @@ function renderLiveDraftSummary() {
 }
 
 function renderLiveDraft(options = {}) {
-  if (!liveStatus) return;
   if (!liveDraft) {
     renderLiveDraftSummary();
     return;

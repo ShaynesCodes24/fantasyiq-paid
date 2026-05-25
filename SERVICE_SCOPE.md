@@ -1,20 +1,21 @@
 # FantasyIQ Service Scope
 
-This is the plain-language scope for the $30/year FantasyIQ Season Pass.
+This is the plain-language scope for the $30/year MyFantasyIQ Season Pass.
 
 ## Included
 
-- One FantasyIQ account dashboard for up to three ESPN fantasy football leagues.
+- One MyFantasyIQ decision-engine account for up to three ESPN fantasy football leagues.
 - Additional ESPN league profiles beyond the included three at $5/year each.
-- Manual setup after payment.
+- Self-serve setup after payment.
 - League name, subtitle, logo, ESPN league ID, team ID, and league settings configuration.
-- Live draft sync for public ESPN leagues.
-- One year of access to the configured dashboard account.
-- Reasonable setup/support help for dashboard access and ESPN sync.
+- Command Center with Main Move, FantasyIQ Score, supporting reasons, risk warning, and alternative path.
+- Roster IQ, Draft Prep IQ, Mock Simulator, Big Board, Trade IQ, Waiver IQ, Schedule IQ, and League Health.
+- Automated ESPN sync for public ESPN leagues.
+- One year of access to the configured FantasyIQ account.
+- Reasonable setup/support help for account access and ESPN sync.
 
 ## Not Included In V1
 
-- Self-serve accounts.
 - Private ESPN league authentication.
 - Guaranteed ESPN API availability.
 - Custom scoring engine rebuilds.
@@ -25,16 +26,17 @@ This is the plain-language scope for the $30/year FantasyIQ Season Pass.
 ## Requirements
 
 - The customer must provide the correct ESPN league ID, team ID, season, and settings for each league.
-- Each ESPN league must be public for live sync.
-- The customer should test the Draft Room before draft day.
+- Each ESPN league must be public for automated ESPN sync.
+- The customer should open the Command Center and confirm league context before draft day.
 
 ## Refund/Exception Guidance
 
 Use your judgment, but a simple policy for v1 is:
 
 ```text
-If live sync cannot work because the ESPN league is private and the customer
-does not want the non-live dashboard, refund before setup is completed.
+If automated ESPN sync cannot work because the ESPN league is private and the
+customer does not want the non-sync decision tools, refund before setup is
+completed.
 
 After setup is delivered, refunds are handled case by case.
 ```

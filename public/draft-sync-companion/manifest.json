@@ -19,6 +19,7 @@
   "content_scripts": [
     {
       "matches": [
+        "https://myfantasyiq.com/*",
         "https://myfantasyiq.com/FantasyIQ/*",
         "https://myfantasyiq.com/fantasyiq/*",
         "https://myfantasyiq.com/draft-sync-companion/*"

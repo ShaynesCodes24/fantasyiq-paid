@@ -35,13 +35,18 @@ def parse_body(handler: BaseHTTPRequestHandler) -> dict[str, Any]:
     return {key: values[0] if values else "" for key, values in parsed.items()}
 
 
+def is_email(value: str) -> bool:
+    clean = str(value or "").strip()
+    return "@" in clean and "." in clean.rsplit("@", 1)[-1] and " " not in clean
+
+
 def dashboard_url(customer_slug: str, league_key: str = "") -> str:
     from urllib.parse import urlencode
 
     query = {"customer": customer_slug}
     if league_key:
         query["league"] = league_key
-    return f"/FantasyIQ/?{urlencode(query)}"
+    return f"/?{urlencode(query)}"
 
 
 def log_password_event(event_type: str, raw: dict[str, Any], message: str, severity: str = "info") -> None:
@@ -106,12 +111,14 @@ def ensure_database_customer(context: CustomerContext) -> None:
 
 
 def create_password_payload(raw: dict[str, Any], headers: Any | None = None) -> tuple[dict[str, Any], list[tuple[str, str]]]:
-    identity = str(raw.get("customer") or raw.get("email") or raw.get("dashboard") or "").strip()
+    identity = str(raw.get("email") or raw.get("customer") or raw.get("dashboard") or "").strip()
     access_code = str(raw.get("accessCode") or raw.get("access_code") or raw.get("code") or "").strip()
     password = str(raw.get("password") or "").strip()
     selected_league = str(raw.get("league") or raw.get("leagueKey") or "").strip()
     if not identity:
-        raise PermissionError("Enter the email from checkout or your dashboard slug.")
+        raise PermissionError("Enter the email from checkout.")
+    if not is_email(identity):
+        raise PermissionError("Enter a valid checkout email address.")
     if not access_code:
         raise PermissionError("Enter your FantasyIQ access code to create a password.")
     policy_error = password_policy_error(password)

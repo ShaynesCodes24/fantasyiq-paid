@@ -13,8 +13,10 @@ from urllib.parse import parse_qs, urlparse
 
 try:
     from customer_context import ConfigError, CustomerContext, authorize_customer_context, require_customer_config, resolve_customer_context
+    from rate_limit import check_rate_limit, rate_limit_payload
 except ModuleNotFoundError:
     from api.customer_context import ConfigError, CustomerContext, authorize_customer_context, require_customer_config, resolve_customer_context
+    from api.rate_limit import check_rate_limit, rate_limit_payload
 
 DEFAULT_LOOKBACK_YEARS = 5
 CACHE_TTL_SECONDS = 900
@@ -388,7 +390,7 @@ def pattern_for_team(team: dict[str, Any], trades: list[dict[str, Any]]) -> dict
             recommendations.append("For this team, avoid watering down elite starters just to add bodies.")
         else:
             recommendations.append("Need-for-need offers should land better than oversized bundles.")
-            recommendations.append("Use the Trade Calculator to check value before accepting balanced swaps.")
+            recommendations.append("Use Trade IQ to check value before accepting balanced swaps.")
     else:
         insights.append("No completed trades were exposed by ESPN for this team in the checked seasons.")
         recommendations.append("Once trades appear, FantasyIQ will build position, partner, and bundle tendencies automatically.")
@@ -412,6 +414,8 @@ def pattern_for_team(team: dict[str, Any], trades: list[dict[str, Any]]) -> dict
 
 def build_payload(request_path: str, seasons: list[int], headers: Any | None = None, force: bool = False) -> dict[str, Any]:
     context = authorize_customer_context(request_path, headers)
+    if context.demo_mode and context.league_id is None:
+        return demo_trade_history_payload(context, seasons)
     league_id, current_season = require_customer_config(context)
     cache_key = f"{context.cache_key}:{','.join(str(season) for season in seasons)}"
     now = time.time()
@@ -461,9 +465,92 @@ def build_payload(request_path: str, seasons: list[int], headers: Any | None = N
     return response
 
 
+def demo_trade_history_payload(context: CustomerContext, seasons: list[int]) -> dict[str, Any]:
+    teams = [
+        {"teamId": 1, "teamName": context.customer_team_name or "FantasyIQ Demo Squad", "manager": "Demo Manager", "abbrev": "FIQ"},
+        {"teamId": 2, "teamName": "North Shore Niners", "manager": "Avery Cole", "abbrev": "NSN"},
+        {"teamId": 3, "teamName": "Steel City Slants", "manager": "Jordan Reed", "abbrev": "SCS"},
+        {"teamId": 4, "teamName": "Riverfront Rebuild", "manager": "Morgan Lee", "abbrev": "RFR"},
+    ]
+    season = seasons[0] if seasons else context.season
+    trades = [
+        {
+            "id": f"demo-{season}-1",
+            "season": season,
+            "date": f"{season}-09-18",
+            "status": "EXECUTED",
+            "teams": [
+                {
+                    "teamId": 1,
+                    "teamName": teams[0]["teamName"],
+                    "sent": [{"playerId": None, "name": "D.J. Moore", "pos": "WR", "proTeam": "CHI"}],
+                    "received": [{"playerId": None, "name": "James Cook", "pos": "RB", "proTeam": "BUF"}],
+                    "partners": [{"teamId": 2, "teamName": teams[1]["teamName"]}],
+                },
+                {
+                    "teamId": 2,
+                    "teamName": teams[1]["teamName"],
+                    "sent": [{"playerId": None, "name": "James Cook", "pos": "RB", "proTeam": "BUF"}],
+                    "received": [{"playerId": None, "name": "D.J. Moore", "pos": "WR", "proTeam": "CHI"}],
+                    "partners": [{"teamId": 1, "teamName": teams[0]["teamName"]}],
+                },
+            ],
+        },
+        {
+            "id": f"demo-{season}-2",
+            "season": season,
+            "date": f"{season}-10-07",
+            "status": "EXECUTED",
+            "teams": [
+                {
+                    "teamId": 3,
+                    "teamName": teams[2]["teamName"],
+                    "sent": [{"playerId": None, "name": "George Pickens", "pos": "WR", "proTeam": "DAL"}],
+                    "received": [
+                        {"playerId": None, "name": "Rhamondre Stevenson", "pos": "RB", "proTeam": "NE"},
+                        {"playerId": None, "name": "Jake Ferguson", "pos": "TE", "proTeam": "DAL"},
+                    ],
+                    "partners": [{"teamId": 4, "teamName": teams[3]["teamName"]}],
+                },
+                {
+                    "teamId": 4,
+                    "teamName": teams[3]["teamName"],
+                    "sent": [
+                        {"playerId": None, "name": "Rhamondre Stevenson", "pos": "RB", "proTeam": "NE"},
+                        {"playerId": None, "name": "Jake Ferguson", "pos": "TE", "proTeam": "DAL"},
+                    ],
+                    "received": [{"playerId": None, "name": "George Pickens", "pos": "WR", "proTeam": "DAL"}],
+                    "partners": [{"teamId": 3, "teamName": teams[2]["teamName"]}],
+                },
+            ],
+        },
+    ]
+    team_patterns = {str(team["teamId"]): pattern_for_team(team, trades) for team in teams}
+    return {
+        "ok": True,
+        "source": "FantasyIQ sanitized demo trade sample",
+        "customer": context.public_dict(),
+        "customerSlug": context.slug,
+        "customerTeamId": context.customer_team_id,
+        "leagueId": None,
+        "season": context.season,
+        "demoMode": True,
+        "leagueName": context.league_name or "Full Demo League",
+        "syncedAt": utc_now(),
+        "seasonsChecked": seasons,
+        "unavailableSeasons": [],
+        "teams": teams,
+        "trades": trades,
+        "teamPatterns": team_patterns,
+    }
+
+
 def requested_seasons(request_path: str, query: str) -> tuple[list[int], bool]:
     context = resolve_customer_context(request_path)
-    _, current_season = require_customer_config(context)
+    if context.demo_mode and context.league_id is None:
+        current_season = context.season
+    else:
+        _, current_season = require_customer_config(context)
     params = parse_qs(query)
     force = "force" in params or "force=1" in query
     seasons_param = params.get("seasons", [""])[0]
@@ -513,6 +600,10 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         try:
+            limit_result = check_rate_limit("trade_history", headers=self.headers, limit=60, window_seconds=900)
+            if not limit_result.allowed:
+                self.send_json(rate_limit_payload(limit_result, "Too many trade-history refreshes. Please wait and try again."), HTTPStatus.TOO_MANY_REQUESTS)
+                return
             seasons, force = requested_seasons(self.path, parsed.query)
             self.send_json(build_payload(self.path, seasons, self.headers, force=force))
         except PermissionError as exc:

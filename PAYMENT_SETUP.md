@@ -37,6 +37,35 @@ The legacy $25 product has been archived/hidden from new buyer paths in Stripe.
 Keep any legacy subscriber access working as grandfathered access, and continue
 to grant new buyers only through the current $30/year Season Pass.
 
+## Webhook Fulfillment Guardrails
+
+The webhook grants access only after the checkout session is eligible for
+fulfillment. Configure these environment variables in production:
+
+```text
+FANTASYIQ_STRIPE_LIVEMODE=live
+FANTASYIQ_STRIPE_ALLOWED_PAYMENT_LINK_IDS=plink_1TZFfOI9VpZIldH0YlrgjKGu,plink_1TZFfYI9VpZIldH0oE2jRNSd
+FANTASYIQ_STRIPE_ALLOWED_PRICE_IDS=price_1TZFfKI9VpZIldH0dEAVPQOR,price_1TZFfVI9VpZIldH0HsLFXTH9
+FANTASYIQ_STRIPE_ALLOWED_PRODUCT_IDS=prod_UYMONg4fWFT0DJ,prod_UYMOnidLvyVwdO
+```
+
+Verified live Payment Link IDs on 2026-05-24:
+
+```text
+Season Pass: plink_1TZFfOI9VpZIldH0YlrgjKGu
+Additional League: plink_1TZFfYI9VpZIldH0oE2jRNSd
+```
+
+If `FANTASYIQ_STRIPE_ALLOWED_PAYMENT_LINK_IDS` is blank, the webhook still
+requires paid USD checkout, a positive amount, and a Stripe customer or buyer
+email. Price/product checks use the current product IDs above when Stripe
+includes line item or metadata IDs in the session payload.
+
+Do not rely on `client_reference_id`, checkout custom fields, or URL metadata to
+choose an existing customer account. New Season Pass accounts derive their
+dashboard slug from the Stripe buyer email/name. Additional league purchases are
+credited by Stripe customer ID or buyer email.
+
 ## Stripe Dashboard Steps
 
 1. Open Stripe Dashboard.
@@ -182,7 +211,7 @@ Required environment variables:
 ```text
 STRIPE_SECRET_KEY=sk_live_...
 FANTASYIQ_SITE_URL=https://myfantasyiq.com
-FANTASYIQ_STRIPE_PORTAL_RETURN_URL=https://myfantasyiq.com/FantasyIQ/?login=1
+FANTASYIQ_STRIPE_PORTAL_RETURN_URL=https://myfantasyiq.com/?login=1
 ```
 
 In Stripe Dashboard, configure the Customer Portal rules for cancellations,

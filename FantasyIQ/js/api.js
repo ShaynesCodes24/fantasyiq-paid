@@ -63,7 +63,7 @@
     merged.demoMessage = loadoutConfig.demoMessage || "Signed-in customer league loaded.";
     merged.heroSubtitle =
       loadoutConfig.heroSubtitle ||
-      "Your official FantasyIQ command center for matchup leverage, player values, mock tracking, and trade discipline.";
+      "Your official FantasyIQ command center for the Main Move, FantasyIQ Score, roster weakness, confidence, and risk.";
   }
 
   if (params.get("name")) merged.customerName = params.get("name");
@@ -79,6 +79,15 @@ window.FANTASY_IQ_ACTIVE_CONFIG = appConfig;
 let boardData = null;
 let activeBoard = "combined";
 let liveDraft = null;
+let fantasyCalcMarket = null;
+let fantasyCalcMarketKey = "";
+let fantasyCalcMarketLoading = false;
+let fantasyCalcTradeDatabase = null;
+let fantasyCalcTradeDatabaseKey = "";
+let fantasyCalcTradeDatabaseLoading = false;
+let fantasyCalcTradeSamples = { bySideKey: new Map(), loadingKeys: new Set() };
+let dataFreshness = null;
+let dataFreshnessLoading = false;
 let intelligenceData = null;
 let intelligenceInFlight = false;
 let liveTimer = null;
@@ -128,36 +137,23 @@ function loginRequested() {
 }
 
 function savedCustomerAccessCode() {
-  const key = loadoutStorageKey("access-code");
-  const raw = localStorage.getItem(key) || "";
-  if (!raw) return "";
-  if (!raw.trim().startsWith("{")) return raw;
   try {
-    const session = JSON.parse(raw);
-    if (!session.code) return "";
-    if (session.expiresAt && Date.now() > Number(session.expiresAt)) {
-      localStorage.removeItem(key);
-      return "";
-    }
-    return String(session.code || "");
+    localStorage.removeItem(loadoutStorageKey("access-code"));
   } catch (error) {
-    return raw;
+    // Legacy access-code cleanup is best effort; auth now relies on HttpOnly session cookies.
   }
+  return "";
 }
 
 function setCustomerAccessCode(value) {
-  const now = Date.now();
-  localStorage.setItem(
-    loadoutStorageKey("access-code"),
-    JSON.stringify({
-      code: value.trim(),
-      signedAt: now,
-      expiresAt: now + CUSTOMER_SESSION_DAYS * 24 * 60 * 60 * 1000,
-    }),
-  );
-  localStorage.setItem("fantasy-dashboard:last-loadout", appConfig.loadoutKey || "");
-  if (appConfig.leagueKey) {
-    localStorage.setItem(`fantasy-dashboard:${appConfig.loadoutKey || "default"}:last-league`, appConfig.leagueKey);
+  try {
+    localStorage.removeItem(loadoutStorageKey("access-code"));
+    localStorage.setItem("fantasy-dashboard:last-loadout", appConfig.loadoutKey || "");
+    if (appConfig.leagueKey) {
+      localStorage.setItem(`fantasy-dashboard:${appConfig.loadoutKey || "default"}:last-league`, appConfig.leagueKey);
+    }
+  } catch (error) {
+    // Session persistence is handled by the server cookie.
   }
 }
 
@@ -166,7 +162,7 @@ function clearCustomerAccessCode() {
 }
 
 function hasCustomerAccess() {
-  return Boolean(savedCustomerAccessCode() || customerPasswordSession);
+  return Boolean(customerPasswordSession);
 }
 
 function rememberCustomerDashboard(customer = {}) {
@@ -219,21 +215,17 @@ function apiUrl(path, params = {}) {
       url.searchParams.set(key, String(value));
     }
   });
-  if (path === "/api/live-draft" && draftLeagueOverrideState?.leagueId) {
-    url.searchParams.set("draftLeagueId", draftLeagueOverrideState.leagueId);
-    if (draftLeagueOverrideState.teamId) url.searchParams.set("draftTeamId", draftLeagueOverrideState.teamId);
-    if (draftLeagueOverrideState.season) url.searchParams.set("draftSeason", draftLeagueOverrideState.season);
+  const draftOverride = activeDraftLeagueOverride();
+  if (path === "/api/live-draft" && draftOverride?.leagueId) {
+    url.searchParams.set("draftLeagueId", draftOverride.leagueId);
+    if (draftOverride.teamId) url.searchParams.set("draftTeamId", draftOverride.teamId);
+    if (draftOverride.season) url.searchParams.set("draftSeason", draftOverride.season);
   }
   return `${url.pathname}${url.search}`;
 }
 
 function apiHeaders(extra = {}) {
-  const headers = { ...extra };
-  const accessCode = savedCustomerAccessCode();
-  if (requiresCustomerAccess() && accessCode) {
-    headers["x-fantasyiq-access-code"] = accessCode;
-  }
-  return headers;
+  return { ...extra };
 }
 
 function draftLeagueOverrideStorageKey(leagueKey = appConfig.leagueKey, leagueId = appConfig.leagueId) {
@@ -243,6 +235,21 @@ function draftLeagueOverrideStorageKey(leagueKey = appConfig.leagueKey, leagueId
 
 function legacyDraftLeagueOverrideStorageKey() {
   return loadoutStorageKey("draft-league-override");
+}
+
+function activeConfiguredLeagueId() {
+  return numericText(appConfig.leagueId || activeLeagueOption()?.leagueId || "");
+}
+
+function draftOverrideMatchesActiveLeague(value) {
+  if (!value?.leagueId) return false;
+  const activeLeagueId = activeConfiguredLeagueId();
+  return value.allowCrossLeague === true || Boolean(activeLeagueId && String(value.leagueId) === activeLeagueId);
+}
+
+function activeDraftLeagueOverride() {
+  if (!draftOverrideMatchesActiveLeague(draftLeagueOverrideState)) return null;
+  return draftLeagueOverrideState;
 }
 
 function numericText(value = "") {
@@ -289,22 +296,27 @@ function extractDraftUrl(value = "") {
 
 function loadDraftLeagueOverride() {
   const params = new URLSearchParams(window.location.search);
-  const queryLeagueId = extractLeagueId(params.get("draftLeagueId") || params.get("liveLeagueId") || params.get("leagueId") || "");
+  const queryLeagueId = extractLeagueId(params.get("draftLeagueId") || params.get("liveLeagueId") || "");
   const queryTeamId = numericText(params.get("draftTeamId") || params.get("liveTeamId") || params.get("teamId") || "");
   if (queryLeagueId) {
-    return {
+    const queryOverride = {
       leagueId: queryLeagueId,
       teamId: queryTeamId,
       season: params.get("season") || params.get("draftSeason") || "2026",
       memberId: params.get("memberId") || "",
+      allowCrossLeague: params.get("allowDraftOverride") === "1",
     };
+    return draftOverrideMatchesActiveLeague(queryOverride) ? queryOverride : null;
   }
   try {
     const storageKey = draftLeagueOverrideStorageKey();
     const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
-    if (saved?.leagueId) return saved;
+    if (saved?.leagueId) {
+      if (draftOverrideMatchesActiveLeague(saved)) return saved;
+      localStorage.removeItem(storageKey);
+    }
     const legacySaved = JSON.parse(localStorage.getItem(legacyDraftLeagueOverrideStorageKey()) || "null");
-    const activeLeagueId = numericText(appConfig.leagueId || "");
+    const activeLeagueId = activeConfiguredLeagueId();
     if (
       legacySaved?.leagueId &&
       (String(legacySaved.leagueId) === activeLeagueId || (!activeLeagueId && currentLeagueOptions().length <= 1))
@@ -323,7 +335,7 @@ function loadDraftLeagueOverride() {
 }
 
 function saveDraftLeagueOverride(value) {
-  draftLeagueOverrideState = value?.leagueId ? value : null;
+  draftLeagueOverrideState = value?.leagueId ? { ...value, activeLeagueId: activeConfiguredLeagueId() } : null;
   try {
     if (draftLeagueOverrideState) {
       localStorage.setItem(draftLeagueOverrideStorageKey(), JSON.stringify(draftLeagueOverrideState));
@@ -340,10 +352,13 @@ function setDraftOverrideUrlState() {
   params.delete("draftLeagueId");
   params.delete("draftTeamId");
   params.delete("draftSeason");
-  if (draftLeagueOverrideState?.leagueId) {
-    params.set("draftLeagueId", draftLeagueOverrideState.leagueId);
-    if (draftLeagueOverrideState.teamId) params.set("draftTeamId", draftLeagueOverrideState.teamId);
-    if (draftLeagueOverrideState.season) params.set("draftSeason", draftLeagueOverrideState.season);
+  params.delete("allowDraftOverride");
+  const draftOverride = activeDraftLeagueOverride();
+  if (draftOverride?.leagueId) {
+    params.set("draftLeagueId", draftOverride.leagueId);
+    if (draftOverride.teamId) params.set("draftTeamId", draftOverride.teamId);
+    if (draftOverride.season) params.set("draftSeason", draftOverride.season);
+    if (draftOverride.allowCrossLeague) params.set("allowDraftOverride", "1");
   }
   const query = params.toString();
   history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`);
@@ -351,15 +366,16 @@ function setDraftOverrideUrlState() {
 
 function renderDraftLeagueOverrideControls() {
   if (!draftLeagueOverride) return;
-  if (draftLeagueInput && draftLeagueOverrideState?.leagueId) {
-    draftLeagueInput.value = draftLeagueOverrideState.draftUrl || draftLeagueOverrideState.leagueId;
+  const draftOverride = activeDraftLeagueOverride();
+  if (draftLeagueInput && draftOverride?.leagueId) {
+    draftLeagueInput.value = draftOverride.draftUrl || draftOverride.leagueId;
   }
-  if (draftTeamInput && draftLeagueOverrideState?.teamId) draftTeamInput.value = draftLeagueOverrideState.teamId;
-  draftLeagueOverride.classList.toggle("active", Boolean(draftLeagueOverrideState?.leagueId));
-  draftLeagueOverride.dataset.active = draftLeagueOverrideState?.leagueId ? "true" : "false";
-  const bridgeReady = Boolean(draftLeagueOverrideState?.leagueId && draftBridgeTeamId());
+  if (draftTeamInput && draftOverride?.teamId) draftTeamInput.value = draftOverride.teamId;
+  draftLeagueOverride.classList.toggle("active", Boolean(draftOverride?.leagueId));
+  draftLeagueOverride.dataset.active = draftOverride?.leagueId ? "true" : "false";
+  const bridgeReady = Boolean(draftOverride?.leagueId && draftBridgeTeamId());
   draftLeagueOverride.dataset.bridgeReady = bridgeReady ? "true" : "false";
-  if (draftBridgeSync) draftBridgeSync.classList.toggle("active", Boolean(draftLeagueOverrideState?.leagueId));
+  if (draftBridgeSync) draftBridgeSync.classList.toggle("active", Boolean(draftOverride?.leagueId));
   if (draftBridgeOpen) draftBridgeOpen.disabled = !bridgeReady;
   if (draftBridgeCopy) draftBridgeCopy.disabled = !bridgeReady;
   if (draftCompanionInstall) {
@@ -368,14 +384,14 @@ function renderDraftLeagueOverrideControls() {
   }
   if (draftBridgeStatus) {
     draftBridgeStatus.textContent = bridgeReady
-      ? draftLeagueOverrideState?.memberId
+      ? draftOverride?.memberId
         ? draftCompanionInstalled
           ? "Automatic sync ready. Open ESPN from here and leave both tabs open."
           : "Install the Draft Sync Companion once, then this opens ESPN and syncs automatically."
         : draftCompanionInstalled
           ? "Automatic sync ready. The companion will infer memberId from ESPN."
           : "Install the Draft Sync Companion once. It can infer memberId from ESPN."
-      : draftLeagueOverrideState?.leagueId
+      : draftOverride?.leagueId
         ? "Add your ESPN teamId so automatic sync can connect to the draft room."
         : "Paste the ESPN draft URL or leagueId above to prepare automatic draft sync.";
   }
@@ -428,18 +444,19 @@ function randomDraftBridgeKey() {
 }
 
 function draftBridgeTeamId() {
-  return draftLeagueOverrideState?.teamId || selectedTeamId() || appConfig.customerTeamId || "";
+  return activeDraftLeagueOverride()?.teamId || selectedTeamId() || appConfig.customerTeamId || "";
 }
 
 function espnDraftRoomUrl() {
-  const leagueId = draftLeagueOverrideState?.leagueId || "";
-  const season = draftLeagueOverrideState?.season || "2026";
+  const draftOverride = activeDraftLeagueOverride();
+  const leagueId = draftOverride?.leagueId || "";
+  const season = draftOverride?.season || "2026";
   const teamId = draftBridgeTeamId();
-  const memberId = draftLeagueOverrideState?.memberId || "";
+  const memberId = draftOverride?.memberId || "";
   if (!leagueId || !teamId) return "";
-  if (draftLeagueOverrideState?.draftUrl) {
+  if (draftOverride?.draftUrl) {
     try {
-      const url = new URL(draftLeagueOverrideState.draftUrl);
+      const url = new URL(draftOverride.draftUrl);
       if (!url.searchParams.get("leagueId")) url.searchParams.set("leagueId", leagueId);
       if (!url.searchParams.get("seasonId")) url.searchParams.set("seasonId", season);
       if (!url.searchParams.get("teamId")) url.searchParams.set("teamId", teamId);
@@ -458,12 +475,13 @@ function espnDraftRoomUrl() {
 }
 
 function draftBridgeConfigPayload() {
+  const draftOverride = activeDraftLeagueOverride();
   return {
-    leagueId: draftLeagueOverrideState?.leagueId || "",
-    season: draftLeagueOverrideState?.season || "2026",
+    leagueId: draftOverride?.leagueId || "",
+    season: draftOverride?.season || "2026",
     teamId: draftBridgeTeamId(),
-    memberId: draftLeagueOverrideState?.memberId || "",
-    bridgeKey: draftLeagueOverrideState?.bridgeKey || "",
+    memberId: draftOverride?.memberId || "",
+    bridgeKey: draftOverride?.bridgeKey || "",
     endpoint: `${window.location.origin}/api/draft-bridge`,
     draftUrl: espnDraftRoomUrl(),
     players: combinedBoardRows()
@@ -491,19 +509,20 @@ function pingDraftCompanion() {
 }
 
 async function registerDraftBridgeSession() {
-  if (!draftLeagueOverrideState?.leagueId || !draftBridgeTeamId()) {
+  const draftOverride = activeDraftLeagueOverride();
+  if (!draftOverride?.leagueId || !draftBridgeTeamId()) {
     throw new Error("Paste the ESPN draft URL or leagueId and teamId first.");
   }
-  const bridgeKey = draftLeagueOverrideState.bridgeKey || randomDraftBridgeKey();
-  saveDraftLeagueOverride({ ...draftLeagueOverrideState, bridgeKey });
+  const bridgeKey = draftOverride.bridgeKey || randomDraftBridgeKey();
+  saveDraftLeagueOverride({ ...draftOverride, bridgeKey });
   const response = await fetch(apiUrl("/api/draft-bridge"), {
     method: "POST",
     cache: "no-store",
     headers: apiHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       action: "register",
-      leagueId: draftLeagueOverrideState.leagueId,
-      season: draftLeagueOverrideState.season || "2026",
+      leagueId: draftOverride.leagueId,
+      season: draftOverride.season || "2026",
       bridgeKey,
     }),
   });
@@ -692,13 +711,14 @@ function copyTextToClipboard(text) {
 }
 
 function copyEspnDraftBridgeScript() {
-  if (!draftLeagueOverrideState?.leagueId || !draftBridgeTeamId()) {
+  const draftOverride = activeDraftLeagueOverride();
+  if (!draftOverride?.leagueId || !draftBridgeTeamId()) {
     if (draftBridgeStatus) draftBridgeStatus.textContent = "Paste the ESPN draft URL or leagueId, enter teamId, then click Use Draft League.";
     draftLeagueInput?.focus();
     return;
   }
-  const bridgeKey = draftLeagueOverrideState.bridgeKey || randomDraftBridgeKey();
-  saveDraftLeagueOverride({ ...draftLeagueOverrideState, bridgeKey });
+  const bridgeKey = draftOverride.bridgeKey || randomDraftBridgeKey();
+  saveDraftLeagueOverride({ ...draftOverride, bridgeKey });
   if (draftBridgeStatus) draftBridgeStatus.textContent = "Copying bridge and registering secure session...";
   copyTextToClipboard(buildEspnDraftBridgeScript())
     .then(() => registerDraftBridgeSession())
@@ -713,13 +733,14 @@ function copyEspnDraftBridgeScript() {
 }
 
 function openEspnDraftRoomWithCompanion() {
-  if (!draftLeagueOverrideState?.leagueId || !draftBridgeTeamId()) {
+  const draftOverride = activeDraftLeagueOverride();
+  if (!draftOverride?.leagueId || !draftBridgeTeamId()) {
     if (draftBridgeStatus) draftBridgeStatus.textContent = "Paste the ESPN draft URL or leagueId, enter teamId, then click Use Draft League.";
     draftLeagueInput?.focus();
     return;
   }
-  const bridgeKey = draftLeagueOverrideState.bridgeKey || randomDraftBridgeKey();
-  saveDraftLeagueOverride({ ...draftLeagueOverrideState, bridgeKey });
+  const bridgeKey = draftOverride.bridgeKey || randomDraftBridgeKey();
+  saveDraftLeagueOverride({ ...draftOverride, bridgeKey });
   sendDraftBridgeConfigToCompanion();
   if (draftBridgeStatus) {
     draftBridgeStatus.textContent = draftCompanionInstalled

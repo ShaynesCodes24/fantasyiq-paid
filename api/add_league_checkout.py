@@ -9,8 +9,10 @@ from typing import Any
 
 try:
     from customer_context import authorize_customer_context, env
+    from rate_limit import check_rate_limit, rate_limit_payload
 except ModuleNotFoundError:
     from api.customer_context import authorize_customer_context, env
+    from api.rate_limit import check_rate_limit, rate_limit_payload
 
 
 DEFAULT_ADD_ON_LINK = "https://buy.stripe.com/dRmcN5aAV1GX0Cc7X3efC02"
@@ -40,6 +42,8 @@ def add_on_payment_url(customer_slug: str, email: str = "") -> str:
 
 def checkout_payload(path: str, headers: Any) -> dict[str, Any]:
     context = authorize_customer_context(path, headers)
+    if context.demo_mode or context.slug == "default":
+        raise PermissionError("Sign in to add a league to your FantasyIQ account.")
     configured = len(context.available_leagues)
     if configured <= 0 and context.league_id:
         configured = 1
@@ -77,6 +81,10 @@ class handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         try:
+            limit_result = check_rate_limit("add_league_checkout", headers=self.headers, limit=30, window_seconds=900)
+            if not limit_result.allowed:
+                self.send_json(rate_limit_payload(limit_result, "Too many checkout attempts. Please wait and try again."), HTTPStatus.TOO_MANY_REQUESTS)
+                return
             self.send_json(checkout_payload(self.path, self.headers))
         except PermissionError as exc:
             self.send_json({"ok": False, "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.UNAUTHORIZED)
