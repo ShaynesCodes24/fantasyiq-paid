@@ -22,6 +22,7 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_SCOPE: ${{ secrets.VERCEL_SCOPE }}
 
     steps:
       - name: Checkout
@@ -46,19 +47,19 @@ jobs:
 
       - name: Deployment automation status
         run: |
-          if [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then
+          if [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ] && [ -n "$VERCEL_SCOPE" ]; then
             echo "Vercel deploy secrets are installed; this run can deploy production before verification."
           else
-            echo "::warning::Vercel deploy secrets are not installed. This run will verify production, but it cannot deploy from GitHub Actions."
+            echo "::warning::Vercel deploy secrets are not fully installed. This run will verify production, but it cannot deploy from GitHub Actions."
           fi
 
       - name: Deploy production when Vercel secrets are installed
-        if: ${{ env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != '' }}
+        if: ${{ env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != '' && env.VERCEL_SCOPE != '' }}
         run: |
           mkdir -p .vercel
           printf '{"orgId":"%s","projectId":"%s"}\n' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
-          npx vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
-          npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"
+          npx vercel pull --yes --environment=production --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
+          npx vercel deploy --prod --yes --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
 
       - name: Verify live production is up to date
         run: npm run agent:site-currency:ci
