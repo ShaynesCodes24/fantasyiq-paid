@@ -58,6 +58,8 @@ class handler(BaseHTTPRequestHandler):
                 "overdueCount": summary.get("overdueCount", 0),
                 "missingRequiredScopes": report.get("missingRequiredScopes") or [],
                 "requiredDataScopes": report.get("requiredDataScopes") or [],
+                "requiredProblemRows": report.get("requiredProblemRows") or [],
+                "nonRequiredProblemRows": report.get("nonRequiredProblemRows") or [],
                 "latestSuccessAt": summary["latestSuccessAt"],
                 "databaseBacked": bool(report.get("freshness")),
                 "message": "Daily refresh status is recorded after the first production cron run.",

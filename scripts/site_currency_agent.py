@@ -184,8 +184,22 @@ def data_freshness_check(site_url: str) -> Check:
     if payload.get("databaseBacked") is not True:
         return Check("data freshness", "FAIL", "databaseBacked is not true")
     rows = payload.get("freshness") if isinstance(payload.get("freshness"), list) else []
-    blocking_stale = [
+    required_cron_steps = {"fantasycalc-market", "fantasycalc-trade-database", "live-board-demo-snapshot", "sos-heatmap"}
+    required_pairs = {("fantasyiq-cron", step) for step in required_cron_steps}
+    payload_status = str(payload.get("status") or "").lower()
+    if payload_status not in {"healthy", "warning"}:
+        return Check("data freshness", "FAIL", f"data-health status is {payload_status or 'missing'}")
+    critical_required = [
         row for row in rows
+        if (
+            isinstance(row, dict)
+            and row.get("computedStatus", row.get("status")) == "critical"
+            and (str(row.get("source") or ""), str(row.get("source_scope") or "")) in required_pairs
+        )
+    ]
+    required_problem_rows = payload.get("requiredProblemRows") if isinstance(payload.get("requiredProblemRows"), list) else []
+    blocking_stale = critical_required or [
+        row for row in required_problem_rows
         if isinstance(row, dict) and row.get("computedStatus", row.get("status")) == "critical"
     ]
     if blocking_stale:
@@ -194,7 +208,6 @@ def data_freshness_check(site_url: str) -> Check:
     summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
     source_counts = summary.get("sourceCounts") if isinstance(summary.get("sourceCounts"), dict) else {}
     cron_steps = summary.get("cronSteps") if isinstance(summary.get("cronSteps"), list) else []
-    required_cron_steps = {"fantasycalc-market", "fantasycalc-trade-database", "live-board-demo-snapshot", "sos-heatmap"}
     missing_cron = required_cron_steps.difference(str(step) for step in cron_steps)
     missing_required = payload.get("missingRequiredScopes") if isinstance(payload.get("missingRequiredScopes"), list) else []
     if missing_required:

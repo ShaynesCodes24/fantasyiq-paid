@@ -249,10 +249,18 @@ def freshness_health_report(limit: int = 240, now: datetime | None = None) -> di
         for source, scope in REQUIRED_DATA_SCOPES
         if (source, scope) not in by_scope
     ]
+    required_rows = [by_scope[key] for key in REQUIRED_DATA_SCOPES if key in by_scope]
     critical = [row for row in rows if row.get("status") == "critical"]
     warnings = [row for row in rows if row.get("status") == "warning"]
-    required_rows = [by_scope[key] for key in REQUIRED_DATA_SCOPES if key in by_scope]
     required_problem_rows = [row for row in required_rows if row.get("status") != "healthy"]
+    required_problem_ids = {
+        (str(row.get("source") or ""), str(row.get("source_scope") or ""))
+        for row in required_problem_rows
+    }
+    non_required_problem_rows = [
+        row for row in [*critical, *warnings]
+        if (str(row.get("source") or ""), str(row.get("source_scope") or "")) not in required_problem_ids
+    ]
     if missing or required_problem_rows:
         status = "critical"
     elif warnings:
@@ -281,6 +289,9 @@ def freshness_health_report(limit: int = 240, now: datetime | None = None) -> di
             "staleCount": len(critical),
             "warningCount": len(warnings),
             "overdueCount": sum(1 for row in rows if row.get("overdue")),
+            "requiredProblemCount": len(required_problem_rows),
+            "nonRequiredProblemCount": len(non_required_problem_rows),
+            "blockingStaleCount": sum(1 for row in required_problem_rows if row.get("status") == "critical"),
             "sourceCounts": source_counts,
             "latestSuccessAt": latest_success,
             "cronStepCount": len(cron_steps),
@@ -290,6 +301,8 @@ def freshness_health_report(limit: int = 240, now: datetime | None = None) -> di
         },
         "requiredDataScopes": [{"source": source, "sourceScope": scope} for source, scope in REQUIRED_DATA_SCOPES],
         "missingRequiredScopes": missing,
+        "requiredProblemRows": required_problem_rows[:25],
+        "nonRequiredProblemRows": non_required_problem_rows[:25],
         "problemRows": critical[:25] + warnings[:25],
         "latestSuccessAt": latest_success,
     }

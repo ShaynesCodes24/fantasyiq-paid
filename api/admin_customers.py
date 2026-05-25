@@ -277,9 +277,12 @@ def data_health_payload(limit: int = 240, cache_limit: int = 80, summary_only: b
         recommended = []
         if report.get("missingRequiredScopes"):
             recommended.append("Run daily and Schedule IQ refresh jobs; required freshness scopes are missing.")
+        required_problem_rows = report.get("requiredProblemRows") if isinstance(report.get("requiredProblemRows"), list) else []
         problem_rows = report.get("problemRows") if isinstance(report.get("problemRows"), list) else []
-        if problem_rows:
-            recommended.append("Review stale or warning provider rows and rerun the affected refresh.")
+        if required_problem_rows:
+            recommended.append("Rerun the affected required refresh before trusting site-wide recommendations.")
+        elif report.get("status") == "warning" and problem_rows:
+            recommended.append("Review warning provider rows and rerun the affected refresh when practical.")
         if report.get("status") == "not_configured":
             recommended.append("Connect the database and wait for the first production cron run.")
         return {
@@ -291,6 +294,8 @@ def data_health_payload(limit: int = 240, cache_limit: int = 80, summary_only: b
             "freshness": [] if summary_only else report.get("freshness") or [],
             "providerCache": cache_rows,
             "problemRows": [] if summary_only else report.get("problemRows") or [],
+            "requiredProblemRows": [] if summary_only else report.get("requiredProblemRows") or [],
+            "nonRequiredProblemRows": [] if summary_only else report.get("nonRequiredProblemRows") or [],
             "missingRequiredScopes": report.get("missingRequiredScopes") or [],
             "recommendedActions": recommended,
         }
