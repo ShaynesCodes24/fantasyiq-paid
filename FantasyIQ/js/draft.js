@@ -636,7 +636,7 @@ function tradePackageMakesSense(shape, diff, marketDiff, bestDelta, projectionDi
     return diff >= -2 && diff <= 6.5 && marketDiff >= -2.5 && marketDiff <= 4.5 && projectionDiff >= -10;
   }
   if (giveCount === 2 && getCount === 1) {
-    return bestDelta >= 4 && diff >= -12 && diff <= 4 && marketDiff >= -12 && marketDiff <= 2.5 && projectionDiff >= -24;
+    return bestDelta >= 1 && diff >= -18 && diff <= 5 && marketDiff >= -12 && marketDiff <= 4.5 && projectionDiff >= -90;
   }
   return false;
 }
@@ -649,14 +649,14 @@ function tradeMarketEdgeScore(shape, marketDiff, bestDelta = 0) {
     return Math.max(-8, 8 - Math.abs(diff - 1.4) * 2.2);
   }
   if (giveCount === 2 && getCount === 1) {
-    return Math.max(-8, 8 - Math.abs(diff + 4.5) * 0.75 + Math.min(4, Math.max(0, Number(bestDelta || 0)) * 0.25));
+    return Math.max(-8, 8 - Math.abs(diff - 1.5) * 1.2 + Math.min(4, Math.max(0, Number(bestDelta || 0)) * 0.3));
   }
   return 0;
 }
 
-function tradePackageEvidence(givePackage, getPackage) {
+function tradePackageEvidence(givePackage, getPackage, requestExact = false) {
   const databaseSupport = tradeDatabaseExactSupport(givePackage, getPackage);
-  if (!databaseSupport.ready) requestTradeDatabaseSamples(givePackage, getPackage);
+  if (!databaseSupport.ready && requestExact) requestTradeDatabaseSamples(givePackage, getPackage);
   const exactCount = databaseSupport.ready ? Number(databaseSupport.count || 0) : 0;
   const activity = tradePackageMarketActivity(givePackage) + tradePackageMarketActivity(getPackage);
   return {
@@ -667,6 +667,14 @@ function tradePackageEvidence(givePackage, getPackage) {
       ? 7 + Math.min(8, exactCount * 1.6)
       : Math.min(4, activity / 450),
   };
+}
+
+function queueExactSamplesForTradeIdeas(ideas) {
+  ideas.forEach((idea) => {
+    const givePackage = idea.givePackage || [idea.give];
+    const getPackage = idea.getPackage || [idea.get];
+    tradePackageEvidence(givePackage, getPackage, true);
+  });
 }
 
 function bestTradePackage(giveRows, getRows, shape, myNeeds, theirNeeds) {
@@ -771,7 +779,9 @@ function finalizeLeagueTradeIdeas(ideas, limit) {
     if (selected.length >= limit) return;
     selected.push(idea);
   });
-  return selected.slice(0, limit);
+  const finalIdeas = selected.slice(0, limit);
+  queueExactSamplesForTradeIdeas(finalIdeas);
+  return finalIdeas;
 }
 
 function leagueTradeIdeas(snapshot, limit = 3) {
@@ -1285,7 +1295,6 @@ function renderTradeFinder(snapshot = activeRosterSnapshot({ preferPasted: true 
   const targets = tradeTargetCandidates(snapshot);
   const needs = rosterWeaknesses(snapshot);
   const topNeed = needs[0]?.pos || "starter upgrade";
-  queueTradeDatabaseSamplesForSnapshot(snapshot);
   const leagueIdeas = snapshot.source === "espn" ? leagueTradeIdeas(snapshot) : [];
   const hasVerifiedTradeData = fantasyCalcTradeDatabaseReady() && !fantasyCalcTradeSamples.loadingKeys?.size;
   const databaseStatus = fantasyCalcTradeDatabaseReady()
