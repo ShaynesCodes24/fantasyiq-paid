@@ -26,6 +26,16 @@ QA and Reliability Agent:
 - Looks for broken routes, stale mirrored files, missing fixtures, and brittle
   workflows.
 
+Site Currency Agent:
+- Runs release gates and then verifies the live production site is serving the
+  current dashboard bundles, cache headers, daily data freshness, ADP-ordered
+  Big Board data, and accepted-trade data.
+- Runs on every push to `main`, on demand, and daily at 11:30 UTC after the
+  Vercel data refresh cron.
+- Deploys production from GitHub Actions when `VERCEL_TOKEN`, `VERCEL_ORG_ID`,
+  and `VERCEL_PROJECT_ID` repository secrets are installed; otherwise it still
+  verifies production and fails loudly if the site drifts from the repo.
+
 Platform Efficiency Agent:
 - Finds duplicate source paths, manual sync steps, slow checks, and confusing
   deployment paths.
@@ -75,6 +85,16 @@ npm run agent:audit
 ```
 
 Only enable production checks when the owner approves live network validation.
+
+Site-wide update verification:
+
+```powershell
+npm run agent:site-currency
+```
+
+The site-currency agent writes a timestamped report under
+`artifacts/site-currency/`. Use `--max-attempts 0` when a human-run session
+should keep retrying until production verifies.
 
 ## Guardrails
 

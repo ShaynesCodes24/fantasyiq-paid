@@ -1,0 +1,62 @@
+name: Site Currency Agent
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "30 11 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: site-currency-agent
+  cancel-in-progress: false
+
+jobs:
+  verify-production-current:
+    name: Verify production is current
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      FANTASYIQ_SITE_URL: https://myfantasyiq.com
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Local release gates
+        run: npm run predeploy
+
+      - name: Deploy production when Vercel secrets are installed
+        if: ${{ env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != '' }}
+        run: |
+          npx vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
+          npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"
+
+      - name: Verify live production is up to date
+        run: npm run agent:site-currency:ci
+
+      - name: Upload site currency report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-currency-report
+          path: artifacts/site-currency/*.json
+          if-no-files-found: ignore

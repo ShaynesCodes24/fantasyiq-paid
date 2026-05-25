@@ -18,6 +18,8 @@
     "test:security-boundaries": "python scripts/test_security_boundaries.py",
     "agent:audit": "python scripts/run_agent_audit.py",
     "agent:health": "python scripts/daily_league_intelligence_health.py",
+    "agent:site-currency": "python scripts/site_currency_agent.py",
+    "agent:site-currency:ci": "python scripts/site_currency_agent.py --ci --max-attempts 3",
     "predeploy": "npm run typecheck && npm run test:api && npm run test:security-boundaries && npm run test:mirrors && npm run test:csp && npm run build",
     "test:readiness": "python scripts/check_product_readiness.py",
     "test:production-readiness": "python scripts/check_product_readiness.py"

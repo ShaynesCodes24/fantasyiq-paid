@@ -146,9 +146,10 @@ def record_freshness(
         return False
 
 
-def freshness_snapshot() -> list[dict[str, Any]]:
+def freshness_snapshot(limit: int = 240) -> list[dict[str, Any]]:
     if not database_enabled():
         return []
+    row_limit = max(20, min(int(limit or 240), 500))
     try:
         with connect() as connection:
             with connection.cursor() as cursor:
@@ -159,9 +160,10 @@ def freshness_snapshot() -> list[dict[str, Any]]:
                            last_success_at, last_attempt_at, max_age_seconds,
                            is_stale, warning, metadata, updated_at
                       FROM fantasyiq_data_freshness
-                     ORDER BY source ASC, source_scope ASC, updated_at DESC
-                     LIMIT 80
-                    """
+                     ORDER BY updated_at DESC, source ASC, source_scope ASC
+                     LIMIT %s
+                    """,
+                    (row_limit,),
                 )
                 rows = []
                 columns = [item.name if hasattr(item, "name") else item[0] for item in cursor.description or []]
