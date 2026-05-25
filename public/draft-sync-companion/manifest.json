@@ -4,16 +4,26 @@
   "description": "Automatically syncs ESPN draft-room pick events into MyFantasyIQ when ESPN public draft data is hidden.",
   "version": "0.1.0",
   "permissions": ["storage"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "host_permissions": [
     "https://myfantasyiq.com/*",
     "https://fantasy.espn.com/*",
     "https://lm-api-reads.fantasy.espn.com/*",
-    "https://fantasydraft.espn.com/*",
-    "wss://fantasydraft.espn.com/*"
+    "https://fantasydraft.espn.com/*"
   ],
   "content_scripts": [
     {
-      "matches": ["https://myfantasyiq.com/FantasyIQ/*", "https://myfantasyiq.com/fantasyiq/*"],
+      "matches": [
+        "https://myfantasyiq.com/*",
+        "https://myfantasyiq.com/FantasyIQ/*",
+        "https://myfantasyiq.com/fantasyiq/*",
+        "https://myfantasyiq.com/draft-sync-companion/*"
+      ],
       "js": ["dashboard.js"],
       "run_at": "document_start"
     },
@@ -24,6 +34,10 @@
     }
   ],
   "action": {
-    "default_title": "MyFantasyIQ Draft Sync"
+    "default_title": "MyFantasyIQ Draft Sync",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
   }
 }

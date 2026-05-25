@@ -51,7 +51,7 @@ def return_url() -> str:
     configured = env("FANTASYIQ_STRIPE_PORTAL_RETURN_URL")
     if configured:
         return configured
-    return f"{env('FANTASYIQ_SITE_URL', 'https://myfantasyiq.com').rstrip('/')}/FantasyIQ/?login=1"
+    return f"{env('FANTASYIQ_SITE_URL', 'https://myfantasyiq.com').rstrip('/')}?login=1"
 
 
 def stripe_secret_key() -> str:
@@ -109,6 +109,14 @@ def log_portal_event(event_type: str, customer_slug: str, message: str, severity
         return
 
 
+def redacted_customer_status(context: Any) -> dict[str, Any]:
+    return {
+        "customerSlug": context.slug,
+        "accessRequired": bool(context.access_code or context.password_configured),
+        "passwordConfigured": bool(context.password_configured),
+    }
+
+
 class handler(BaseHTTPRequestHandler):
     def send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
         body = json.dumps(payload).encode("utf-8")
@@ -142,16 +150,17 @@ class handler(BaseHTTPRequestHandler):
                     return
             context = resolve_customer_context(self.path)
             authenticated = not bool(context.access_code or context.password_configured)
-            if context.access_code and session_slug_from_headers(self.headers) == context.slug:
+            if session_slug_from_headers(self.headers) == context.slug:
                 authenticated = True
             if access_code_from(self.path, self.headers):
                 verify_customer_access(context, self.path, self.headers)
                 authenticated = True
+            customer_payload = context.public_dict() if authenticated else redacted_customer_status(context)
             self.send_json(
                 {
                     "ok": True,
-                    "customer": context.public_dict(),
-                    "accessRequired": bool(context.access_code),
+                    "customer": customer_payload,
+                    "accessRequired": bool(context.access_code or context.password_configured),
                     "authenticated": authenticated,
                     "syncedAt": utc_now(),
                 }

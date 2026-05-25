@@ -968,6 +968,36 @@ def increment_additional_league_count(slug_or_email: str, amount: int = 1) -> di
             return fetch_one_dict(cursor)
 
 
+def increment_additional_league_count_by_buyer(
+    *,
+    stripe_customer_id: str = "",
+    email: str = "",
+    amount: int = 1,
+) -> dict[str, Any] | None:
+    if not database_enabled():
+        raise DatabaseUnavailable("Database is not enabled.")
+    clean_customer = str(stripe_customer_id or "").strip()
+    clean_email = str(email or "").strip().lower()
+    if not clean_customer and not clean_email:
+        return None
+    safe_amount = max(1, int_value(amount, 1) or 1)
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE fantasyiq_customers
+                   SET additional_league_count = additional_league_count + %s,
+                       updated_at = now()
+                 WHERE (%s <> '' AND stripe_customer_id = %s)
+                    OR (%s <> '' AND lower(email) = lower(%s))
+             RETURNING slug, customer_name, email, access_code, status,
+                       included_league_limit, additional_league_count, default_league_key
+                """,
+                (safe_amount, clean_customer, clean_customer, clean_email, clean_email),
+            )
+            return fetch_one_dict(cursor)
+
+
 def update_customer_subscription_status(
     *,
     stripe_customer_id: str = "",
@@ -1049,6 +1079,63 @@ def active_league_exists(customer_slug: str, league_key: str) -> bool:
                 (slugify(customer_slug), slugify(league_key)),
             )
             return cursor.fetchone() is not None
+
+
+def archive_customer_league(customer_slug: str, league_key: str) -> dict[str, Any]:
+    if not database_enabled():
+        raise DatabaseUnavailable("Database is not enabled.")
+    lookup = slugify(customer_slug)
+    key = slugify(league_key)
+    if not lookup or not key:
+        raise ValueError("Customer and league are required.")
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT league_key
+                  FROM fantasyiq_leagues
+                 WHERE customer_slug = %s
+                   AND COALESCE(status, 'configured') IN ('configured', 'active')
+                 ORDER BY created_at ASC, league_key ASC
+                """,
+                (lookup,),
+            )
+            active_keys = [str(row["league_key"]) for row in fetch_all_dicts(cursor)]
+            if key not in active_keys:
+                raise KeyError("League profile was not found.")
+            if len(active_keys) <= 1:
+                raise ValueError("Keep at least one active league on this account.")
+
+            cursor.execute(
+                """
+                UPDATE fantasyiq_leagues
+                   SET status = 'archived',
+                       source = COALESCE(NULLIF(source, ''), 'dashboard') || ':removed_by_customer',
+                       updated_at = now()
+                 WHERE customer_slug = %s
+                   AND league_key = %s
+                   AND COALESCE(status, 'configured') IN ('configured', 'active')
+             RETURNING customer_slug, league_key, label, league_name, league_id, team_id, status
+                """,
+                (lookup, key),
+            )
+            archived = fetch_one_dict(cursor)
+            remaining = [item for item in active_keys if item != key]
+            next_key = remaining[0] if remaining else ""
+            cursor.execute(
+                """
+                UPDATE fantasyiq_customers
+                   SET default_league_key = CASE
+                           WHEN default_league_key = %s OR NULLIF(default_league_key, '') IS NULL THEN %s
+                           ELSE default_league_key
+                       END,
+                       updated_at = now()
+                 WHERE slug = %s
+                """,
+                (key, next_key, lookup),
+            )
+            return {"archived": archived or {}, "nextLeagueKey": next_key, "remainingLeagueCount": len(remaining)}
 
 
 def delete_smoke_customer(slug: str) -> bool:

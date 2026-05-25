@@ -27,7 +27,7 @@
     if (message.type !== "FANTASYIQ_DRAFT_BRIDGE_CONFIG") return;
 
     const config = message.config || {};
-    if (!config.leagueId || !config.teamId || !config.memberId || !config.bridgeKey || !config.endpoint) {
+    if (!config.leagueId || !config.teamId || !config.bridgeKey || !config.endpoint) {
       sendStatus({ ok: false, reason: "missing-config" });
       return;
     }

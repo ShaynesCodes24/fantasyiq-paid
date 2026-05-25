@@ -13,12 +13,12 @@ from local_env import load_local_env
 
 API_BASE = "https://api.stripe.com/v1"
 PRODUCT_NAME = "FantasyIQ Season Pass"
-PRODUCT_DESCRIPTION = "One manually configured dashboard account for up to three public ESPN fantasy football leagues."
+PRODUCT_DESCRIPTION = "One MyFantasyIQ decision-engine account for up to three ESPN fantasy football leagues."
 UNIT_AMOUNT_CENTS = 3000
 CURRENCY = "usd"
 SUPPORT_EMAIL = "support@myfantasyiq.com"
 WEBSITE_URL = "https://myfantasyiq.com/"
-DASHBOARD_URL = "https://myfantasyiq.com/FantasyIQ/"
+DASHBOARD_URL = "https://myfantasyiq.com/"
 SETUP_URL = "https://myfantasyiq.com/setup.html"
 SUCCESS_URL = "https://myfantasyiq.com/success.html?checkout=season-pass"
 

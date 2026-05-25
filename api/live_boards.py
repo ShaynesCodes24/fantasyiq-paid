@@ -16,9 +16,11 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 try:
-    from customer_context import authorize_customer_context, resolve_customer_context
+    from customer_context import ConfigError, authorize_customer_context, resolve_customer_context
+    from rate_limit import check_rate_limit, rate_limit_payload
 except ModuleNotFoundError:
-    from api.customer_context import authorize_customer_context, resolve_customer_context
+    from api.customer_context import ConfigError, authorize_customer_context, resolve_customer_context
+    from api.rate_limit import check_rate_limit, rate_limit_payload
 
 
 DEFAULT_SEASON = 2026
@@ -29,6 +31,23 @@ SLEEPER_API_BASE = "https://api.sleeper.app/v1"
 SLEEPER_LOOKBACK_HOURS = 72
 SLEEPER_TREND_LIMIT = 150
 SLEEPER_PLAYERS_TTL_SECONDS = 86400
+
+ESPN_LINEUP_SLOT_MAP = {
+    0: "QB",
+    2: "RB",
+    3: "FLEX",
+    4: "WR",
+    5: "FLEX",
+    6: "TE",
+    7: "SUPERFLEX",
+    16: "DST",
+    17: "K",
+    20: "BE",
+    21: "IR",
+    23: "FLEX",
+}
+
+DEFAULT_LINEUP_SLOT_KEYS = ("QB", "RB", "WR", "TE", "FLEX", "SUPERFLEX", "DST", "K", "BE", "IR")
 
 
 DEFAULT_SCORING_WEIGHTS: dict[int, float] = {
@@ -505,6 +524,16 @@ def ppr_rank(player: dict[str, Any]) -> int:
     return rank if rank > 0 else 9999
 
 
+def true_adp(ownership: dict[str, Any], fallback_rank: int) -> float:
+    try:
+        adp = float(ownership.get("averageDraftPosition"))
+    except (TypeError, ValueError):
+        adp = 0.0
+    if adp > 0:
+        return adp
+    return float(fallback_rank or 9999) + 500.0
+
+
 def float_value(value: Any, default: float = 0.0) -> float:
     try:
         return float(value)
@@ -534,6 +563,19 @@ def merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
             **(override.get("lineupSlots") or {}),
         }
     return merged
+
+
+def customer_settings_are_manual(settings: dict[str, Any] | None) -> bool:
+    if not settings:
+        return False
+    source = str(settings.get("source") or "").strip().lower()
+    return "override" in source
+
+
+def merge_runtime_league_settings(espn_settings: dict[str, Any], customer_settings: dict[str, Any] | None) -> dict[str, Any]:
+    if customer_settings_are_manual(customer_settings):
+        return merge_dicts(espn_settings, customer_settings or {})
+    return merge_dicts(customer_settings or {}, espn_settings)
 
 
 def scoring_items_from_espn(settings: dict[str, Any]) -> list[dict[str, Any]]:
@@ -577,19 +619,44 @@ def extract_scoring_settings(settings: dict[str, Any]) -> dict[str, Any]:
     return extracted
 
 
+def lineup_slots_from_espn(settings: dict[str, Any]) -> dict[str, int]:
+    raw_counts = (settings.get("rosterSettings") or {}).get("lineupSlotCounts") or {}
+    if not raw_counts:
+        return {}
+    slots = {key: 0 for key in DEFAULT_LINEUP_SLOT_KEYS}
+    for raw_slot, raw_count in raw_counts.items():
+        slot_name = ESPN_LINEUP_SLOT_MAP.get(int_value(raw_slot, -1))
+        if not slot_name:
+            continue
+        slots[slot_name] = slots.get(slot_name, 0) + int_value(raw_count)
+    return slots
+
+
+def extract_league_settings_from_espn(settings: dict[str, Any]) -> dict[str, Any]:
+    extracted = extract_scoring_settings(settings)
+    lineup_slots = lineup_slots_from_espn(settings)
+    if lineup_slots:
+        extracted["lineupSlots"] = lineup_slots
+        extracted["source"] = "ESPN league settings"
+    team_count = int_value(settings.get("size"), 0)
+    if team_count:
+        extracted["teamCount"] = team_count
+    return extracted
+
+
 def context_scoring_settings(context: Any, season: int) -> dict[str, Any]:
-    league_id = context.league_id or DEFAULT_DEMO_LEAGUE_ID
+    league_id = context.league_id
     extracted: dict[str, Any] = {}
     if league_id:
         try:
             league = fetch_json(league_settings_url(int(league_id), season))
-            extracted = extract_scoring_settings(league.get("settings") or {})
+            extracted = extract_league_settings_from_espn(league.get("settings") or {})
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError, ValueError):
             extracted = {}
     overrides = context.league_settings or {}
-    merged = merge_dicts(extracted, overrides)
+    merged = merge_runtime_league_settings(extracted, overrides)
     if overrides and not overrides.get("source"):
-        merged["source"] = "FantasyIQ league profile + ESPN scoring settings"
+        merged["source"] = "FantasyIQ league profile + ESPN league settings"
     return merged
 
 
@@ -753,40 +820,40 @@ def last_year_scored_profile(player: dict[str, Any], season: int, scoring_items:
 def position_tier(pos: str, pos_rank: int) -> str:
     if pos == "QB":
         if pos_rank <= 6:
-            return "QB1 Elite"
+            return "QB Elite"
         if pos_rank <= 12:
-            return "QB1 Starter"
+            return "QB Starter"
         if pos_rank <= 24:
-            return "QB2 Stream"
-        return "QB Deep Watch"
+            return "QB Bench"
+        return "QB Deep"
     if pos == "RB":
         if pos_rank <= 12:
-            return "RB1 Elite"
+            return "RB Elite"
         if pos_rank <= 24:
-            return "RB2 Core"
+            return "RB Starter"
         if pos_rank <= 36:
-            return "RB3 Flex"
+            return "RB Flex"
         if pos_rank <= 50:
-            return "RB4 Upside"
-        return "RB5 Handcuff"
+            return "RB Bench"
+        return "RB Deep"
     if pos == "WR":
         if pos_rank <= 12:
-            return "WR1 Elite"
+            return "WR Elite"
         if pos_rank <= 24:
-            return "WR2 Core"
+            return "WR Starter"
         if pos_rank <= 36:
-            return "WR3 Flex"
+            return "WR Flex"
         if pos_rank <= 60:
-            return "WR4 Upside"
-        return "WR5 Deep"
+            return "WR Bench"
+        return "WR Deep"
     if pos == "TE":
         if pos_rank <= 6:
-            return "TE1 Edge"
+            return "TE Elite"
         if pos_rank <= 12:
-            return "TE1 Starter"
+            return "TE Starter"
         if pos_rank <= 24:
-            return "TE2 Stream"
-        return "TE Deep Watch"
+            return "TE Bench"
+        return "TE Deep"
     if pos == "DST":
         return "DST Stream"
     if pos == "K":
@@ -1042,7 +1109,7 @@ def build_row_seed(
     last_year_profile = last_year_scored_profile(player, season, scoring_items)
     last_year_ppr_profile = last_year_scored_profile(player, season, ppr_items)
     last_year = float(last_year_profile["points"])
-    adp = float(ownership.get("averageDraftPosition") or rank + 30)
+    adp = true_adp(ownership, rank)
     market_delta = adp - rank
     percent_change = float(ownership.get("percentChange") or 0.0)
     auction_change = float(ownership.get("auctionValueAverageChange") or 0.0)
@@ -1106,6 +1173,7 @@ def build_row_seed(
     return {
         "player": player,
         "rank": rank,
+        "true_adp": adp,
         "league_sort_rank": league_sort_rank,
         "pos": pos,
         "projected": projected,
@@ -1149,7 +1217,7 @@ def build_rows(
     udk_signals: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     seeds = [seed for player in players if (seed := build_row_seed(player, season, scoring_profile, external_signals))]
-    seeds.sort(key=lambda item: (item["league_sort_rank"], item["rank"], -item["projected"], item["player"].get("fullName", "")))
+    seeds.sort(key=lambda item: (item["true_adp"], item["rank"], -item["projected"], item["player"].get("fullName", "")))
     rows: list[dict[str, Any]] = []
     pos_counts: dict[str, int] = {}
 
@@ -1207,6 +1275,7 @@ def build_rows(
             "ESPN Player ID": player.get("id"),
             "ESPN PPR Rank": ppr_rank(player),
             "ESPN ADP": seed["ownership"].get("averageDraftPosition"),
+            "True ADP": seed["true_adp"] if seed["true_adp"] < 500 else "",
             "ESPN Percent Owned": seed["ownership"].get("percentOwned"),
             "ESPN Percent Started": seed["ownership"].get("percentStarted"),
             "ESPN Ownership Change": seed["percent_change"],
@@ -1336,6 +1405,40 @@ def trend_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return grouped[:85]
 
 
+def sleeper_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def is_candidate(row: dict[str, Any]) -> bool:
+        if row.get("Pos") in {"K", "DST"}:
+            return False
+        rank = int_value(row.get("Rank"), 999)
+        value = float(row.get("Value Score") or 0)
+        sleeper_activity = int_value(row.get("Sleeper Add Count"), 0) + int_value(row.get("Sleeper Drop Count"), 0)
+        sleeper_net = int_value(row.get("Sleeper Net Adds"), 0)
+        trend_score = float(row.get("External Trend Score") or 0)
+        return (
+            row.get("Category") == "Sleeper"
+            or (value >= 52 and rank > 55)
+            or (rank > 45 and sleeper_activity > 0 and sleeper_net >= 0)
+            or (rank > 80 and trend_score >= 4)
+        )
+
+    candidates = [row for row in rows if is_candidate(row)]
+    if not candidates:
+        candidates = [
+            row
+            for row in rows
+            if row.get("Pos") not in {"K", "DST"} and int_value(row.get("Rank"), 999) > 55
+        ]
+    return sorted(
+        candidates,
+        key=lambda row: (
+            0 if row.get("Category") == "Sleeper" else 1,
+            -float(row.get("External Trend Score") or 0),
+            -float(row.get("Value Score") or 0),
+            int_value(row.get("Rank"), 999),
+        ),
+    )[:45]
+
+
 def build_live_board_payload(
     request_path: str = "",
     headers: Any | None = None,
@@ -1353,7 +1456,7 @@ def build_live_board_payload(
     league_settings = context_scoring_settings(context, season)
     scoring_profile = scoring_profile_for(league_settings)
     row_limit = limit or int_env("FANTASY_IQ_BOARD_LIMIT", DEFAULT_LIMIT)
-    fetch_limit = max(row_limit + 80, 420)
+    fetch_limit = max(row_limit + 240, 700)
     external_signals = sleeper_external_signals()
     udk_signals = udk_signal_payload(force=force)
     data = fetch_json(player_feed_url(season), {"x-fantasy-filter": player_filter(fetch_limit)})
@@ -1421,11 +1524,7 @@ def build_live_board_payload(
             },
             "sleepers": {
                 "title": "Live Sleeper Board",
-                "rows": [
-                    row
-                    for row in rows
-                    if row["Category"] == "Sleeper" or (row["Value Score"] >= 56 and row["Rank"] > 55)
-                ],
+                "rows": sleeper_rows(rows),
             },
             "kdst": {"title": "Live K/DST Board", "rows": [row for row in rows if row["Pos"] in {"K", "DST"}]},
             "trends": {"title": "Live Risers/Fallers", "rows": trend_rows(rows)},
@@ -1459,16 +1558,22 @@ class handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         query = parse_qs(parsed.query)
         force = query.get("force", ["0"])[0] == "1"
+        limit_result = check_rate_limit("live_boards", headers=self.headers, limit=90, window_seconds=900)
+        if not limit_result.allowed:
+            self.send_json(rate_limit_payload(limit_result, "Live board data is receiving too many requests. Try again shortly."), HTTPStatus.TOO_MANY_REQUESTS)
+            return
         limit = None
         if query.get("limit"):
             try:
-                limit = int(query["limit"][0])
+                limit = max(40, min(260, int(query["limit"][0])))
             except ValueError:
                 limit = None
         try:
             self.send_json(build_live_board_payload(self.path, self.headers, force=force, limit=limit))
         except PermissionError as exc:
             self.send_json(error_payload(str(exc)), HTTPStatus.UNAUTHORIZED)
+        except ConfigError as exc:
+            self.send_json(error_payload(str(exc)), HTTPStatus.SERVICE_UNAVAILABLE)
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError, ValueError) as exc:
             self.send_json(error_payload(str(exc)), HTTPStatus.BAD_GATEWAY)
 

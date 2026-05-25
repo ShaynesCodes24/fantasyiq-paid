@@ -104,7 +104,7 @@ def checkout_row(session: dict[str, Any]) -> dict[str, str]:
     team_id = custom_field_value(session, "teamid")
     season = custom_field_value(session, "season") or str(DEFAULT_SEASON)
     league_name = custom_field_value(session, "leaguename")
-    dashboard_url = env("FANTASYIQ_DASHBOARD_URL", "https://myfantasyiq.com/FantasyIQ/")
+    dashboard_url = env("FANTASYIQ_DASHBOARD_URL", "https://myfantasyiq.com/")
     return {
         "customer_name": str(customer.get("name") or "").strip(),
         "email": str(customer.get("email") or "").strip(),
@@ -120,6 +120,91 @@ def checkout_row(session: dict[str, Any]) -> dict[str, str]:
         "status": "paid_needs_setup",
         "notes": "Received by Stripe webhook. Validate ESPN league/team, then configure customer dashboard.",
     }
+
+
+def checkout_session_rejection_reason(session: dict[str, Any]) -> str:
+    payment_status = str(session.get("payment_status") or "").strip().lower()
+    if payment_status != "paid":
+        return "checkout_not_paid"
+    currency = str(session.get("currency") or "").strip().lower()
+    if currency and currency != "usd":
+        return "checkout_currency_not_supported"
+    try:
+        amount_total = int(session.get("amount_total") or 0)
+    except (TypeError, ValueError):
+        amount_total = 0
+    if amount_total <= 0:
+        return "checkout_amount_invalid"
+    customer = session.get("customer_details") or {}
+    if not str(session.get("customer") or "").startswith("cus_") and not str(customer.get("email") or "").strip():
+        return "checkout_customer_missing"
+    livemode_policy = env("FANTASYIQ_STRIPE_LIVEMODE", "").strip().lower()
+    if livemode_policy in {"true", "1", "live"} and session.get("livemode") is not True:
+        return "checkout_livemode_mismatch"
+    if livemode_policy in {"false", "0", "test"} and session.get("livemode") is not False:
+        return "checkout_livemode_mismatch"
+
+    allowed_payment_links = checkout_allowlist_values("FANTASYIQ_STRIPE_ALLOWED_PAYMENT_LINK_IDS")
+    payment_link_id = checkout_payment_link_id(session)
+    if allowed_payment_links and payment_link_id and payment_link_id not in allowed_payment_links:
+        return "checkout_payment_link_not_allowed"
+
+    allowed_prices = checkout_allowlist_values(
+        "FANTASYIQ_STRIPE_ALLOWED_PRICE_IDS",
+        ("price_1TZFfKI9VpZIldH0dEAVPQOR", "price_1TZFfVI9VpZIldH0HsLFXTH9"),
+    )
+    observed_prices = checkout_price_ids(session)
+    if observed_prices and not (observed_prices & allowed_prices):
+        return "checkout_price_not_allowed"
+
+    allowed_products = checkout_allowlist_values(
+        "FANTASYIQ_STRIPE_ALLOWED_PRODUCT_IDS",
+        ("prod_UYMONg4fWFT0DJ", "prod_UYMOnidLvyVwdO"),
+    )
+    observed_products = checkout_product_ids(session)
+    if observed_products and not (observed_products & allowed_products):
+        return "checkout_product_not_allowed"
+    return ""
+
+
+def checkout_allowlist_values(name: str, defaults: tuple[str, ...] = ()) -> set[str]:
+    configured = env(name)
+    raw = configured if configured else ",".join(defaults)
+    return {item.strip() for item in raw.split(",") if item.strip()}
+
+
+def checkout_nested_values(value: Any, keys: set[str]) -> set[str]:
+    found: set[str] = set()
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key in keys and item not in (None, ""):
+                found.add(str(item).strip())
+            found.update(checkout_nested_values(item, keys))
+    elif isinstance(value, list):
+        for item in value:
+            found.update(checkout_nested_values(item, keys))
+    return found
+
+
+def checkout_payment_link_id(session: dict[str, Any]) -> str:
+    payment_link = session.get("payment_link") or metadata_value(session, "payment_link", "payment_link_id")
+    if isinstance(payment_link, dict):
+        return str(payment_link.get("id") or "").strip()
+    return str(payment_link or "").strip()
+
+
+def checkout_price_ids(session: dict[str, Any]) -> set[str]:
+    values = checkout_nested_values(session.get("line_items") or {}, {"price"})
+    values.update(checkout_nested_values(session.get("display_items") or {}, {"price"}))
+    values.update(checkout_nested_values(session.get("metadata") or {}, {"price_id"}))
+    return {value for value in values if value.startswith("price_")}
+
+
+def checkout_product_ids(session: dict[str, Any]) -> set[str]:
+    values = checkout_nested_values(session.get("line_items") or {}, {"product"})
+    values.update(checkout_nested_values(session.get("display_items") or {}, {"product"}))
+    values.update(checkout_nested_values(session.get("metadata") or {}, {"product_id"}))
+    return {value for value in values if value.startswith("prod_")}
 
 
 def metadata_value(session: dict[str, Any], *keys: str) -> str:
@@ -195,13 +280,7 @@ def checkout_customer_slug(session: dict[str, Any], row: dict[str, str]) -> str:
         def customer_slug_from_email(email: str) -> str:
             return slugify(email)
 
-    explicit = (
-        metadata_value(session, "customer_slug", "customer", "dashboard")
-        or custom_field_value(session, "customerslug")
-        or custom_field_value(session, "customer")
-        or str(session.get("client_reference_id") or "")
-    )
-    return slugify(explicit or customer_slug_from_email(row.get("email", "")) or row.get("customer_name", ""))
+    return slugify(customer_slug_from_email(row.get("email", "")) or row.get("customer_name", ""))
 
 
 def is_additional_league_checkout(session: dict[str, Any]) -> bool:
@@ -224,7 +303,7 @@ def persist_additional_league_checkout(event: dict[str, Any], session: dict[str,
             from database import (
                 DatabaseUnavailable,
                 database_status,
-                increment_additional_league_count,
+                increment_additional_league_count_by_buyer,
                 record_ops_event,
                 record_stripe_event,
             )
@@ -232,7 +311,7 @@ def persist_additional_league_checkout(event: dict[str, Any], session: dict[str,
             from api.database import (
                 DatabaseUnavailable,
                 database_status,
-                increment_additional_league_count,
+                increment_additional_league_count_by_buyer,
                 record_ops_event,
                 record_stripe_event,
             )
@@ -255,7 +334,11 @@ def persist_additional_league_checkout(event: dict[str, Any], session: dict[str,
         )
         saved_customer = None
         if inserted_event:
-            saved_customer = increment_additional_league_count(customer_slug or row.get("email", ""), 1)
+            saved_customer = increment_additional_league_count_by_buyer(
+                stripe_customer_id=str(session.get("customer") or ""),
+                email=row.get("email", ""),
+                amount=1,
+            )
             record_ops_event(
                 event_type="checkout.additional_league_paid",
                 severity="info",
@@ -520,6 +603,14 @@ def process_event(event: dict[str, Any]) -> dict[str, Any]:
     event_type = event.get("type")
     data_object = ((event.get("data") or {}).get("object") or {})
     if event_type == "checkout.session.completed":
+        rejection_reason = checkout_session_rejection_reason(data_object)
+        if rejection_reason:
+            return {
+                "action": "checkout_ignored",
+                "status": rejection_reason,
+                "stripeObjectId": data_object.get("id"),
+                "nextStep": "No FantasyIQ customer access was granted because checkout was not eligible for fulfillment.",
+            }
         row = checkout_row(data_object)
         if is_additional_league_checkout(data_object):
             database_result = persist_additional_league_checkout(event, data_object, row)

@@ -66,7 +66,7 @@ def public_site_url() -> str:
 
 
 def dashboard_url(customer_slug: str) -> str:
-    return f"{public_site_url()}/FantasyIQ/?customer={urllib.parse.quote(customer_slug)}"
+    return f"{public_site_url()}/?customer={urllib.parse.quote(customer_slug)}"
 
 
 def setup_url(customer_slug: str) -> str:
@@ -337,7 +337,7 @@ def admin_action(raw: dict[str, Any]) -> dict[str, Any]:
                 from api.sos_heatmap import force_refresh_payload
             refreshed = force_refresh_payload(season)
         except Exception as exc:
-            raise ConfigError(f"Could not refresh SoS Heat Map: {exc}") from exc
+            raise ConfigError(f"Could not refresh Schedule IQ: {exc}") from exc
         try:
             try:
                 from database import record_ops_event
@@ -347,7 +347,7 @@ def admin_action(raw: dict[str, Any]) -> dict[str, Any]:
                 event_type="admin.refresh_sos_heatmap",
                 severity="info",
                 source="admin_customers",
-                message=f"SoS Heat Map refreshed manually for {season}.",
+                message=f"Schedule IQ refreshed manually for {season}.",
                 payload={
                     "season": refreshed.get("season"),
                     "rows": len(refreshed.get("rows") or []),

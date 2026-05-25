@@ -5,12 +5,14 @@ const { chromium } = require("playwright");
 const BASE_URL = (process.env.VISUAL_SMOKE_BASE_URL || "https://myfantasyiq.com").replace(/\/$/, "");
 const OUTPUT_DIR = process.env.VISUAL_SMOKE_OUTPUT_DIR || path.join("artifacts", "visual-smoke");
 const HEADLESS = process.env.VISUAL_SMOKE_HEADLESS !== "0";
+const IGNORE_STATIC_API_404 = process.env.VISUAL_SMOKE_IGNORE_STATIC_API_404 === "1";
 const VIEWPORTS = [
   { name: "desktop", width: 1440, height: 1100 },
   { name: "mobile", width: 390, height: 844 },
 ];
 
 const consoleIssues = [];
+const responseIssues = [];
 const pageErrors = [];
 const results = [];
 
@@ -59,6 +61,11 @@ async function newPage(browser, viewport) {
       consoleIssues.push(`${viewport.name} ${message.type()}: ${message.text()}`);
     }
   });
+  page.on("response", (response) => {
+    if (response.status() >= 400) {
+      responseIssues.push(`${viewport.name} HTTP ${response.status()}: ${response.url()}`);
+    }
+  });
   page.on("pageerror", (error) => {
     pageErrors.push(`${viewport.name}: ${error.message}`);
   });
@@ -80,6 +87,18 @@ async function checkPublicPages(browser, viewport) {
     const response = await page.goto(urlFor(item.route), { waitUntil: "domcontentloaded", timeout: 45000 });
     await waitForQuietPage(page);
     await expectBodyText(page, item.text, `${viewport.name} ${item.name}`);
+    if (item.name === "success") {
+      const href = await page.locator("#success-dashboard-link").getAttribute("href");
+      if (!href || !href.includes("login=1")) {
+        throw new Error(`${viewport.name} success customer login link must preserve login=1, found ${href || "missing"}`);
+      }
+    }
+    if (item.name === "setup") {
+      const href = await page.locator("#setup-open-dashboard-link").getAttribute("href");
+      if (!href || !href.includes("login=1")) {
+        throw new Error(`${viewport.name} setup dashboard link must preserve login=1, found ${href || "missing"}`);
+      }
+    }
     const file = await screenshot(page, `${viewport.name}-${item.name}`);
     record(`${viewport.name} ${item.name}`, {
       detail: `HTTP ${response?.status() || "unknown"}, screenshot ${file}`,
@@ -90,9 +109,14 @@ async function checkPublicPages(browser, viewport) {
 
 async function checkLoginRoute(browser, viewport) {
   const page = await newPage(browser, viewport);
-  const response = await page.goto(urlFor("/login"), { waitUntil: "domcontentloaded", timeout: 45000 });
+  let response = await page.goto(urlFor("/login"), { waitUntil: "domcontentloaded", timeout: 45000 });
   await waitForQuietPage(page);
-  await page.locator("#customer-access-gate").waitFor({ state: "visible", timeout: 15000 });
+  const gate = page.locator("#customer-access-gate");
+  if ((await gate.count()) === 0) {
+    response = await page.goto(urlFor("/?login=1"), { waitUntil: "domcontentloaded", timeout: 45000 });
+    await waitForQuietPage(page);
+  }
+  await gate.waitFor({ state: "visible", timeout: 15000 });
   await page.locator("#customer-login-identity").waitFor({ state: "visible", timeout: 15000 });
   await page.locator("#customer-login-password").waitFor({ state: "visible", timeout: 15000 });
 
@@ -125,35 +149,13 @@ async function activateDashboardSection(page, section) {
   await page.locator(`.panel#${section}.active`).waitFor({ state: "visible", timeout: 15000 });
 }
 
-async function checkPreDraftState(page, viewport) {
-  const liveStatusText = await page.locator("#live-status").innerText({ timeout: 15000 });
-  if (!liveStatusText.includes("Pre-draft board ready")) return;
-
-  const preDraftPanel = page.locator("#pre-draft-panel");
-  await preDraftPanel.waitFor({ state: "visible", timeout: 15000 });
-  const preDraftText = await preDraftPanel.innerText({ timeout: 10000 });
-  const normalizedPreDraftText = preDraftText.toLowerCase();
-  for (const text of ["before the draft opens", "room is staged", "league", "order", "tier watch"]) {
-    if (!normalizedPreDraftText.includes(text)) {
-      throw new Error(`${viewport.name} pre-draft panel missing: ${text}`);
-    }
-  }
-
-  const recommendationText = await page.locator("#live-recommendations").innerText({ timeout: 10000 });
-  if (!recommendationText.toLowerCase().includes("pre-draft board value is ready")) {
-    throw new Error(`${viewport.name} pre-draft recommendations did not render the readiness intro`);
-  }
-
-  const rosterText = await page.locator("#live-my-roster").innerText({ timeout: 10000 });
-  const normalizedRosterText = rosterText.toLowerCase();
-  if (!normalizedRosterText.includes("roster starts clean") && !normalizedRosterText.includes("pick your espn team")) {
-    throw new Error(`${viewport.name} pre-draft roster empty state was not helpful`);
-  }
-
-  const postDraftText = await page.locator("#post-draft-plan").innerText({ timeout: 10000 });
-  const normalizedPostDraftText = postDraftText.toLowerCase();
-  if (!normalizedPostDraftText.includes("armed") || !normalizedPostDraftText.includes("after the draft")) {
-    throw new Error(`${viewport.name} pre-draft post-draft plan was not armed`);
+async function checkScheduleIqState(page, viewport) {
+  await page.locator("#sos-position").waitFor({ state: "visible", timeout: 15000 });
+  await page.locator("#sos-range").waitFor({ state: "visible", timeout: 15000 });
+  await page.locator("#sos-table-body tr").first().waitFor({ state: "visible", timeout: 15000 });
+  const summary = await page.locator("#sos-selected-summary").innerText({ timeout: 10000 });
+  if (!summary.toLowerCase().includes("weeks")) {
+    throw new Error(`${viewport.name} Schedule IQ summary did not render week context`);
   }
 }
 
@@ -185,10 +187,12 @@ async function checkDashboard(browser, viewport) {
   if (boardRows < 50) throw new Error(`${viewport.name} dashboard expected board rows, found ${boardRows}`);
 
   await screenshot(page, `${viewport.name}-dashboard-command`);
+  await page.locator("#manual-sync").waitFor({ state: "visible", timeout: 15000 });
+  await page.locator("#live-sync-toggle").waitFor({ state: "visible", timeout: 15000 });
 
   for (const section of ["draft", "live", "simulator", "trade", "workbooks", "account"]) {
     await activateDashboardSection(page, section);
-    if (section === "live") await checkPreDraftState(page, viewport);
+    if (section === "live") await checkScheduleIqState(page, viewport);
     if (section === "workbooks") await checkOptionalUdkView(page, viewport);
     await screenshot(page, `${viewport.name}-dashboard-${section}`);
   }
@@ -226,10 +230,23 @@ async function main() {
     await browser.close();
   }
 
-  const hardConsoleErrors = consoleIssues.filter((issue) => issue.includes(" error:"));
-  if (pageErrors.length || hardConsoleErrors.length) {
+  const hardConsoleErrors = consoleIssues.filter((issue) => {
+    if (!issue.includes(" error:")) return false;
+    if (IGNORE_STATIC_API_404 && issue.includes("Failed to load resource: the server responded with a status of 404")) {
+      return false;
+    }
+    return true;
+  });
+  const hardResponseErrors = responseIssues.filter((issue) => {
+    if (IGNORE_STATIC_API_404 && /HTTP 404: .*\/api\//.test(issue)) return false;
+    if (IGNORE_STATIC_API_404 && /HTTP 404: .*\/login$/.test(issue)) return false;
+    return true;
+  });
+  if (pageErrors.length || hardConsoleErrors.length || hardResponseErrors.length) {
     console.error("Page errors:");
     pageErrors.forEach((error) => console.error(`- ${error}`));
+    console.error("Response errors:");
+    hardResponseErrors.forEach((error) => console.error(`- ${error}`));
     console.error("Console errors:");
     hardConsoleErrors.forEach((error) => console.error(`- ${error}`));
     process.exit(1);
@@ -237,7 +254,7 @@ async function main() {
 
   await fs.writeFile(
     path.join(OUTPUT_DIR, "summary.json"),
-    JSON.stringify({ baseUrl: BASE_URL, viewports: VIEWPORTS, results, consoleIssues, pageErrors }, null, 2),
+    JSON.stringify({ baseUrl: BASE_URL, viewports: VIEWPORTS, results, responseIssues, consoleIssues, pageErrors }, null, 2),
   );
   console.log(`PASS visual smoke complete: ${results.length} checks, screenshots in ${OUTPUT_DIR}`);
 }

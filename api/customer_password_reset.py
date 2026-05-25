@@ -35,12 +35,23 @@ def parse_body(handler: BaseHTTPRequestHandler) -> dict[str, Any]:
     return {key: values[0] if values else "" for key, values in parsed.items()}
 
 
+def is_email(value: str) -> bool:
+    clean = str(value or "").strip()
+    return "@" in clean and "." in clean.rsplit("@", 1)[-1] and " " not in clean
+
+
 def password_reset_payload(raw: dict[str, Any]) -> dict[str, Any]:
-    identity = str(raw.get("customer") or raw.get("email") or raw.get("dashboard") or "").strip()
+    identity = str(raw.get("email") or raw.get("customer") or raw.get("dashboard") or "").strip()
     if not identity:
         return {
             "ok": False,
-            "message": "Enter the email from checkout or your dashboard slug.",
+            "message": "Enter the email from checkout.",
+            "syncedAt": utc_now(),
+        }
+    if not is_email(identity):
+        return {
+            "ok": False,
+            "message": "Enter a valid checkout email address.",
             "syncedAt": utc_now(),
         }
 
@@ -77,7 +88,6 @@ def password_reset_payload(raw: dict[str, Any]) -> dict[str, Any]:
     return {
         "ok": True,
         "message": "If that account exists, a password reset email is on the way.",
-        "email": {"sent": bool(result.get("sent"))},
         "syncedAt": utc_now(),
     }
 

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" role="img" aria-labelledby="title desc">
+  <title id="title">MyFantasyIQ crest</title>
+  <desc id="desc">Gold crown, shield, football, and rising bars for MyFantasyIQ.</desc>
+  <defs>
+    <linearGradient id="gold" x1="26" x2="184" y1="26" y2="192" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff4bd"/>
+      <stop offset=".28" stop-color="#f6cc70"/>
+      <stop offset=".58" stop-color="#c8953f"/>
+      <stop offset=".84" stop-color="#ffe49a"/>
+      <stop offset="1" stop-color="#a87527"/>
+    </linearGradient>
+    <linearGradient id="emerald" x1="48" x2="168" y1="58" y2="182" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0d5c50"/>
+      <stop offset=".52" stop-color="#05362f"/>
+      <stop offset="1" stop-color="#011412"/>
+    </linearGradient>
+    <linearGradient id="bars" x1="88" x2="150" y1="164" y2="94" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0e7658"/>
+      <stop offset="1" stop-color="#58d884"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="7" stdDeviation="5" flood-color="#000806" flood-opacity=".45"/>
+    </filter>
+  </defs>
+  <rect width="220" height="220" rx="44" fill="#001715"/>
+  <circle cx="110" cy="116" r="82" fill="none" stroke="url(#gold)" stroke-width="4" opacity=".82"/>
+  <circle cx="30" cy="116" r="10" fill="#001715" stroke="url(#gold)" stroke-width="6"/>
+  <circle cx="190" cy="116" r="10" fill="#001715" stroke="url(#gold)" stroke-width="6"/>
+  <g filter="url(#shadow)">
+    <path d="M73 45l23 13 14-29 15 29 23-13-8 38H81z" fill="url(#gold)"/>
+    <path d="M80 91c28-6 43-6 61 0l-31 15z" fill="#fff1bb" opacity=".92"/>
+    <path d="M56 86c27-4 43-12 54-23 12 11 28 19 54 23v40c0 39-21 65-54 83-33-18-54-44-54-83z" fill="url(#emerald)" stroke="url(#gold)" stroke-width="8"/>
+    <path d="M75 105c20-5 27-15 35-31 9 16 16 26 35 31v27c0 26-13 44-35 57-22-13-35-31-35-57z" fill="none" stroke="url(#gold)" stroke-width="6"/>
+    <path d="M110 83c19 14 29 31 29 51s-10 36-29 50c-19-14-29-30-29-50s10-37 29-51z" fill="#061d19" stroke="#f5d072" stroke-width="5"/>
+    <path d="M110 99v50M96 121h28M98 133h24M101 145h18" stroke="#ffe8a3" stroke-width="5" stroke-linecap="round"/>
+    <path d="M77 160h20v25H77zM104 146h20v48h-20zM131 126h20v54l-20 14z" fill="url(#bars)"/>
+  </g>
+</svg>

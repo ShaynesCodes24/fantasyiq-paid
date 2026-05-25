@@ -110,9 +110,135 @@ DEFAULT_LINEUP_SLOTS = {
 _live_cache: dict[str, dict[str, Any]] = {}
 _player_cache: dict[int, dict[int, dict[str, Any]]] = {}
 
+DEMO_TEAM_ID = 5
+DEMO_TEAM_NAME = "FantasyIQ Demo Squad"
+DEMO_MANAGER = "Demo Manager"
+DEMO_ROSTERS = {
+    1: {
+        "teamName": "Anchor RB Room",
+        "manager": "Demo Rival A",
+        "abbrev": "ARB",
+        "players": [
+            ("Lamar Jackson", "QB", "BAL", "QB"),
+            ("Saquon Barkley", "RB", "PHI", "RB"),
+            ("Bucky Irving", "RB", "TB", "RB"),
+            ("Justin Jefferson", "WR", "MIN", "WR"),
+            ("Mike Evans", "WR", "TB", "WR"),
+            ("Trey McBride", "TE", "ARI", "TE"),
+            ("Malik Nabers", "WR", "NYG", "FLEX"),
+            ("De'Von Achane", "RB", "MIA", "BE"),
+            ("Drake London", "WR", "ATL", "BE"),
+            ("Baker Mayfield", "QB", "TB", "BE"),
+            ("Chuba Hubbard", "RB", "CAR", "BE"),
+            ("Rome Odunze", "WR", "CHI", "BE"),
+            ("David Njoku", "TE", "CLE", "BE"),
+            ("Pittsburgh Steelers", "DST", "PIT", "DST"),
+            ("Jake Bates", "K", "DET", "K"),
+        ],
+    },
+    3: {
+        "teamName": "Receiver Heavy",
+        "manager": "Demo Rival B",
+        "abbrev": "WRH",
+        "players": [
+            ("Jayden Daniels", "QB", "WAS", "QB"),
+            ("Jonathan Taylor", "RB", "IND", "RB"),
+            ("Kyren Williams", "RB", "LAR", "RB"),
+            ("Amon-Ra St. Brown", "WR", "DET", "WR"),
+            ("CeeDee Lamb", "WR", "DAL", "WR"),
+            ("T.J. Hockenson", "TE", "MIN", "TE"),
+            ("Derrick Henry", "RB", "BAL", "FLEX"),
+            ("Nico Collins", "WR", "HOU", "BE"),
+            ("Ladd McConkey", "WR", "LAC", "BE"),
+            ("Dak Prescott", "QB", "DAL", "BE"),
+            ("Tony Pollard", "RB", "TEN", "BE"),
+            ("David Montgomery", "RB", "DET", "BE"),
+            ("Ricky Pearsall", "WR", "SF", "BE"),
+            ("Buffalo Bills", "DST", "BUF", "DST"),
+            ("Cameron Dicker", "K", "LAC", "K"),
+        ],
+    },
+    DEMO_TEAM_ID: {
+        "teamName": DEMO_TEAM_NAME,
+        "manager": DEMO_MANAGER,
+        "abbrev": "FIQ",
+        "players": [
+            ("Jordan Love", "QB", "GB", "QB"),
+            ("Jonathan Taylor", "RB", "IND", "RB"),
+            ("James Conner", "RB", "ARI", "RB"),
+            ("Tee Higgins", "WR", "CIN", "WR"),
+            ("Jordan Addison", "WR", "MIN", "WR"),
+            ("Jake Ferguson", "TE", "DAL", "TE"),
+            ("George Pickens", "WR", "DAL", "FLEX"),
+            ("Houston Texans", "DST", "HOU", "DST"),
+            ("Brandon Aubrey", "K", "DAL", "K"),
+            ("Caleb Williams", "QB", "CHI", "BE"),
+            ("Zach Charbonnet", "RB", "SEA", "BE"),
+            ("Jaylen Warren", "RB", "PIT", "BE"),
+            ("Jameson Williams", "WR", "DET", "BE"),
+            ("Rashee Rice", "WR", "KC", "BE"),
+            ("Dallas Goedert", "TE", "PHI", "BE"),
+        ],
+    },
+    8: {
+        "teamName": "QB Advantage",
+        "manager": "Demo Rival C",
+        "abbrev": "QBA",
+        "players": [
+            ("Jalen Hurts", "QB", "PHI", "QB"),
+            ("Ashton Jeanty", "RB", "LV", "RB"),
+            ("Josh Jacobs", "RB", "GB", "RB"),
+            ("A.J. Brown", "WR", "PHI", "WR"),
+            ("Brian Thomas Jr.", "WR", "JAX", "WR"),
+            ("Sam LaPorta", "TE", "DET", "TE"),
+            ("Marvin Harrison Jr.", "WR", "ARI", "FLEX"),
+            ("Kenneth Walker III", "RB", "SEA", "BE"),
+            ("Terry McLaurin", "WR", "WAS", "BE"),
+            ("Bo Nix", "QB", "DEN", "BE"),
+            ("TreVeyon Henderson", "RB", "NE", "BE"),
+            ("DJ Moore", "WR", "CHI", "BE"),
+            ("Tucker Kraft", "TE", "GB", "BE"),
+            ("Denver Broncos", "DST", "DEN", "DST"),
+            ("Ka'imi Fairbairn", "K", "HOU", "K"),
+        ],
+    },
+    10: {
+        "teamName": "Balanced Build",
+        "manager": "Demo Rival D",
+        "abbrev": "BAL",
+        "players": [
+            ("Joe Burrow", "QB", "CIN", "QB"),
+            ("Christian McCaffrey", "RB", "SF", "RB"),
+            ("Breece Hall", "RB", "NYJ", "RB"),
+            ("Garrett Wilson", "WR", "NYJ", "WR"),
+            ("Davante Adams", "WR", "LAR", "WR"),
+            ("Mark Andrews", "TE", "BAL", "TE"),
+            ("Courtland Sutton", "WR", "DEN", "FLEX"),
+            ("Omarion Hampton", "RB", "LAC", "BE"),
+            ("Zay Flowers", "WR", "BAL", "BE"),
+            ("Justin Herbert", "QB", "LAC", "BE"),
+            ("Rhamondre Stevenson", "RB", "NE", "BE"),
+            ("Darnell Mooney", "WR", "ATL", "BE"),
+            ("Evan Engram", "TE", "DEN", "BE"),
+            ("Philadelphia Eagles", "DST", "PHI", "DST"),
+            ("Harrison Butker", "K", "KC", "K"),
+        ],
+    },
+}
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def iso_from_epoch_millis(value: Any) -> str:
+    try:
+        millis = int(value)
+    except (TypeError, ValueError):
+        return ""
+    if millis <= 0:
+        return ""
+    return datetime.fromtimestamp(millis / 1000, timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 def league_url(context: CustomerContext, cache_bust: bool = False) -> str:
@@ -133,28 +259,53 @@ def override_customer_context(context: CustomerContext, request_path: str = "") 
     raw_league_id = (
         params.get("draftLeagueId", [""])[0]
         or params.get("liveLeagueId", [""])[0]
-        or params.get("leagueId", [""])[0]
     )
     if not raw_league_id:
         return context
     league_id = int_setting(raw_league_id, 0)
     if league_id <= 0:
         raise ConfigError("Live draft leagueId must be a number.")
+    raw_season = params.get("draftSeason", [""])[0] or params.get("season", [""])[0]
+    season = int_setting(raw_season, context.season) or context.season
+    matched_league = saved_league_for_override(context, league_id, season)
+    if not matched_league:
+        raise PermissionError("Live draft override must match a saved league and season on this FantasyIQ account.")
     raw_team_id = (
         params.get("draftTeamId", [""])[0]
         or params.get("liveTeamId", [""])[0]
         or params.get("teamId", [""])[0]
     )
-    raw_season = params.get("draftSeason", [""])[0] or params.get("season", [""])[0]
+    team_id = int_setting(raw_team_id, 0) or int_setting(matched_league.get("teamId"), 0) or context.customer_team_id
+    league_key = str(matched_league.get("leagueKey") or matched_league.get("key") or context.league_key or f"league-{league_id}")
+    league_name = str(matched_league.get("leagueName") or matched_league.get("label") or context.league_name or "Saved ESPN League")
+    league_settings = matched_league.get("leagueSettings") if isinstance(matched_league.get("leagueSettings"), dict) else {}
     return replace(
         context,
         league_id=league_id,
-        season=int_setting(raw_season, context.season) or context.season,
-        customer_team_id=int_setting(raw_team_id, 0) or context.customer_team_id,
-        league_key=f"live-draft-{league_id}",
-        league_name="Live Draft Override",
+        season=season,
+        customer_team_id=team_id,
+        league_key=league_key,
+        league_name=league_name,
+        league_settings=league_settings,
         demo_mode=False,
     )
+
+
+def saved_league_for_override(context: CustomerContext, league_id: int, season: int) -> dict[str, Any] | None:
+    if int_setting(context.league_id, 0) == league_id and int_setting(context.season, 0) == season:
+        return {
+            "leagueKey": context.league_key,
+            "leagueName": context.league_name,
+            "teamId": context.customer_team_id,
+            "leagueSettings": context.league_settings,
+        }
+    for league in context.available_leagues or []:
+        if int_setting(league.get("leagueId"), 0) == league_id:
+            league_season = int_setting(league.get("season"), season)
+            if league_season != season:
+                continue
+            return league
+    return None
 
 
 def players_url(context: CustomerContext) -> str:
@@ -250,6 +401,171 @@ def normalize_roster_entry(entry: dict[str, Any], players: dict[int, dict[str, A
         "injuryStatus": player.get("injuryStatus") or pool_entry.get("injuryStatus") or "",
         "acquisitionType": entry.get("acquisitionType") or "",
         "status": pool_entry.get("status") or "",
+    }
+
+
+def demo_roster_entry(index: int, name: str, pos: str, pro_team: str, lineup_slot: str) -> dict[str, Any]:
+    return {
+        "playerId": -1000 - index,
+        "player": name,
+        "pos": pos,
+        "proTeam": pro_team,
+        "lineupSlotId": -1,
+        "lineupSlot": lineup_slot,
+        "injuryStatus": "",
+        "acquisitionType": "DRAFT",
+        "status": "ONTEAM",
+    }
+
+
+def apply_demo_rosters(context: CustomerContext, teams: dict[int, dict[str, Any]]) -> int:
+    if not context.demo_mode:
+        return int_setting(context.customer_team_id, 0)
+    if any((team.get("roster") or []) for team in teams.values()):
+        return int_setting(context.customer_team_id, 0) or DEMO_TEAM_ID
+
+    for team_id, profile in DEMO_ROSTERS.items():
+        existing = teams.get(team_id, {})
+        teams[team_id] = {
+            "teamId": team_id,
+            "teamName": profile["teamName"],
+            "manager": profile["manager"],
+            "abbrev": profile["abbrev"],
+            "roster": [
+                demo_roster_entry((team_id * 100) + index, name, pos, pro_team, lineup_slot)
+                for index, (name, pos, pro_team, lineup_slot) in enumerate(profile["players"], start=1)
+            ],
+        }
+        if existing and not teams[team_id]["manager"]:
+            teams[team_id]["manager"] = existing.get("manager", "")
+    return DEMO_TEAM_ID
+
+
+def demo_customer_payload(context: CustomerContext, team_id: int, league_settings: dict[str, Any]) -> dict[str, Any]:
+    customer = context.public_dict()
+    if not context.demo_mode:
+        return customer
+    settings = merge_runtime_league_settings(league_settings, customer.get("leagueSettings") or {})
+    customer["customerName"] = customer.get("customerName") or DEMO_MANAGER
+    customer["customerTeamId"] = customer.get("customerTeamId") or team_id
+    customer["customerTeamName"] = customer.get("customerTeamName") or DEMO_TEAM_NAME
+    customer["leagueName"] = customer.get("leagueName") or "Full Demo League"
+    customer["leagueSettings"] = settings
+    customer["leagues"] = customer.get("leagues") or [
+        {
+            "key": "full-demo-league",
+            "label": "Full Demo League",
+            "leagueId": context.league_id,
+            "leagueName": "Full Demo League",
+            "teamId": team_id,
+            "teamName": DEMO_TEAM_NAME,
+            "customerTeamId": team_id,
+            "customerTeamName": DEMO_TEAM_NAME,
+            "season": context.season,
+            "leagueSettings": settings,
+        }
+    ]
+    return customer
+
+
+def build_static_demo_payload(context: CustomerContext) -> dict[str, Any]:
+    league_settings = merge_runtime_league_settings(
+        {
+            "teamCount": 12,
+            "scoringType": "ppr",
+            "scoringLabel": "PPR",
+            "receptionPoints": 1,
+            "lineupSlots": DEFAULT_LINEUP_SLOTS,
+            "draftRounds": 15,
+            "playoffTeams": 6,
+            "source": "Sanitized FantasyIQ demo profile",
+        },
+        context.league_settings,
+    )
+    teams = {
+        team_id: {
+            "teamId": team_id,
+            "teamName": profile["teamName"],
+            "manager": profile["manager"],
+            "abbrev": profile["abbrev"],
+            "roster": [
+                demo_roster_entry((team_id * 100) + index, name, pos, pro_team, lineup_slot)
+                for index, (name, pos, pro_team, lineup_slot) in enumerate(profile["players"], start=1)
+            ],
+        }
+        for team_id, profile in DEMO_ROSTERS.items()
+    }
+    rostered_players = [
+        entry
+        for team in teams.values()
+        for entry in team.get("roster", [])
+        if entry.get("player")
+    ]
+    picks = []
+    overall = 1
+    for round_id in range(1, 16):
+        for team in sorted(teams.values(), key=lambda item: int(item["teamId"])):
+            roster = team.get("roster") or []
+            entry = roster[round_id - 1] if round_id - 1 < len(roster) else None
+            if not entry:
+                continue
+            picks.append(
+                {
+                    "id": overall,
+                    "overall": overall,
+                    "round": round_id,
+                    "roundPick": len([pick for pick in picks if pick.get("round") == round_id]) + 1,
+                    "teamId": team["teamId"],
+                    "teamName": team["teamName"],
+                    "playerId": entry["playerId"],
+                    "player": entry["player"],
+                    "pos": entry["pos"],
+                    "proTeam": entry["proTeam"],
+                    "status": "drafted",
+                    "lineupSlot": entry["lineupSlot"],
+                    "bidAmount": 0,
+                }
+            )
+            overall += 1
+    customer_payload = demo_customer_payload(context, DEMO_TEAM_ID, league_settings)
+    return {
+        "ok": True,
+        "source": "FantasyIQ sanitized demo league",
+        "customer": customer_payload,
+        "customerSlug": context.slug,
+        "customerTeamId": DEMO_TEAM_ID,
+        "leagueId": None,
+        "season": context.season,
+        "demoMode": True,
+        "leagueName": "Full Demo League",
+        "leagueLogo": "",
+        "leagueSettings": league_settings,
+        "syncedAt": utc_now(),
+        "drafted": True,
+        "inProgress": False,
+        "draftSyncMode": "staticDemo",
+        "draftDetailCompletedPicks": len(picks),
+        "rosterFallbackPicks": 0,
+        "draftBridgePicks": 0,
+        "draftBridgeUpdatedAt": "",
+        "draftScheduledAt": "",
+        "draftAvailableAt": "",
+        "draftTimePerSelection": 0,
+        "draftType": "SNAKE",
+        "draftOrderType": "SNAKE",
+        "fallbackStates": ["This public demo uses sanitized sample rosters, not a live customer ESPN league."],
+        "totalPicks": len(picks),
+        "completedPicks": len(picks),
+        "currentPick": None,
+        "nextPicks": [],
+        "recentPicks": picks[-12:][::-1],
+        "draftOrder": [pick for pick in picks if pick.get("round") == 1],
+        "teams": list(teams.values()),
+        "picks": picks,
+        "draftedPlayerIds": [pick["playerId"] for pick in picks],
+        "draftedNames": [pick["player"] for pick in picks],
+        "rosteredPlayerIds": [entry["playerId"] for entry in rostered_players],
+        "rosteredNames": [entry["player"] for entry in rostered_players],
     }
 
 
@@ -496,6 +812,19 @@ def merge_league_settings(base: dict[str, Any], override: dict[str, Any] | None)
     return merged
 
 
+def customer_settings_are_manual(settings: dict[str, Any] | None) -> bool:
+    if not settings:
+        return False
+    source = str(settings.get("source") or "").strip().lower()
+    return "override" in source
+
+
+def merge_runtime_league_settings(espn_settings: dict[str, Any], customer_settings: dict[str, Any] | None) -> dict[str, Any]:
+    if customer_settings_are_manual(customer_settings):
+        return merge_league_settings(espn_settings, customer_settings)
+    return merge_league_settings(customer_settings or {}, espn_settings)
+
+
 def extract_league_settings(
     settings: dict[str, Any],
     team_count: int,
@@ -519,12 +848,14 @@ def extract_league_settings(
         "playoffTeams": playoff_team_count(settings),
         "source": "ESPN league settings",
     }
-    return merge_league_settings(extracted, context.league_settings)
+    return merge_runtime_league_settings(extracted, context.league_settings)
 
 
 def build_live_payload(request_path: str = "", headers: Any | None = None, force: bool = False) -> dict[str, Any]:
     authorized_context = authorize_customer_context(request_path, headers)
     context = override_customer_context(authorized_context, request_path)
+    if context.demo_mode and context.league_id is None:
+        return build_static_demo_payload(context)
     now = time.time()
     cached = _live_cache.get(context.cache_key)
     if not force and cached and cached.get("data") and now - float(cached.get("ts") or 0) < 5:
@@ -553,6 +884,7 @@ def build_live_payload(request_path: str = "", headers: Any | None = None, force
             "abbrev": team.get("abbrev", ""),
             "roster": roster_entries,
         }
+    demo_team_id = apply_demo_rosters(context, teams)
 
     draft_detail = league.get("draftDetail") or {}
     settings = league.get("settings") or {}
@@ -573,6 +905,8 @@ def build_live_payload(request_path: str = "", headers: Any | None = None, force
     pending = [pick for pick in picks if pick["status"] != "drafted"]
     draft_order = [pick for pick in picks if pick.get("round") == 1]
     league_settings = extract_league_settings(settings, len(teams), raw_picks, context)
+    customer_payload = demo_customer_payload(context, demo_team_id, league_settings)
+    draft_settings = settings.get("draftSettings") or {}
     rostered_players = [
         roster_player
         for team in teams.values()
@@ -612,9 +946,9 @@ def build_live_payload(request_path: str = "", headers: Any | None = None, force
     payload = {
         "ok": True,
         "source": "ESPN public league API",
-        "customer": context.public_dict(),
+        "customer": customer_payload,
         "customerSlug": context.slug,
-        "customerTeamId": context.customer_team_id,
+        "customerTeamId": customer_payload.get("customerTeamId") or context.customer_team_id,
         "leagueId": league_id,
         "season": season,
         "demoMode": context.demo_mode,
@@ -629,6 +963,11 @@ def build_live_payload(request_path: str = "", headers: Any | None = None, force
         "rosterFallbackPicks": roster_overlay_count,
         "draftBridgePicks": bridge_overlay_count,
         "draftBridgeUpdatedAt": bridge_snapshot.get("postedAt") if isinstance(bridge_snapshot, dict) else "",
+        "draftScheduledAt": iso_from_epoch_millis(draft_settings.get("date")),
+        "draftAvailableAt": iso_from_epoch_millis(draft_settings.get("availableDate")),
+        "draftTimePerSelection": int_setting(draft_settings.get("timePerSelection"), 0),
+        "draftType": draft_settings.get("type") or "",
+        "draftOrderType": draft_settings.get("orderType") or "",
         "fallbackStates": fallback_states,
         "totalPicks": len(picks),
         "completedPicks": len(completed),
