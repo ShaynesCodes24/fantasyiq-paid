@@ -16,7 +16,7 @@ for (const htmlRoot of htmlRoots) {
     const html = fs.readFileSync(filePath, "utf8");
     for (const script of inlineScripts(html)) {
       inlineScriptCount += 1;
-      const hash = crypto.createHash("sha256").update(script).digest("base64");
+      const hash = crypto.createHash("sha256").update(normalizeLineEndings(script)).digest("base64");
       if (!configuredHashes.has(hash)) {
         issues.push(`${display(filePath)} is missing CSP hash 'sha256-${hash}'`);
       }
@@ -70,4 +70,8 @@ function inlineScripts(html) {
 
 function display(filePath) {
   return path.relative(root, filePath).split(path.sep).join("/");
+}
+
+function normalizeLineEndings(value) {
+  return String(value || "").replace(/\r\n/g, "\n");
 }

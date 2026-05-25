@@ -196,7 +196,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'sha256-JB/wYy6rdD/Q32Z6aNCy187gOEjT9bbp1vU/Mwn4h/M=' 'sha256-cPgHzT7eU7i8j048UqAV/Y4D86WVHbQF620dsTeJSow=' 'sha256-eXHpktqx/rNZTgMj3vFZQ5ifA1XFaGymBD1qPjwY4oY=' 'sha256-xM7uidAHQhpHLzJf0l2BwMHGDspW2gNF3g6qnOfFhmA=' 'sha256-XHbf2QjrGDwn+R91wkha7JpfnrnO7rxNHW+Ix1/FEm0=' 'sha256-I6wlQOXFtjY98NYL1lOfx8E6tRpcy4RjMF+xV/lCln8=' 'sha256-N8I4yX2LgxVdCBspYHNU1Mx788zwwpr6jXJ9z07woIo='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; form-action 'self' https://buy.stripe.com; manifest-src 'self'; worker-src 'none'; upgrade-insecure-requests"
+          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'sha256-JB/wYy6rdD/Q32Z6aNCy187gOEjT9bbp1vU/Mwn4h/M=' 'sha256-WphvGi7m1K+bkI6mGdBX7qs3rgHqB6StpPqI6xT4t68=' 'sha256-C84zoBPyBzk1LKnvcKs4DI69WelWft4k0g3AJC1POGI=' 'sha256-H1+eZCkkIueSZtcVuF32pZuue49SuXeOGwndZ/z1LV8=' 'sha256-02fK+b3ShJ35jX3Isntml3n6LFhXWVXPb/AB6v+8hiI=' 'sha256-cMO/eVcx7+IGUIyD1y4k3xp9nozk3apSGkTxkBy8+p8=' 'sha256-NhI2eTW1/P3isKQqBx9w0NT+1FmWdGwkoWD436c9eRo='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; form-action 'self' https://buy.stripe.com; manifest-src 'self'; worker-src 'none'; upgrade-insecure-requests"
         },
         {
           "key": "Cross-Origin-Opener-Policy",

@@ -12,6 +12,9 @@ function copyDirectory(from, to) {
     const targetPath = path.join(to, entry.name);
     if (entry.isDirectory()) {
       copyDirectory(sourcePath, targetPath);
+    } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".html")) {
+      const normalized = fs.readFileSync(sourcePath, "utf8").replace(/\r\n/g, "\n");
+      fs.writeFileSync(targetPath, normalized, "utf8");
     } else {
       fs.copyFileSync(sourcePath, targetPath);
     }
