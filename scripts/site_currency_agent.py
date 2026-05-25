@@ -21,7 +21,7 @@ DEFAULT_SITE_URL = os.environ.get("FANTASYIQ_SITE_URL", "https://myfantasyiq.com
 EXPECTED_ASSETS = {
     "auth": "js/auth.js?v=20260524_email_login_1",
     "dashboard": "js/dashboard.js?v=20260525_big_board_adp_1",
-    "draft": "js/draft.js?v=20260525_trade_quality_3",
+    "draft": "js/draft.js?v=20260525_trade_quality_4",
 }
 EXPECTED_DASHBOARD_MARKERS = [
     "Fantasy IQ Data",

@@ -636,7 +636,7 @@ function tradePackageMakesSense(shape, diff, marketDiff, bestDelta, projectionDi
     return diff >= -2 && diff <= 6.5 && marketDiff >= -2.5 && marketDiff <= 4.5 && projectionDiff >= -10;
   }
   if (giveCount === 2 && getCount === 1) {
-    return bestDelta >= 1 && diff >= -18 && diff <= 5 && marketDiff >= -12 && marketDiff <= 4.5 && projectionDiff >= -90;
+    return bestDelta >= 1 && diff >= -36 && diff <= 5 && marketDiff >= -12 && marketDiff <= 4.5 && projectionDiff >= -190;
   }
   return false;
 }
