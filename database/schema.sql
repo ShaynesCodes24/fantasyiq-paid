@@ -375,6 +375,15 @@ CREATE TABLE IF NOT EXISTS fantasyiq_data_freshness (
 CREATE INDEX IF NOT EXISTS fantasyiq_data_freshness_stale_idx
     ON fantasyiq_data_freshness (is_stale, updated_at DESC);
 
+CREATE TABLE IF NOT EXISTS fantasyiq_provider_cache (
+    cache_key TEXT PRIMARY KEY,
+    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS fantasyiq_provider_cache_updated_idx
+    ON fantasyiq_provider_cache (updated_at DESC);
+
 CREATE TABLE IF NOT EXISTS fantasyiq_weekly_matchups (
     id BIGSERIAL PRIMARY KEY,
     customer_slug TEXT NOT NULL DEFAULT '',

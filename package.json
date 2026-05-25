@@ -12,7 +12,15 @@
     "test:phase4": "tsc -p tsconfig.json --noEmit",
     "test:phase5": "tsc -p tsconfig.json --noEmit",
     "test:visual": "node scripts/visual_smoke.js",
-    "test:readiness": "python scripts/check_product_readiness.py"
+    "test:mirrors": "node scripts/check_dashboard_mirror_drift.js",
+    "test:csp": "node scripts/check_csp_hashes.js",
+    "test:api": "python scripts/check_api_imports.py",
+    "test:security-boundaries": "python scripts/test_security_boundaries.py",
+    "agent:audit": "python scripts/run_agent_audit.py",
+    "agent:health": "python scripts/daily_league_intelligence_health.py",
+    "predeploy": "npm run typecheck && npm run test:api && npm run test:security-boundaries && npm run test:mirrors && npm run test:csp && npm run build",
+    "test:readiness": "python scripts/check_product_readiness.py",
+    "test:production-readiness": "python scripts/check_product_readiness.py"
   },
   "devDependencies": {
     "playwright": "^1.60.0",

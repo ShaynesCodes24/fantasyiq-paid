@@ -14,7 +14,8 @@ from datetime import date, datetime
 SITE_URL = os.environ.get("FANTASYIQ_SITE_URL", "https://myfantasyiq.com/").rstrip("/")
 VERCEL_APP_URL = os.environ.get("FANTASYIQ_VERCEL_APP_URL", "https://fantasyiq-paid.vercel.app").rstrip("/")
 ROOT_URL = f"{SITE_URL}/"
-DASHBOARD_URL = f"{SITE_URL}/FantasyIQ/"
+DASHBOARD_URL = ROOT_URL
+COMPAT_DASHBOARD_URL = f"{SITE_URL}/FantasyIQ/"
 STRIPE_URL = os.environ.get(
     "FANTASYIQ_STRIPE_URL",
     "https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01",
@@ -26,7 +27,7 @@ SETUP_VALIDATE_URL = os.environ.get(
     "FANTASYIQ_SETUP_VALIDATE_URL",
     f"{SITE_URL}/api/setup-validate?leagueId=584856941&teamId=5&season=2026",
 )
-CUSTOMER_STATUS_URL = os.environ.get("FANTASYIQ_CUSTOMER_STATUS_URL", f"{SITE_URL}/api/customer-status?customer=katelyn")
+CUSTOMER_STATUS_URL = os.environ.get("FANTASYIQ_CUSTOMER_STATUS_URL", f"{SITE_URL}/api/customer-status")
 WEBHOOK_URL = os.environ.get("FANTASYIQ_WEBHOOK_URL", f"{SITE_URL}/api/stripe-webhook")
 SUCCESS_URL = os.environ.get("FANTASYIQ_SUCCESS_URL", f"{SITE_URL}/success.html")
 PASSWORD_RESET_URL = os.environ.get("FANTASYIQ_PASSWORD_RESET_URL", f"{SITE_URL}/api/customer-password-reset")
@@ -96,11 +97,22 @@ def dashboard_check() -> CheckResult:
         return CheckResult("Dashboard", "FAIL", f"{DASHBOARD_URL} returned HTTP {status}")
     if "FantasyIQ" not in body:
         return CheckResult("Dashboard", "FAIL", f"{DASHBOARD_URL} missing: FantasyIQ")
+    if "Command Center" in body and "next-move-panel" in body:
+        return CheckResult("Dashboard", "PASS", f"{DASHBOARD_URL} is the apex Command Center")
     if "Demo Mode" in body and "No customer account is loaded" in body:
         return CheckResult("Dashboard", "PASS", f"{DASHBOARD_URL} is in public demo mode")
     if "Active" in body and "Configured for" in body and "Demo Mode" not in body:
         return CheckResult("Dashboard", "PASS", f"{DASHBOARD_URL} is in paid customer mode")
     return CheckResult("Dashboard", "FAIL", f"{DASHBOARD_URL} is neither demo mode nor paid customer mode")
+
+
+def compatibility_dashboard_check() -> CheckResult:
+    status, body = fetch(COMPAT_DASHBOARD_URL)
+    if status != 200:
+        return CheckResult("Compatibility dashboard", "FAIL", f"{COMPAT_DASHBOARD_URL} returned HTTP {status}")
+    if "Command Center" in body and "next-move-panel" in body:
+        return CheckResult("Compatibility dashboard", "PASS", f"{COMPAT_DASHBOARD_URL} still serves the app")
+    return CheckResult("Compatibility dashboard", "FAIL", f"{COMPAT_DASHBOARD_URL} missing Command Center app")
 
 
 def canonical_domain_check() -> CheckResult:
@@ -109,9 +121,9 @@ def canonical_domain_check() -> CheckResult:
     if not app_host or app_host == site_host:
         return CheckResult("Canonical domain", "PASS", f"{SITE_URL} is the configured site URL")
 
-    check_url = f"{VERCEL_APP_URL}/FantasyIQ/"
+    check_url = f"{VERCEL_APP_URL}/"
     status, location = fetch_no_redirect(check_url)
-    expected = f"{SITE_URL}/FantasyIQ/"
+    expected = f"{SITE_URL}/"
     if status in {301, 302, 307, 308} and location == expected:
         return CheckResult("Canonical domain", "PASS", f"{check_url} redirects to {expected}")
     return CheckResult("Canonical domain", "FAIL", f"{check_url} returned HTTP {status} with Location {location or 'missing'}")
@@ -123,11 +135,11 @@ def root_check() -> CheckResult:
         return CheckResult("Root URL", "FAIL", f"{ROOT_URL} returned HTTP {status}")
     if "FantasyIQ" not in body:
         return CheckResult("Root URL", "FAIL", f"{ROOT_URL} missing: FantasyIQ")
-    if ("Start setup" in body or "Start Season Pass" in body or "Check ESPN compatibility" in body) and "setup.html?mode=precheck" in body:
-        return CheckResult("Root URL", "PASS", f"{ROOT_URL} is in public sales mode")
+    if "Command Center" in body and "next-move-panel" in body:
+        return CheckResult("Root URL", "PASS", f"{ROOT_URL} is the production Command Center")
     if "Active" in body and "Configured for" in body:
         return CheckResult("Root URL", "PASS", f"{ROOT_URL} redirects to paid customer dashboard")
-    return CheckResult("Root URL", "FAIL", f"{ROOT_URL} is neither sales mode nor paid dashboard mode")
+    return CheckResult("Root URL", "FAIL", f"{ROOT_URL} is not serving the Command Center app")
 
 
 def stripe_check() -> CheckResult:
@@ -287,6 +299,7 @@ def main() -> int:
     checks = [
         root_check(),
         dashboard_check(),
+        compatibility_dashboard_check(),
         canonical_domain_check(),
         page_check("Terms", f"{SITE_URL}/terms.html", ["Terms"]),
         page_check("Privacy", f"{SITE_URL}/privacy.html", ["Privacy"]),

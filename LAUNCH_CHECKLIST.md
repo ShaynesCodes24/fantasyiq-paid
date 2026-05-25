@@ -15,7 +15,7 @@
 - Done: Set Vercel Output Directory to `dist`.
 - Done: Store paid customer records and league profiles in Neon/Postgres when `DATABASE_URL` is connected.
 - Confirm the database customer registry includes every paid customer's league profiles.
-- Done: Configure Katelyn as the first real customer using her public ESPN league.
+- Done: Configure the first customer using their public ESPN league.
 - Next: Test the public demo dashboard after redeploying the public sales config.
 - Use `https://myfantasyiq.com/FantasyIQ/` as Stripe's business website.
 - Done: Run `python .\scripts\check_product_readiness.py` before sharing the offer publicly.

@@ -6,16 +6,16 @@ validated the checkout and fulfillment flow.
 ## Completed First Customer
 
 ```text
-Customer: Katelyn Holladay
+Customer: Demo Manager
 League: No Guts, No Glory
-Team: KatAttack
+Team: Sample Team
 League ID: 584856941
 Team ID: 5
 Season: 2026
 Checkout session: cs_live_a1dFa5qV8Kbccz0TZx9j1Mxf9RcHkutClazb3BSs1TffjYLUhlFCBoKu6q
 Paid at: 2026-05-19
 Renewal date: 2027-05-19
-Dashboard verified: https://myfantasyiq.com/FantasyIQ/?customer=katelyn
+Dashboard verified: https://myfantasyiq.com/FantasyIQ/?customer=demo-manager
 ```
 
 ## Tester Steps
@@ -37,6 +37,6 @@ Dashboard verified: https://myfantasyiq.com/FantasyIQ/?customer=katelyn
 1. Done: Confirm the payment appears in Stripe.
 2. Done: Confirm the custom checkout fields are configured on the payment link.
 3. Owner action: Confirm the customer email appears correctly.
-4. Done: Customer tracker includes Katelyn as the first real customer.
-5. Do not refund unless Katelyn asks to cancel.
+4. Done: Customer tracker includes the first real customer.
+5. Do not refund unless the customer asks to cancel.
 6. Done: Run `python .\scripts\check_product_readiness.py` again.

@@ -49,6 +49,18 @@ def constant_time_match(left: str, right: str) -> bool:
     return bool(left and right and hmac.compare_digest(left, right))
 
 
+def context_allows_bridge_league(context: Any, league_id: int, season: int) -> bool:
+    if int_value(getattr(context, "league_id", 0), 0) == league_id and int_value(getattr(context, "season", 0), 0) == season:
+        return True
+    for league in getattr(context, "available_leagues", []) or []:
+        if int_value(league.get("leagueId"), 0) != league_id:
+            continue
+        league_season = int_value(league.get("season"), season)
+        if league_season == season:
+            return True
+    return False
+
+
 def clean_pick(raw: Any) -> dict[str, Any] | None:
     if not isinstance(raw, dict):
         return None
@@ -128,7 +140,6 @@ def register_bridge_session(league_id: int, season: int, bridge_key: str) -> dic
         raise ValueError("leagueId is required.")
     if len(str(bridge_key or "")) < 24 or not key_hash:
         raise ValueError("Bridge key is invalid.")
-
     snapshot = {
         "leagueId": league_id,
         "season": season,
@@ -155,6 +166,7 @@ def register_bridge_session(league_id: int, season: int, bridge_key: str) -> dic
                     VALUES (%s, %s, %s::jsonb, %s, %s, NOW())
                     ON CONFLICT (league_id, season)
                     DO UPDATE SET
+                        payload = EXCLUDED.payload,
                         bridge_key_hash = EXCLUDED.bridge_key_hash,
                         bridge_source = EXCLUDED.bridge_source,
                         updated_at = NOW()
@@ -202,8 +214,12 @@ def store_bridge_snapshot(snapshot: dict[str, Any], bridge_key: str = "") -> dic
     if league_id <= 0:
         raise ValueError("leagueId is required.")
     key_hash = bridge_key_hash(bridge_key)
+    if not key_hash:
+        raise PermissionError("Bridge key is required.")
     existing_hash = existing_bridge_key_hash(league_id, season)
-    if existing_hash and not constant_time_match(existing_hash, key_hash):
+    if not existing_hash:
+        raise PermissionError("Register the draft bridge before posting snapshots.")
+    if not constant_time_match(existing_hash, key_hash):
         raise PermissionError("Bridge key did not match this draft session.")
 
     key = bridge_cache_key(league_id, season)
@@ -294,7 +310,7 @@ def cors_headers(handler: BaseHTTPRequestHandler) -> dict[str, str]:
     return {
         "Access-Control-Allow-Origin": allow_origin,
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-fantasyiq-access-code, x-fantasy-iq-access-code",
         "Vary": "Origin",
     }
 
@@ -307,21 +323,35 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self) -> None:
-        params = parse_qs(urlparse(self.path).query)
-        league_id = int_value(params.get("leagueId", [""])[0], 0)
-        season = int_value(params.get("season", [""])[0], 2026)
-        snapshot = bridge_snapshot_for_league(league_id, season)
-        json_response(
-            self,
-            HTTPStatus.OK,
-            {
-                "ok": True,
-                "leagueId": league_id,
-                "season": season,
-                "snapshot": snapshot,
-                "syncedAt": utc_now(),
-            },
-        )
+        try:
+            params = parse_qs(urlparse(self.path).query)
+            league_id = int_value(params.get("leagueId", [""])[0], 0)
+            season = int_value(params.get("season", [""])[0], 2026)
+            context = authorize_customer_context(self.path, self.headers)
+            if not context_allows_bridge_league(context, league_id, season):
+                raise PermissionError("Draft bridge league must match a saved FantasyIQ league on this account.")
+            snapshot = bridge_snapshot_for_league(league_id, season)
+            json_response(
+                self,
+                HTTPStatus.OK,
+                {
+                    "ok": True,
+                    "leagueId": league_id,
+                    "season": season,
+                    "snapshot": snapshot,
+                    "syncedAt": utc_now(),
+                },
+            )
+        except Exception as exc:
+            json_response(
+                self,
+                HTTPStatus.UNAUTHORIZED,
+                {
+                    "ok": False,
+                    "error": str(exc),
+                    "syncedAt": utc_now(),
+                },
+            )
 
     def do_POST(self) -> None:
         try:
@@ -331,10 +361,14 @@ class handler(BaseHTTPRequestHandler):
             if not isinstance(payload, dict):
                 raise ValueError("JSON body must be an object.")
             if str(payload.get("action") or "").lower() == "register":
-                authorize_customer_context(self.path, self.headers)
+                context = authorize_customer_context(self.path, self.headers)
+                league_id = int_value(payload.get("leagueId"), 0)
+                season = int_value(payload.get("season") or payload.get("seasonId"), 2026)
+                if not context_allows_bridge_league(context, league_id, season):
+                    raise PermissionError("Draft bridge league must match a saved FantasyIQ league on this account.")
                 snapshot = register_bridge_session(
-                    int_value(payload.get("leagueId"), 0),
-                    int_value(payload.get("season") or payload.get("seasonId"), 2026),
+                    league_id,
+                    season,
                     str(payload.get("bridgeKey") or ""),
                 )
             else:

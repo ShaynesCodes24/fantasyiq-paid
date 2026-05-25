@@ -332,20 +332,31 @@ def fallback_context(slug: str = "default", selected_league: str = "") -> Custom
             source=context.source,
         )
 
-    league_id = int_value(configured_league, "FANTASY_IQ_LEAGUE_ID", DEFAULT_DEMO_LEAGUE_ID)
+    league_id = int_value(configured_league, "FANTASY_IQ_LEAGUE_ID") if configured_league else None
     season = int_value(env("FANTASY_IQ_SEASON"), "FANTASY_IQ_SEASON", DEFAULT_SEASON) or DEFAULT_SEASON
     team_id = int_value(env("FANTASY_IQ_CUSTOMER_TEAM_ID"), "FANTASY_IQ_CUSTOMER_TEAM_ID")
     return CustomerContext(
         slug=slugify(env("FANTASY_IQ_CUSTOMER_SLUG", slug)),
         league_id=league_id,
         season=season,
-        customer_name=env("FANTASY_IQ_CUSTOMER_NAME"),
+        customer_name=env("FANTASY_IQ_CUSTOMER_NAME", "Demo Manager" if not configured_league else ""),
         email=env("FANTASY_IQ_CUSTOMER_EMAIL"),
         league_key=slugify(env("FANTASY_IQ_DEFAULT_LEAGUE")) if env("FANTASY_IQ_DEFAULT_LEAGUE") else "",
         customer_team_id=team_id,
-        customer_team_name=env("FANTASY_IQ_CUSTOMER_TEAM_NAME"),
-        league_name=env("FANTASY_IQ_LEAGUE_NAME"),
-        league_settings=dict_value(env("FANTASY_IQ_LEAGUE_SETTINGS")),
+        customer_team_name=env("FANTASY_IQ_CUSTOMER_TEAM_NAME", "FantasyIQ Demo Squad" if not configured_league else ""),
+        league_name=env("FANTASY_IQ_LEAGUE_NAME", "Full Demo League" if not configured_league else ""),
+        league_settings=dict_value(env("FANTASY_IQ_LEAGUE_SETTINGS")) or (
+            {
+                "teamCount": 12,
+                "scoringType": "ppr",
+                "scoringLabel": "PPR",
+                "receptionPoints": 1,
+                "lineupSlots": {"QB": 1, "RB": 2, "WR": 2, "TE": 1, "FLEX": 1, "DST": 1, "K": 1, "BE": 7, "IR": 1},
+                "source": "Sanitized FantasyIQ demo profile",
+            }
+            if not configured_league
+            else {}
+        ),
         available_leagues=[],
         status=env("FANTASY_IQ_CUSTOMER_STATUS", "configured"),
         access_code=env("FANTASY_IQ_CUSTOMER_ACCESS_CODE"),

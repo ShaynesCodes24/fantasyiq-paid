@@ -1,32 +1,32 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "node scripts/build_static.js",
+  "buildCommand": "npm run predeploy",
   "installCommand": "",
   "outputDirectory": "dist",
   "redirects": [
     {
       "source": "/login",
-      "destination": "/FantasyIQ/?login=1",
+      "destination": "/?login=1",
       "permanent": false
     },
     {
       "source": "/sign-in",
-      "destination": "/FantasyIQ/?login=1",
+      "destination": "/?login=1",
       "permanent": false
     },
     {
       "source": "/dashboard",
-      "destination": "/FantasyIQ/?login=1",
+      "destination": "/?login=1",
       "permanent": false
     },
     {
       "source": "/fantasyiq",
-      "destination": "/FantasyIQ/",
+      "destination": "/",
       "permanent": false
     },
     {
       "source": "/fantasyiq/(.*)",
-      "destination": "/FantasyIQ/$1",
+      "destination": "/",
       "permanent": false
     }
   ],
@@ -70,6 +70,34 @@
     {
       "source": "/api/trade-history.json",
       "destination": "/api/trade_history"
+    },
+    {
+      "source": "/api/fantasycalc-market",
+      "destination": "/api/fantasycalc_market"
+    },
+    {
+      "source": "/api/fantasycalc-market.json",
+      "destination": "/api/fantasycalc_market"
+    },
+    {
+      "source": "/api/fantasycalc-trades",
+      "destination": "/api/fantasycalc_trades"
+    },
+    {
+      "source": "/api/fantasycalc-trades.json",
+      "destination": "/api/fantasycalc_trades"
+    },
+    {
+      "source": "/api/data-freshness",
+      "destination": "/api/data_freshness"
+    },
+    {
+      "source": "/api/data-freshness.json",
+      "destination": "/api/data_freshness"
+    },
+    {
+      "source": "/api/cron/daily-data-refresh",
+      "destination": "/api/cron_daily_refresh"
     },
     {
       "source": "/api/intelligence",
@@ -116,6 +144,10 @@
       "destination": "/api/add_league_checkout"
     },
     {
+      "source": "/api/remove-league",
+      "destination": "/api/remove_league"
+    },
+    {
       "source": "/api/track-event",
       "destination": "/api/setup_validate"
     },
@@ -130,6 +162,12 @@
     {
       "source": "/api/stripe-webhook",
       "destination": "/api/stripe_webhook"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/daily-data-refresh",
+      "schedule": "0 10 * * *"
     }
   ],
   "headers": [
@@ -151,6 +189,45 @@
         {
           "key": "X-Frame-Options",
           "value": "DENY"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'sha256-JB/wYy6rdD/Q32Z6aNCy187gOEjT9bbp1vU/Mwn4h/M=' 'sha256-WphvGi7m1K+bkI6mGdBX7qs3rgHqB6StpPqI6xT4t68=' 'sha256-C84zoBPyBzk1LKnvcKs4DI69WelWft4k0g3AJC1POGI=' 'sha256-H1+eZCkkIueSZtcVuF32pZuue49SuXeOGwndZ/z1LV8=' 'sha256-02fK+b3ShJ35jX3Isntml3n6LFhXWVXPb/AB6v+8hiI=' 'sha256-RHyNgkptQ+wFecNzB9aSRmjEiQA3JokFm8Xj6cxqj4Y=' 'sha256-B2TICZLh2cuEEz33vADmkps1yRtXxx8vKcqFDVCVkuM=' 'sha256-kXvRz2fLgJsq/xNmC8kYMKTbn66omBOPbX+dR+XGi4w=' 'sha256-cMO/eVcx7+IGUIyD1y4k3xp9nozk3apSGkTxkBy8+p8=' 'sha256-NhI2eTW1/P3isKQqBx9w0NT+1FmWdGwkoWD436c9eRo='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; form-action 'self' https://buy.stripe.com; manifest-src 'self'; worker-src 'none'; upgrade-insecure-requests"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    },
+    {
+      "source": "/js/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    },
+    {
+      "source": "/data/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
         }
       ]
     },

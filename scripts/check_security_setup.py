@@ -139,7 +139,37 @@ def check_security_headers() -> Result:
     missing = [key for key, value in required.items() if values.get(key) != value]
     if missing:
         return Result("Security headers", "FAIL", f"Missing or changed headers: {', '.join(missing)}")
-    return Result("Security headers", "PASS", "Baseline browser security headers are configured.")
+    csp = values.get("Content-Security-Policy", "")
+    csp_required = [
+        "default-src 'self'",
+        "object-src 'none'",
+        "frame-ancestors 'none'",
+        "script-src-attr 'none'",
+        "connect-src 'self'",
+    ]
+    missing_csp = [item for item in csp_required if item not in csp]
+    if missing_csp:
+        return Result("Security headers", "FAIL", f"CSP is missing: {', '.join(missing_csp)}")
+    if values.get("Strict-Transport-Security") != "max-age=63072000; includeSubDomains; preload":
+        return Result("Security headers", "FAIL", "HSTS preload header is missing or changed.")
+    if values.get("Cross-Origin-Opener-Policy") != "same-origin":
+        return Result("Security headers", "FAIL", "Cross-Origin-Opener-Policy is missing or changed.")
+    return Result("Security headers", "PASS", "CSP, HSTS, and baseline browser security headers are configured.")
+
+
+def check_client_secret_storage() -> Result:
+    api_text = (ROOT / "public" / "FantasyIQ" / "js" / "api.js").read_text(encoding="utf-8")
+    state_text = (ROOT / "public" / "FantasyIQ" / "js" / "state.js").read_text(encoding="utf-8")
+    setup_text = (ROOT / "public" / "setup.html").read_text(encoding="utf-8")
+    if '"x-fantasyiq-access-code"' in api_text or "headers[\"x-fantasyiq-access-code\"]" in api_text:
+        return Result("Client access code storage", "FAIL", "Client JS still sends customer access codes on API requests.")
+    if 'localStorage.setItem(\\n    loadoutStorageKey("access-code")' in api_text or '`fantasy-dashboard:${key}:access-code`' in state_text:
+        return Result("Client access code storage", "FAIL", "Client JS still persists customer access codes in localStorage.")
+    if ":access-code" in setup_text or "savedAccessCode" in setup_text or "rememberAccessCode" in setup_text:
+        return Result("Setup access code storage", "FAIL", "Setup page still persists or reloads customer access codes.")
+    if "return Boolean(customerPasswordSession)" not in api_text:
+        return Result("Client access code storage", "FAIL", "Customer access should rely on the HttpOnly session state in memory.")
+    return Result("Client access code storage", "PASS", "Access codes are not persisted or replayed by browser JavaScript.")
 
 
 def check_rate_limiting() -> Result:
@@ -179,6 +209,7 @@ def main() -> int:
         check_ignored(".vercelignore", REQUIRED_VERCELIGNORE),
         check_vercel_config(),
         check_security_headers(),
+        check_client_secret_storage(),
         check_admin_token_transport(),
         check_rate_limiting(),
     ]

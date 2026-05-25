@@ -52,7 +52,7 @@ def security_check() -> Step:
 
 def local_content_check() -> Step:
     checks = {
-        "public/index.html": ["Check ESPN compatibility", "setup.html?mode=precheck", "Software subscription only"],
+        "public/index.html": ["Command Center", "next-move-panel", "Your smartest next move"],
         "public/FantasyIQ/config.js": ["Demo Mode", "showSubscribeButton: true", "$30 / year"],
         "SECURITY_SETUP.md": ["Do not put admin tokens in URLs", "customers.csv", "excluded from Vercel deploys"],
     }
@@ -64,7 +64,7 @@ def local_content_check() -> Step:
                 missing.append(f"{relative_path}: {needle}")
     if missing:
         return Step("Static content check", "FAIL", "; ".join(missing))
-    return Step("Static content check", "PASS", "Public sales/demo/security copy is present.")
+    return Step("Static content check", "PASS", "Apex Command Center, demo config, and security copy are present.")
 
 
 def node_build() -> Step:

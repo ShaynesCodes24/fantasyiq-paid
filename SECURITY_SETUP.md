@@ -163,7 +163,7 @@ $env:FANTASYIQ_ADMIN_GATE_PASSWORD="long_random_admin_gate_password_here"
 $env:FANTASYIQ_ADMIN_GATE_SECRET="long_random_admin_gate_signing_secret_here"
 $env:FANTASYIQ_ADMIN_TOKEN="long_random_admin_token_here"
 $env:STRIPE_WEBHOOK_SECRET="whsec_your_webhook_secret_here"
-$env:FANTASY_IQ_CUSTOMERS_JSON='{"katelyn":{"customerName":"Katelyn Holladay","teamId":5,"teamName":"KatAttack","leagueId":584856941,"season":2026,"status":"configured","accessCode":"customer_code_here"}}'
+$env:FANTASY_IQ_CUSTOMERS_JSON='{"demo-manager":{"customerName":"Demo Manager","teamId":5,"teamName":"Sample Team","leagueId":584856941,"season":2026,"status":"configured","accessCode":"customer_code_here"}}'
 python .\scripts\secure_launch_setup.py --apply-vercel-env
 Remove-Item Env:\VERCEL_TOKEN
 Remove-Item Env:\FANTASYIQ_ADMIN_GATE_PASSWORD

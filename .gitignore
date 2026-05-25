@@ -9,7 +9,9 @@ test-results/
 private/
 .env
 .env.local
+.env.production
 .env.*.local
+.env*.bak
 *udk*.csv
 *udk*signals*.json
 customers.csv

@@ -23,6 +23,14 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
+GENERIC_LOGIN_FAILURE = "Email, password, or access code did not match."
+
+
+def is_email(value: str) -> bool:
+    clean = str(value or "").strip()
+    return "@" in clean and "." in clean.rsplit("@", 1)[-1] and " " not in clean
+
+
 def parse_body(handler: BaseHTTPRequestHandler) -> dict[str, Any]:
     length = int(handler.headers.get("Content-Length") or 0)
     if length <= 0:
@@ -41,7 +49,7 @@ def dashboard_url(customer_slug: str, league_key: str = "") -> str:
         query["league"] = league_key
     from urllib.parse import urlencode
 
-    return f"/FantasyIQ/?{urlencode(query)}"
+    return f"/?{urlencode(query)}"
 
 
 def log_login_event(event_type: str, message: str, raw: dict[str, Any], severity: str = "info") -> None:
@@ -66,12 +74,14 @@ def log_login_event(event_type: str, message: str, raw: dict[str, Any], severity
 
 
 def login_payload(raw: dict[str, Any], headers: Any | None = None) -> tuple[dict[str, Any], list[tuple[str, str]]]:
-    identity = str(raw.get("customer") or raw.get("email") or raw.get("dashboard") or "").strip()
+    identity = str(raw.get("email") or raw.get("customer") or raw.get("dashboard") or "").strip()
     access_code = str(raw.get("accessCode") or raw.get("access_code") or raw.get("code") or "").strip()
     password = str(raw.get("password") or "").strip()
     selected_league = str(raw.get("league") or raw.get("leagueKey") or "").strip()
     if not identity:
-        raise PermissionError("Enter the email from checkout or your dashboard slug.")
+        raise PermissionError("Enter the email from checkout.")
+    if not is_email(identity):
+        raise PermissionError("Enter a valid checkout email address.")
 
     if password:
         if len(password) > 128:
@@ -178,7 +188,7 @@ class handler(BaseHTTPRequestHandler):
             self.send_json(payload, extra_headers=extra_headers)
         except (PermissionError, ConfigError, json.JSONDecodeError) as exc:
             log_login_event("login.failed", str(exc), raw, "warning")
-            self.send_json({"ok": False, "message": str(exc), "syncedAt": utc_now()}, HTTPStatus.UNAUTHORIZED)
+            self.send_json({"ok": False, "message": GENERIC_LOGIN_FAILURE, "syncedAt": utc_now()}, HTTPStatus.UNAUTHORIZED)
         except Exception:
             log_login_event("login.error", "Could not verify that account right now.", raw, "warning")
             self.send_json({"ok": False, "message": "Could not verify that account right now.", "syncedAt": utc_now()}, HTTPStatus.BAD_GATEWAY)

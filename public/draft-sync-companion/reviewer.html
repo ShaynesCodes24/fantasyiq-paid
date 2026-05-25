@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MyFantasyIQ Companion Review Check</title>
+    <style>
+      :root {
+        --ink: #102c25;
+        --muted: #63726d;
+        --green: #123f34;
+        --gold: #f0c35b;
+        --paper: #fffaf0;
+        --line: rgba(18, 63, 52, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #06251f;
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      main {
+        width: min(940px, calc(100% - 32px));
+        margin: 42px auto;
+        border: 1px solid rgba(240, 195, 91, 0.38);
+        border-radius: 8px;
+        background: var(--paper);
+        padding: clamp(20px, 4vw, 34px);
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        color: var(--ink);
+        font-size: clamp(32px, 5vw, 54px);
+        line-height: 1;
+      }
+
+      p,
+      li {
+        color: var(--muted);
+        font-size: 17px;
+        font-weight: 750;
+        line-height: 1.55;
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: #a57918;
+        font-size: 13px;
+        font-weight: 950;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      .status {
+        display: grid;
+        gap: 8px;
+        margin: 22px 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fffdf8;
+        padding: 18px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        width: max-content;
+        min-height: 36px;
+        border-radius: 999px;
+        background: #fff3cf;
+        color: #6f4d08;
+        padding: 0 12px;
+        font-size: 13px;
+        font-weight: 950;
+        text-transform: uppercase;
+      }
+
+      .status[data-installed="true"] .pill {
+        background: #e9f7ef;
+        color: #215f42;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fffdf8;
+        padding: 18px;
+      }
+
+      .panel h2 {
+        margin: 0 0 10px;
+        font-size: 18px;
+        line-height: 1.2;
+      }
+
+      .panel ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 22px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        border: 1px solid rgba(18, 63, 52, 0.22);
+        border-radius: 8px;
+        background: var(--green);
+        color: #fff;
+        padding: 0 16px;
+        font-weight: 950;
+        text-decoration: none;
+      }
+
+      .button.secondary {
+        background: #fffdf8;
+        color: var(--green);
+      }
+
+      @media (max-width: 760px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Chrome Web Store Reviewer Check</p>
+      <h1>Draft Sync Companion</h1>
+      <p>
+        This page lets Chrome Web Store reviewers verify that the installed extension can run on MyFantasyIQ
+        without requiring a live ESPN draft room.
+      </p>
+
+      <section class="status" id="review-status-card" data-installed="false">
+        <span class="pill" id="review-status">Not installed</span>
+        <p id="review-detail">Install the extension, then refresh this page. The status should change to Installed.</p>
+      </section>
+
+      <section class="grid" aria-label="Reviewer details">
+        <article class="panel">
+          <h2>What This Verifies</h2>
+          <ul>
+            <li>The MyFantasyIQ content script is active.</li>
+            <li>The extension can confirm installed status to MyFantasyIQ pages.</li>
+            <li>The test does not require ESPN credentials or a live draft room.</li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h2>Data Boundaries</h2>
+          <ul>
+            <li>No ESPN passwords are collected.</li>
+            <li>No ESPN session cookies are sent to MyFantasyIQ.</li>
+            <li>ESPN's draft security token is used locally in Chrome and is not stored or transmitted to MyFantasyIQ.</li>
+            <li>Live pick-event sync requires a user-owned ESPN fantasy football draft room.</li>
+          </ul>
+        </article>
+      </section>
+
+      <div class="actions">
+        <a class="button" href="/#live">Open Draft Room</a>
+        <a class="button secondary" href="/draft-sync-companion/install.html">Open Install Page</a>
+        <a class="button secondary" href="/privacy.html">Privacy Policy</a>
+      </div>
+    </main>
+
+    <script>
+      const card = document.querySelector("#review-status-card");
+      const status = document.querySelector("#review-status");
+      const detail = document.querySelector("#review-detail");
+
+      function setInstalled() {
+        card.dataset.installed = "true";
+        status.textContent = "Installed";
+        detail.textContent = "The MyFantasyIQ Draft Sync Companion is installed and can communicate with MyFantasyIQ pages.";
+      }
+
+      window.addEventListener("message", (event) => {
+        if (event.origin !== window.location.origin) return;
+        const payload = event.data || {};
+        if (payload.type === "FANTASYIQ_DRAFT_COMPANION_STATUS" && payload.installed) setInstalled();
+      });
+
+      window.postMessage({ type: "FANTASYIQ_DRAFT_COMPANION_PING" }, window.location.origin);
+      window.setTimeout(() => {
+        window.postMessage({ type: "FANTASYIQ_DRAFT_COMPANION_PING" }, window.location.origin);
+      }, 800);
+    </script>
+  </body>
+</html>
