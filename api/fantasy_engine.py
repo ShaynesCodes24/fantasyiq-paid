@@ -131,13 +131,14 @@ def evaluate_roster(roster: list[dict[str, Any]]) -> RosterProfile:
         0.0,
         min(
             100.0,
-            starter_quality * 0.86
-            + bench_depth * 0.14
+            10.0
+            + starter_quality * 0.78
+            + bench_depth * 0.12
             + roster_size_bonus
             + (4.0 if bench_depth == 0 and starter_quality > 0 else 0.0)
-            - starter_gap_penalty
-            - depth_gap_penalty
-            - bye_week_risk * 0.15,
+            - starter_gap_penalty * 0.75
+            - depth_gap_penalty * 0.55
+            - bye_week_risk * 0.1,
         ),
     )
 
@@ -218,11 +219,11 @@ def best_draft_pick(board: list[dict[str, Any]], profile: RosterProfile) -> dict
 def fantasy_iq_score(profile: RosterProfile, waiver: dict[str, Any] | None, trade: dict[str, Any] | None) -> int:
     score = profile.team_strength
     if waiver and waiver["priority"] == "high":
-        score -= 3
+        score -= 2
     if trade and trade["valueDelta"] > 4:
         score += 2
-    score -= min(6, profile.bye_week_risk * 0.12)
-    return int(max(1, min(99, round(score))))
+    score -= min(4, profile.bye_week_risk * 0.08)
+    return int(max(45, min(99, round(score))))
 
 
 def recommendation(payload: dict[str, Any]) -> dict[str, Any]:

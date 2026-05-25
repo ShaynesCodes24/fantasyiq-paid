@@ -214,11 +214,11 @@ function postDraftGrade(snapshot) {
   const starterGaps = weaknesses.reduce((sum, item) => sum + item.starterGap, 0);
   const depthGaps = weaknesses.reduce((sum, item) => sum + item.depthGap, 0);
   let score =
-    58 +
-    (consensus.starterAvg - 60) * 0.52 +
-    (consensus.depthAvg ? (consensus.depthAvg - 55) * 0.18 : 0) +
-    (avgValue - 55) * 0.12 +
-    consensus.coverage * 4;
+    66 +
+    (consensus.starterAvg - 58) * 0.44 +
+    (consensus.depthAvg ? (consensus.depthAvg - 52) * 0.12 : 0) +
+    (avgValue - 55) * 0.08 +
+    consensus.coverage * 5;
 
   if (snapshot.picks.length) {
     const pickGrades = snapshot.picks.map((pick) => valueForPick(pick).label);
@@ -226,13 +226,13 @@ function postDraftGrade(snapshot) {
     score += pickGrades.filter((label) => label === "Good value").length;
     score -= pickGrades.filter((label) => label === "Reach").length * 2;
   }
-  score -= starterGaps * 3.5;
-  score -= Math.max(0, depthGaps - starterGaps) * 0.75;
+  score -= starterGaps * 2.25;
+  score -= Math.max(0, depthGaps - starterGaps) * 0.45;
   if (rbWr >= Math.max(5, starterTargetCounts().RB + starterTargetCounts().WR + flexStarterTarget())) score += 2;
-  if (avgRisk > 5.8) score -= 2;
+  if (avgRisk > 5.8) score -= 1.5;
   if (avgRisk < 3.2 && rows.length >= 7) score += 1;
-  if (activeLineupSlots().SUPERFLEX && Number(snapshot.counts.QB || 0) < 2) score -= 4;
-  score = Math.round(clampNumber(score, 52, 98));
+  if (activeLineupSlots().SUPERFLEX && Number(snapshot.counts.QB || 0) < 2) score -= 3;
+  score = Math.round(clampNumber(score, 58, 98));
   const notes = [
     `Consensus score ${avgValue.toFixed(1)} using board value, projections, rank, and market support.`,
     weaknesses.length
@@ -1473,12 +1473,12 @@ function commandScoreFromData(data, rec, snapshot) {
   if (Number.isFinite(rosterScore) && rosterScore > 0) {
     let score = rosterScore;
     if (Number.isFinite(backendScore) && backendScore > 20) {
-      score = rosterScore * 0.72 + backendScore * 0.28;
+      score = Math.max(rosterScore - 3, rosterScore * 0.86 + backendScore * 0.14);
     } else {
       const confidence = Number(rec?.confidenceScore);
-      if (Number.isFinite(confidence)) score = rosterScore * 0.76 + confidence * 0.24;
+      if (Number.isFinite(confidence)) score = Math.max(rosterScore - 2, rosterScore * 0.88 + confidence * 0.12);
     }
-    if (rec?.action === "WAIT") score += 2;
+    if (rec?.action === "WAIT") score += 1;
     if (rec?.action === "ACT_NOW") score -= 1;
     return Math.round(clampNumber(score, 1, 99));
   }
