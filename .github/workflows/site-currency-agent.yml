@@ -13,8 +13,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  verify-production-current:
-    name: Verify production is current
+  deploy-production:
+    name: Deploy production coordinator
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
@@ -61,13 +61,134 @@ jobs:
           npx vercel pull --yes --environment=production --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
           npx vercel deploy --prod --yes --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
 
-      - name: Verify live production is up to date
-        run: npm run agent:site-currency:ci
-
-      - name: Upload site currency report
+      - name: Upload coordinator reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: site-currency-report
+          name: site-currency-coordinator-report
           path: artifacts/site-currency/*.json
+          if-no-files-found: ignore
+
+  collaborating-agent:
+    name: Collaborating agent review
+    needs: deploy-production
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      FANTASYIQ_SITE_URL: https://myfantasyiq.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run collaborating local audit agent
+        run: npm run agent:audit
+
+      - name: Run collaborating production review agent
+        run: npm run agent:site-currency:collaborator
+
+      - name: Upload collaborating agent reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-currency-collaborator-report
+          path: |
+            artifacts/agent-reports/*.json
+            artifacts/site-currency/*.json
+          if-no-files-found: ignore
+
+  verifier-data-agent:
+    name: Verifier agent A - data currency
+    needs: deploy-production
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      FANTASYIQ_SITE_URL: https://myfantasyiq.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify production site currency
+        run: python scripts/site_currency_agent.py --ci --skip-local --max-attempts 6 --sleep-seconds 30
+
+      - name: Verify production data sources
+        run: npm run agent:site-currency:verifier-data
+
+      - name: Upload data verifier reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-currency-data-verifier-report
+          path: artifacts/site-currency/*.json
+          if-no-files-found: ignore
+
+  verifier-flow-agent:
+    name: Verifier agent B - operating flows
+    needs: deploy-production
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      FANTASYIQ_SITE_URL: https://myfantasyiq.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify production readiness flows
+        run: npm run test:production-readiness
+
+      - name: Verify customer and webhook boundaries
+        run: npm run agent:site-currency:verifier-flow
+
+      - name: Upload flow verifier reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-currency-flow-verifier-report
+          path: |
+            artifacts/product-readiness/*.json
+            artifacts/site-currency/*.json
           if-no-files-found: ignore

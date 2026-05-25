@@ -35,6 +35,10 @@ Site Currency Agent:
 - Deploys production from GitHub Actions when `VERCEL_TOKEN`, `VERCEL_ORG_ID`,
   and `VERCEL_PROJECT_ID` repository secrets are installed; otherwise it still
   verifies production and fails loudly if the site drifts from the repo.
+- Coordinates three same-run peer checks after deploy: a collaborating audit
+  agent, a data-currency verifier agent, and an operating-flows verifier agent.
+  Each peer uses a fresh checkout so site-wide updates must pass independent
+  checks before the automation is green.
 
 Platform Efficiency Agent:
 - Finds duplicate source paths, manual sync steps, slow checks, and confusing
@@ -90,6 +94,9 @@ Site-wide update verification:
 
 ```powershell
 npm run agent:site-currency
+npm run agent:site-currency:collaborator
+npm run agent:site-currency:verifier-data
+npm run agent:site-currency:verifier-flow
 ```
 
 The site-currency agent writes a timestamped report under
