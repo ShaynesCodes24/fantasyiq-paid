@@ -48,8 +48,8 @@ ODDS_API = "https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds"
 HISTORICAL_ODDS_API = "https://api.the-odds-api.com/v4/historical/sports/americanfootball_nfl/odds"
 CACHE_TTL_SECONDS = 7 * 24 * 60 * 60
 REFRESH_MAX_AGE_SECONDS = 8 * 24 * 60 * 60
-CACHE_VERSION = "v8-schedule-intelligence"
-LEGACY_CACHE_VERSIONS = ("v7-schedule-rank",)
+CACHE_VERSION = "v9-schedule-validation"
+LEGACY_CACHE_VERSIONS = ("v8-schedule-intelligence", "v7-schedule-rank")
 PROVIDER_WORKERS = 8
 ODDS_MARKETS = "h2h,spreads,totals"
 DEFAULT_ODDS_BOOKMAKERS = "draftkings,fanduel,betmgm"
@@ -216,6 +216,10 @@ def sos_refresh_log_key(season: int, stamp: str) -> str:
     return f"sos_heatmap:refresh-log:{season}:{stamp}"
 
 
+def sos_validation_key(season: int, stamp: str) -> str:
+    return f"sos_heatmap:validation:{season}:{stamp}"
+
+
 def ensure_sos_cache_table(cursor: Any) -> None:
     cursor.execute(
         """
@@ -338,6 +342,19 @@ def save_refresh_log(season: int, payload: dict[str, Any]) -> dict[str, Any]:
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     saved = save_payload_with_key(sos_refresh_log_key(season, stamp), payload)
     return {"saved": saved, "logKey": sos_refresh_log_key(season, stamp) if saved else ""}
+
+
+def save_validation_result(season: int, validation: dict[str, Any]) -> dict[str, Any]:
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    cache_key = sos_validation_key(season, stamp)
+    saved = save_payload_with_key(cache_key, {
+        "ok": bool(validation.get("ok")),
+        "type": "sos-heatmap-validation",
+        "season": season,
+        "createdAt": utc_now(),
+        "validation": validation,
+    })
+    return {"saved": saved, "validationKey": cache_key if saved else ""}
 
 
 def stat_value(categories: list[dict[str, Any]], name: str, default: float = 0.0) -> float:
@@ -1520,6 +1537,27 @@ def build_payload(season: int, force: bool = False) -> dict[str, Any]:
         },
         "rows": rows,
     }
+    try:
+        try:
+            from sos_validation import validate_schedule_iq_payload
+        except ImportError:
+            from api.sos_validation import validate_schedule_iq_payload
+        validation = validate_schedule_iq_payload(payload)
+    except Exception as exc:
+        validation = {
+            "ok": False,
+            "status": "critical",
+            "modelVersion": "schedule-iq-validation-v1",
+            "validatedAt": utc_now(),
+            "errors": [f"Schedule IQ validation failed to run: {exc}"],
+            "warnings": [],
+            "summary": {},
+        }
+    validation_info = save_validation_result(season, validation)
+    validation = {**validation, **validation_info}
+    payload["validation"] = validation
+    payload["providerMeta"]["validation"] = validation
+    payload["weeklyRefreshLog"]["validation"] = validation
     log_payload = {
         "ok": True,
         "type": "sos-heatmap-refresh-log",
@@ -1530,6 +1568,7 @@ def build_payload(season: int, force: bool = False) -> dict[str, Any]:
         "providerMeta": provider_meta,
         "scheduleMovementReport": report,
         "agentWorkflow": agents,
+        "validation": validation,
     }
     log_info = save_refresh_log(season, log_payload)
     payload["weeklyRefreshLog"]["saved"] = log_info.get("saved", False)
@@ -1550,6 +1589,7 @@ def build_payload(season: int, force: bool = False) -> dict[str, Any]:
             "rows": len(rows),
             "snapshot": snapshot,
             "log": log_info,
+            "validation": validation,
             "odds": odds_meta,
             "weekCompletion": week_summary,
         },

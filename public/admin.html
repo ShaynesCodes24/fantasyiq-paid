@@ -87,6 +87,8 @@
           <div class="button-row">
             <button class="primary" id="load-admin" type="button">Load customers</button>
             <button class="secondary" id="refresh-ops" type="button">Refresh ops</button>
+            <button class="secondary" id="refresh-data-health" type="button">Refresh data health</button>
+            <button class="secondary" id="refresh-daily-data" type="button">Run daily data refresh</button>
             <button class="primary dark" id="smoke-admin" type="button">Run checkout smoke</button>
             <button class="secondary" id="clean-admin" type="button">Clean stale setup</button>
             <button class="secondary" id="refresh-sos" type="button">Refresh SoS heat map</button>
@@ -107,6 +109,8 @@
       const smokeButton = document.querySelector("#smoke-admin");
       const refreshSosButton = document.querySelector("#refresh-sos");
       const refreshOpsButton = document.querySelector("#refresh-ops");
+      const refreshDataHealthButton = document.querySelector("#refresh-data-health");
+      const refreshDailyDataButton = document.querySelector("#refresh-daily-data");
       const adminGateLogout = document.querySelector("#admin-gate-logout");
       const opsSearch = document.querySelector("#ops-search");
       const opsSeverityFilter = document.querySelector("#ops-severity-filter");
@@ -242,6 +246,53 @@
           .join("")}</div>`;
       }
 
+      function statusClass(value) {
+        const clean = String(value || "unknown").toLowerCase();
+        if (clean === "healthy") return "info";
+        if (clean === "warning") return "warning";
+        if (clean === "critical") return "error";
+        return "info";
+      }
+
+      function renderDataHealth(health = {}) {
+        const summary = health.summary || {};
+        const freshness = health.freshness || [];
+        const cacheRows = health.providerCache || [];
+        const problems = health.problemRows || [];
+        const missing = health.missingRequiredScopes || summary.missingRequiredScopes || [];
+        const cards = [
+          ["Overall", health.status || "unknown", `${escapeHtml(summary.rowCount || 0)} freshness rows`],
+          ["Daily cron", (summary.cronSteps || []).length ? "Tracked" : "Missing", `${escapeHtml((summary.cronSteps || []).length)} steps`],
+          ["Required scopes", missing.length ? "Missing" : "Present", `${escapeHtml(missing.length)} missing`],
+          ["Provider cache", cacheRows.length ? "Visible" : "Not loaded", `${escapeHtml(cacheRows.length)} cache entries`],
+        ];
+        return `
+          <h3>Data health</h3>
+          <div class="admin-status-grid">
+            ${cards.map(([label, value, detail]) => `<article><span>${label}</span><strong>${escapeHtml(value)}</strong><small>${detail}</small></article>`).join("")}
+          </div>
+          ${health.recommendedActions?.length ? `<p><strong>Recommended:</strong> ${escapeHtml(health.recommendedActions.join(" "))}</p>` : ""}
+          ${missing.length ? `<p><strong>Missing required scopes:</strong> ${escapeHtml(missing.map((item) => `${item.source || ""}:${item.sourceScope || ""}`).join(", "))}</p>` : ""}
+          <div class="mini-table">
+            ${freshness.slice(0, 20).map((row) => `<div>
+              <span>${escapeHtml(row.computedStatus || row.status || "unknown")}</span>
+              <strong>${escapeHtml(row.source || "source")} / ${escapeHtml(row.source_scope || row.sourceScope || "scope")}</strong>
+              <span>${escapeHtml(row.last_success_at || "no success")} / age ${escapeHtml(row.ageSeconds ?? "n/a")}s / SLA ${escapeHtml(row.maxAgeSeconds || 0)}s</span>
+              ${row.staleReason || row.warning ? `<small>${escapeHtml(row.staleReason || row.warning)}</small>` : ""}
+            </div>`).join("") || "<p>No freshness rows loaded yet.</p>"}
+          </div>
+          ${problems.length ? `<p><strong>${escapeHtml(problems.length)} problem row(s)</strong> need review.</p>` : ""}
+          <h3>Provider cache inventory</h3>
+          <div class="mini-table">
+            ${cacheRows.slice(0, 16).map((row) => `<div>
+              <span>${escapeHtml(row.payloadType || "payload")}</span>
+              <strong>${escapeHtml(row.cacheKey || "cache")}</strong>
+              <span>age ${escapeHtml(row.ageSeconds ?? "n/a")}s / keys ${escapeHtml((row.sampleKeys || []).join(", "))}</span>
+            </div>`).join("") || "<p>No provider cache entries loaded yet.</p>"}
+          </div>
+        `;
+      }
+
       function bindAdminActionButtons() {
         result.querySelectorAll("[data-admin-action]").forEach((button) => {
           button.addEventListener("click", async () => {
@@ -259,13 +310,22 @@
         const opsEvents = filteredOpsEvents(payload.opsEvents);
         const email = payload.email || {};
         const ops = payload.opsSummary || {};
+        const health = {
+          status: payload.dataHealthStatus,
+          summary: payload.dataHealthSummary || {},
+          freshness: [],
+          providerCache: [],
+          recommendedActions: [],
+        };
         result.innerHTML = `
           <strong>${escapeHtml(payload.configuredCount)} configured / ${escapeHtml(payload.needsSetupCount)} need setup</strong>
           <div class="admin-status-grid">
             <article><span>Database</span><strong>${payload.database?.enabled ? "Connected" : "Not connected"}</strong></article>
             <article><span>Email</span><strong>${email.configured ? "Ready" : "Needs key"}</strong><small>${escapeHtml(email.from || email.provider || "Resend")}</small></article>
             <article><span>Ops events</span><strong>${escapeHtml(ops.total || 0)}</strong><small>${escapeHtml(ops.errors || 0)} errors / ${escapeHtml(ops.warnings || 0)} warnings</small></article>
+            <article><span>Data health</span><strong>${escapeHtml(payload.dataHealthStatus || "unknown")}</strong><small>${escapeHtml((payload.dataHealthSummary?.cronSteps || []).length || 0)} cron scopes</small></article>
           </div>
+          ${renderDataHealth(adminPayload?.dataHealth || health)}
           <h3>Database accounts</h3>
           ${renderDatabase(databaseCustomers)}
           <h3>Ops event console</h3>
@@ -356,6 +416,18 @@
             "afterbegin",
             `<div class="result-panel"><strong>Schedule IQ refreshed.</strong><p>${escapeHtml(payload.rows || 0)} rows / ${escapeHtml(payload.cache?.layer || "fresh")} / ${escapeHtml(sources.odds || "odds source unknown")} / ${oddsDetail}</p></div>`,
           );
+        }
+        if (action === "data_health") {
+          adminPayload = { ...(adminPayload || {}), dataHealth: payload };
+          renderAdminPayload(adminPayload);
+        }
+        if (action === "refresh_daily_data") {
+          adminPayload = { ...(adminPayload || {}), dataHealth: payload.dataHealth || {} };
+          result.insertAdjacentHTML(
+            "afterbegin",
+            `<div class="result-panel"><strong>Daily data refresh ${payload.ok ? "passed" : "needs attention"}.</strong><p>${escapeHtml((payload.refresh?.steps || []).map((step) => `${step.name}:${step.ok ? "ok" : "fail"}`).join(" / "))}</p></div>`,
+          );
+          renderAdminPayload(adminPayload);
         }
       }
 
@@ -449,6 +521,20 @@
           await refreshOpsEvents();
         } catch (error) {
           result.insertAdjacentHTML("afterbegin", `<div class="result-panel"><strong>Ops refresh failed.</strong><p>${escapeHtml(error.message)}</p></div>`);
+        }
+      });
+      refreshDataHealthButton.addEventListener("click", async () => {
+        try {
+          await runAdminAction("data_health");
+        } catch (error) {
+          result.insertAdjacentHTML("afterbegin", `<div class="result-panel"><strong>Data health refresh failed.</strong><p>${escapeHtml(error.message)}</p></div>`);
+        }
+      });
+      refreshDailyDataButton.addEventListener("click", async () => {
+        try {
+          await runAdminAction("refresh_daily_data");
+        } catch (error) {
+          result.insertAdjacentHTML("afterbegin", `<div class="result-panel"><strong>Daily data refresh failed.</strong><p>${escapeHtml(error.message)}</p></div>`);
         }
       });
 

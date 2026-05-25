@@ -184,17 +184,9 @@ def data_freshness_check(site_url: str) -> Check:
     if payload.get("databaseBacked") is not True:
         return Check("data freshness", "FAIL", "databaseBacked is not true")
     rows = payload.get("freshness") if isinstance(payload.get("freshness"), list) else []
-    stale_rows = [row for row in rows if isinstance(row, dict) and row.get("is_stale")]
-    healthy_sources = {
-        str(row.get("source") or "")
-        for row in rows
-        if isinstance(row, dict) and not row.get("is_stale") and row.get("last_success_at")
-    }
     blocking_stale = [
-        row
-        for row in stale_rows
-        if str(row.get("source") or "") == "fantasyiq-cron"
-        or str(row.get("source") or "") not in healthy_sources
+        row for row in rows
+        if isinstance(row, dict) and row.get("computedStatus", row.get("status")) == "critical"
     ]
     if blocking_stale:
         scopes = ", ".join(str(row.get("source_scope") or row.get("source") or "unknown") for row in blocking_stale[:4])
@@ -202,8 +194,12 @@ def data_freshness_check(site_url: str) -> Check:
     summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
     source_counts = summary.get("sourceCounts") if isinstance(summary.get("sourceCounts"), dict) else {}
     cron_steps = summary.get("cronSteps") if isinstance(summary.get("cronSteps"), list) else []
-    required_cron_steps = {"fantasycalc-market", "fantasycalc-trade-database", "live-board-demo-snapshot"}
+    required_cron_steps = {"fantasycalc-market", "fantasycalc-trade-database", "live-board-demo-snapshot", "sos-heatmap"}
     missing_cron = required_cron_steps.difference(str(step) for step in cron_steps)
+    missing_required = payload.get("missingRequiredScopes") if isinstance(payload.get("missingRequiredScopes"), list) else []
+    if missing_required:
+        scopes = ", ".join(f"{item.get('source')}:{item.get('sourceScope')}" for item in missing_required[:4] if isinstance(item, dict))
+        return Check("data freshness", "FAIL", f"missing required freshness scope(s): {scopes}")
     if source_counts.get("fantasyiq-cron") and missing_cron:
         return Check("data freshness", "FAIL", f"missing cron freshness step(s): {', '.join(sorted(missing_cron))}")
     latest = payload.get("latestSuccessAt") or payload.get("syncedAt") or "unknown"
@@ -291,6 +287,9 @@ def schedule_iq_check(site_url: str) -> Check:
         return Check("Schedule IQ heatmap", "FAIL", "cells are missing colorGrade")
     if not isinstance(payload.get("weeklyRefreshLog"), dict):
         return Check("Schedule IQ heatmap", "FAIL", "weeklyRefreshLog missing")
+    validation = payload.get("validation") if isinstance(payload.get("validation"), dict) else {}
+    if validation.get("ok") is not True:
+        return Check("Schedule IQ heatmap", "FAIL", f"validation failed or missing: {validation.get('errors') or validation.get('status') or 'missing'}")
     updated = payload.get("updatedAt") or "unknown"
     odds = (payload.get("providerMeta") or {}).get("odds") if isinstance(payload.get("providerMeta"), dict) else {}
     odds_note = "odds configured" if isinstance(odds, dict) and odds.get("configured") else "odds confidence lowered"

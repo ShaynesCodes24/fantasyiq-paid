@@ -239,6 +239,7 @@ def admin_payload() -> dict[str, Any]:
     registry_rows = registry_customers()
     database_status, database_rows = database_customers()
     ops_status, ops_events = database_ops()
+    data_health = data_health_payload(limit=120, cache_limit=40, summary_only=True)
     configured_count, needs_setup_count = customer_totals(csv_rows, registry_rows, database_rows)
     return {
         "ok": True,
@@ -250,6 +251,8 @@ def admin_payload() -> dict[str, Any]:
         "email": email_readiness(),
         "opsSummary": ops_status,
         "opsEvents": ops_events,
+        "dataHealthSummary": data_health.get("summary") or {},
+        "dataHealthStatus": data_health.get("status") or "not_configured",
         "configuredCount": configured_count,
         "needsSetupCount": needs_setup_count,
         "customers": csv_rows,
@@ -261,6 +264,48 @@ def admin_payload() -> dict[str, Any]:
             "Use /setup.html from a signed-in dashboard to save each public ESPN league profile.",
         ],
     }
+
+
+def data_health_payload(limit: int = 240, cache_limit: int = 80, summary_only: bool = False) -> dict[str, Any]:
+    try:
+        try:
+            from provider_cache import freshness_health_report, provider_cache_snapshot
+        except ImportError:
+            from api.provider_cache import freshness_health_report, provider_cache_snapshot
+        report = freshness_health_report(limit)
+        cache_rows = provider_cache_snapshot(cache_limit) if not summary_only else []
+        recommended = []
+        if report.get("missingRequiredScopes"):
+            recommended.append("Run daily and Schedule IQ refresh jobs; required freshness scopes are missing.")
+        problem_rows = report.get("problemRows") if isinstance(report.get("problemRows"), list) else []
+        if problem_rows:
+            recommended.append("Review stale or warning provider rows and rerun the affected refresh.")
+        if report.get("status") == "not_configured":
+            recommended.append("Connect the database and wait for the first production cron run.")
+        return {
+            "ok": True,
+            "action": "data_health",
+            "status": report.get("status") or "not_configured",
+            "syncedAt": utc_now(),
+            "summary": report.get("summary") or {},
+            "freshness": [] if summary_only else report.get("freshness") or [],
+            "providerCache": cache_rows,
+            "problemRows": [] if summary_only else report.get("problemRows") or [],
+            "missingRequiredScopes": report.get("missingRequiredScopes") or [],
+            "recommendedActions": recommended,
+        }
+    except Exception as exc:
+        return {
+            "ok": False,
+            "action": "data_health",
+            "status": "critical",
+            "syncedAt": utc_now(),
+            "message": str(exc),
+            "summary": {},
+            "freshness": [],
+            "providerCache": [],
+            "recommendedActions": ["Fix the data-health aggregation error before trusting provider status."],
+        }
 
 
 def parse_body(handler: BaseHTTPRequestHandler) -> dict[str, Any]:
@@ -368,6 +413,45 @@ def admin_action(raw: dict[str, Any]) -> dict[str, Any]:
             "providerMeta": refreshed.get("providerMeta") or {},
             "updatedAt": refreshed.get("updatedAt"),
             "refreshCadence": refreshed.get("refreshCadence"),
+            "syncedAt": utc_now(),
+        }
+
+    if action == "data_health":
+        limit = int(raw.get("limit") or 240)
+        cache_limit = int(raw.get("cacheLimit") or raw.get("cache_limit") or 80)
+        payload = data_health_payload(limit=limit, cache_limit=cache_limit)
+        if not payload.get("ok"):
+            raise ConfigError(payload.get("message") or "Could not load data health.")
+        return payload
+
+    if action == "refresh_daily_data":
+        try:
+            try:
+                from cron_daily_refresh import daily_refresh_payload
+            except ImportError:
+                from api.cron_daily_refresh import daily_refresh_payload
+            refreshed = daily_refresh_payload()
+        except Exception as exc:
+            raise ConfigError(f"Could not run daily data refresh: {exc}") from exc
+        try:
+            try:
+                from database import record_ops_event
+            except ImportError:
+                from api.database import record_ops_event
+            record_ops_event(
+                event_type="admin.refresh_daily_data",
+                severity="info" if refreshed.get("ok") else "warning",
+                source="admin_customers",
+                message="Daily provider data refresh was run from the protected admin console.",
+                payload={"ok": refreshed.get("ok"), "steps": refreshed.get("steps") or []},
+            )
+        except Exception:
+            pass
+        return {
+            "ok": bool(refreshed.get("ok")),
+            "action": action,
+            "refresh": refreshed,
+            "dataHealth": data_health_payload(limit=240, cache_limit=80),
             "syncedAt": utc_now(),
         }
 

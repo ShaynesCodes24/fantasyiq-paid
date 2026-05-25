@@ -148,10 +148,13 @@ def freshness_check(site_url: str) -> Check:
     assert payload is not None
     summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
     cron_steps = {str(step) for step in summary.get("cronSteps", []) if step}
-    required = {"fantasycalc-market", "fantasycalc-trade-database", "live-board-demo-snapshot"}
+    required = {"fantasycalc-market", "fantasycalc-trade-database", "live-board-demo-snapshot", "sos-heatmap"}
     missing = required.difference(cron_steps)
     if missing:
         return Check("data verifier freshness", "FAIL", f"missing cron step(s): {', '.join(sorted(missing))}")
+    missing_required = payload.get("missingRequiredScopes") if isinstance(payload.get("missingRequiredScopes"), list) else []
+    if missing_required:
+        return Check("data verifier freshness", "FAIL", f"missing required scope(s): {len(missing_required)}")
     if payload.get("databaseBacked") is not True:
         return Check("data verifier freshness", "FAIL", "databaseBacked is not true")
     return Check("data verifier freshness", "PASS", f"cron steps verified: {', '.join(sorted(cron_steps))}")

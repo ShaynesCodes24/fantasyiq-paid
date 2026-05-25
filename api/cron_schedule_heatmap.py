@@ -45,6 +45,7 @@ def schedule_heatmap_refresh_payload(season: int = DEFAULT_SEASON) -> dict[str, 
             "rows": len(payload.get("rows") or []),
             "historicalSnapshot": payload.get("historicalSnapshot") or {},
             "weeklyRefreshLog": weekly_log,
+            "validation": payload.get("validation") or weekly_log.get("validation") or {},
             "weekCompletion": provider_meta.get("weekCompletion") or {},
             "odds": (provider_meta.get("odds") or {}),
             "scheduleMovementReport": {

@@ -8,10 +8,10 @@ from typing import Any
 import urllib.parse
 
 try:
-    from provider_cache import freshness_snapshot
+    from provider_cache import freshness_health_report
     from rate_limit import check_rate_limit, rate_limit_payload
 except (ModuleNotFoundError, ImportError):
-    from api.provider_cache import freshness_snapshot
+    from api.provider_cache import freshness_health_report
     from api.rate_limit import check_rate_limit, rate_limit_payload
 
 
@@ -25,27 +25,6 @@ def int_param(value: str, default: int, low: int, high: int) -> int:
     except (TypeError, ValueError):
         return default
     return max(low, min(high, number))
-
-
-def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    stale_rows = [row for row in rows if row.get("is_stale")]
-    source_counts: dict[str, int] = {}
-    latest_success = ""
-    for row in rows:
-        source = str(row.get("source") or "unknown")
-        source_counts[source] = source_counts.get(source, 0) + 1
-        success_at = str(row.get("last_success_at") or "")
-        if success_at and success_at > latest_success:
-            latest_success = success_at
-    cron_rows = [row for row in rows if row.get("source") == "fantasyiq-cron"]
-    return {
-        "rowCount": len(rows),
-        "staleCount": len(stale_rows),
-        "sourceCounts": source_counts,
-        "latestSuccessAt": latest_success,
-        "cronStepCount": len(cron_rows),
-        "cronSteps": sorted({str(row.get("source_scope") or "") for row in cron_rows if row.get("source_scope")}),
-    }
 
 
 class handler(BaseHTTPRequestHandler):
@@ -66,17 +45,21 @@ class handler(BaseHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         params = urllib.parse.parse_qs(parsed.query)
         row_limit = int_param(params.get("limit", ["240"])[0], 240, 20, 500)
-        rows = freshness_snapshot(row_limit)
-        summary = summarize(rows)
+        report = freshness_health_report(row_limit)
+        summary = report.get("summary") or {}
         self.send_json(
             {
                 "ok": True,
                 "syncedAt": utc_now(),
-                "freshness": rows,
+                "status": report.get("status"),
+                "freshness": report.get("freshness") or [],
                 "summary": summary,
                 "staleCount": summary["staleCount"],
+                "overdueCount": summary.get("overdueCount", 0),
+                "missingRequiredScopes": report.get("missingRequiredScopes") or [],
+                "requiredDataScopes": report.get("requiredDataScopes") or [],
                 "latestSuccessAt": summary["latestSuccessAt"],
-                "databaseBacked": bool(rows),
+                "databaseBacked": bool(report.get("freshness")),
                 "message": "Daily refresh status is recorded after the first production cron run.",
             }
         )

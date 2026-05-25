@@ -35,18 +35,42 @@ def authorized(headers: Any) -> bool:
     return str(headers.get("Authorization") or headers.get("authorization") or "") == f"Bearer {secret}"
 
 
+def result_ok(result: Any) -> bool:
+    if isinstance(result, dict) and result.get("ok") is False:
+        return False
+    if isinstance(result, list) and any(isinstance(item, dict) and item.get("ok") is False for item in result):
+        return False
+    return True
+
+
+def result_warning(result: Any) -> str:
+    if isinstance(result, dict):
+        return str(result.get("warning") or result.get("error") or result.get("message") or "")[:1000]
+    if isinstance(result, list):
+        warnings = [
+            str(item.get("warning") or item.get("error") or item.get("message") or "")
+            for item in result
+            if isinstance(item, dict) and item.get("ok") is False
+        ]
+        return "; ".join(warning for warning in warnings if warning)[:1000]
+    return ""
+
+
 def run_step(name: str, fn: Callable[[], Any]) -> dict[str, Any]:
     started = utc_now()
     try:
         result = fn()
+        ok = result_ok(result)
+        warning = result_warning(result)
         record_freshness(
             source="fantasyiq-cron",
             source_scope=name,
-            ok=True,
+            ok=ok,
             max_age_seconds=MAX_AGE_SECONDS,
+            warning=warning,
             metadata={"result": result},
         )
-        return {"name": name, "ok": True, "startedAt": started, "finishedAt": utc_now(), "result": result}
+        return {"name": name, "ok": ok, "startedAt": started, "finishedAt": utc_now(), "result": result, "warning": warning}
     except Exception as exc:
         record_freshness(
             source="fantasyiq-cron",
