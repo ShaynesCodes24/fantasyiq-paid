@@ -44,6 +44,14 @@ jobs:
       - name: Local release gates
         run: npm run predeploy
 
+      - name: Deployment automation status
+        run: |
+          if [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then
+            echo "Vercel deploy secrets are installed; this run can deploy production before verification."
+          else
+            echo "::warning::Vercel deploy secrets are not installed. This run will verify production, but it cannot deploy from GitHub Actions."
+          fi
+
       - name: Deploy production when Vercel secrets are installed
         if: ${{ env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != '' }}
         run: |
