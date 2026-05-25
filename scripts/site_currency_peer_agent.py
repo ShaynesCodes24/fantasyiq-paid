@@ -18,7 +18,8 @@ ARTIFACT_DIR = ROOT / "artifacts" / "site-currency"
 DEFAULT_SITE_URL = os.environ.get("FANTASYIQ_SITE_URL", "https://myfantasyiq.com").rstrip("/")
 CURRENT_DRAFT_ASSET = "js/draft.js?v=20260525_trade_quality_4"
 CURRENT_DASHBOARD_ASSET = "js/dashboard.js?v=20260525_big_board_adp_1"
-CURRENT_STYLE_ASSET = "styles.css?v=20260525_trade_empty_state_1"
+CURRENT_STYLE_ASSET = "styles.css?v=20260525_schedule_iq_1"
+CURRENT_SOS_ASSET = "js/sos.js?v=20260525_schedule_iq_1"
 OLD_DRAFT_ASSET = "js/draft.js?v=20260525_trade_quality_3"
 KATELYN_QUERY = "customer=katelyn&league=baltimore-beginner-h2h-points-ppr-league"
 
@@ -76,7 +77,7 @@ def html_asset_check(site_url: str, path: str, name: str, extra_markers: list[st
     cache = headers.get("cache-control", "")
     if "no-store" not in cache.lower():
         return Check(name, "FAIL", f"Cache-Control is {cache or 'missing'}")
-    markers = [CURRENT_DRAFT_ASSET, CURRENT_DASHBOARD_ASSET, CURRENT_STYLE_ASSET, *(extra_markers or [])]
+    markers = [CURRENT_DRAFT_ASSET, CURRENT_DASHBOARD_ASSET, CURRENT_STYLE_ASSET, CURRENT_SOS_ASSET, *(extra_markers or [])]
     missing = [marker for marker in markers if marker not in body]
     if missing:
         return Check(name, "FAIL", f"missing current marker(s): {', '.join(missing)}")
