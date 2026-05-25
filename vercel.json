@@ -100,6 +100,10 @@
       "destination": "/api/cron_daily_refresh"
     },
     {
+      "source": "/api/cron/schedule-heatmap-refresh",
+      "destination": "/api/cron_schedule_heatmap"
+    },
+    {
       "source": "/api/intelligence",
       "destination": "/api/intelligence"
     },
@@ -168,6 +172,10 @@
     {
       "path": "/api/cron/daily-data-refresh",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/schedule-heatmap-refresh",
+      "schedule": "30 12 * * 3"
     }
   ],
   "headers": [

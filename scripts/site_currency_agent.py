@@ -22,6 +22,7 @@ EXPECTED_ASSETS = {
     "auth": "js/auth.js?v=20260524_email_login_1",
     "dashboard": "js/dashboard.js?v=20260525_big_board_adp_1",
     "draft": "js/draft.js?v=20260525_trade_quality_4",
+    "sos": "js/sos.js?v=20260525_schedule_iq_1",
 }
 EXPECTED_DASHBOARD_MARKERS = [
     "Fantasy IQ Data",
@@ -36,6 +37,13 @@ EXPECTED_DRAFT_MARKERS = [
     "tradeDatabaseExactSupport",
     "consensusPlayerScore",
     "Math.max(rosterScore - 3",
+]
+EXPECTED_SOS_MARKERS = [
+    "tier-elite",
+    "colorGrade",
+    "marketVsActualTrend",
+    "scoringEnvironmentScore",
+    "streamingOpportunity",
 ]
 LOCAL_GATES = [
     ("typecheck", ["npm", "run", "typecheck"]),
@@ -262,14 +270,43 @@ def trade_data_check(site_url: str) -> Check:
     return Check("accepted trade data", "PASS", f"{trade_count:,} accepted trades indexed; syncedAt={synced_at}")
 
 
+def schedule_iq_check(site_url: str) -> Check:
+    url = f"{site_url}/api/sos-heatmap?season=2026&currency={int(time.time())}"
+    status, _, body = fetch(url, timeout=180)
+    payload, error = json_payload("Schedule IQ heatmap", status, body)
+    if error:
+        return error
+    if status != 200 or payload.get("ok") is not True:
+        return Check("Schedule IQ heatmap", "FAIL", f"HTTP {status}: {payload.get('error') or payload.get('message')}")
+    rows = payload.get("rows") if isinstance(payload.get("rows"), list) else []
+    if len(rows) < 150:
+        return Check("Schedule IQ heatmap", "FAIL", f"too few schedule rows: {len(rows)}")
+    workflow = payload.get("agentWorkflow") if isinstance(payload.get("agentWorkflow"), dict) else {}
+    agents = workflow.get("agents") if isinstance(workflow.get("agents"), list) else []
+    lead = workflow.get("leadAgent") if isinstance(workflow.get("leadAgent"), dict) else {}
+    if len(agents) != 12 or lead.get("agent") != "Lead Schedule Intelligence Agent":
+        return Check("Schedule IQ heatmap", "FAIL", f"agent workflow incomplete: lead={lead.get('agent')}, agents={len(agents)}")
+    cells = [cell for row in rows[:12] for cell in (row.get("cells") or []) if isinstance(cell, dict)]
+    if not any(cell.get("colorGrade") for cell in cells):
+        return Check("Schedule IQ heatmap", "FAIL", "cells are missing colorGrade")
+    if not isinstance(payload.get("weeklyRefreshLog"), dict):
+        return Check("Schedule IQ heatmap", "FAIL", "weeklyRefreshLog missing")
+    updated = payload.get("updatedAt") or "unknown"
+    odds = (payload.get("providerMeta") or {}).get("odds") if isinstance(payload.get("providerMeta"), dict) else {}
+    odds_note = "odds configured" if isinstance(odds, dict) and odds.get("configured") else "odds confidence lowered"
+    return Check("Schedule IQ heatmap", "PASS", f"{len(rows)} rows, {len(agents)} agents, {odds_note}, updated={updated}")
+
+
 def production_checks(site_url: str) -> list[Check]:
     return [
         dashboard_page_check(site_url),
         asset_marker_check(site_url, "dashboard", EXPECTED_ASSETS["dashboard"], EXPECTED_DASHBOARD_MARKERS),
         asset_marker_check(site_url, "draft", EXPECTED_ASSETS["draft"], EXPECTED_DRAFT_MARKERS),
+        asset_marker_check(site_url, "Schedule IQ", EXPECTED_ASSETS["sos"], EXPECTED_SOS_MARKERS),
         data_freshness_check(site_url),
         live_board_check(site_url),
         trade_data_check(site_url),
+        schedule_iq_check(site_url),
     ]
 
 

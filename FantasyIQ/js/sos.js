@@ -60,17 +60,32 @@ function sosScore(team, position, week) {
   return ((base + positionalBias + week) % 4) + 1;
 }
 
-function sosTier(score, apiTier = "") {
+function sosTier(score, apiTier = "", colorGrade = "") {
   if (apiTier === "bye") return "tier-bye";
-  if (score <= 1.75) return "tier-easy";
-  if (score <= 2.5) return "tier-good";
-  if (score <= 3.25) return "tier-hard";
+  const grade = String(colorGrade || "").toLowerCase();
+  if (grade === "gray") return "tier-bye";
+  if (grade === "dark green") return "tier-elite";
+  if (grade === "light green") return "tier-easy";
+  if (grade === "yellow") return "tier-neutral";
+  if (grade === "orange") return "tier-hard";
+  if (grade === "red") return "tier-brutal";
+  if (score <= 1.55) return "tier-elite";
+  if (score <= 2.3) return "tier-easy";
+  if (score <= 2.8) return "tier-neutral";
+  if (score <= 3.35) return "tier-hard";
   return "tier-brutal";
 }
 
-function sosTierLabel(score, apiTier = "") {
+function sosTierLabel(score, apiTier = "", colorGrade = "") {
   if (apiTier === "bye") return "Bye";
-  return score <= 1.75 ? "Easy" : score <= 2.5 ? "Good" : score <= 3.25 ? "Tough" : "Brutal";
+  const grade = String(colorGrade || "").toLowerCase();
+  if (grade === "gray") return "Unavailable";
+  if (grade === "dark green") return "Elite";
+  if (grade === "light green") return "Favorable";
+  if (grade === "yellow") return "Neutral";
+  if (grade === "orange") return "Difficult";
+  if (grade === "red") return "Avoid";
+  return score <= 1.55 ? "Elite" : score <= 2.3 ? "Favorable" : score <= 2.8 ? "Neutral" : score <= 3.35 ? "Difficult" : "Avoid";
 }
 
 function sosNumber(value, fallback = null) {
@@ -258,6 +273,8 @@ function sosRows(options = {}) {
             isAway: Boolean(apiCell.isAway),
             score,
             apiTier: apiCell.tier || "",
+            colorGrade: apiCell.colorGrade || "",
+            blendedScore: sosNumber(apiCell.blendedScore),
             fpa: sosNumber(apiCell.fpa),
             fpaScore: sosNumber(apiCell.fpaScore),
             heatValue: sosNumber(apiCell.heatValue, sosNumber(apiCell.impliedTotal, fallbackHeat)),
@@ -265,6 +282,20 @@ function sosRows(options = {}) {
             opponentImpliedTotal: sosNumber(apiCell.opponentImpliedTotal),
             gameTotal: sosNumber(apiCell.gameTotal),
             spread: sosNumber(apiCell.spread),
+            openingSpread: sosNumber(apiCell.openingSpread),
+            closingSpread: sosNumber(apiCell.closingSpread),
+            lineMovement: sosNumber(apiCell.lineMovement),
+            openingTotal: sosNumber(apiCell.openingTotal),
+            closingTotal: sosNumber(apiCell.closingTotal),
+            totalMovement: sosNumber(apiCell.totalMovement),
+            marketVsActualTrend: apiCell.marketVsActualTrend || "",
+            avgImpliedDelta: sosNumber(apiCell.avgImpliedDelta),
+            avgTotalDelta: sosNumber(apiCell.avgTotalDelta),
+            coverRate: sosNumber(apiCell.coverRate),
+            scoringEnvironmentScore: sosNumber(apiCell.scoringEnvironmentScore),
+            streamingOpportunity: sosNumber(apiCell.streamingOpportunity),
+            confidence: sosNumber(apiCell.confidence),
+            venueContext: apiCell.venueContext || "",
             moneyline: sosNumber(apiCell.moneyline),
             noVigWinProbability: sosNumber(apiCell.noVigWinProbability),
             oddsSource: apiCell.oddsSource || sourceRow.oddsSource || "",
@@ -334,14 +365,14 @@ function sosHeatColor(percentile) {
 }
 
 function sosDifficultyPercent(item, heatValues = []) {
-  if (item.apiTier === "bye") return "";
+  if (item.apiTier === "bye" || String(item.colorGrade || "").toLowerCase() === "gray") return "";
   const score = sosNumber(item.score);
   if (score === null) return 0.5;
   return clampNumber((score - 1) / 3, 0, 1);
 }
 
 function sosCellStyle(item, heatValues) {
-  if (item.apiTier === "bye") return "";
+  if (item.apiTier === "bye" || String(item.colorGrade || "").toLowerCase() === "gray") return "";
   const percentile = sosDifficultyPercent(item, heatValues);
   const color = sosHeatColor(percentile);
   const glow = Math.round(10 + percentile * 28);
@@ -356,10 +387,11 @@ function sosSourceLabel(value = "") {
 }
 
 function sosCellTooltip(row, item, percentile) {
-  if (item.apiTier === "bye") return `${row.team} Week ${item.week}\nBye`;
+  if (item.apiTier === "bye" || String(item.colorGrade || "").toLowerCase() === "gray") return `${row.team} Week ${item.week}\n${item.opponent === "BYE" ? "Bye" : "Unavailable data"}`;
   const lines = [
     `${row.player} (${row.team} ${row.position})`,
     `Week ${item.week} ${item.isAway ? "at" : "vs"} ${item.opponent}`,
+    `Color grade: ${sosTierLabel(item.score, item.apiTier, item.colorGrade)}`,
     `Matchup difficulty: ${sosFormat(item.score, 2)} / 4`,
     `Difficulty percentile: ${Math.round(percentile * 100)}`,
     `Fantasy points allowed: ${sosFormat(item.fpa, 1)}`,
@@ -367,7 +399,17 @@ function sosCellTooltip(row, item, percentile) {
     `Implied team total: ${sosFormat(item.impliedTotal)}`,
     `Source: ${sosSourceLabel(item.oddsSource)}`,
   ];
+  if (Number.isFinite(item.confidence)) lines.push(`Confidence: ${Math.round(item.confidence * 100)}%`);
+  if (item.venueContext) lines.push(`Venue: ${item.venueContext}`);
+  if (Number.isFinite(item.scoringEnvironmentScore)) lines.push(`Environment score: ${sosFormat(item.scoringEnvironmentScore, 2)}`);
+  if (Number.isFinite(item.streamingOpportunity) && item.streamingOpportunity > 0) lines.push(`Streaming score: ${sosFormat(item.streamingOpportunity, 0)}`);
   if (Number.isFinite(item.gameTotal)) lines.push(`Game total: ${sosFormat(item.gameTotal)}`);
+  if (Number.isFinite(item.lineMovement)) lines.push(`Spread move: ${sosFormat(item.lineMovement, 1)}`);
+  if (Number.isFinite(item.totalMovement)) lines.push(`Total move: ${sosFormat(item.totalMovement, 1)}`);
+  if (item.marketVsActualTrend) lines.push(`Market trend: ${item.marketVsActualTrend}`);
+  if (Number.isFinite(item.avgImpliedDelta)) lines.push(`Avg implied delta: ${sosFormat(item.avgImpliedDelta, 1)}`);
+  if (Number.isFinite(item.avgTotalDelta)) lines.push(`Avg total delta: ${sosFormat(item.avgTotalDelta, 1)}`);
+  if (Number.isFinite(item.coverRate)) lines.push(`Cover rate: ${sosPercent(item.coverRate)}`);
   if (Number.isFinite(item.bookmakers)) lines.push(`Books: ${sosFormat(item.bookmakers, 0)}`);
   return lines.join("\n");
 }
@@ -580,7 +622,7 @@ function renderSosHeatMap() {
         const percentile = sosDifficultyPercent(item, heatValues);
         const tooltip = sosCellTooltip(row, item, percentile);
         const label = sosOpponentLabel(item);
-        return `<td class="${sosWeekClass(item.week)}"><span class="sos-cell ${sosTier(item.score ?? 2.5, item.apiTier)}" style="${sosCellStyle(item, heatValues)}" data-tooltip="${htmlEscape(tooltip)}" title="${htmlEscape(tooltip)}">${htmlEscape(label)}</span></td>`;
+        return `<td class="${sosWeekClass(item.week)}"><span class="sos-cell ${sosTier(item.score ?? 2.5, item.apiTier, item.colorGrade)}" style="${sosCellStyle(item, heatValues)}" data-tooltip="${htmlEscape(tooltip)}" title="${htmlEscape(tooltip)}">${htmlEscape(label)}</span></td>`;
       }).join("")}
     </tr>`;
   }).join("") || `<tr><td colspan="${weeks.length + 5}">No players match this filter.</td></tr>`;

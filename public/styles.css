@@ -1343,13 +1343,19 @@ textarea {
   gap: 8px;
 }
 
-.sos-legend .tier-easy {
+.sos-legend .tier-elite {
   --sos-heat-bg: #2f9753;
   --sos-heat-border: rgba(47, 151, 83, 0.72);
   --sos-text: #fff8e8;
 }
 
-.sos-legend .tier-good {
+.sos-legend .tier-easy {
+  --sos-heat-bg: #77bf48;
+  --sos-heat-border: rgba(119, 191, 72, 0.72);
+  --sos-text: #102014;
+}
+
+.sos-legend .tier-neutral {
   --sos-heat-bg: #dfe834;
   --sos-heat-border: rgba(226, 232, 52, 0.72);
   --sos-text: #1b1208;
@@ -1619,11 +1625,15 @@ textarea {
   pointer-events: none;
 }
 
+.sos-cell.tier-elite {
+  background: var(--sos-heat-bg);
+}
+
 .sos-cell.tier-easy {
   background: var(--sos-heat-bg);
 }
 
-.sos-cell.tier-good {
+.sos-cell.tier-neutral {
   background: var(--sos-heat-bg);
 }
 
@@ -7930,8 +7940,9 @@ small,
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
+#live.sos-panel .sos-cell.tier-elite,
 #live.sos-panel .sos-cell.tier-easy,
-#live.sos-panel .sos-cell.tier-good,
+#live.sos-panel .sos-cell.tier-neutral,
 #live.sos-panel .sos-cell.tier-hard,
 #live.sos-panel .sos-cell.tier-brutal {
   background: var(--sos-heat-bg, #253d52);
@@ -7970,12 +7981,18 @@ small,
   color: rgba(255, 248, 232, 0.74);
 }
 
-#live.sos-panel .sos-legend .tier-easy {
+#live.sos-panel .sos-legend .tier-elite {
   --sos-heat-bg: #2f9753;
   --sos-heat-border: rgba(47, 151, 83, 0.72);
 }
 
-#live.sos-panel .sos-legend .tier-good {
+#live.sos-panel .sos-legend .tier-easy {
+  --sos-heat-bg: #77bf48;
+  --sos-heat-border: rgba(119, 191, 72, 0.72);
+  --sos-text: #102014;
+}
+
+#live.sos-panel .sos-legend .tier-neutral {
   --sos-heat-bg: #dfe834;
   --sos-heat-border: rgba(226, 232, 52, 0.72);
   --sos-text: #1b1208;
