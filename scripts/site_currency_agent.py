@@ -21,7 +21,7 @@ DEFAULT_SITE_URL = os.environ.get("FANTASYIQ_SITE_URL", "https://myfantasyiq.com
 EXPECTED_ASSETS = {
     "auth": "js/auth.js?v=20260524_email_login_1",
     "dashboard": "js/dashboard.js?v=20260525_big_board_adp_1",
-    "draft": "js/draft.js?v=20260525_trade_empty_state_1",
+    "draft": "js/draft.js?v=20260525_trade_quality_1",
 }
 EXPECTED_DASHBOARD_MARKERS = [
     "Fantasy IQ Data",
@@ -31,6 +31,8 @@ EXPECTED_DASHBOARD_MARKERS = [
 ]
 EXPECTED_DRAFT_MARKERS = [
     "Fantasy IQ Data is validating exact 1-for-1 and 2-for-1",
+    "market-backed ideas stay available",
+    "matched FantasyCalc.com market values",
     "tradeDatabaseExactSupport",
     "consensusPlayerScore",
     "Math.max(rosterScore - 3",

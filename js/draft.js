@@ -407,12 +407,8 @@ function bestTradePair(giveRows, getRows) {
       const marketDiff = Number(marketGet) - Number(marketGive);
       const projectionDiff = projectionValue(get) - projectionValue(give);
       if (!tradePackageMakesSense([1, 1], diff, marketDiff, tradeAssetValue(get) - tradeAssetValue(give), projectionDiff, { weight: 8 })) return;
-      const databaseSupport = tradeDatabaseExactSupport([give], [get]);
-      if (!databaseSupport.ready) {
-        requestTradeDatabaseSamples([give], [get]);
-        return;
-      }
-      if (databaseSupport.count <= 0) return;
+      const evidence = tradePackageEvidence([give], [get]);
+      if (!fantasyCalcTradeDatabaseReady()) return;
       const score =
         58 -
         Math.abs(diff) * 1.15 -
@@ -420,9 +416,21 @@ function bestTradePair(giveRows, getRows) {
         Math.min(5, Math.max(0, marketDiff + 2)) +
         Math.min(5, tradePackageMarketActivity([give]) / 400) +
         Math.min(5, tradePackageMarketActivity([get]) / 400) +
-        Math.min(6, databaseSupport.count * 1.4) +
+        evidence.score +
+        tradeMarketEdgeScore([1, 1], marketDiff, diff) +
         Math.max(-4, Math.min(4, projectionDiff / 18));
-      if (!best || score > best.score) best = { give, get, diff, marketDiff, score, databaseSampleCount: databaseSupport.count };
+      if (!best || score > best.score) {
+        best = {
+          give,
+          get,
+          diff,
+          marketDiff,
+          score,
+          databaseSampleCount: evidence.exactCount,
+          databaseEvidence: evidence.tier,
+          databaseActivity: evidence.activity,
+        };
+      }
     });
   });
   return best;
@@ -625,12 +633,40 @@ function tradePackageMakesSense(shape, diff, marketDiff, bestDelta, projectionDi
   const [giveCount, getCount] = shape;
   if (!Number.isFinite(Number(marketDiff))) return false;
   if (giveCount === 1 && getCount === 1) {
-    return diff >= -2 && diff <= 7 && marketDiff >= -2 && marketDiff <= 5 && projectionDiff >= -8;
+    return diff >= -2 && diff <= 6.5 && marketDiff >= -2.5 && marketDiff <= 4.5 && projectionDiff >= -10;
   }
   if (giveCount === 2 && getCount === 1) {
-    return bestDelta >= 4 && diff >= -12 && diff <= 4 && marketDiff >= -10 && marketDiff <= 3 && projectionDiff >= -22;
+    return bestDelta >= 4 && diff >= -12 && diff <= 4 && marketDiff >= -12 && marketDiff <= 2.5 && projectionDiff >= -24;
   }
   return false;
+}
+
+function tradeMarketEdgeScore(shape, marketDiff, bestDelta = 0) {
+  const diff = Number(marketDiff);
+  if (!Number.isFinite(diff)) return -20;
+  const [giveCount, getCount] = shape;
+  if (giveCount === 1 && getCount === 1) {
+    return Math.max(-8, 8 - Math.abs(diff - 1.4) * 2.2);
+  }
+  if (giveCount === 2 && getCount === 1) {
+    return Math.max(-8, 8 - Math.abs(diff + 4.5) * 0.75 + Math.min(4, Math.max(0, Number(bestDelta || 0)) * 0.25));
+  }
+  return 0;
+}
+
+function tradePackageEvidence(givePackage, getPackage) {
+  const databaseSupport = tradeDatabaseExactSupport(givePackage, getPackage);
+  if (!databaseSupport.ready) requestTradeDatabaseSamples(givePackage, getPackage);
+  const exactCount = databaseSupport.ready ? Number(databaseSupport.count || 0) : 0;
+  const activity = tradePackageMarketActivity(givePackage) + tradePackageMarketActivity(getPackage);
+  return {
+    exactCount,
+    activity,
+    tier: exactCount > 0 ? "exact" : "market",
+    score: exactCount > 0
+      ? 7 + Math.min(8, exactCount * 1.6)
+      : Math.min(4, activity / 450),
+  };
 }
 
 function bestTradePackage(giveRows, getRows, shape, myNeeds, theirNeeds) {
@@ -655,12 +691,8 @@ function bestTradePackage(giveRows, getRows, shape, myNeeds, theirNeeds) {
       const theirNeed = tradePackageNeed(theirNeeds, givePackage);
       if (!yourNeed || !theirNeed) return;
       if (!tradePackageMakesSense(shape, diff, marketDiff, bestDelta, projectionDiff, yourNeed)) return;
-      const databaseSupport = tradeDatabaseExactSupport(givePackage, getPackage);
-      if (!databaseSupport.ready) {
-        requestTradeDatabaseSamples(givePackage, getPackage);
-        return;
-      }
-      if (databaseSupport.count <= 0) return;
+      const evidence = tradePackageEvidence(givePackage, getPackage);
+      if (!fantasyCalcTradeDatabaseReady()) return;
 
       const shapeBonus =
         giveCount > getCount
@@ -675,7 +707,8 @@ function bestTradePackage(giveRows, getRows, shape, myNeeds, theirNeeds) {
         Number(theirNeed.weight || 0) * 0.55 +
         Math.min(5, tradePackageMarketActivity(givePackage) / 400) +
         Math.min(5, tradePackageMarketActivity(getPackage) / 400) +
-        Math.min(6, databaseSupport.count * 1.4) +
+        evidence.score +
+        tradeMarketEdgeScore(shape, marketDiff, bestDelta) +
         shapeBonus +
         Math.max(-4, Math.min(4, projectionDiff / 18));
       if (!best || score > best.score) {
@@ -692,7 +725,9 @@ function bestTradePackage(giveRows, getRows, shape, myNeeds, theirNeeds) {
           shape: tradeShapeLabel(giveCount, getCount),
           yourNeed,
           theirNeed,
-          databaseSampleCount: databaseSupport.count,
+          databaseSampleCount: evidence.exactCount,
+          databaseEvidence: evidence.tier,
+          databaseActivity: evidence.activity,
         };
       }
     });
@@ -706,7 +741,40 @@ function teamSnapshotLabel(snapshot) {
   return `${snapshot.teamName || `Team ${snapshot.teamId}`}${snapshot.manager ? ` (${snapshot.manager})` : ""}`;
 }
 
-function leagueTradeIdeas(snapshot, limit = 6) {
+function finalizeLeagueTradeIdeas(ideas, limit) {
+  const seen = new Set();
+  const selected = [];
+  const repeats = [];
+  const usedGive = new Set();
+  const usedGet = new Set();
+  ideas
+    .sort((a, b) => b.score - a.score)
+    .forEach((idea) => {
+      const givePackage = idea.givePackage || [idea.give];
+      const getPackage = idea.getPackage || [idea.get];
+      const key = `${idea.team.teamId}-${idea.shape || "1-for-1"}-${tradePackageKey(givePackage)}-${tradePackageKey(getPackage)}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const giveKey = tradePackageKey(givePackage);
+      const getKey = tradePackageKey(getPackage);
+      const repeatedPlayer = giveKey.split("+").some((item) => usedGive.has(item)) || getKey.split("+").some((item) => usedGet.has(item));
+      if (repeatedPlayer) {
+        repeats.push(idea);
+        return;
+      }
+      selected.push(idea);
+      giveKey.split("+").filter(Boolean).forEach((item) => usedGive.add(item));
+      getKey.split("+").filter(Boolean).forEach((item) => usedGet.add(item));
+    });
+
+  repeats.forEach((idea) => {
+    if (selected.length >= limit) return;
+    selected.push(idea);
+  });
+  return selected.slice(0, limit);
+}
+
+function leagueTradeIdeas(snapshot, limit = 3) {
   if (!snapshot?.teamId || !liveLeagueHasRosters()) return [];
   if (!fantasyCalcTradeDatabaseReady()) return [];
   const myNeeds = tradeNeedProfiles(snapshot);
@@ -775,16 +843,7 @@ function leagueTradeIdeas(snapshot, limit = 6) {
       });
     });
 
-  const seen = new Set();
-  return ideas
-    .sort((a, b) => b.score - a.score)
-    .filter((idea) => {
-      const key = `${idea.team.teamId}-${idea.shape || "1-for-1"}-${tradePackageKey(idea.givePackage || [idea.give])}-${tradePackageKey(idea.getPackage || [idea.get])}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .slice(0, limit);
+  return finalizeLeagueTradeIdeas(ideas, limit);
 }
 
 function tradeAwayCandidates(snapshot, limit = 3) {
@@ -840,6 +899,21 @@ function renderTradePackageMiniCards(rows, label = "") {
   return rows.map((row) => renderPlayerMiniCard(row, label)).join("");
 }
 
+function tradeIdeaEvidenceLabel(idea) {
+  const samples = Number(idea.databaseSampleCount || 0);
+  if (samples > 0) return `${samples} exact accepted sample${samples === 1 ? "" : "s"}`;
+  const activity = Number(idea.databaseActivity || 0);
+  if (activity > 0) return `market-backed / ${Math.round(activity).toLocaleString()} player activity`;
+  return "market-backed by Fantasy IQ Data";
+}
+
+function tradeIdeaEvidenceDetail(idea, shape) {
+  if (Number(idea.databaseSampleCount || 0) > 0) {
+    return `found this exact ${shape} in accepted-trade database samples`;
+  }
+  return "matched FantasyCalc.com market values, accepted-trade activity, and both rosters' needs";
+}
+
 function renderTradeIdeaCard(idea) {
   const givePackage = idea.givePackage || [idea.give];
   const getPackage = idea.getPackage || [idea.get];
@@ -852,7 +926,7 @@ function renderTradeIdeaCard(idea) {
     <div class="trade-idea-head">
       <span>${htmlEscape(teamSnapshotLabel(idea.team))}</span>
       <strong>${htmlEscape(tradePackageName(givePackage))} for ${htmlEscape(tradePackageName(getPackage))}</strong>
-      <small>${htmlEscape(shape)} / ${htmlEscape(diffLabel)} / ${htmlEscape(marketLabel)} / ${Number(idea.databaseSampleCount || 0)} accepted sample${Number(idea.databaseSampleCount || 0) === 1 ? "" : "s"}</small>
+      <small>${htmlEscape(shape)} / ${htmlEscape(diffLabel)} / ${htmlEscape(marketLabel)} / ${htmlEscape(tradeIdeaEvidenceLabel(idea))}</small>
     </div>
     <div class="trade-idea-flow">
       <section>
@@ -864,7 +938,7 @@ function renderTradeIdeaCard(idea) {
         ${renderTradePackageMiniCards(getPackage, `${idea.yourNeed?.pos || idea.get.Pos} fills your need`)}
       </section>
     </div>
-    <p>${htmlEscape(`Why it fits: you need ${idea.yourNeed?.pos || idea.get.Pos}, and ${teamSnapshotLabel(idea.team)} needs ${idea.theirNeed?.pos || idea.give.Pos}. FantasyIQ found this exact ${shape} in accepted-trade database samples, then checked market value and roster need before showing it.`)}</p>
+    <p>${htmlEscape(`Why it fits: you need ${idea.yourNeed?.pos || idea.get.Pos}, and ${teamSnapshotLabel(idea.team)} needs ${idea.theirNeed?.pos || idea.give.Pos}. FantasyIQ ${tradeIdeaEvidenceDetail(idea, shape)}, then checked for a slight value edge before showing it.`)}</p>
   </article>`;
 }
 
@@ -1216,8 +1290,8 @@ function renderTradeFinder(snapshot = activeRosterSnapshot({ preferPasted: true 
   const hasVerifiedTradeData = fantasyCalcTradeDatabaseReady() && !fantasyCalcTradeSamples.loadingKeys?.size;
   const databaseStatus = fantasyCalcTradeDatabaseReady()
     ? fantasyCalcTradeSamples.loadingKeys?.size
-      ? "Fantasy IQ Data is validating exact 1-for-1 and 2-for-1 accepted-trade samples for your roster."
-      : "No exact accepted-trade database match cleared the value and roster-fit filters."
+      ? "Fantasy IQ Data is validating exact 1-for-1 and 2-for-1 accepted-trade samples while market-backed ideas stay available."
+      : "No package cleared the FantasyCalc.com market value, accepted-trade activity, and roster-fit filters."
     : fantasyCalcTradeDatabaseLoading || fantasyCalcMarketLoading
       ? "Fantasy IQ Data is still loading accepted-trade context. Package ideas will appear only after the real-trade database is ready."
       : "Fantasy IQ Data is unavailable, so package ideas are disabled instead of guessing from local roster values.";
@@ -1225,7 +1299,7 @@ function renderTradeFinder(snapshot = activeRosterSnapshot({ preferPasted: true 
     tradeFinder.innerHTML = `
       <div class="trade-lane-summary">
         <strong>${leagueIdeas.length} active-league trade idea${leagueIdeas.length === 1 ? "" : "s"}</strong>
-        <span>${htmlEscape(tradeMarketSourceLabel())}. FantasyIQ only shows 1-for-1 and 2-for-1 ideas after an exact accepted-trade database match clears roster need and market value.</span>
+        <span>${htmlEscape(tradeMarketSourceLabel())}. FantasyIQ shows the best realistic 1-for-1 and 2-for-1 ideas after FantasyCalc.com value, trade activity, and both-team roster fit clear the filters.</span>
       </div>
       <div class="trade-idea-list">
         ${leagueIdeas.map(renderTradeIdeaCard).join("")}
@@ -1240,7 +1314,7 @@ function renderTradeFinder(snapshot = activeRosterSnapshot({ preferPasted: true 
         <span>${htmlEscape(databaseStatus)} FantasyIQ is holding back trade suggestions instead of showing loose or unrealistic offers.</span>
       </div>
       <div class="trade-empty-state">
-        <p>For this roster, the accepted-trade database did not find a clean 1-for-1 or 2-for-1 match that also helps both managers.</p>
+        <p>For this roster, Fantasy IQ Data did not find three clean 1-for-1 or 2-for-1 ideas that help both managers.</p>
         <p>Use the manual trade checker for a specific offer, or check back after rosters/trade market data move.</p>
       </div>
     `;
