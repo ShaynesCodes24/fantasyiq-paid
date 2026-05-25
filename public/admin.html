@@ -246,24 +246,17 @@
           .join("")}</div>`;
       }
 
-      function statusClass(value) {
-        const clean = String(value || "unknown").toLowerCase();
-        if (clean === "healthy") return "info";
-        if (clean === "warning") return "warning";
-        if (clean === "critical") return "error";
-        return "info";
-      }
-
       function renderDataHealth(health = {}) {
         const summary = health.summary || {};
         const freshness = health.freshness || [];
         const cacheRows = health.providerCache || [];
-        const problems = health.problemRows || [];
+        const requiredProblems = health.requiredProblemRows || [];
+        const diagnosticProblems = health.nonRequiredProblemRows || [];
         const missing = health.missingRequiredScopes || summary.missingRequiredScopes || [];
         const cards = [
           ["Overall", health.status || "unknown", `${escapeHtml(summary.rowCount || 0)} freshness rows`],
           ["Daily cron", (summary.cronSteps || []).length ? "Tracked" : "Missing", `${escapeHtml((summary.cronSteps || []).length)} steps`],
-          ["Required scopes", missing.length ? "Missing" : "Present", `${escapeHtml(missing.length)} missing`],
+          ["Required scopes", missing.length || requiredProblems.length ? "Needs review" : "Present", `${escapeHtml(missing.length)} missing / ${escapeHtml(requiredProblems.length)} issue(s)`],
           ["Provider cache", cacheRows.length ? "Visible" : "Not loaded", `${escapeHtml(cacheRows.length)} cache entries`],
         ];
         return `
@@ -273,6 +266,7 @@
           </div>
           ${health.recommendedActions?.length ? `<p><strong>Recommended:</strong> ${escapeHtml(health.recommendedActions.join(" "))}</p>` : ""}
           ${missing.length ? `<p><strong>Missing required scopes:</strong> ${escapeHtml(missing.map((item) => `${item.source || ""}:${item.sourceScope || ""}`).join(", "))}</p>` : ""}
+          ${diagnosticProblems.length ? `<p><strong>${escapeHtml(diagnosticProblems.length)} non-required diagnostic row(s)</strong> are retained for history and do not block site-wide freshness.</p>` : ""}
           <div class="mini-table">
             ${freshness.slice(0, 20).map((row) => `<div>
               <span>${escapeHtml(row.computedStatus || row.status || "unknown")}</span>
@@ -281,7 +275,7 @@
               ${row.staleReason || row.warning ? `<small>${escapeHtml(row.staleReason || row.warning)}</small>` : ""}
             </div>`).join("") || "<p>No freshness rows loaded yet.</p>"}
           </div>
-          ${problems.length ? `<p><strong>${escapeHtml(problems.length)} problem row(s)</strong> need review.</p>` : ""}
+          ${requiredProblems.length ? `<p><strong>${escapeHtml(requiredProblems.length)} required problem row(s)</strong> need review.</p>` : ""}
           <h3>Provider cache inventory</h3>
           <div class="mini-table">
             ${cacheRows.slice(0, 16).map((row) => `<div>
