@@ -55,6 +55,8 @@ jobs:
       - name: Deploy production when Vercel secrets are installed
         if: ${{ env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != '' }}
         run: |
+          mkdir -p .vercel
+          printf '{"orgId":"%s","projectId":"%s"}\n' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
           npx vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
           npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"
 
