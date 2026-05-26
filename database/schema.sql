@@ -123,6 +123,19 @@ CREATE TABLE IF NOT EXISTS fantasyiq_rate_limits (
 CREATE INDEX IF NOT EXISTS fantasyiq_rate_limits_expires_idx
     ON fantasyiq_rate_limits (expires_at);
 
+CREATE TABLE IF NOT EXISTS fantasyiq_draft_bridge_snapshots (
+    league_id BIGINT NOT NULL,
+    season INTEGER NOT NULL,
+    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    bridge_source TEXT NOT NULL DEFAULT 'espnDraftRoomBridge',
+    bridge_key_hash TEXT NOT NULL DEFAULT '',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (league_id, season)
+);
+
+CREATE INDEX IF NOT EXISTS fantasyiq_draft_bridge_snapshots_updated_idx
+    ON fantasyiq_draft_bridge_snapshots (updated_at DESC);
+
 CREATE TABLE IF NOT EXISTS fantasyiq_espn_sync_snapshots (
     id BIGSERIAL PRIMARY KEY,
     customer_slug TEXT NOT NULL DEFAULT '',

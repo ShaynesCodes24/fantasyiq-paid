@@ -9,6 +9,13 @@ from typing import Any, Iterator
 
 
 DATABASE_ENV_NAMES = ("DATABASE_URL", "POSTGRES_URL", "POSTGRES_PRISMA_URL")
+MIGRATION_DATABASE_ENV_NAMES = (
+    "DATABASE_URL_UNPOOLED",
+    "POSTGRES_URL_NON_POOLING",
+    "DATABASE_URL",
+    "POSTGRES_URL",
+    "POSTGRES_PRISMA_URL",
+)
 ACCESS_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
 
@@ -20,12 +27,16 @@ def env(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
 
 
-def database_url() -> str:
-    for name in DATABASE_ENV_NAMES:
+def database_url(env_names: tuple[str, ...] = DATABASE_ENV_NAMES) -> str:
+    for name in env_names:
         value = env(name)
         if value:
             return value
     return ""
+
+
+def migration_database_url() -> str:
+    return database_url(MIGRATION_DATABASE_ENV_NAMES)
 
 
 def load_psycopg() -> Any | None:
@@ -44,18 +55,25 @@ def database_enabled() -> bool:
     return bool(database_url()) and dependency_ready()
 
 
+def migration_database_enabled() -> bool:
+    return bool(migration_database_url()) and dependency_ready()
+
+
 def database_status() -> dict[str, Any]:
     return {
         "configured": bool(database_url()),
+        "migrationConfigured": bool(migration_database_url()),
         "driverReady": dependency_ready(),
         "enabled": database_enabled(),
+        "migrationEnabled": migration_database_enabled(),
         "envNames": [name for name in DATABASE_ENV_NAMES if env(name)],
+        "migrationEnvNames": [name for name in MIGRATION_DATABASE_ENV_NAMES if env(name)],
     }
 
 
 @contextmanager
-def connect() -> Iterator[Any]:
-    url = database_url()
+def connect(connection_url: str = "") -> Iterator[Any]:
+    url = connection_url or database_url()
     psycopg = load_psycopg()
     if not url:
         raise DatabaseUnavailable("DATABASE_URL is not configured.")
@@ -946,6 +964,31 @@ def reset_customer_access_code(slug: str) -> dict[str, Any] | None:
             return fetch_one_dict(cursor)
 
 
+def update_customer_status(slug: str, status: str, subscription_status: str = "") -> dict[str, Any] | None:
+    if not database_enabled():
+        return None
+    lookup = slugify(slug)
+    clean_status = str(status or "").strip()
+    clean_subscription = str(subscription_status or "").strip()
+    if not lookup or not clean_status:
+        return None
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE fantasyiq_customers
+                   SET status = %s,
+                       subscription_status = COALESCE(NULLIF(%s, ''), subscription_status),
+                       updated_at = now()
+                 WHERE slug = %s
+             RETURNING slug, customer_name, email, status, subscription_status,
+                       default_league_key, included_league_limit, additional_league_count
+                """,
+                (clean_status, clean_subscription, lookup),
+            )
+            return fetch_one_dict(cursor)
+
+
 def increment_additional_league_count(slug_or_email: str, amount: int = 1) -> dict[str, Any] | None:
     if not database_enabled():
         raise DatabaseUnavailable("Database is not enabled.")
@@ -1158,8 +1201,9 @@ def delete_smoke_customer(slug: str) -> bool:
 
 
 def apply_schema(schema_sql: str) -> None:
-    if not database_enabled():
-        raise DatabaseUnavailable("Database is not enabled.")
-    with connect() as connection:
+    url = migration_database_url()
+    if not url or not dependency_ready():
+        raise DatabaseUnavailable("Database migration connection is not enabled.")
+    with connect(url) as connection:
         with connection.cursor() as cursor:
             cursor.execute(schema_sql)

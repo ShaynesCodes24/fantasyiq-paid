@@ -9,13 +9,13 @@ def load_local_env(path: str = ".env.local", *, override: bool = False) -> None:
     if not env_path.exists():
         return
 
-    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+    for raw_line in env_path.read_text(encoding="utf-8-sig").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
 
         key, value = line.split("=", 1)
-        key = key.strip()
+        key = key.strip().lstrip("\ufeff")
         value = value.strip().strip('"').strip("'")
         if key and (override or key not in os.environ):
             os.environ[key] = value

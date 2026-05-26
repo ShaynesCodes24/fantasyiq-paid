@@ -12,11 +12,11 @@ from local_env import load_local_env  # noqa: E402
 
 
 def main() -> int:
-    load_local_env()
+    load_local_env(str(ROOT / ".env.local"))
     schema_path = ROOT / "database" / "schema.sql"
     status = database_status()
-    if not status["configured"]:
-        print("DATABASE_URL is not configured. Connect Neon/Postgres first.")
+    if not status.get("migrationConfigured"):
+        print("DATABASE_URL_UNPOOLED or DATABASE_URL is not configured. Connect Neon/Postgres first.")
         return 1
     if not status["driverReady"]:
         print("psycopg is not installed. Run: pip install -r requirements.txt")

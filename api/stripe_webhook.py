@@ -333,23 +333,43 @@ def persist_additional_league_checkout(event: dict[str, Any], session: dict[str,
             payload={"session": session, "fulfillment": "additional_league"},
         )
         saved_customer = None
+        add_on_email = {"sent": False, "reason": "not_attempted"}
         if inserted_event:
             saved_customer = increment_additional_league_count_by_buyer(
                 stripe_customer_id=str(session.get("customer") or ""),
                 email=row.get("email", ""),
                 amount=1,
             )
+            if saved_customer:
+                try:
+                    try:
+                        from email_service import send_additional_league_email
+                    except ImportError:
+                        from api.email_service import send_additional_league_email
+                    add_on_email = send_additional_league_email(
+                        saved_customer,
+                        idempotency_key=f"fantasyiq-additional-league-{event.get('id') or session.get('id')}",
+                    )
+                except Exception:
+                    add_on_email = {"sent": False, "reason": "email_send_failed"}
             record_ops_event(
                 event_type="checkout.additional_league_paid",
-                severity="info",
+                severity="info" if saved_customer else "warning",
                 source="stripe_webhook",
                 customer_slug=(saved_customer or {}).get("slug") or customer_slug,
-                message="Additional league add-on credited to customer account.",
+                message=(
+                    "Additional league add-on credited to customer account."
+                    if saved_customer
+                    else "Additional league add-on was paid but no matching customer account was found."
+                ),
                 payload={
                     "stripeEventId": event.get("id") or "",
                     "stripeObjectId": session.get("id") or "",
+                    "stripeCustomerId": session.get("customer") or "",
+                    "email": row.get("email", ""),
                     "amountTotal": session.get("amount_total"),
                     "currency": session.get("currency") or "",
+                    "addOnEmail": add_on_email,
                 },
             )
         return {
@@ -358,6 +378,7 @@ def persist_additional_league_checkout(event: dict[str, Any], session: dict[str,
             "insertedEvent": inserted_event,
             "customerSlug": (saved_customer or {}).get("slug") or customer_slug,
             "additionalLeagueCount": (saved_customer or {}).get("additional_league_count"),
+            "addOnEmail": add_on_email,
         }
     except (DatabaseUnavailable, ValueError) as exc:
         return {"databaseEnabled": False, "persistedDatabase": False, "reason": str(exc)}
@@ -660,7 +681,7 @@ def process_event(event: dict[str, Any]) -> dict[str, Any]:
             "stripeObjectId": data_object.get("id"),
             "database": database_result,
         }
-    if event_type == "invoice.paid":
+    if event_type in {"invoice.paid", "invoice.payment_succeeded"}:
         database_result = persist_subscription_access_event(event, data_object, "active")
         return {
             "action": "invoice_paid",

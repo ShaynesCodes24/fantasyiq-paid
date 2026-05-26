@@ -188,7 +188,7 @@ If you cannot find teamId=, send the full ESPN league URL and your team name.
 
 1. Stripe redirects the customer to `https://myfantasyiq.com/success.html?checkout=season-pass`.
 2. The webhook creates or updates the customer record when `DATABASE_URL` is connected.
-3. Send or verify the setup email from `CUSTOMER_EMAILS.md`.
+3. The webhook sends the setup/access-code email when `RESEND_API_KEY` is configured; otherwise the admin page can resend it after email is configured.
 4. Complete the setup checklist in `CUSTOMER_ONBOARDING.md` if manual attention is needed.
 5. Set a renewal reminder before the annual renewal date.
 
@@ -231,4 +231,6 @@ https://buy.stripe.com/dRmcN5aAV1GX0Cc7X3efC02
 The dashboard routes add-on purchases through `/api/add-league-checkout`. When
 the included slots are full, that endpoint appends `client_reference_id` to the
 Stripe Payment Link so `/api/stripe-webhook` can credit the correct customer
-after `checkout.session.completed`.
+after `checkout.session.completed`. A successful add-on credit sends the
+customer an extra-league-ready email and records an ops event; unmatched add-on
+payments are recorded as warnings for owner follow-up.

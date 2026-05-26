@@ -428,7 +428,7 @@ def access_code_from(path: str, headers: Any | None = None) -> str:
 def verify_customer_access(context: CustomerContext, path: str = "", headers: Any | None = None) -> None:
     if context.demo_mode:
         return
-    blocked_statuses = {"canceled", "cancelled", "expired", "suspended", "unpaid", "incomplete_expired"}
+    blocked_statuses = {"canceled", "cancelled", "expired", "refunded", "suspended", "unpaid", "incomplete_expired"}
     if str(context.status or "").strip().lower() in blocked_statuses or str(context.subscription_status or "").strip().lower() in blocked_statuses:
         raise PermissionError("This FantasyIQ subscription is not active. Update billing or contact support.")
     try:

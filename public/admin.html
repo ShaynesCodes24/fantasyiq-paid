@@ -48,7 +48,11 @@
               <select id="admin-status-filter">
                 <option value="">All statuses</option>
                 <option value="configured">Configured</option>
+                <option value="active">Active</option>
                 <option value="paid_needs_setup">Needs setup</option>
+                <option value="suspended">Suspended</option>
+                <option value="canceled">Canceled</option>
+                <option value="refunded">Refunded</option>
                 <option value="warning">Needs attention</option>
               </select>
             </label>
@@ -118,6 +122,7 @@
       const opsCustomerFilter = document.querySelector("#ops-customer-filter");
       const opsSourceFilter = document.querySelector("#ops-source-filter");
       let adminPayload = null;
+      const customerStatuses = ["paid_needs_setup", "configured", "active", "suspended", "canceled", "refunded"];
 
       function escapeHtml(value) {
         return String(value || "")
@@ -169,6 +174,10 @@
                 <button type="button" data-admin-action="send_onboarding_email" data-stage="draft_room" data-customer="${escapeHtml(customer.slug)}">Onboard</button>
                 <button type="button" data-admin-action="clean_pending_leagues" data-customer="${escapeHtml(customer.slug)}">Clean</button>
                 <button type="button" data-admin-action="reset_access_code" data-customer="${escapeHtml(customer.slug)}">Reset code</button>
+                <select data-admin-status-control aria-label="Customer status">
+                  ${customerStatuses.map((status) => `<option value="${status}" ${customer.status === status ? "selected" : ""}>${status}</option>`).join("")}
+                </select>
+                <button type="button" data-admin-action="update_customer_status" data-customer="${escapeHtml(customer.slug)}">Set status</button>
               </span>
             </div>`,
           )
@@ -289,9 +298,18 @@
 
       function bindAdminActionButtons() {
         result.querySelectorAll("[data-admin-action]").forEach((button) => {
+          if (button.dataset.adminBound === "1") return;
+          button.dataset.adminBound = "1";
           button.addEventListener("click", async () => {
             try {
-              await runAdminAction(button.dataset.adminAction, button.dataset.customer, button.dataset.stage || "");
+              const extra = {};
+              if (button.dataset.adminAction === "update_customer_status") {
+                extra.status = button.closest(".admin-actions")?.querySelector("[data-admin-status-control]")?.value || "";
+              }
+              if (button.dataset.adminAction === "archive_league") {
+                extra.league = button.dataset.league || "";
+              }
+              await runAdminAction(button.dataset.adminAction, button.dataset.customer, button.dataset.stage || "", extra);
             } catch (error) {
               result.insertAdjacentHTML("afterbegin", `<div class="result-panel"><strong>Admin action failed.</strong><p>${escapeHtml(error.message)}</p></div>`);
             }
@@ -334,7 +352,7 @@
         bindAdminActionButtons();
       }
 
-      async function runAdminAction(action, customer = "", stage = "") {
+      async function runAdminAction(action, customer = "", stage = "", extra = {}) {
         result.insertAdjacentHTML("afterbegin", "<p><strong>Running admin action...</strong></p>");
         const response = await fetch("/api/admin-customers", {
           method: "POST",
@@ -343,7 +361,7 @@
             "Content-Type": "application/json",
             "x-fantasyiq-admin-token": tokenInput.value.trim(),
           },
-          body: JSON.stringify({ action, customer, stage }),
+          body: JSON.stringify({ action, customer, stage, ...extra }),
         });
         const payload = await response.json();
         if (!response.ok || !payload.ok) {
@@ -354,6 +372,7 @@
           const accessCode = customerData.access_code || "";
           const setupUrl = payload.setupUrl || "";
           const dashboardUrl = payload.dashboardUrl || "";
+          const leagues = customerData.leagues || [];
           result.insertAdjacentHTML(
             "afterbegin",
             `<div class="result-panel">
@@ -361,9 +380,35 @@
               <p>Dashboard: ${escapeHtml(dashboardUrl)}</p>
               <p>Setup: ${escapeHtml(setupUrl)}</p>
               <p>Access code: <code>${escapeHtml(accessCode || "not set")}</code></p>
+              <div class="mini-table">
+                ${leagues.map((league) => `<div class="has-actions">
+                  <span>${escapeHtml(league.status || "unknown")}</span>
+                  <strong>${escapeHtml(league.label || league.league_name || league.league_key || "League")}</strong>
+                  <span>${escapeHtml(league.league_id || "")} / Team ${escapeHtml(league.team_id || "")}</span>
+                  <span class="admin-actions">
+                    <button type="button" data-admin-action="archive_league" data-customer="${escapeHtml(customerData.slug)}" data-league="${escapeHtml(league.league_key)}">Archive league</button>
+                  </span>
+                </div>`).join("") || "<p>No saved leagues found.</p>"}
+              </div>
             </div>`,
           );
+          bindAdminActionButtons();
           return;
+        }
+        if (action === "update_customer_status") {
+          const customerData = payload.customer || {};
+          await loadAdmin();
+          result.insertAdjacentHTML(
+            "afterbegin",
+            `<div class="result-panel"><strong>Status updated.</strong><p>${escapeHtml(customerData.slug || customer)} is now ${escapeHtml(customerData.status || extra.status || "updated")}.</p></div>`,
+          );
+        }
+        if (action === "archive_league") {
+          await loadAdmin();
+          result.insertAdjacentHTML(
+            "afterbegin",
+            `<div class="result-panel"><strong>League archived.</strong><p>${escapeHtml(payload.archived?.league_key || extra.league || "League")} archived. Next active league: ${escapeHtml(payload.nextLeagueKey || "none")}.</p></div>`,
+          );
         }
         if (action === "send_setup_email") {
           const email = payload.email || {};

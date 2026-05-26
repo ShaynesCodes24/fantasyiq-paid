@@ -306,6 +306,11 @@ def main() -> int:
         if add_on_status != 200 or (add_on_payload.get("result") or {}).get("action") != "additional_league_paid" or not add_on_database.get("persistedDatabase"):
             raise RuntimeError(f"Add-on webhook failed: {add_on_payload}")
         print("PASS add-on webhook credits additional league")
+        add_on_email = add_on_database.get("addOnEmail") or {}
+        if add_on_email.get("sent"):
+            print("PASS add-on webhook sent extra-league email")
+        else:
+            print(f"WARN add-on webhook extra-league email not sent: {add_on_email.get('reason') or 'unknown'}")
     finally:
         if created_customer:
             cleanup = admin_action("delete_smoke_customer", slug)

@@ -32,6 +32,7 @@ To set or rotate a production secret from PowerShell:
 .\scripts\set_vercel_secret.ps1 -Name STRIPE_WEBHOOK_SECRET
 .\scripts\set_vercel_secret.ps1 -Name RESEND_API_KEY
 .\scripts\set_vercel_secret.ps1 -Name DATABASE_URL
+.\scripts\set_vercel_secret.ps1 -Name DATABASE_URL_UNPOOLED
 .\scripts\set_vercel_secret.ps1 -Name FANTASYIQ_ADMIN_TOKEN
 .\scripts\set_vercel_secret.ps1 -Name FANTASYIQ_ADMIN_GATE_PASSWORD
 .\scripts\set_vercel_secret.ps1 -Name FANTASYIQ_ADMIN_GATE_SECRET
@@ -41,6 +42,7 @@ For durable self-serve records and transactional setup email, also set:
 
 ```text
 DATABASE_URL
+DATABASE_URL_UNPOOLED
 RESEND_API_KEY
 FANTASYIQ_EMAIL_FROM
 FANTASYIQ_SITE_URL
@@ -51,8 +53,9 @@ FANTASYIQ_SUPPORT_EMAIL
 still creates the customer record and the admin page can resend setup email
 after the key is configured.
 
-Run the database schema after connecting Neon/Postgres. The schema now includes
-customer records, sessions, ops events, and the `fantasyiq_rate_limits` table
+Run the database schema after connecting Neon/Postgres. Use `DATABASE_URL_UNPOOLED`
+or another direct connection for schema application when Neon provides one. The
+schema now includes customer records, sessions, ops events, and the `fantasyiq_rate_limits` table
 used to throttle login, password, setup, admin, event tracking, and live draft
 requests.
 

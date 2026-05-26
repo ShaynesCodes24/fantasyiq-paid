@@ -81,6 +81,7 @@ Required production env:
 
 ```text
 DATABASE_URL
+DATABASE_URL_UNPOOLED
 ```
 
 Required setup:
@@ -94,6 +95,7 @@ Records:
 - Customer account: `fantasyiq_customers`
 - League profile: `fantasyiq_leagues`
 - Payment event: `fantasyiq_payment_events`
+- Add-on entitlement: `fantasyiq_customers.additional_league_count`
 
 ## Add-On League Rules
 
@@ -102,6 +104,8 @@ Records:
 - The add-on should not confuse the customer with a second account.
 - The active dashboard remains the same; only another league profile gets added.
 - Admin should be able to see configured league count and add-on count.
+- Successful add-on checkout sends an extra-league-ready email when Resend is configured.
+- Paid add-ons that do not match a customer by Stripe customer id or email are warning-level ops events.
 
 ## Renewal Rules
 

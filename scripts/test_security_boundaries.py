@@ -58,6 +58,20 @@ class SecurityBoundaryTests(unittest.TestCase):
         with self.assertRaises(PermissionError):
             override_customer_context(context, "/api/live-draft?draftLeagueId=222&draftSeason=2025&draftTeamId=8")
 
+    def test_refunded_customer_status_blocks_access(self) -> None:
+        from api.customer_context import CustomerContext, verify_customer_access
+
+        context = CustomerContext(
+            slug="owner",
+            customer_name="Owner",
+            league_id=111,
+            season=2026,
+            access_code="code",
+            status="refunded",
+        )
+        with self.assertRaises(PermissionError):
+            verify_customer_access(context, headers={"x-fantasyiq-access-code": "code"})
+
     def test_draft_bridge_requires_registration_and_matching_key(self) -> None:
         import api.draft_bridge as draft_bridge
 
@@ -191,6 +205,28 @@ class SecurityBoundaryTests(unittest.TestCase):
         self.assertEqual(result["action"], "checkout_ignored")
         self.assertEqual(result["status"], "checkout_not_paid")
 
+    def test_invoice_payment_succeeded_updates_subscription_access(self) -> None:
+        import api.stripe_webhook as stripe_webhook
+
+        calls = []
+        original_persist = stripe_webhook.persist_subscription_access_event
+        try:
+            stripe_webhook.persist_subscription_access_event = lambda event, data_object, status: calls.append(
+                (event["type"], data_object["id"], status)
+            ) or {"persistedDatabase": True}
+            result = stripe_webhook.process_event(
+                {
+                    "id": "evt_invoice_paid",
+                    "type": "invoice.payment_succeeded",
+                    "data": {"object": {"id": "in_123", "status": "paid"}},
+                }
+            )
+        finally:
+            stripe_webhook.persist_subscription_access_event = original_persist
+
+        self.assertEqual(result["action"], "invoice_paid")
+        self.assertEqual(calls, [("invoice.payment_succeeded", "in_123", "active")])
+
     def test_login_failures_and_reset_responses_are_generic(self) -> None:
         from api.customer_login import GENERIC_LOGIN_FAILURE
         from api.customer_password_reset import password_reset_payload
@@ -207,6 +243,23 @@ class SecurityBoundaryTests(unittest.TestCase):
         self.assertNotIn(":access-code", text)
         self.assertNotIn("savedAccessCode", text)
         self.assertNotIn("rememberAccessCode", text)
+
+    def test_local_env_handles_utf8_bom(self) -> None:
+        import os
+        import tempfile
+
+        from scripts.local_env import load_local_env
+
+        saved = os.environ.pop("DATABASE_URL", None)
+        try:
+            with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as handle:
+                handle.write("\ufeffDATABASE_URL=postgres://example\n")
+                env_path = handle.name
+            load_local_env(env_path)
+            self.assertEqual(os.environ.get("DATABASE_URL"), "postgres://example")
+        finally:
+            Path(env_path).unlink(missing_ok=True)
+            restore_env("DATABASE_URL", saved)
 
     def test_health_report_is_redacted(self) -> None:
         from scripts.daily_league_intelligence_health import build_report

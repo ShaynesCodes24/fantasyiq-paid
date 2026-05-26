@@ -13,13 +13,25 @@ pip install -r requirements.txt
 python .\scripts\apply_database_schema.py
 ```
 
-The app checks these env vars in order:
+The app checks these runtime env vars in order:
 
 ```text
 DATABASE_URL
 POSTGRES_URL
 POSTGRES_PRISMA_URL
 ```
+
+Schema application uses a direct migration connection when available, then falls back to the runtime connection:
+
+```text
+DATABASE_URL_UNPOOLED
+POSTGRES_URL_NON_POOLING
+DATABASE_URL
+POSTGRES_URL
+POSTGRES_PRISMA_URL
+```
+
+Use Neon pooled/serverless URLs for runtime traffic when available, and direct/unpooled URLs for `python .\scripts\apply_database_schema.py`.
 
 ## Current Production Database
 
@@ -36,7 +48,9 @@ Vercel project: fantasyiq-paid
 
 Do not commit or paste the connection string. It is stored as an encrypted Vercel environment variable for Production and Development.
 
-Production currently has these tables:
+Production has the core self-serve tables. `database/schema.sql` defines the full current schema, including customer/account tables, Stripe/payment events, sessions, ops events, rate limits, provider cache/freshness, live draft bridge snapshots, ESPN sync snapshots, and recommendation/intelligence tables. Applying the schema is idempotent.
+
+Core launch tables:
 
 ```text
 fantasyiq_customers
@@ -45,6 +59,9 @@ fantasyiq_payment_events
 fantasyiq_sessions
 fantasyiq_ops_events
 fantasyiq_rate_limits
+fantasyiq_provider_cache
+fantasyiq_data_freshness
+fantasyiq_draft_bridge_snapshots
 ```
 
 ## What The Database Stores

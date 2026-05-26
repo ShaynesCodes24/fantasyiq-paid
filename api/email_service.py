@@ -403,6 +403,43 @@ Support:
     }
 
 
+def additional_league_email(customer: dict[str, Any]) -> dict[str, str]:
+    customer_slug = str(customer.get("slug") or customer.get("customerSlug") or "")
+    email = str(customer.get("email") or "").strip()
+    setup = setup_url(customer_slug)
+    dashboard = dashboard_url(customer_slug, str(customer.get("default_league_key") or ""))
+    support = support_email()
+    allowed = int(customer.get("included_league_limit") or customer.get("includedLeagueLimit") or 3) + int(
+        customer.get("additional_league_count") or customer.get("additionalLeagueCount") or 0
+    )
+    subject = "Your extra FantasyIQ league slot is ready"
+    text = f"""Your extra FantasyIQ league slot is ready.
+
+You can now connect another public ESPN league from setup:
+{setup}
+
+Your account currently supports up to {allowed} saved league profile(s).
+
+Dashboard:
+{dashboard}
+
+Support:
+{support}
+"""
+    html = f"""
+    <div style="font-family:Arial,sans-serif;color:#151813;line-height:1.55;max-width:620px;">
+      <p style="color:#8a4f24;font-weight:700;text-transform:uppercase;font-size:12px;">FantasyIQ add-on</p>
+      <h1 style="color:#0f3a30;">Your extra league slot is ready</h1>
+      <p>You can now connect another public ESPN league from setup.</p>
+      <p>Your account currently supports up to <strong>{escape(str(allowed))}</strong> saved league profile(s).</p>
+      <p><a href="{escape(setup)}" style="display:inline-block;background:#0f3a30;color:#fff8e8;font-weight:700;padding:12px 16px;border-radius:8px;text-decoration:none;">Connect another league</a></p>
+      <p><a href="{escape(dashboard)}" style="color:#0f3a30;font-weight:700;">Open dashboard</a></p>
+      <p>Support: <a href="mailto:{escape(support)}">{escape(support)}</a></p>
+    </div>
+    """
+    return {"to": email, "subject": subject, "text": text, "html": html}
+
+
 def send_customer_password_reset_email(customer: dict[str, Any], league_key: str = "", idempotency_key: str = "") -> dict[str, Any]:
     email = str(customer.get("email") or "").strip()
     access_code = str(customer.get("access_code") or customer.get("accessCode") or "").strip()
@@ -440,6 +477,21 @@ def send_customer_onboarding_email(customer: dict[str, Any], stage: str = "accou
         idempotency_key=idempotency_key,
     )
     record_email_event({**customer, "leagueKey": league_key}, result, event_type=f"email.onboarding.{stage}")
+    return result
+
+
+def send_additional_league_email(customer: dict[str, Any], idempotency_key: str = "") -> dict[str, Any]:
+    message = additional_league_email(customer)
+    if not message["to"]:
+        return {"sent": False, "reason": "customer_email_missing"}
+    result = send_email(
+        to=message["to"],
+        subject=message["subject"],
+        html=message["html"],
+        text=message["text"],
+        idempotency_key=idempotency_key,
+    )
+    record_email_event(customer, result, event_type="email.additional_league")
     return result
 
 

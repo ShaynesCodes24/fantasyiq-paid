@@ -78,7 +78,8 @@ Trade Calculator:
 
 Admin:
 - `/admin.html` requires admin token by header.
-- Admin endpoint does not expose access codes.
+- Admin access codes are only visible through protected owner detail/reset actions for support recovery.
+- Admin status changes, access-code resets, and league archive actions record ops events.
 - Database status displays when database is connected.
 - Ops event console filters setup, login, live sync, email, Stripe, and admin events by severity, type, customer, source, and search text.
 - Ops event payload details are hidden behind expandable details, not shown by default.

@@ -332,11 +332,28 @@ def parse_body(handler: BaseHTTPRequestHandler) -> dict[str, Any]:
 def admin_action(raw: dict[str, Any]) -> dict[str, Any]:
     action = str(raw.get("action") or "").strip()
     customer_slug = str(raw.get("customer") or raw.get("slug") or "").strip()
+    league_key = str(raw.get("league") or raw.get("leagueKey") or raw.get("league_key") or "").strip()
     try:
         try:
-            from database import admin_customer_detail, archive_pending_duplicate_leagues, reset_customer_access_code
+            from database import (
+                admin_customer_detail,
+                archive_customer_league,
+                archive_pending_duplicate_leagues,
+                record_ops_event,
+                reset_customer_access_code,
+                revoke_customer_sessions,
+                update_customer_status,
+            )
         except ImportError:
-            from api.database import admin_customer_detail, archive_pending_duplicate_leagues, reset_customer_access_code
+            from api.database import (
+                admin_customer_detail,
+                archive_customer_league,
+                archive_pending_duplicate_leagues,
+                record_ops_event,
+                reset_customer_access_code,
+                revoke_customer_sessions,
+                update_customer_status,
+            )
     except ImportError as exc:
         raise ConfigError("Database admin tools are unavailable.") from exc
 
@@ -500,12 +517,73 @@ def admin_action(raw: dict[str, Any]) -> dict[str, Any]:
         detail = reset_customer_access_code(customer_slug)
         if not detail:
             raise ConfigError("Customer was not found in the database.")
+        revoke_customer_sessions(str(detail.get("slug") or customer_slug))
+        record_ops_event(
+            event_type="admin.reset_access_code",
+            severity="info",
+            source="admin_customers",
+            customer_slug=str(detail.get("slug") or customer_slug),
+            message="Admin reset a customer access code.",
+            payload={"accessCodeSet": bool(detail.get("access_code"))},
+        )
         return {
             "ok": True,
             "action": action,
             "customer": detail,
             "dashboardUrl": dashboard_url(detail["slug"]),
             "setupUrl": setup_url(detail["slug"]),
+            "syncedAt": utc_now(),
+        }
+
+    if action == "update_customer_status":
+        status = str(raw.get("status") or raw.get("customerStatus") or raw.get("customer_status") or "").strip()
+        subscription_status = str(raw.get("subscriptionStatus") or raw.get("subscription_status") or "").strip()
+        allowed_statuses = {"paid_needs_setup", "configured", "active", "suspended", "canceled", "refunded"}
+        if status not in allowed_statuses:
+            raise ConfigError("Unsupported customer status.")
+        detail = update_customer_status(customer_slug, status, subscription_status)
+        if not detail:
+            raise ConfigError("Customer was not found in the database.")
+        record_ops_event(
+            event_type="admin.update_customer_status",
+            severity="info",
+            source="admin_customers",
+            customer_slug=str(detail.get("slug") or customer_slug),
+            message=f"Admin changed customer status to {status}.",
+            payload={"status": status, "subscriptionStatus": subscription_status},
+        )
+        return {
+            "ok": True,
+            "action": action,
+            "customer": detail,
+            "dashboardUrl": dashboard_url(detail["slug"]),
+            "setupUrl": setup_url(detail["slug"]),
+            "syncedAt": utc_now(),
+        }
+
+    if action == "archive_league":
+        if not league_key:
+            raise ConfigError("Choose a league to archive.")
+        try:
+            archived = archive_customer_league(customer_slug, league_key)
+        except (KeyError, ValueError) as exc:
+            raise ConfigError(str(exc)) from exc
+        record_ops_event(
+            event_type="admin.archive_league",
+            severity="info",
+            source="admin_customers",
+            customer_slug=customer_slug,
+            league_key=league_key,
+            message="Admin archived a customer league profile.",
+            payload=archived,
+        )
+        return {
+            "ok": True,
+            "action": action,
+            "archived": archived.get("archived") or {},
+            "nextLeagueKey": archived.get("nextLeagueKey") or "",
+            "remainingLeagueCount": archived.get("remainingLeagueCount") or 0,
+            "customer": admin_customer_detail(customer_slug) or {},
             "syncedAt": utc_now(),
         }
 
@@ -542,6 +620,19 @@ def admin_action(raw: dict[str, Any]) -> dict[str, Any]:
         detail = admin_customer_detail(customer_slug)
         if not detail:
             raise ConfigError("Customer was not found in the database.")
+        if not str(detail.get("access_code") or "").strip():
+            detail = reset_customer_access_code(customer_slug)
+            if not detail:
+                raise ConfigError("Customer was not found in the database.")
+            revoke_customer_sessions(str(detail.get("slug") or customer_slug))
+            record_ops_event(
+                event_type="admin.reset_access_code",
+                severity="info",
+                source="admin_customers",
+                customer_slug=str(detail.get("slug") or customer_slug),
+                message="Admin rotated an access code before sending a password reset email.",
+                payload={"accessCodeSet": bool(detail.get("access_code"))},
+            )
         try:
             try:
                 from email_service import send_customer_password_reset_email

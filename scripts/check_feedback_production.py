@@ -34,12 +34,12 @@ def load_env() -> None:
     production_env = ROOT / ".env.production.local"
     if not production_env.exists():
         return
-    for raw_line in production_env.read_text(encoding="utf-8").splitlines():
+    for raw_line in production_env.read_text(encoding="utf-8-sig").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
-        key = key.strip()
+        key = key.strip().lstrip("\ufeff")
         value = value.strip().strip('"').strip("'")
         if key in LOCAL_SECRET_KEYS:
             continue
@@ -145,6 +145,7 @@ def check_email_templates() -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Verify production feedback storage and admin ops visibility.")
+    parser.add_argument("--apply-schema", action="store_true", help="Apply database/schema.sql through the protected admin action before checking feedback.")
     parser.add_argument("--send-smoke-email", action="store_true", help="Run the existing admin checkout smoke test, which attempts a setup email through Resend.")
     args = parser.parse_args()
 
@@ -164,9 +165,12 @@ def main() -> int:
     require("total" in database, "Admin ops summary did not load; database may be unavailable.")
     print("PASS production admin gate and ops database are reachable")
 
-    schema_result = admin_action(opener, site_url, "apply_database_schema")
-    require((schema_result.get("database") or {}).get("enabled") is True, "Production database is not enabled after schema check.")
-    print("PASS production database schema apply/check completed")
+    if args.apply_schema:
+        schema_result = admin_action(opener, site_url, "apply_database_schema")
+        require((schema_result.get("database") or {}).get("enabled") is True, "Production database is not enabled after schema apply.")
+        print("PASS production database schema apply completed")
+    else:
+        print("PASS production database schema apply skipped; pass --apply-schema to run production DDL")
 
     marker = f"production-feedback-check-{int(time.time())}"
     feedback_payload = {
