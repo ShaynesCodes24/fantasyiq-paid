@@ -8088,3 +8088,347 @@ small,
     grid-template-columns: 1fr;
   }
 }
+
+.nav-item.premium-nav {
+  border-color: rgba(231, 185, 90, 0.42);
+  background:
+    linear-gradient(90deg, rgba(231, 185, 90, 0.22), rgba(6, 45, 38, 0.72)),
+    rgba(0, 25, 21, 0.92);
+  color: #f3cf72;
+}
+
+.parlay-panel .panel-head {
+  align-items: end;
+}
+
+.parlay-hero {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.parlay-hero article,
+.parlay-card,
+.parlay-table-card,
+.parlay-slip-card,
+.parlay-intel-grid article,
+.parlay-roster-list article {
+  border: 1px solid rgba(16, 44, 37, 0.13);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(251, 247, 237, 0.98)),
+    var(--panel-bg);
+  box-shadow: 0 16px 36px rgba(8, 24, 20, 0.08);
+}
+
+.parlay-hero article {
+  min-height: 116px;
+  padding: 18px;
+}
+
+.parlay-hero span,
+.parlay-card-top span,
+.parlay-card-head .eyebrow,
+.parlay-intel-grid article > span,
+.parlay-roster-list span,
+.parlay-slip-summary span {
+  display: block;
+  color: #536259;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.parlay-hero strong {
+  display: block;
+  margin: 8px 0 6px;
+  color: #08241f;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.parlay-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  align-items: start;
+}
+
+.parlay-main {
+  display: grid;
+  gap: 16px;
+}
+
+.parlay-smart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.parlay-card,
+.parlay-table-card,
+.parlay-slip-card,
+.parlay-intel-grid article {
+  padding: 18px;
+}
+
+.parlay-card-top {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.parlay-card-top strong,
+.parlay-card-head h3,
+.parlay-slip-card h3 {
+  margin: 4px 0 0;
+  color: #08241f;
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.parlay-card-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.parlay-card-metrics b,
+.parlay-slip-summary strong {
+  border-radius: 8px;
+  background: rgba(3, 53, 45, 0.08);
+  color: #07382f;
+  font-size: 18px;
+  padding: 10px;
+  text-align: center;
+}
+
+.parlay-card ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.parlay-card li,
+.parlay-slip-list article {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  border-top: 1px solid rgba(8, 43, 35, 0.08);
+  padding-top: 8px;
+  color: #102b25;
+  font-weight: 900;
+}
+
+.parlay-card li small {
+  color: #5b675f;
+  white-space: nowrap;
+}
+
+.parlay-card p,
+.parlay-empty p,
+.parlay-disclaimer {
+  color: #526058;
+  font-weight: 800;
+}
+
+.parlay-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.parlay-leg-table {
+  display: grid;
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.parlay-row {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) 150px 90px 80px 82px;
+  gap: 10px;
+  align-items: center;
+  min-width: 760px;
+  border: 1px solid rgba(7, 43, 36, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 253, 247, 0.82);
+  padding: 10px;
+}
+
+.parlay-row-head {
+  border-color: rgba(7, 43, 36, 0.16);
+  background: #092a24;
+  color: #f1cc67;
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.parlay-row.selected {
+  border-color: rgba(231, 185, 90, 0.7);
+  background: rgba(255, 244, 203, 0.72);
+}
+
+.parlay-row strong {
+  display: block;
+  color: #08241f;
+  line-height: 1.2;
+}
+
+.parlay-row small {
+  display: block;
+  color: #627066;
+}
+
+.edge-hot {
+  color: #087143;
+  font-weight: 950;
+}
+
+.icon-text-action,
+.parlay-slip-list button {
+  min-height: 34px;
+  border: 1px solid rgba(7, 43, 36, 0.16);
+  border-radius: 8px;
+  background: #092a24;
+  color: #f1cc67;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.parlay-roster-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.parlay-roster-list article {
+  padding: 14px;
+}
+
+.parlay-roster-list strong {
+  display: block;
+  margin: 6px 0;
+  color: #08241f;
+}
+
+.parlay-slip-card {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.parlay-slip-list {
+  display: grid;
+  gap: 8px;
+}
+
+.parlay-slip-list article {
+  grid-template-columns: 34px 1fr;
+  border: 1px solid rgba(7, 43, 36, 0.09);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.parlay-slip-list article small {
+  grid-column: 2;
+}
+
+.parlay-slip-summary {
+  display: grid;
+  gap: 8px;
+  border-radius: 8px;
+  background: rgba(7, 43, 36, 0.08);
+  padding: 14px;
+}
+
+.parlay-slip-summary strong {
+  padding: 0;
+  background: transparent;
+  font-size: 34px;
+  text-align: left;
+}
+
+.parlay-warning {
+  border: 1px solid rgba(171, 63, 48, 0.32);
+  border-radius: 8px;
+  background: rgba(171, 63, 48, 0.1);
+  color: #7e2418;
+  font-weight: 900;
+  padding: 12px;
+}
+
+.parlay-intel-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.parlay-history-row,
+.parlay-agent-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) 86px 90px 80px;
+  gap: 10px;
+  align-items: center;
+  border-top: 1px solid rgba(7, 43, 36, 0.08);
+  padding: 10px 0;
+}
+
+.parlay-agent-row {
+  grid-template-columns: minmax(150px, 1fr) 74px;
+}
+
+.parlay-agent-row small {
+  grid-column: 1 / -1;
+}
+
+.parlay-empty {
+  grid-column: 1 / -1;
+  border: 1px solid rgba(7, 43, 36, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 253, 247, 0.92);
+  padding: 18px;
+}
+
+.parlay-empty.danger {
+  border-color: rgba(171, 63, 48, 0.34);
+}
+
+@media (max-width: 1120px) {
+  .parlay-layout,
+  .parlay-intel-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .parlay-slip-card {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .parlay-hero,
+  .parlay-smart-grid,
+  .parlay-roster-list {
+    grid-template-columns: 1fr;
+  }
+
+  .parlay-card-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .parlay-history-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}

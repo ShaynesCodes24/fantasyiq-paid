@@ -136,6 +136,48 @@ CREATE TABLE IF NOT EXISTS fantasyiq_draft_bridge_snapshots (
 CREATE INDEX IF NOT EXISTS fantasyiq_draft_bridge_snapshots_updated_idx
     ON fantasyiq_draft_bridge_snapshots (updated_at DESC);
 
+CREATE TABLE IF NOT EXISTS fantasyiq_parlay_odds_cache (
+    cache_key TEXT PRIMARY KEY,
+    sport_key TEXT NOT NULL DEFAULT '',
+    event_id TEXT NOT NULL DEFAULT '',
+    markets TEXT NOT NULL DEFAULT '',
+    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    usage_meta JSONB NOT NULL DEFAULT '{}'::jsonb,
+    expires_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS fantasyiq_parlay_odds_cache_expires_idx
+    ON fantasyiq_parlay_odds_cache (expires_at);
+
+CREATE TABLE IF NOT EXISTS fantasyiq_parlay_recommendations (
+    id BIGSERIAL PRIMARY KEY,
+    customer_slug TEXT NOT NULL DEFAULT '',
+    league_key TEXT NOT NULL DEFAULT '',
+    sport_key TEXT NOT NULL DEFAULT '',
+    slate_key TEXT NOT NULL DEFAULT '',
+    request_hash TEXT NOT NULL DEFAULT '',
+    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    agent_trace JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS fantasyiq_parlay_recommendations_lookup_idx
+    ON fantasyiq_parlay_recommendations (customer_slug, league_key, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS fantasyiq_parlay_backtests (
+    id BIGSERIAL PRIMARY KEY,
+    sport_key TEXT NOT NULL DEFAULT '',
+    market_key TEXT NOT NULL DEFAULT '',
+    leg_type TEXT NOT NULL DEFAULT '',
+    sample_size INTEGER NOT NULL DEFAULT 0,
+    win_rate NUMERIC(6,4),
+    roi NUMERIC(8,4),
+    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (sport_key, market_key, leg_type)
+);
+
 CREATE TABLE IF NOT EXISTS fantasyiq_espn_sync_snapshots (
     id BIGSERIAL PRIMARY KEY,
     customer_slug TEXT NOT NULL DEFAULT '',

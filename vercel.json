@@ -112,6 +112,14 @@
       "destination": "/api/intelligence"
     },
     {
+      "source": "/api/parlay-iq",
+      "destination": "/api/parlay_iq"
+    },
+    {
+      "source": "/api/parlay-iq.json",
+      "destination": "/api/parlay_iq"
+    },
+    {
       "source": "/api/setup-validate",
       "destination": "/api/setup_validate"
     },

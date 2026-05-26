@@ -110,6 +110,9 @@ function applyBoardPayload(data) {
   renderRosterEngines();
   refreshActivePlayerAutocomplete();
   loadIntelligence(false);
+  if (document.querySelector("#parlay.panel.active") && typeof loadParlayIq === "function") {
+    loadParlayIq({ force: true });
+  }
 }
 
 function fantasyCalcMarketRequestUrl() {

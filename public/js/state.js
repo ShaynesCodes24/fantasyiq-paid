@@ -236,6 +236,26 @@ const accountLeagueSlots = document.querySelector("#account-league-slots");
 const accountLeagueSlotDetail = document.querySelector("#account-league-slot-detail");
 const accountSupportEmail = document.querySelector("#account-support-email");
 const accountLeagueList = document.querySelector("#account-league-list");
+const parlaySport = document.querySelector("#parlay-sport");
+const parlayRefresh = document.querySelector("#parlay-refresh");
+const parlayBetMyTeam = document.querySelector("#parlay-bet-my-team");
+const parlayStatus = document.querySelector("#parlay-status");
+const parlaySmartCount = document.querySelector("#parlay-smart-count");
+const parlayBestEdge = document.querySelector("#parlay-best-edge");
+const parlayWinRate = document.querySelector("#parlay-win-rate");
+const parlayMatrixNote = document.querySelector("#parlay-matrix-note");
+const parlayOddsSource = document.querySelector("#parlay-odds-source");
+const parlayCacheNote = document.querySelector("#parlay-cache-note");
+const parlaySmartList = document.querySelector("#parlay-smart-list");
+const parlayLegTable = document.querySelector("#parlay-leg-table");
+const parlayRosterList = document.querySelector("#parlay-roster-list");
+const parlaySlipCount = document.querySelector("#parlay-slip-count");
+const parlaySlipList = document.querySelector("#parlay-slip-list");
+const parlaySlipSummary = document.querySelector("#parlay-slip-summary");
+const parlaySlipWarning = document.querySelector("#parlay-slip-warning");
+const parlayClearSlip = document.querySelector("#parlay-clear-slip");
+const parlayHistoryMatrix = document.querySelector("#parlay-history-matrix");
+const parlayAgentTrace = document.querySelector("#parlay-agent-trace");
 
 const DEFAULT_LINEUP_SLOTS = {
   QB: 1,

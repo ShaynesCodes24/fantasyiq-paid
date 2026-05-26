@@ -97,6 +97,7 @@
         <button class="nav-item" data-section="draft">Draft Prep IQ</button>
         <button class="nav-item" data-section="simulator">Mock Simulator</button>
         <button class="nav-item" data-section="live">Schedule IQ</button>
+        <button class="nav-item premium-nav" data-section="parlay">Parlay IQ</button>
         <button class="nav-item" data-section="waivers">Waivers IQ</button>
         <button class="nav-item" data-section="trade">Trade IQ</button>
         <button class="nav-item" data-section="account">Account</button>
@@ -116,6 +117,7 @@
                 <button class="secondary-action nav-jump" type="button" data-jump="draft">Draft Prep IQ</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="simulator">Mock Simulator</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="live">Schedule IQ</button>
+                <button class="secondary-action nav-jump" type="button" data-jump="parlay">Parlay IQ</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="waivers">Waivers IQ</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="trade">Trade IQ</button>
               </div>
@@ -1026,6 +1028,112 @@
 
         </section>
 
+        <section class="panel parlay-panel" id="parlay">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Parlay IQ</p>
+              <h2>Cheat Code Dashboard</h2>
+            </div>
+            <div class="live-switches">
+              <select id="parlay-sport" aria-label="Parlay IQ sport">
+                <option value="americanfootball_nfl">NFL</option>
+              </select>
+              <button class="secondary-action" id="parlay-bet-my-team" type="button">Bet My Team</button>
+              <button class="primary-action" id="parlay-refresh" type="button">Refresh Odds</button>
+            </div>
+          </div>
+
+          <section class="parlay-hero" aria-label="Parlay IQ status">
+            <article>
+              <span>Smart Parlays</span>
+              <strong id="parlay-smart-count">--</strong>
+              <small id="parlay-status">Loading Parlay IQ.</small>
+            </article>
+            <article>
+              <span>Best Edge</span>
+              <strong id="parlay-best-edge">--</strong>
+              <small>FantasyIQ model vs book line</small>
+            </article>
+            <article>
+              <span>Historical Win Rate</span>
+              <strong id="parlay-win-rate">--</strong>
+              <small id="parlay-matrix-note">Backtest matrix pending</small>
+            </article>
+            <article>
+              <span>Odds Source</span>
+              <strong id="parlay-odds-source">Checking</strong>
+              <small id="parlay-cache-note">Server-side cache</small>
+            </article>
+          </section>
+
+          <div class="parlay-layout">
+            <div class="parlay-main">
+              <section class="parlay-smart-grid" id="parlay-smart-list" aria-label="Smart Parlay recommendations">
+                <article class="parlay-empty">
+                  <strong>Building Smart Parlays...</strong>
+                  <p>Coordinator is waiting on the odds and roster agents.</p>
+                </article>
+              </section>
+
+              <section class="parlay-table-card">
+                <div class="parlay-card-head">
+                  <div>
+                    <p class="eyebrow">Positive EV Legs</p>
+                    <h3>Line Shop Board</h3>
+                  </div>
+                  <button class="secondary-action" id="parlay-clear-slip" type="button">Clear Slip</button>
+                </div>
+                <div class="parlay-leg-table" id="parlay-leg-table">
+                  Waiting for odds.
+                </div>
+              </section>
+
+              <section class="parlay-table-card">
+                <div class="parlay-card-head">
+                  <div>
+                    <p class="eyebrow">Roster Integration</p>
+                    <h3>Bet My Team Candidates</h3>
+                  </div>
+                </div>
+                <div class="parlay-roster-list" id="parlay-roster-list">
+                  Roster props appear after My Team sync.
+                </div>
+              </section>
+            </div>
+
+            <aside class="parlay-slip-card" aria-label="Interactive parlay slip builder">
+              <div class="parlay-card-head">
+                <div>
+                  <p class="eyebrow">Slip Builder</p>
+                  <h3>Custom Parlay</h3>
+                </div>
+                <strong id="parlay-slip-count">0 legs</strong>
+              </div>
+              <div class="parlay-slip-list" id="parlay-slip-list">
+                <p>Select legs from the board.</p>
+              </div>
+              <div class="parlay-slip-summary" id="parlay-slip-summary">
+                <span>FantasyIQ Edge</span>
+                <strong>--</strong>
+                <small>Edge updates as legs are added.</small>
+              </div>
+              <div class="parlay-warning" id="parlay-slip-warning" hidden></div>
+              <small class="parlay-disclaimer">Analytics only. Verify line availability, book rules, and local laws before wagering.</small>
+            </aside>
+          </div>
+
+          <section class="parlay-intel-grid" aria-label="Parlay IQ intelligence">
+            <article>
+              <span>Historical Accuracy Matrix</span>
+              <div id="parlay-history-matrix">Waiting for backtest data.</div>
+            </article>
+            <article>
+              <span>Agent Trace</span>
+              <div id="parlay-agent-trace">Coordinator is standing by.</div>
+            </article>
+          </section>
+        </section>
+
         <section class="panel" id="simulator">
           <div class="panel-head">
             <div>
@@ -1495,6 +1603,7 @@
     <script src="./js/sos.js?v=20260525_schedule_iq_1"></script>
     <script src="./js/draft.js?v=20260525_trade_quality_5"></script>
     <script src="./js/simulator.js?v=20260524_split_1"></script>
+    <script src="./js/parlay.js?v=20260525_parlay_iq_1"></script>
     <script src="./js/ui.js?v=20260524_trade_database_1"></script>
     <script src="./app.js?v=20260524_split_1"></script>
   </body>
