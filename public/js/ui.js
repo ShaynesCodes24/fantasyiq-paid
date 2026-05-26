@@ -81,6 +81,15 @@ function startLiveSync() {
   loadLiveDraft();
 }
 
+function scheduleIdleTask(callback, timeout = 1200) {
+  if (typeof callback !== "function") return;
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(callback, { timeout });
+    return;
+  }
+  window.setTimeout(callback, timeout);
+}
+
 function liveBoardRequestUrl(limit = "") {
   const liveBoardUrl = appConfig.liveBoardUrl || "/api/live-boards";
   if (liveBoardUrl.startsWith("/api/")) {
@@ -91,16 +100,62 @@ function liveBoardRequestUrl(limit = "") {
   return `${liveBoardUrl}${liveBoardUrl.includes("?") ? "&" : "?"}${params.toString()}`;
 }
 
-function applyBoardPayload(data) {
-  boardData = data;
-  applyServerCustomerContext(data.customer);
-  loadFantasyCalcMarket();
-  loadFantasyCalcTradeDatabase();
-  renderLeagueProfile();
+const BUNDLED_BOARD_VERSION = "20260525_boot_speed_1";
+let deferredDashboardRenderQueued = false;
+
+function activeDashboardSection() {
+  return document.querySelector(".panel.active")?.id || "command";
+}
+
+function renderBoardDependentSection(section = activeDashboardSection(), options = {}) {
+  if (!boardData) return;
+  const activated = Boolean(options.userActivated);
+  if (section === "command") {
+    renderLeagueHealth();
+    renderIntelligenceOS();
+    return;
+  }
+  if (section === "workbooks") {
+    renderBoard();
+    refreshActivePlayerAutocomplete();
+    return;
+  }
+  if (section === "draft") {
+    renderDraftPrep();
+    return;
+  }
+  if (section === "live") {
+    renderSosHeatMap();
+    if (activated && sosRuntimeReady) loadSosHeatMap();
+    renderCheatcodeMode();
+    renderLiveDraft();
+    renderLiveTierBoard();
+    return;
+  }
+  if (section === "simulator") {
+    renderMockSimulator();
+    gradeExternalMockDraft();
+    return;
+  }
+  if (section === "trade") {
+    renderTradeCalc();
+    renderRosterEngines();
+    return;
+  }
+  if (section === "my-team" || section === "waivers") {
+    renderRosterEngines();
+    return;
+  }
+  if (section === "account") {
+    renderAccountPanel();
+  }
+}
+
+function renderDeferredDashboardSections() {
+  if (!boardData) return;
   renderBoard();
   renderDraftPrep();
   renderSosHeatMap();
-  loadSosHeatMap();
   renderCheatcodeMode();
   renderLiveDraft();
   renderLiveTierBoard();
@@ -109,7 +164,28 @@ function applyBoardPayload(data) {
   renderTradeCalc();
   renderRosterEngines();
   refreshActivePlayerAutocomplete();
+}
+
+function scheduleDeferredDashboardSections() {
+  if (deferredDashboardRenderQueued) return;
+  deferredDashboardRenderQueued = true;
+  scheduleIdleTask(() => {
+    deferredDashboardRenderQueued = false;
+    renderDeferredDashboardSections();
+  }, 900);
+}
+
+function applyBoardPayload(data) {
+  boardData = data;
+  applyServerCustomerContext(data.customer);
+  renderLeagueProfile();
+  renderBoardDependentSection(activeDashboardSection());
   loadIntelligence(false);
+  scheduleDeferredDashboardSections();
+  scheduleIdleTask(() => {
+    loadFantasyCalcMarket();
+    loadFantasyCalcTradeDatabase();
+  }, 1800);
 }
 
 function fantasyCalcMarketRequestUrl() {
@@ -235,7 +311,8 @@ function combinedBoardCount(data = boardData) {
 function loadFullBoardInBackground() {
   if (fullBoardLoadStarted || !(appConfig.liveBoardUrl || "/api/live-boards").startsWith("/api/")) return;
   fullBoardLoadStarted = true;
-  fetch(liveBoardRequestUrl(), { cache: "no-store", headers: apiHeaders() })
+  scheduleIdleTask(() => {
+    fetch(liveBoardRequestUrl(), { cache: "no-store", headers: apiHeaders() })
     .then((response) => {
       if (!response.ok) throw new Error(`Full board returned HTTP ${response.status}`);
       return response.json();
@@ -250,6 +327,7 @@ function loadFullBoardInBackground() {
     .catch((error) => {
       console.warn("Full board background load failed.", error);
     });
+  }, 2400);
 }
 
 function loadBoards() {
@@ -271,7 +349,7 @@ function loadBoards() {
       if (window.FANTASY_BOARDS) {
         return window.FANTASY_BOARDS;
       }
-      return fetch(`./data/boards.json?v=${Date.now()}`, { cache: "no-store" }).then((response) => {
+      return fetch(`./data/boards.json?v=${BUNDLED_BOARD_VERSION}`).then((response) => {
         if (!response.ok) throw new Error(`Bundled board returned HTTP ${response.status}`);
         return response.json();
       });
@@ -302,7 +380,7 @@ window.setTimeout(pingDraftCompanion, 800);
 
 if (boardTable) {
   bootCustomerDashboard();
-  loadDataFreshness();
+  scheduleIdleTask(loadDataFreshness, 3000);
 }
 
 setupPlayerAutocomplete();

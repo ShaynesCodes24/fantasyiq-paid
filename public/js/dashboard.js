@@ -1582,6 +1582,9 @@ navItems.forEach((button) => {
     history.replaceState(null, "", dashboardUrlWithHash(`#${section}`));
     setActive(navItems, button);
     panels.forEach((panel) => panel.classList.toggle("active", panel.id === section));
+    if (typeof renderBoardDependentSection === "function") {
+      renderBoardDependentSection(section, { userActivated: true });
+    }
     scrollDashboardTop("smooth");
   });
 });
@@ -1595,6 +1598,9 @@ if (brandHomeLink) {
     const commandButton = Array.from(navItems).find((button) => button.dataset.section === "command");
     if (commandButton) setActive(navItems, commandButton);
     panels.forEach((panel) => panel.classList.toggle("active", panel.id === "command"));
+    if (typeof renderBoardDependentSection === "function") {
+      renderBoardDependentSection("command", { userActivated: true });
+    }
     history.replaceState(null, "", dashboardHomeUrl());
     scrollDashboardTop("smooth");
   });
@@ -1608,9 +1614,8 @@ function activateSection(section) {
   history.replaceState(null, "", dashboardUrlWithHash(`#${section}`));
   setActive(navItems, targetButton);
   panels.forEach((panel) => panel.classList.toggle("active", panel.id === section));
-  if (section === "live" && sosRuntimeReady) {
-    renderSosHeatMap();
-    loadSosHeatMap();
+  if (typeof renderBoardDependentSection === "function") {
+    renderBoardDependentSection(section, { userActivated: true });
   }
   scrollDashboardTop("auto");
 }

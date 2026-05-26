@@ -17,15 +17,19 @@ from urllib.parse import parse_qs, urlparse
 
 try:
     from customer_context import ConfigError, authorize_customer_context, resolve_customer_context
+    from provider_cache import load_provider_payload, save_provider_payload
     from rate_limit import check_rate_limit, rate_limit_payload
 except ModuleNotFoundError:
     from api.customer_context import ConfigError, authorize_customer_context, resolve_customer_context
+    from api.provider_cache import load_provider_payload, save_provider_payload
     from api.rate_limit import check_rate_limit, rate_limit_payload
 
 
 DEFAULT_SEASON = 2026
 DEFAULT_LIMIT = 320
 CACHE_TTL_SECONDS = 900
+BOARD_DURABLE_CACHE_TTL_SECONDS = 900
+BOARD_CACHE_SCHEMA_VERSION = "v2"
 DEFAULT_DEMO_LEAGUE_ID = 584856941
 SLEEPER_API_BASE = "https://api.sleeper.app/v1"
 SLEEPER_LOOKBACK_HOURS = 72
@@ -1447,15 +1451,24 @@ def build_live_board_payload(
 ) -> dict[str, Any]:
     context = authorize_customer_context(request_path, headers)
     now = time.time()
-    cache_key = f"{context.cache_key}:boards:{limit or 'default'}"
+    row_limit = limit or int_env("FANTASY_IQ_BOARD_LIMIT", DEFAULT_LIMIT)
+    cache_key = f"{context.cache_key}:boards:{row_limit}"
     cached = _board_cache.get(cache_key)
     if not force and cached and cached.get("data") and now - float(cached.get("ts") or 0) < CACHE_TTL_SECONDS:
-        return cached["data"]
+        payload = dict(cached["data"])
+        payload["cache"] = {"layer": "memory", "ageSeconds": round(now - float(cached.get("ts") or 0))}
+        return payload
+
+    durable_key = f"live-board:{BOARD_CACHE_SCHEMA_VERSION}:{cache_key}"
+    if not force:
+        durable = load_provider_payload(durable_key, BOARD_DURABLE_CACHE_TTL_SECONDS)
+        if durable:
+            _board_cache[cache_key] = {"data": durable, "ts": now}
+            return durable
 
     season = context.season or int_env("FANTASY_IQ_SEASON", DEFAULT_SEASON)
     league_settings = context_scoring_settings(context, season)
     scoring_profile = scoring_profile_for(league_settings)
-    row_limit = limit or int_env("FANTASY_IQ_BOARD_LIMIT", DEFAULT_LIMIT)
     fetch_limit = max(row_limit + 240, 700)
     external_signals = sleeper_external_signals()
     udk_signals = udk_signal_payload(force=force)
@@ -1532,6 +1545,7 @@ def build_live_board_payload(
         },
     }
     _board_cache[cache_key] = {"data": payload, "ts": now}
+    save_provider_payload(durable_key, payload)
     return payload
 
 
