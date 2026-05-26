@@ -1582,9 +1582,6 @@ navItems.forEach((button) => {
     history.replaceState(null, "", dashboardUrlWithHash(`#${section}`));
     setActive(navItems, button);
     panels.forEach((panel) => panel.classList.toggle("active", panel.id === section));
-    if (section === "parlay" && typeof loadParlayIq === "function") {
-      loadParlayIq();
-    }
     scrollDashboardTop("smooth");
   });
 });
@@ -1614,9 +1611,6 @@ function activateSection(section) {
   if (section === "live" && sosRuntimeReady) {
     renderSosHeatMap();
     loadSosHeatMap();
-  }
-  if (section === "parlay" && typeof loadParlayIq === "function") {
-    loadParlayIq();
   }
   scrollDashboardTop("auto");
 }
