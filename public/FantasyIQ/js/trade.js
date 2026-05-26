@@ -1,4 +1,3 @@
-
 function positionCounts(players) {
   const counts = {};
   players.forEach((item) => {
@@ -23,10 +22,12 @@ function tradeTotals(players) {
 
 function tradePositionSummary(players) {
   const counts = positionCounts(players);
-  return ["QB", "RB", "WR", "TE", "DST", "K"]
-    .filter((pos) => counts[pos])
-    .map((pos) => `${pos} ${counts[pos]}`)
-    .join(" / ") || "No matched positions";
+  return (
+    ["QB", "RB", "WR", "TE", "DST", "K"]
+      .filter((pos) => counts[pos])
+      .map((pos) => `${pos} ${counts[pos]}`)
+      .join(" / ") || "No matched positions"
+  );
 }
 
 function marketTotalLabel(totals) {
@@ -52,7 +53,8 @@ function tradeMarketCalibration(giveTotals, getTotals, give, get) {
     } else if (netMarket < netFantasyIq - 5) {
       label = "Market colder";
       className = "watch";
-      detail = "The real-trade market is less favorable than FantasyIQ roster fit. Expect the other manager to push back.";
+      detail =
+        "The real-trade market is less favorable than FantasyIQ roster fit. Expect the other manager to push back.";
     } else {
       label = "Market discount";
       className = "good";
@@ -60,7 +62,8 @@ function tradeMarketCalibration(giveTotals, getTotals, give, get) {
     }
   } else if (marketReady) {
     label = "Partial market";
-    detail = "Some players do not have a Fantasy IQ Data match yet, so the verdict blends market value with FantasyIQ values.";
+    detail =
+      "Some players do not have a Fantasy IQ Data match yet, so the verdict blends market value with FantasyIQ values.";
   }
   return {
     label,
@@ -75,7 +78,12 @@ function tradeMarketCalibration(giveTotals, getTotals, give, get) {
 
 function packageRealism(give, get, giveTotals, getTotals) {
   if (!give.length || !get.length) {
-    return { label: "Waiting", className: "watch", score: 0, detail: "Add both sides to judge whether this looks like a real offer." };
+    return {
+      label: "Waiting",
+      className: "watch",
+      score: 0,
+      detail: "Add both sides to judge whether this looks like a real offer.",
+    };
   }
   const countDelta = give.length - get.length;
   const bestOutgoing = giveTotals.best?.value || 0;
@@ -87,12 +95,27 @@ function packageRealism(give, get, giveTotals, getTotals) {
   if (give.length >= 3 && get.length === 1 && bestIncoming < bestOutgoing + 6) score -= 12;
   score = clampNumber(score, 0, 100);
   if (score >= 68) {
-    return { label: "Realistic ask", className: "good", score, detail: "The package shape is close enough that manager needs can sell it." };
+    return {
+      label: "Realistic ask",
+      className: "good",
+      score,
+      detail: "The package shape is close enough that manager needs can sell it.",
+    };
   }
   if (score >= 45) {
-    return { label: "Needs framing", className: "watch", score, detail: "This can work if the other team has a clear positional reason to say yes." };
+    return {
+      label: "Needs framing",
+      className: "watch",
+      score,
+      detail: "This can work if the other team has a clear positional reason to say yes.",
+    };
   }
-  return { label: "Unlikely ask", className: "danger", score, detail: "The value gap or package shape looks like a trade calculator offer, not a manager-to-manager offer." };
+  return {
+    label: "Unlikely ask",
+    className: "danger",
+    score,
+    detail: "The value gap or package shape looks like a trade calculator offer, not a manager-to-manager offer.",
+  };
 }
 
 function acceptanceProbability(give, get, roster, warnings, giveTotals, getTotals, marketRead) {
@@ -102,7 +125,13 @@ function acceptanceProbability(give, get, roster, warnings, giveTotals, getTotal
   const realism = packageRealism(give, get, giveTotals, getTotals);
   const marketPenalty = marketRead.className === "watch" && marketRead.netMarket < marketRead.netFantasyIq - 5 ? 8 : 0;
   const rosterPenalty = warnings.length * 4;
-  const score = Math.round(clampNumber(52 - Math.max(0, netToYou) * 1.8 + partnerNeedBonus + (realism.score - 55) * 0.45 - marketPenalty - rosterPenalty, 5, 95));
+  const score = Math.round(
+    clampNumber(
+      52 - Math.max(0, netToYou) * 1.8 + partnerNeedBonus + (realism.score - 55) * 0.45 - marketPenalty - rosterPenalty,
+      5,
+      95,
+    ),
+  );
   let label = "Long shot";
   let className = "danger";
   if (score >= 68) {
@@ -145,7 +174,8 @@ function hydrateTradeSlotsFromTextareas() {
   const getHydrated = tradeGet?.dataset.slotsHydrated === "true";
   const giveSlotsEmpty = tradeSlotList("give").every((input) => !input.value.trim());
   const getSlotsEmpty = tradeSlotList("get").every((input) => !input.value.trim());
-  if (!giveHydrated && giveSlotsEmpty && tradeGive?.value) setTradeSlots("give", parseLines(tradeGive.value).slice(0, 3));
+  if (!giveHydrated && giveSlotsEmpty && tradeGive?.value)
+    setTradeSlots("give", parseLines(tradeGive.value).slice(0, 3));
   if (!getHydrated && getSlotsEmpty && tradeGet?.value) setTradeSlots("get", parseLines(tradeGet.value).slice(0, 3));
   if (tradeGive) tradeGive.dataset.slotsHydrated = "true";
   if (tradeGet) tradeGet.dataset.slotsHydrated = "true";
@@ -170,7 +200,10 @@ function desiredTradePackageShape() {
 function updateTradePackageControls(giveCount, getCount) {
   const desired = desiredTradePackageShape();
   const [desiredGive, desiredGet] = desired.split("-").map((value) => Number(value || 1));
-  const shape = packageShapeFromCounts(Math.max(giveCount || 0, desiredGive || 1), Math.max(getCount || 0, desiredGet || 1));
+  const shape = packageShapeFromCounts(
+    Math.max(giveCount || 0, desiredGive || 1),
+    Math.max(getCount || 0, desiredGet || 1),
+  );
   const [giveLimit, getLimit] = shape.split("-").map((value) => Number(value || 1));
   if (tradePackageLabel) tradePackageLabel.textContent = `${giveLimit}-for-${getLimit}`;
   tradePackageButtons.forEach((button) => {
@@ -206,7 +239,8 @@ function riskBand(risk) {
     return {
       label: "Stable",
       className: "good",
-      detail: "The incoming side is mostly predictable. That usually means safer weekly points and fewer panic decisions.",
+      detail:
+        "The incoming side is mostly predictable. That usually means safer weekly points and fewer panic decisions.",
     };
   }
   if (risk <= 5) {
@@ -220,13 +254,15 @@ function riskBand(risk) {
     return {
       label: "Volatile",
       className: "watch",
-      detail: "The incoming side has more role, injury, age, or team-environment uncertainty. Upside is fine, but do not pay full price for it.",
+      detail:
+        "The incoming side has more role, injury, age, or team-environment uncertainty. Upside is fine, but do not pay full price for it.",
     };
   }
   return {
     label: "High risk",
     className: "danger",
-    detail: "The incoming side is fragile. You need a clear discount, major upside, or a roster emergency to justify it.",
+    detail:
+      "The incoming side is fragile. You need a clear discount, major upside, or a roster emergency to justify it.",
   };
 }
 
@@ -269,13 +305,15 @@ function tradeDealShape(give, get, net, warnings, giveTotals, getTotals) {
   if (bestPlayerDelta <= -10) {
     return {
       label: "Star tax",
-      detail: "You are probably giving up the best player. Make sure the total value and roster need are strong enough to cover that.",
+      detail:
+        "You are probably giving up the best player. Make sure the total value and roster need are strong enough to cover that.",
     };
   }
   if (give.length > get.length && bestPlayerDelta >= 0) {
     return {
       label: "Consolidation win",
-      detail: "You are turning multiple pieces into equal-or-better player quality. That is usually a clean trade shape.",
+      detail:
+        "You are turning multiple pieces into equal-or-better player quality. That is usually a clean trade shape.",
     };
   }
   if (get.length > give.length) {
@@ -298,9 +336,10 @@ function tradeDealShape(give, get, net, warnings, giveTotals, getTotals) {
   }
   return {
     label: net >= 0 ? "Clean edge" : "Thin edge",
-    detail: net >= 0
-      ? "The incoming side gives you a measurable value edge. Check risk and lineup need, then negotiate from strength."
-      : "You are giving up value on paper. Only do it if it fixes a real weekly lineup problem.",
+    detail:
+      net >= 0
+        ? "The incoming side gives you a measurable value edge. Check risk and lineup need, then negotiate from strength."
+        : "You are giving up value on paper. Only do it if it fixes a real weekly lineup problem.",
   };
 }
 
@@ -395,7 +434,9 @@ function rowListFromTradeItems(items) {
 function tradeAdjustedRosterRows(roster, give, get) {
   const giveKeys = new Set(rowListFromTradeItems(give).map((row) => normalizePlayerName(row.Player)));
   const before = rowListFromTradeItems(roster);
-  const after = before.filter((row) => !giveKeys.has(normalizePlayerName(row.Player))).concat(rowListFromTradeItems(get));
+  const after = before
+    .filter((row) => !giveKeys.has(normalizePlayerName(row.Player)))
+    .concat(rowListFromTradeItems(get));
   return { before, after };
 }
 
@@ -420,12 +461,7 @@ function fillLineup(rows) {
       .filter((row) => posList.includes(row.Pos) && !used.has(normalizePlayerName(row.Player)))
       .sort((a, b) => leagueValueScore(b) - leagueValueScore(a));
   return lineupSlotsForDisplay().map((slot) => {
-    const eligible =
-      slot === "FLEX"
-        ? ["RB", "WR", "TE"]
-        : slot === "SFLEX"
-          ? ["QB", "RB", "WR", "TE"]
-          : [slot];
+    const eligible = slot === "FLEX" ? ["RB", "WR", "TE"] : slot === "SFLEX" ? ["QB", "RB", "WR", "TE"] : [slot];
     const row = sortedByPos(eligible)[0] || null;
     if (row) used.add(normalizePlayerName(row.Player));
     return { slot, row };
@@ -444,9 +480,13 @@ function renderLineupComparison(roster, give, get) {
   const beforeLineup = fillLineup(before);
   const afterLineup = fillLineup(after);
   const delta = lineupValue(afterLineup) - lineupValue(beforeLineup);
-  const renderSide = (label, lineup) => `<section><h4>${label}</h4>${lineup
-    .map((item) => `<div><span>${htmlEscape(item.slot)}</span><strong>${item.row ? htmlEscape(item.row.Player) : "Open slot"}</strong><small>${item.row ? `${item.row.Pos} / value ${valueDisplay(item.row)}` : "Needs player"}</small></div>`)
-    .join("")}</section>`;
+  const renderSide = (label, lineup) =>
+    `<section><h4>${label}</h4>${lineup
+      .map(
+        (item) =>
+          `<div><span>${htmlEscape(item.slot)}</span><strong>${item.row ? htmlEscape(item.row.Player) : "Open slot"}</strong><small>${item.row ? `${item.row.Pos} / value ${valueDisplay(item.row)}` : "Needs player"}</small></div>`,
+      )
+      .join("")}</section>`;
   return `<div class="trade-lineup-card">
     <span>Before / After Lineup</span>
     <strong>${delta >= 0 ? "+" : ""}${delta.toFixed(1)} starter value</strong>
@@ -456,7 +496,12 @@ function renderLineupComparison(roster, give, get) {
 
 function tradeRosterFitRead(give, get, roster) {
   if (!roster.length) {
-    return { label: "Roster context pending", className: "watch", detail: "Paste your roster or use the ESPN team selector to unlock true roster-fit judgment.", score: 0 };
+    return {
+      label: "Roster context pending",
+      className: "watch",
+      detail: "Paste your roster or use the ESPN team selector to unlock true roster-fit judgment.",
+      score: 0,
+    };
   }
   const { before, after } = tradeAdjustedRosterRows(roster, give, get);
   const beforeSnapshot = {
@@ -474,9 +519,28 @@ function tradeRosterFitRead(give, get, roster) {
   const lineupDelta = lineupValue(fillLineup(after)) - lineupValue(fillLineup(before));
   const score = (beforeNeedScore - afterNeedScore) * 1.8 + lineupDelta * 0.65;
   const mainNeed = afterNeeds[0]?.pos;
-  if (score >= 8) return { label: "Roster fit improves", className: "good", detail: `Starter/depth shape improves. ${mainNeed ? `Main remaining need: ${mainNeed}.` : "No obvious remaining hole."}`, score };
-  if (score <= -8) return { label: "Roster fit worsens", className: "danger", detail: `This creates or deepens a roster hole${mainNeed ? ` at ${mainNeed}` : ""}.`, score };
-  return { label: "Fit is neutral", className: "watch", detail: mainNeed ? `The deal is close. Your main remaining need is ${mainNeed}.` : "Roster shape stays mostly intact, so raw value and risk should decide.", score };
+  if (score >= 8)
+    return {
+      label: "Roster fit improves",
+      className: "good",
+      detail: `Starter/depth shape improves. ${mainNeed ? `Main remaining need: ${mainNeed}.` : "No obvious remaining hole."}`,
+      score,
+    };
+  if (score <= -8)
+    return {
+      label: "Roster fit worsens",
+      className: "danger",
+      detail: `This creates or deepens a roster hole${mainNeed ? ` at ${mainNeed}` : ""}.`,
+      score,
+    };
+  return {
+    label: "Fit is neutral",
+    className: "watch",
+    detail: mainNeed
+      ? `The deal is close. Your main remaining need is ${mainNeed}.`
+      : "Roster shape stays mostly intact, so raw value and risk should decide.",
+    score,
+  };
 }
 
 function tradeScoreBreakdown(giveTotals, getTotals, give, get, roster, warnings) {
@@ -485,25 +549,68 @@ function tradeScoreBreakdown(giveTotals, getTotals, give, get, roster, warnings)
   const projectionDelta = getTotals.projection - giveTotals.projection;
   const bestDelta = (getTotals.best?.value || 0) - (giveTotals.best?.value || 0);
   const fit = tradeRosterFitRead(give, get, roster);
-  const scarcity = rowListFromTradeItems(get).reduce((sum, row) => sum + (topTierInfo(row.Pos).count <= 3 ? 5 : 0), 0) -
+  const scarcity =
+    rowListFromTradeItems(get).reduce((sum, row) => sum + (topTierInfo(row.Pos).count <= 3 ? 5 : 0), 0) -
     rowListFromTradeItems(give).reduce((sum, row) => sum + (topTierInfo(row.Pos).count <= 3 ? 5 : 0), 0);
   const riskDelta = getTotals.risk - giveTotals.risk;
-  const modeBias = mode === "win-now" ? projectionDelta * 0.08 - Math.max(0, riskDelta) * 2 : mode === "upside" ? Math.max(0, riskDelta) * 0.8 + rowListFromTradeItems(get).reduce((sum, row) => sum + Number(row.Upside || row.Ceiling || 0) * 0.04, 0) : 0;
+  const modeBias =
+    mode === "win-now"
+      ? projectionDelta * 0.08 - Math.max(0, riskDelta) * 2
+      : mode === "upside"
+        ? Math.max(0, riskDelta) * 0.8 +
+          rowListFromTradeItems(get).reduce((sum, row) => sum + Number(row.Upside || row.Ceiling || 0) * 0.04, 0)
+        : 0;
   const marketRead = tradeMarketCalibration(giveTotals, getTotals, give, get);
   const marketDelta = marketRead.netMarket - marketRead.netFantasyIq;
   const marketBias = marketRead.coverage >= 0.75 ? clampNumber(marketDelta * 0.45, -7, 7) : 0;
-  const score = Math.round(clampNumber(50 + net * 1.15 + projectionDelta * 0.06 + bestDelta * 0.7 + fit.score + scarcity + modeBias + marketBias - warnings.length * 4, 0, 100));
+  const score = Math.round(
+    clampNumber(
+      50 +
+        net * 1.15 +
+        projectionDelta * 0.06 +
+        bestDelta * 0.7 +
+        fit.score +
+        scarcity +
+        modeBias +
+        marketBias -
+        warnings.length * 4,
+      0,
+      100,
+    ),
+  );
   return {
     score,
     fit,
     marketRead,
     items: [
-      { label: "Raw value", value: `${net >= 0 ? "+" : ""}${net.toFixed(1)}`, className: net >= 4 ? "good" : net < -4 ? "danger" : "watch" },
-      { label: "Market value", value: marketRead.coverage ? `${marketRead.netMarket >= 0 ? "+" : ""}${marketRead.netMarket.toFixed(1)}` : "Loading", className: marketRead.className },
-      { label: "Starter impact", value: `${projectionDelta >= 0 ? "+" : ""}${projectionDelta.toFixed(1)}`, className: projectionDelta >= 10 ? "good" : projectionDelta < -10 ? "danger" : "watch" },
+      {
+        label: "Raw value",
+        value: `${net >= 0 ? "+" : ""}${net.toFixed(1)}`,
+        className: net >= 4 ? "good" : net < -4 ? "danger" : "watch",
+      },
+      {
+        label: "Market value",
+        value: marketRead.coverage
+          ? `${marketRead.netMarket >= 0 ? "+" : ""}${marketRead.netMarket.toFixed(1)}`
+          : "Loading",
+        className: marketRead.className,
+      },
+      {
+        label: "Starter impact",
+        value: `${projectionDelta >= 0 ? "+" : ""}${projectionDelta.toFixed(1)}`,
+        className: projectionDelta >= 10 ? "good" : projectionDelta < -10 ? "danger" : "watch",
+      },
       { label: "Roster fit", value: fit.label, className: fit.className },
-      { label: "Scarcity", value: scarcity > 0 ? `+${scarcity}` : String(scarcity), className: scarcity > 0 ? "good" : scarcity < 0 ? "danger" : "watch" },
-      { label: "Risk", value: `${riskDelta >= 0 ? "+" : ""}${riskDelta.toFixed(1)}`, className: riskDelta <= -1 ? "good" : riskDelta >= 1.5 ? "danger" : "watch" },
+      {
+        label: "Scarcity",
+        value: scarcity > 0 ? `+${scarcity}` : String(scarcity),
+        className: scarcity > 0 ? "good" : scarcity < 0 ? "danger" : "watch",
+      },
+      {
+        label: "Risk",
+        value: `${riskDelta >= 0 ? "+" : ""}${riskDelta.toFixed(1)}`,
+        className: riskDelta <= -1 ? "good" : riskDelta >= 1.5 ? "danger" : "watch",
+      },
       { label: "Mode", value: tradeModeLabel(mode), className: "watch" },
     ],
   };
@@ -518,23 +625,32 @@ function fairnessLabel(score) {
 function oneLineTradeVerdict(verdict, breakdown, warnings) {
   if (verdict === "Enter both sides") return "Add both sides before making a decision.";
   if (verdict === "Fix unknown players") return "Fix the unmatched player names before trusting the result.";
-  if (breakdown.fit.className === "danger") return "Reject or counter. The value may not cover the roster hole this creates.";
-  if (warnings.some((warning) => warning.includes("best player"))) return "Counter. You are giving up the best player and need a cleaner premium back.";
+  if (breakdown.fit.className === "danger")
+    return "Reject or counter. The value may not cover the roster hole this creates.";
+  if (warnings.some((warning) => warning.includes("best player")))
+    return "Counter. You are giving up the best player and need a cleaner premium back.";
   if (breakdown.score >= 70) return "Accept if the incoming players fit your weekly lineup.";
   if (breakdown.score >= 50) return "Negotiate. This is close enough that one bench piece can swing it.";
   return "Reject unless this solves an urgent lineup problem.";
 }
 
 function counterOfferIdeas(give, get, roster, breakdown) {
-  const needs = roster.length ? rosterWeaknesses({ rows: rowListFromTradeItems(roster), counts: positionCounts(roster) }) : [];
+  const needs = roster.length
+    ? rosterWeaknesses({ rows: rowListFromTradeItems(roster), counts: positionCounts(roster) })
+    : [];
   const topNeed = needs[0]?.pos || rowListFromTradeItems(give)[0]?.Pos || "RB/WR";
   const incomingBest = tradeTotals(get).best;
   const outgoingBest = tradeTotals(give).best;
   const ideas = [];
   if (breakdown.score < 55) ideas.push(`Ask for one more ${topNeed} depth piece or a safer starter before accepting.`);
-  if (outgoingBest?.value && incomingBest?.value && outgoingBest.value - incomingBest.value >= 8) ideas.push(`Keep ${outgoingBest.row?.Player || outgoingBest.name} unless ${incomingBest.row?.Player || incomingBest.name} comes with a meaningful add-on.`);
-  if (breakdown.fit.className === "danger") ideas.push(`Counter by replacing the outgoing ${topNeed} with a bench piece, or ask for ${topNeed} back.`);
-  if (!ideas.length) ideas.push("If you want to press, ask for a small bench upside player instead of changing the core.");
+  if (outgoingBest?.value && incomingBest?.value && outgoingBest.value - incomingBest.value >= 8)
+    ideas.push(
+      `Keep ${outgoingBest.row?.Player || outgoingBest.name} unless ${incomingBest.row?.Player || incomingBest.name} comes with a meaningful add-on.`,
+    );
+  if (breakdown.fit.className === "danger")
+    ideas.push(`Counter by replacing the outgoing ${topNeed} with a bench piece, or ask for ${topNeed} back.`);
+  if (!ideas.length)
+    ideas.push("If you want to press, ask for a small bench upside player instead of changing the core.");
   ideas.push("If they reject, remove your lowest-value outgoing piece before upgrading the incoming side.");
   return ideas.slice(0, 3);
 }
@@ -549,14 +665,19 @@ function partnerLens(give, get) {
     .filter((snapshot) => String(snapshot.teamId) !== String(selectedTeamId()))
     .map((snapshot) => {
       const needs = tradeNeedProfiles(snapshot);
-      const wantsIncoming = needs.filter((need) => givePositions.has(need.pos)).reduce((sum, need) => sum + need.weight, 0);
+      const wantsIncoming = needs
+        .filter((need) => givePositions.has(need.pos))
+        .reduce((sum, need) => sum + need.weight, 0);
       const losingNeed = needs.filter((need) => getPositions.has(need.pos)).reduce((sum, need) => sum + need.weight, 0);
       return { snapshot, score: wantsIncoming - losingNeed, needs };
     })
     .sort((a, b) => b.score - a.score);
   const best = teams[0];
   if (best && best.score > 0) {
-    return `${teamSnapshotLabel(best.snapshot)} is the best fit: they need ${best.needs.slice(0, 2).map((need) => need.pos).join("/")} and may value what you are sending.`;
+    return `${teamSnapshotLabel(best.snapshot)} is the best fit: they need ${best.needs
+      .slice(0, 2)
+      .map((need) => need.pos)
+      .join("/")} and may value what you are sending.`;
   }
   return "Partner lens: sell the incoming manager on need, not raw value. This offer is more likely to work if their roster needs the position you send.";
 }
@@ -597,13 +718,15 @@ function renderSavedTradeNotes() {
     return;
   }
   tradeSavedNotes.innerHTML = notes
-    .map((note, index) => `<article>
+    .map(
+      (note, index) => `<article>
       <span>${htmlEscape(tradeModeLabel(note.mode))} / ${htmlEscape(new Date(note.at).toLocaleDateString())}</span>
       <strong>${htmlEscape(note.give.join(", ") || "Nothing")} -> ${htmlEscape(note.get.join(", ") || "Nothing")}</strong>
       <small>${note.net >= 0 ? "+" : ""}${Number(note.net || 0).toFixed(1)} net value</small>
       <button type="button" data-load-trade-note="${index}">Load</button>
       <button type="button" data-remove-trade-note="${index}">Remove</button>
-    </article>`)
+    </article>`,
+    )
     .join("");
   tradeSavedNotes.querySelectorAll("[data-load-trade-note]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -639,7 +762,7 @@ function renderTradeCalc() {
   syncTradeSlotsToTextareas();
   if (!boardData) {
     tradeOutput.innerHTML = `
-      <span class="trade-verdict-label">Trade verdict</span>
+      <span class="trade-verdict-label">Deal Verdict</span>
       <strong>Loading board</strong>
       <p>Live ESPN board values are still loading. Try again in a moment.</p>
     `;
@@ -673,9 +796,10 @@ function renderTradeCalc() {
   if (give.length && get.length && !unknowns.length) {
     breakdown.score = Math.round(Math.min(breakdown.score, acceptance.score + 35));
   }
-  const fairness = acceptance.score < 30 && give.length && get.length && !unknowns.length
-    ? { label: "Unrealistic ask", className: "danger" }
-    : fairnessLabel(breakdown.score);
+  const fairness =
+    acceptance.score < 30 && give.length && get.length && !unknowns.length
+      ? { label: "Unrealistic ask", className: "danger" }
+      : fairnessLabel(breakdown.score);
   const verdict =
     !give.length || !get.length
       ? "Enter both sides"
@@ -683,15 +807,15 @@ function renderTradeCalc() {
         ? "Fix unknown players"
         : acceptance.score < 30
           ? "Unlikely, counter"
-        : breakdown.score >= 72 && !warnings.length
-          ? "Accept"
-          : breakdown.score >= 60
-            ? "Lean accept"
-            : breakdown.score >= 45
-              ? "Fair, negotiate"
-              : breakdown.score >= 35
-                ? "Only for roster fit"
-                : "Reject or counter";
+          : breakdown.score >= 72 && !warnings.length
+            ? "Accept"
+            : breakdown.score >= 60
+              ? "Lean accept"
+              : breakdown.score >= 45
+                ? "Fair, negotiate"
+                : breakdown.score >= 35
+                  ? "Only for roster fit"
+                  : "Reject or counter";
   const verdictClass =
     verdict === "Accept" || verdict === "Lean accept"
       ? "good"
@@ -703,21 +827,24 @@ function renderTradeCalc() {
       ? "Type one player per line on each side. Trade IQ updates from the live ESPN board."
       : acceptance.score < 30 && !unknowns.length
         ? "Good for you on paper, but unlikely to be accepted. Add a real incentive, lower the target, or shop a need the other roster actually has."
-      : oneLineTradeVerdict(verdict, breakdown, warnings);
+        : oneLineTradeVerdict(verdict, breakdown, warnings);
 
   if (tradeGiveTotal) tradeGiveTotal.textContent = giveTotal.toFixed(1);
   if (tradeGetTotal) tradeGetTotal.textContent = getTotal.toFixed(1);
   updateTradePackageControls(give.length, get.length);
-  if (tradeRosterStatus) tradeRosterStatus.textContent = pastedRoster.length ? "Pasted" : roster.length ? "ESPN" : "Optional";
+  if (tradeRosterStatus)
+    tradeRosterStatus.textContent = pastedRoster.length ? "Pasted" : roster.length ? "ESPN" : "Optional";
   renderTradePlayers(tradeGiveList, give, "No outgoing players yet.");
   renderTradePlayers(tradeGetList, get, "No incoming players yet.");
   renderRosterPills(roster);
-  tradeModeButtons.forEach((button) => button.classList.toggle("active", (button.dataset.tradeMode || "balanced") === selectedTradeMode()));
+  tradeModeButtons.forEach((button) =>
+    button.classList.toggle("active", (button.dataset.tradeMode || "balanced") === selectedTradeMode()),
+  );
   renderSavedTradeNotes();
 
   if (!give.length || !get.length) {
     tradeOutput.innerHTML = `
-      <span class="trade-verdict-label">Trade verdict</span>
+      <span class="trade-verdict-label">Deal Verdict</span>
       <strong class="${verdictClass}">${verdict}</strong>
       <p>${htmlEscape(summary)}</p>
       <div class="trade-score-grid">
@@ -731,13 +858,13 @@ function renderTradeCalc() {
   }
 
   tradeOutput.innerHTML = `
-    <span class="trade-verdict-label">Trade verdict</span>
+    <span class="trade-verdict-label">Deal Verdict</span>
     <strong class="${verdictClass}">${verdict}</strong>
     <p>${htmlEscape(summary)}</p>
     <div class="trade-fairness ${fairness.className}">
-      <span>Fairness Meter</span>
+      <span>Deal Quality Index</span>
       <strong>${htmlEscape(fairness.label)}</strong>
-      <div><i style="width:${breakdown.score}%"></i></div>
+      <div class="trade-quality-track"><i style="width:${breakdown.score}%"></i><b>Reject</b><b>Negotiate</b><b>Lean Accept</b><b>Accept</b></div>
       <small>${breakdown.score}/100 decision score in ${htmlEscape(tradeModeLabel())} mode</small>
     </div>
     <div class="trade-score-grid">
@@ -786,8 +913,10 @@ function renderTradeCalc() {
     </div>
     ${renderLineupComparison(roster, give, get)}
     <div class="trade-counteroffers">
-      <span>Counteroffer Generator</span>
-      <ul>${counterOfferIdeas(give, get, roster, breakdown).map((idea) => `<li>${htmlEscape(idea)}</li>`).join("")}</ul>
+      <span>Negotiation Script</span>
+      <ul>${counterOfferIdeas(give, get, roster, breakdown)
+        .map((idea) => `<li>${htmlEscape(idea)}</li>`)
+        .join("")}</ul>
     </div>
     <p><strong>Positions:</strong> Send ${tradePositionSummary(give)}. Receive ${tradePositionSummary(get)}.</p>
     ${warnings.length ? `<div class="trade-warning-list">${warnings.map((warning) => `<span>${htmlEscape(warning)}</span>`).join("")}</div>` : ""}

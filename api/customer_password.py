@@ -46,7 +46,7 @@ def dashboard_url(customer_slug: str, league_key: str = "") -> str:
     query = {"customer": customer_slug}
     if league_key:
         query["league"] = league_key
-    return f"/?{urlencode(query)}"
+    return f"/FantasyIQ/?{urlencode(query)}"
 
 
 def log_password_event(event_type: str, raw: dict[str, Any], message: str, severity: str = "info") -> None:

@@ -8,7 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
     <link rel="shortcut icon" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260521-premium-3" />
-    <link rel="stylesheet" href="./site.css?v=20260522_logo_home_1" />
+    <link rel="stylesheet" href="./site.css?v=20260526_contrast_1" />
   </head>
   <body class="policy-page">
     <header class="site-header">
@@ -17,7 +17,7 @@
         <span>MyFantasyIQ</span>
       </a>
       <nav aria-label="Setup navigation">
-        <a href="/" class="dashboard-link">Dashboard</a>
+        <a href="/FantasyIQ/?login=1" class="dashboard-link">Dashboard</a>
         <a href="./help.html">Help</a>
         <a href="mailto:support@myfantasyiq.com">Support</a>
       </nav>
@@ -34,6 +34,51 @@
         <div class="setup-mode-note" id="setup-mode-note" hidden>
           Checking before checkout? Skip password creation and use Step 2 as a free ESPN compatibility check.
         </div>
+
+        <section class="setup-season-pass" id="season-pass-summary" aria-labelledby="season-pass-title">
+          <div class="setup-pass-copy">
+            <p class="eyebrow">Season Pass</p>
+            <h2 id="season-pass-title">$30/year for your fantasy football decision desk.</h2>
+            <p>
+              Includes up to 3 public ESPN leagues, every IQ module, Stripe-secured billing, and no ESPN password
+              requirement.
+            </p>
+          </div>
+          <dl class="setup-pass-metrics" aria-label="Season Pass details">
+            <div>
+              <dt>Included</dt>
+              <dd>3 ESPN leagues</dd>
+            </div>
+            <div>
+              <dt>Extra leagues</dt>
+              <dd>$5/year each</dd>
+            </div>
+            <div>
+              <dt>Precheck</dt>
+              <dd>Before checkout</dd>
+            </div>
+          </dl>
+          <div class="setup-price-calculator" aria-label="Extra league price calculator">
+            <div>
+              <span>Extra leagues</span>
+              <strong id="extra-league-count">0</strong>
+            </div>
+            <div class="calculator-controls" role="group" aria-label="Adjust extra leagues">
+              <button type="button" data-extra-league-step="-1" aria-label="Remove one extra league">-</button>
+              <button type="button" data-extra-league-step="1" aria-label="Add one extra league">+</button>
+            </div>
+            <p>
+              Total: <output id="setup-total-price" for="extra-league-count">$30/year</output>
+              <small id="setup-price-note">3 leagues included. No extras selected.</small>
+            </p>
+          </div>
+          <div class="button-row setup-pass-actions">
+            <a class="primary dark" href="#setup-form">Check ESPN compatibility</a>
+            <a class="secondary dark-outline" href="https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01" data-checkout-link>
+              Start Season Pass
+            </a>
+          </div>
+        </section>
 
         <div class="setup-steps" aria-label="Setup steps">
           <article>
@@ -80,7 +125,7 @@
           <div class="button-row">
             <button class="primary" id="create-password-button" type="button">Create / Reset password</button>
             <button class="secondary" id="reset-email-button" type="button">Email reset link</button>
-            <a class="primary dark" id="setup-sign-in-link" href="/">Open dashboard</a>
+            <a class="primary dark" id="setup-sign-in-link" href="/FantasyIQ/?login=1">Open dashboard</a>
           </div>
           <div class="result-panel" id="password-result">Create a password, or use the same access code below to connect a league.</div>
         </section>
@@ -158,7 +203,7 @@
 
           <div class="button-row">
             <button class="primary" id="setup-submit-button" type="submit">Connect league</button>
-            <a class="primary dark" id="setup-open-dashboard-link" href="/">Open dashboard</a>
+            <a class="primary dark" id="setup-open-dashboard-link" href="/FantasyIQ/?login=1">Open dashboard</a>
           </div>
           <div class="result-panel" id="setup-result">Paste your ESPN IDs and click Connect league.</div>
         </form>
@@ -188,6 +233,10 @@
       const setupSignInLink = document.querySelector("#setup-sign-in-link");
       const setupOpenDashboardLink = document.querySelector("#setup-open-dashboard-link");
       const setupSubmitButton = document.querySelector("#setup-submit-button");
+      const setupSeasonPassCard = document.querySelector("#season-pass-summary");
+      const extraLeagueCountOutput = document.querySelector("#extra-league-count");
+      const setupTotalPrice = document.querySelector("#setup-total-price");
+      const setupPriceNote = document.querySelector("#setup-price-note");
       const passwordResult = document.querySelector("#password-result");
       const settingsInputs = {
         scoringType: document.querySelector("#scoring-type"),
@@ -205,6 +254,18 @@
       let settingsOverride = false;
       let applyingSettings = false;
       let autoFillTimer = 0;
+      let extraLeagueCount = 0;
+
+      function renderLeaguePrice() {
+        const total = 30 + extraLeagueCount * 5;
+        if (extraLeagueCountOutput) extraLeagueCountOutput.textContent = String(extraLeagueCount);
+        if (setupTotalPrice) setupTotalPrice.textContent = `$${total}/year`;
+        if (setupPriceNote) {
+          setupPriceNote.textContent = extraLeagueCount
+            ? `3 leagues included. ${extraLeagueCount} extra ${extraLeagueCount === 1 ? "league" : "leagues"} at $5/year each.`
+            : "3 leagues included. No extras selected.";
+        }
+      }
 
       function trackSetupEvent(eventType, payload = {}) {
         if (["127.0.0.1", "localhost"].includes(window.location.hostname)) return;
@@ -245,8 +306,19 @@
         });
       });
 
+      document.querySelectorAll("[data-extra-league-step]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const step = Number(button.dataset.extraLeagueStep || 0);
+          extraLeagueCount = Math.max(0, Math.min(12, extraLeagueCount + step));
+          renderLeaguePrice();
+        });
+      });
+
       if (customerSlug && passwordEmailWrap) {
         passwordEmailWrap.hidden = true;
+      }
+      if (customerSlug && !precheckMode && setupSeasonPassCard) {
+        setupSeasonPassCard.hidden = true;
       }
       if (precheckMode) {
         if (setupTitle) setupTitle.textContent = "Check ESPN compatibility before checkout";
@@ -261,9 +333,10 @@
       } else if (!customerSlug && setupModeNote) {
         setupModeNote.hidden = false;
       }
+      renderLeaguePrice();
 
       function customerDashboardHref(customer, league = "") {
-        const dashboard = new URL("/", window.location.href);
+        const dashboard = new URL("/FantasyIQ/", window.location.href);
         if (customer) dashboard.searchParams.set("customer", customer);
         if (league) dashboard.searchParams.set("league", league);
         dashboard.searchParams.set("login", "1");
@@ -360,7 +433,7 @@
       }
 
       function previewUrl(packet) {
-        const preview = new URL("/", window.location.href);
+        const preview = new URL("/FantasyIQ/", window.location.href);
         if (packet.customer) preview.searchParams.set("customer", packet.customer);
         if (packet.leagueKey && packet.customer) preview.searchParams.set("league", packet.leagueKey);
         preview.searchParams.set("leagueLabel", packet.label);
@@ -490,7 +563,7 @@
             trackSetupEvent("password.create_failed", { status: payload.status || "not_ok" });
             return;
           }
-          const dashboard = payload.dashboardUrl || "/";
+          const dashboard = payload.dashboardUrl || customerDashboardHref(payload.customer?.customerSlug || customerSlug || identity);
           const signedInCustomer = payload.customer?.customerSlug || customerSlug || identity;
           customerSlug = signedInCustomer;
           rememberCustomer(signedInCustomer);

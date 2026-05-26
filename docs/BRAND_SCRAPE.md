@@ -1,0 +1,2059 @@
+﻿# MyFantasyIQ Brand Scrape
+
+Source: https://myfantasyiq.com
+Scraped: 2026-05-25 22:45:52 -05:00
+Provider: Firecrawl v2 scrape
+
+## Branding
+
+``json
+{
+    "colorScheme":  "dark",
+    "fonts":  [
+                  {
+                      "family":  "Inter",
+                      "role":  "body"
+                  }
+              ],
+    "colors":  {
+                   "primary":  "#00110F",
+                   "secondary":  "#E7B95A",
+                   "accent":  "#E7B95A",
+                   "background":  "#FFFDF9",
+                   "textPrimary":  "#123F34",
+                   "link":  "#123F34"
+               },
+    "typography":  {
+                       "fontFamilies":  {
+                                            "primary":  "Inter",
+                                            "heading":  "Inter"
+                                        },
+                       "fontStacks":  {
+                                          "heading":  [
+                                                          "Inter",
+                                                          "ui-sans-serif",
+                                                          "system-ui",
+                                                          "-apple-system",
+                                                          "BlinkMacSystemFont",
+                                                          "Segoe UI",
+                                                          "sans-serif"
+                                                      ],
+                                          "body":  [
+                                                       "Inter",
+                                                       "ui-sans-serif",
+                                                       "system-ui",
+                                                       "-apple-system",
+                                                       "BlinkMacSystemFont",
+                                                       "Segoe UI",
+                                                       "sans-serif"
+                                                   ],
+                                          "paragraph":  [
+                                                            "Inter",
+                                                            "ui-sans-serif",
+                                                            "system-ui",
+                                                            "-apple-system",
+                                                            "BlinkMacSystemFont",
+                                                            "Segoe UI",
+                                                            "sans-serif"
+                                                        ]
+                                      },
+                       "fontSizes":  {
+                                         "h1":  "44px",
+                                         "h2":  "52px",
+                                         "body":  "12px"
+                                     }
+                   },
+    "spacing":  {
+                    "baseUnit":  10,
+                    "borderRadius":  "8px"
+                },
+    "components":  {
+                       "buttonPrimary":  {
+                                             "background":  "#E7B95A",
+                                             "textColor":  "#1B1409",
+                                             "borderColor":  "#E4DED9",
+                                             "borderRadius":  "8px",
+                                             "borderRadiusCorners":  {
+                                                                         "topLeft":  "8px",
+                                                                         "topRight":  "8px",
+                                                                         "bottomRight":  "8px",
+                                                                         "bottomLeft":  "8px"
+                                                                     },
+                                             "shadow":  "none"
+                                         },
+                       "buttonSecondary":  {
+                                               "background":  "#123F34",
+                                               "textColor":  "#F9F0DC",
+                                               "borderRadius":  "8px",
+                                               "borderRadiusCorners":  {
+                                                                           "topLeft":  "8px",
+                                                                           "topRight":  "8px",
+                                                                           "bottomRight":  "8px",
+                                                                           "bottomLeft":  "8px"
+                                                                       },
+                                               "shadow":  "none"
+                                           }
+                   },
+    "images":  {
+                   "logo":  "https://myfantasyiq.com/assets/myfantasyiq-wordmark.svg?v=20260522-wordmark-safe-1",
+                   "favicon":  "https://myfantasyiq.com/favicon-myfantasyiq.svg?v=20260521-premium-3",
+                   "ogImage":  "https://myfantasyiq.com/social-preview.png?v=20260524-link-preview-1",
+                   "logoHref":  "/",
+                   "logoAlt":  "MyFantasyIQ league logo"
+               },
+    "__llm_logo_reasoning":  {
+                                 "selectedIndex":  0,
+                                 "reasoning":  "Selected #0 because it is visible, located in the header, links to the homepage, and matches the brand name \u0027MyFantasyIQ\u0027.",
+                                 "confidence":  0.9,
+                                 "source":  "llm"
+                             },
+    "__llm_button_reasoning":  {
+                                   "primary":  {
+                                                   "index":  0,
+                                                   "text":  "Start Season Pass",
+                                                   "reasoning":  "The \u0027Start Season Pass\u0027 button is likely the primary CTA as it is action-oriented and uses the vibrant brand color #E7B95A, indicating a strong call-to-action for users to engage with the site\u0027s main offering."
+                                               },
+                                   "secondary":  {
+                                                     "index":  4,
+                                                     "text":  "Check ESPN first",
+                                                     "reasoning":  "The \u0027Check ESPN first\u0027 button is selected as secondary because it has a different background color (#123F34) from the primary button, making it a suitable secondary action."
+                                                 },
+                                   "confidence":  0.95
+                               },
+    "personality":  {
+                        "tone":  "professional",
+                        "energy":  "medium",
+                        "targetAudience":  "fantasy sports enthusiasts"
+                    },
+    "designSystem":  {
+                         "framework":  "custom",
+                         "componentLibrary":  ""
+                     },
+    "confidence":  {
+                       "buttons":  0.95,
+                       "colors":  0.9,
+                       "overall":  0.925
+                   },
+    "__llm_metadata":  {
+                           "logoSelection":  {
+                                                 "llmCalled":  true,
+                                                 "llmSucceeded":  true,
+                                                 "finalSource":  "llm",
+                                                 "rawLogoSelection":  {
+                                                                          "selectedLogoIndex":  0,
+                                                                          "selectedLogoReasoning":  "Selected #0 because it is visible, located in the header, links to the homepage, and matches the brand name \u0027MyFantasyIQ\u0027.",
+                                                                          "confidence":  0.9
+                                                                      }
+                                             },
+                           "buttonClassification":  {
+                                                        "llmCalled":  true,
+                                                        "llmSucceeded":  true
+                                                    }
+                       }
+}
+``
+
+## Metadata
+
+``json
+{
+    "ogTitle":  "MyFantasyIQ",
+    "og:title":  "MyFantasyIQ",
+    "twitter:card":  "summary_large_image",
+    "twitter:title":  "MyFantasyIQ",
+    "ogDescription":  "Your ESPN fantasy football command center for smarter roster, waiver, trade, schedule, and draft decisions.",
+    "theme-color":  "#001915",
+    "ogUrl":  "https://myfantasyiq.com/",
+    "og:site_name":  "MyFantasyIQ",
+    "og:type":  "website",
+    "ogImage":  "https://myfantasyiq.com/social-preview.png?v=20260524-link-preview-1",
+    "og:url":  "https://myfantasyiq.com/",
+    "twitter:description":  "Your ESPN fantasy football command center for smarter roster, waiver, trade, schedule, and draft decisions.",
+    "viewport":  "width=device-width, initial-scale=1",
+    "language":  "en",
+    "og:image:height":  "630",
+    "og:image:alt":  "MyFantasyIQ fantasy football decision engine preview card",
+    "ogSiteName":  "MyFantasyIQ",
+    "og:image":  "https://myfantasyiq.com/social-preview.png?v=20260524-link-preview-1",
+    "og:image:type":  "image/png",
+    "title":  "MyFantasyIQ",
+    "og:image:secure_url":  "https://myfantasyiq.com/social-preview.png?v=20260524-link-preview-1",
+    "twitter:image":  "https://myfantasyiq.com/social-preview.png?v=20260524-link-preview-1",
+    "og:image:width":  "1200",
+    "description":  "Your ESPN fantasy football command center for roster sync, waiver reads, trade lanes, schedule edges, draft prep, and mock draft decisions.",
+    "og:description":  "Your ESPN fantasy football command center for smarter roster, waiver, trade, schedule, and draft decisions.",
+    "favicon":  "https://myfantasyiq.com/favicon-myfantasyiq.svg?v=20260521-premium-3",
+    "scrapeId":  "019e6263-42eb-7303-bea0-4bcdb48bc408",
+    "sourceURL":  "https://myfantasyiq.com",
+    "url":  "https://myfantasyiq.com/",
+    "statusCode":  200,
+    "contentType":  "text/html; charset=utf-8",
+    "timezone":  "America/New_York",
+    "proxyUsed":  "basic",
+    "indexId":  "a94c5c0c-712d-4d50-9995-1994f4aa18d7",
+    "creditsUsed":  1,
+    "concurrencyLimited":  false
+}
+``
+
+## Screenshot
+
+https://storage.googleapis.com/firecrawl-scrape-media/screenshot-3f07ba5e-f4a2-404c-b04e-cc165a0e7575.png?GoogleAccessId=scrape-bucket-accessor%40firecrawl.iam.gserviceaccount.com&Expires=1780371946&Signature=RBbe2xEYc7UPqJ081CC0u9H0YwFpEQlch85hgE3PQed7ut7Hiik5Fl4GeSXAGwbON%2FOvhZfqL%2Fr7ANRQsy6zGXPeeGU%2FxtpNnSTiBN4VijqpB115ZvDJ6T1a%2FXQ0yYt53fvmtlR3lir59zeiD9NEDA0uefFgZ0kED%2BXF%2B8IsRGBGANBP8Bi0JjHwqu9lPe5IDGdLdzdNgf2KeqtGYF86CI%2BxSrcbgtz3IuHdQue6yj9DXrSDUcjSjS9I5SR01Vo4whxnXZhxuGVtWbTxdvusVRvz0Yte42ZALsaypKTo0OP%2BVM578TvIGDOpAQR3OLx7XVr%2BABlRNrJRqvp9tCmTVw%3D%3D
+
+## Links
+
+- https://myfantasyiq.com/
+- https://myfantasyiq.com/setup.html?mode=precheck
+- https://myfantasyiq.com/draft-sync-companion/install.html
+- https://myfantasyiq.com/help.html
+- https://myfantasyiq.com/setup.html?league=full-demo-league
+
+## Markdown
+
+FantasyIQ102030405040302010102030405040302010
+
+[![MyFantasyIQ league logo](https://myfantasyiq.com/assets/myfantasyiq-wordmark.svg?v=20260522-wordmark-safe-1)\\
+\\
+FantasyIQ Demo Squad\\
+\\
+ **MyFantasyIQ** Demo Manager / FantasyIQ Demo Squad](https://myfantasyiq.com/)
+
+Subscription **$30 / year** Season Pass for up to 3 ESPN leagues [Start Season Pass](https://myfantasyiq.com/setup.html?mode=precheck)
+
+Active League **League profile**
+
+Up to 3 included-+
+
+Public Demo **Preview** Sign In
+
+**Demo Mode** Full sample league with roster, waiver, trade, schedule, and draft-prep examples. [Check ESPN first](https://myfantasyiq.com/setup.html?mode=precheck)
+
+Command CenterMy TeamBig BoardDraft Prep IQMock SimulatorSchedule IQWaivers IQTrade IQAccount
+
+Command Center
+
+## Your smartest next move, explained.
+
+FantasyIQ reads league context, roster shape, player values, schedule leverage, trade lanes, and waiver opportunities before recommending what to do next.
+
+Refresh RecommendationMy TeamBig BoardDraft Prep IQMock SimulatorSchedule IQWaivers IQTrade IQ
+
+Main Move **Add Bijan Robinson (RB, ATL) and drop James Conner (RB, ARI)**
+
+Projected roster VOR gain is +50.9 versus the best drop candidate.
+
+FantasyIQ Score **73** Consensus starters 64.9 / roster 53.3 / 0.8 construction dragBiggest Weakness **RB** RB is the first roster-fit concern.Confidence **88%** Client synthesis from dashboard data. Board synced 11:45:35 PM.Why This Move
+
+Projected roster VOR gain is +50.9 versus the best drop candidate.
+
+RB maps to your top roster need: 0 starter gap and 2 depth gap.
+
+League-adjusted value is 80.6 with projection 353.2 in PPR.
+
+Risk Warning **Waiver value can evaporate quickly if role/news changes before claims process.**Alternative Path **Hold waiver priority/FAAB if news flow weakens the role before lock.**
+
+League **12 teams** ESPN / PPR / redraft
+
+Lineup **9 starters** 1 QB / 2 RB / 2 WR / 1 TE / 1 FLEX / 1 DST / 1 K / 7 bench / 1 IR
+
+Scoring **PPR** Raw-stat scoring when live board is loaded
+
+Draft **16 rounds** 6 playoff teams
+
+**League engine active** 12 teams / PPR / 1 QB / 2 RB / 2 WR / 1 TE / 1 FLEX / 1 DST / 1 K. Source: Sanitized FantasyIQ demo profile.
+
+Decision Engine
+
+### Add Bijan Robinson (RB, ATL) and drop James Conner (RB, ARI)
+
+Client synthesis from dashboard data. Board synced 11:45:35 PM.
+
+Refresh
+
+**ACT\_NOW** Add Bijan Robinson (RB, ATL) and drop James Conner (RB, ARI)Confidence 88 / FantasyIQ Demo Squad
+
+Projected roster VOR gain is +50.9 versus the best drop candidate.
+
+RB maps to your top roster need: 0 starter gap and 2 depth gap.
+
+League-adjusted value is 80.6 with projection 353.2 in PPR.
+
+**Risk:** Waiver value can evaporate quickly if role/news changes before claims process.
+
+**Backup:** Hold waiver priority/FAAB if news flow weakens the role before lock.
+
+**Missing:** No backend roster snapshot was provided; dashboard client synthesis may add more context. No waiver pool snapshot was provided.
+
+**Fallback:** Backend fantasy engine used conservative defaults for missing snapshots. Client-side dashboard synthesis ranked hold, waiver, trade, and draft actions against doing nothing.
+
+Roster IQ **ACT\_NOW: Add Bijan Robinson (RB, ATL) and drop James Conner (RB, ARI)** Projected roster VOR gain is +50.9 versus the best drop candidate.Waiver IQ **ACT\_NOW: Add Bijan Robinson (RB, ATL)** FAAB 8-16Trade IQ **WAIT: No clean trade lane** Generated proposal laneLeague IQ **4 profiles** Roster-aware manager
+
+League Health
+
+### Ready for draft day
+
+**All clear**
+
+Account **Demo preview** Public preview with sample data.ESPN Sync **Connected** Demo league synced 11:45:35 PMTeam Match **Matched** FantasyIQ Demo Squad is tied to recommendations.Scoring **PPR** 12 teams, 1 QB / 2 RB / 2 WR / 1 TE / 1 FLEX / 1 DST / 1 K, 16 rounds.Draft State **Draft complete** 75/75 picks complete.
+
+1 **Confirm league** Use Active League at the top before draft prep.2 **Select your team** Schedule IQ highlights matchup leverage by position.3 **Sync once** Run Sync Now before draft day to verify ESPN access.4 **Mock from slot** Practice the build before the room is live.
+
+Sync Now
+Auto sync
+Use Sync Now before draft day to verify ESPN access.
+
+Board Universe **320 players** Source-backed raw-stat board with league-native scoring and live market signalsDraft Mode **Demo league connected** Weekly matchup leverage by positionMock Intelligence **Practice room** Simulated draft reps with live-style toolsTrade IQ **Roster-fit check** Value, risk, and need in one verdictData Audit **Professional sources** ESPN projections plus Sleeper add/drop risers and fallersMain Move Signal **Bijan Robinson** Board value / RB / RB EliteLeverage Mode **Attack** Draft posture adjusts to live tiers, roster shape, and pick timing
+
+### Next Actions
+
+Live random draft order decided Confirm playoff seeding rules Review playoff matchup leverage Run first mock draft
+
+### System Phases
+
+**1** Build board and sleepers _Live_
+
+**2** Mock from random slots _Next_
+
+**3** Finalize draft slot _Draft night_
+
+**4** Load roster for trade engine _Post-draft_
+
+Roster IQ
+
+## My Team
+
+Waivers IQTrade IQSchedule IQ
+
+Roster IQ **B- (74)** Solid team / 15 matched / ESPN TeamBiggest Weakness **RB** 0 starter gap / 2 depth gapNext Move **Shop TE depth for RB** Best clean strength: TE
+
+QB **2/1** Caleb Williams, Jordan LoveRB **4/6** Jonathan Taylor, Jaylen WarrenWR **5/6** George Pickens, Rashee RiceTE **2/1** Dallas Goedert, Jake FergusonDST **1/1** Texans D/STK **1/1** Brandon Aubrey
+
+Likely Starters
+
+### Best lineup by value
+
+QB **Caleb Williams** QB / value 38.8 / Proj PPR 281.3RB **Jonathan Taylor** RB / value 79.9 / Proj PPR 308.2RB **Jaylen Warren** RB / value 52.2 / Proj PPR 190.6WR **George Pickens** WR / value 77.3 / Proj PPR 239.6WR **Rashee Rice** WR / value 76.1 / Proj PPR 289.7TE **Dallas Goedert** TE / value 42.3 / Proj PPR 176.3FLEX **Tee Higgins** WR / value 60.5 / Proj PPR 218.2DST **Texans D/ST** DST / value 37.2 / Proj PPR 111.2K **Brandon Aubrey** K / value 35.6 / Proj PPR TBD
+
+Bench / Depth
+
+### Players outside the starter build
+
+Jameson WilliamsWR depth / Fair marketTrade value 43.1 / Proj PPR 208.7 / Risk 3/10
+
+Jordan AddisonWR depth / Fair marketTrade value 32.6 / Proj PPR 170.3 / Risk 4/10
+
+Zach CharbonnetRB depth / Fair marketTrade value 31.5 / Proj PPR 135.1 / Risk 5/10
+
+Jake FergusonTE depth / Fair marketTrade value 26.8 / Proj PPR 167.2 / Risk 4/10
+
+Jordan LoveQB depth / Fair marketTrade value 22.4 / Proj PPR 259.0 / Risk 4/10
+
+James ConnerRB depth / Market tax 36 picksTrade value 17.4 / Proj PPR TBD / Risk 7/10
+
+FantasyIQ Read
+
+### Action path
+
+**Shop TE depth for RB** Consensus score 53.3 using board value, projections, rank, and market support.
+
+Waiver priority: add RB depth before chasing luxury bench points.
+
+Trade lane: shop extra TE for a RB upgrade.
+
+Stabilize the bench: pair high-risk upside with one safer weekly role.
+
+Watch injury/news changes before waivers lock; prioritize roles that can become weekly starters.
+
+**Risk:** Do not overpay for RB; fix the gap through value first.
+
+**Alternative:** Use Trade IQ if the waiver pool does not clear replacement value.
+
+Waivers IQ
+
+## Claims, drops, and watchlist priority.
+
+My TeamBig BoardTrade IQ
+
+Main Claim **Add Bijan Robinson** Claim aggressively / RB / +50.9 roster valueDrop Candidate **James Conner** RB / value 29.7 / risk 7/10Confidence **76%** Suggested FAAB 11-22%
+
+Why This Claim
+
+Bijan Robinson is the top available add after roster need, league value, upside, and risk are weighted.
+
+The claim projects +50.9 roster value versus James Conner.
+
+RB is measured against your top roster gap: RB.
+
+Filtered against active ESPN rosters. 12 teams / 1 QB / 2 RB / 2 WR / 1 TE / 1 FLEX / 1 DST / 1 K.
+
+Risk Warning **Stable 2/10. Waiver value still depends on role/news before claims process.**Alternative Path **If Bijan Robinson is claimed, pivot to Jahmyr Gibbs or hold priority.**
+
+Priority Claims **Best Adds**
+
+Claim aggressively **Bijan Robinson** RB / +50.9 value / FAAB 11-22%
+
+Drop James Conner76% confidencedepth fit in PPR
+
+Claim aggressively **Jahmyr Gibbs** RB / +50.7 value / FAAB 11-22%
+
+Drop James Conner76% confidencedepth fit in PPR
+
+Claim aggressively **James Cook III** RB / +49.6 value / FAAB 11-22%
+
+Drop James Conner76% confidencedepth fit in PPR
+
+Claim aggressively **Chase Brown** RB / +49.4 value / FAAB 11-22%
+
+Drop James Conner76% confidencedepth fit in PPR
+
+Claim aggressively **Ja'Marr Chase** WR / +28.6 value / FAAB 11-22%
+
+Drop Jordan Addison76% confidencedepth fit in PPR
+
+Claim aggressively **Puka Nacua** WR / +28.5 value / FAAB 11-22%
+
+Drop Jordan Addison76% confidencedepth fit in PPR
+
+Claim aggressively **Chris Olave** WR / +28.5 value / FAAB 11-22%
+
+Drop Jordan Addison76% confidencedepth fit in PPR
+
+Claim aggressively **Travis Etienne Jr.** RB / +49.3 value / FAAB 11-22%
+
+Drop James Conner76% confidencedepth fit in PPR
+
+Drop Candidates **Roster Cuts**
+
+James ConnerCut line / RB / value 29.7Trade value 17.4 / Proj PPR TBD / Risk 7/10
+
+Jordan LoveCut line / QB / value 32.7Trade value 22.4 / Proj PPR 259.0 / Risk 4/10
+
+Brandon AubreyCut line / K / value 35.6Trade value 20.6 / Proj PPR TBD / Risk 6/10
+
+Texans D/STCut line / DST / value 37.2Trade value 21.6 / Proj PPR 111.2 / Risk 4/10
+
+Caleb WilliamsCut line / QB / value 38.8Trade value 32.6 / Proj PPR 281.3 / Risk 4/10
+
+Claim Plan **Execution**
+
+**Claim aggressively** Add Bijan Robinson. Suggested FAAB 11-22%. Fair market.
+
+**Claim:** Add Bijan Robinson, drop James Conner.
+
+**Bid:** 11-22%. Do not chase past the top of the range without confirmed role news.
+
+**Fallback:** Pivot to Jahmyr Gibbs.
+
+Draft Prep
+
+## Draft Prep IQ
+
+Readiness **82%** Finish the watchlist and select your team; the draft slot updates when ESPN publishes order.
+
+League Public **Verified** ESPN public sync reached this leagueLeague IDs **Missing** Team 5Draft Date **Complete** ESPN has not published a scheduled draft time yet.Draft Position **Pick 3** FantasyIQ Demo Squad / Round 1 / Overall 3Scoring **PPR** Sanitized FantasyIQ demo profileRoster Slots **1 QB / 2 RB / 2 WR / 1 TE / 1 FLEX / 1 DST / 1 K** Lineup shape loadedDraft Rounds **16 rounds** Used for mock and live pick pacingBoard Loaded **246 available** Tier and value data readyESPN Sync **Live** Click Sync Now on draft dayFallback Mode **Ready** Manual draft tracking can continue if ESPN lagsWatchlist **0 saved** Save at least 3 names
+
+Pick Slot Strategy
+
+### Early slot: protect the anchor
+
+**Pick 3** FantasyIQ Demo Squad / Round 1 / Overall 3**Pending** ESPN has not published a scheduled draft time yet.
+
+Take the clean elite player first, then use rounds 2-4 to balance RB/WR before chasing luxury edges.
+
+- Do not pass a true tier-one player for uniqueness.
+- Your return pick should solve roster structure, not force a stack.
+- QB/TE only if the board creates a real discount.
+
+League Settings Intelligence
+
+### PPR
+
+12 teams / 1 QB / 2 RB / 2 WR / 1 TE / 1 FLEX / 1 DST / 1 K / 16 rounds
+
+- Full PPR rewards target volume and pass-catching RBs.
+- Deep benches reward handcuff-plus RBs and breakout WRs.
+
+Tier Pressure
+
+### Current cliffs
+
+QB: 2 in QB EliteWR: 3 in WR EliteRB: 4 in RB EliteTE: 5 in TE Elite
+
+Value Pockets
+
+### Round map
+
+**Rounds 1-2: RB/WR** Bijan Robinson (RB), Jahmyr Gibbs (RB), Puka Nacua (WR)**Rounds 3-5: RB/WR** Chase Brown (RB), Chris Olave (WR), Javonte Williams (RB)**Rounds 6-9: RB/QB** D'Andre Swift (RB), Jaxson Dart (QB), Bhayshul Tuten (RB)**Rounds 10+: WR/RB** Matthew Golden (WR), Kyle Monangai (RB), Travis Hunter (WR)
+
+BalancedHero RBWR HeavyElite QB/TE
+
+Roster Build Plan
+
+### Balanced Hammer
+
+Open RB/WR flexible, then let value decide the first luxury position.
+
+- Rounds 1-4: three RB/WR starters minimum.
+- Rounds 5-8: one QB or TE edge only if the tier is discounted.
+- Rounds 9+: upside bench, then DST/K late.
+
+Do Not Draft Too Early
+
+### Price discipline
+
+- Before round 9: avoid K/DST unless your league is already in endgame.
+- Before your RB/WR base is stable: do not buy backup QB or second TE.
+- Current board discipline: Cam Skattebo (RB), Seahawks D/ST (DST), Jason Myers (K)
+
+Bench Strategy
+
+### Upside over comfort
+
+- Deep bench: chase upside, not floor. Handcuff-plus RBs and route-growth WRs matter.
+- Single flex: keep the bench liquid for waiver pivots.
+- Final rounds: DST only with early schedule value, kicker last.
+
+Custom Watchlist
+
+### Targets, fades, sleepers, and must-drafts
+
+TargetMust draftSleeperFadeAdd
+
+No saved watchlist yet. Add targets, fades, sleepers, or must-drafts before your room opens.
+
+### 16-Round Draft Guide
+
+**1** Elite anchor. Do not reach for uniqueness.
+
+**2** Balance first pick or double down on falling elite value.
+
+**3** Secure second or third weekly RB/WR starter.
+
+**4** Watch for tier cliffs; avoid luxury panic.
+
+**5** First clean QB/TE value window if core is stable.
+
+**6** Must have at least four RB/WR unless value was extreme.
+
+**7** Upside WR/RB pocket. Start beating ADP.
+
+**8** Fill QB/TE if value fell; otherwise keep stacking upside.
+
+**9** Target role ambiguity before it becomes obvious.
+
+**10** Draft bench players with trade value or breakout paths.
+
+**11** Handcuff-plus or high-route WR.
+
+**12** One-week-away RBs and camp role risers.
+
+**13** Late TE/QB only if you skipped the position.
+
+**14** DST only if early schedule is strong.
+
+**15** Final upside stash over safety.
+
+**16** Kicker last.
+
+Open Schedule IQ
+
+Matchup Intelligence
+
+## Schedule IQ heat map
+
+**Weeks 1-17 / All positions / All schedules / modeled fallback**
+
+Position
+AllQBRBWRTED/STK
+View
+All schedulesEasiestToughestStreamers
+Player or Team
+
+Weeks
+Fantasy seasonNFL weeks 1-18Weeks 1-4Weeks 5-8Weeks 9-14Playoffs: 15-17Custom playoff weeks
+
+14151617
+
+Easiest Overall **Lamar Jackson (1st-Easy)** Lowest average matchup difficultyToughest Overall **Brock Purdy (1st-Tough)** Highest average matchup difficultyPlayoff Edge **Weeks 15-17** Customize to match your leagueModel **Fallback** 0/3264 cells include market context / modeled fallback
+
+Easiest schedule **Lamar Jackson** BAL QB / 1st-Easy / W2 vs LVBest streamer **Cowboys D/ST** DAL DST / 1st-Easy / W2 vs NOToughest schedule **Brock Purdy** SF QB / 14 tough spots / W17 vs NYG
+
+EliteFavorableNeutralDifficultAvoidBye
+
+| # | Player | Pos | Team | Overall + | W1 | W2 | W3 | W4 | W5 | W6 | W7 | W8 | W9 | W10 | W11 | W12 | W13 | W14 | W15 | W16 | W17 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | **Lamar Jackson** Baltimore | QB | BAL | 1st-Easy1.71 avg | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN |
+| 2 | **Bryce Young** Carolina | QB | CAR | 2nd-Easy1.82 avg | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI |
+| 3 | **Tony Pollard** Tennessee | RB | TEN | 1st-Easy1.88 avg | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT |
+| 4 | **Jadarian Price** Seattle | RB | SEA | 2nd-Easy1.94 avg | BUF | DET | LAR | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ |
+| 5 | **Josh Allen** Buffalo | QB | BUF | 3rd-Easy2.00 avg | DET | LAC | PHI | ARI | CLE | KC | NO | TB | CHI | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS |
+| 6 | **David Montgomery** Houston | RB | HOU | 3rd-Easy2.00 avg | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL |
+| 7 | **Bhayshul Tuten** Jacksonville | RB | JAX | 4th-Easy2.00 avg | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET |
+| 8 | **Justin Herbert** LA Chargers | QB | LAC | 4th-Easy2.00 avg | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND |
+| 9 | **Cowboys D/ST** Dallas | DST | DAL | 1st-Easy2.00 avg | KC | NO | TEN | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR |
+| 10 | **Malik Willis** Miami | QB | MIA | 5th-Easy2.00 avg | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND | NE | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC |
+| 11 | **New Orleans K1** New Orleans | K | NO | 1st-Easy2.00 avg | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR |
+| 12 | **Seahawks D/ST** Seattle | DST | SEA | 2nd-Easy2.06 avg | BUF | DET | LAR | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ |
+| 13 | **Cairo Santos** Chicago | K | CHI | 2nd-Easy2.06 avg | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB | MIA | PIT | ATL |
+| 14 | **Matthew Stafford** LA Rams | QB | LAR | 6th-Easy2.12 avg | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX |
+| 15 | **Rachaad White** Washington | RB | WAS | 5th-Easy2.12 avg | CIN | IND | NE | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI | IND | MIN | SF |
+| 16 | **Harrison Mevis** LA Rams | K | LAR | 3rd-Easy2.12 avg | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX |
+| 17 | **Vikings D/ST** Minnesota | DST | MIN | 3rd-Easy2.12 avg | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV |
+| 18 | **Jake Elliott** Philadelphia | K | PHI | 4th-Easy2.12 avg | ARI | CLE | KC | NO | TB | CHI | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE |
+| 19 | **Panthers D/ST** Carolina | DST | CAR | 4th-Easy2.12 avg | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI |
+| 20 | **Carson Beck** Arizona | QB | ARI | 7th-Easy2.12 avg | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA |
+| 21 | **Jeremiyah Love** Arizona | RB | ARI | 6th-Easy2.18 avg | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA |
+| 22 | **Garrett Wilson** NY Jets | WR | NYJ | 1st-Easy2.18 avg | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN |
+| 23 | **Tyler Warren** Indianapolis | TE | IND | 1st-Easy2.18 avg | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE | KC | NO | TB | CHI | HOU | MIA | SF | BAL | DEN |
+| 24 | **Jaylen Waddle** Denver | WR | DEN | 2nd-Easy2.18 avg | LV | NYG | WAS | CIN | IND | NE | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI |
+| 25 | **Alec Pierce** Indianapolis | WR | IND | 3rd-Easy2.18 avg | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE | KC | NO | TB | CHI | HOU | MIA | SF | BAL | DEN |
+| 26 | **Caleb Williams** Chicago | QB | CHI | 8th-Easy2.18 avg | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB | MIA | PIT | ATL |
+| 27 | **Patrick Mahomes** Kansas City | QB | KC | 9th-Easy2.18 avg | NO | TB | CHI | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB |
+| 28 | **Kenyon Sadiq** NY Jets | TE | NYJ | 2nd-Easy2.18 avg | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN |
+| 29 | **Will Reichard** Minnesota | K | MIN | 5th-Easy2.18 avg | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV |
+| 30 | **Ryan Fitzgerald** Carolina | K | CAR | 6th-Easy2.18 avg | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI |
+| 31 | **Evan Engram** Denver | TE | DEN | 3rd-Easy2.18 avg | LV | NYG | WAS | CIN | IND | NE | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI |
+| 32 | **Jets D/ST** NY Jets | DST | NYJ | 5th-Easy2.18 avg | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN |
+| 33 | **Ashton Jeanty** Las Vegas | RB | LV | 7th-Easy2.24 avg | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU |
+| 34 | **Drake London** Atlanta | WR | ATL | 4th-Easy2.24 avg | DAL | KC | NYG | TEN | CHI | IND | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE | KC | NO | TB |
+| 35 | **Kenneth Walker III** Kansas City | RB | KC | 8th-Easy2.24 avg | NO | TB | CHI | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB |
+| 36 | **Kyle Pitts Sr.** Atlanta | TE | ATL | 4th-Easy2.24 avg | DAL | KC | NYG | TEN | CHI | IND | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE | KC | NO | TB |
+| 37 | **Romeo Doubs** New England | WR | NE | 5th-Easy2.24 avg | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI | IND | MIN | SF | BUF | DET | LAC |
+| 38 | **Browns D/ST** Cleveland | DST | CLE | 6th-Easy2.24 avg | JAX | NE | TB | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND | NE | SEA | BUF |
+| 39 | **Jake Bates** Detroit | K | DET | 7th-Easy2.24 avg | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN |
+| 40 | **Hunter Henry** New England | TE | NE | 5th-Easy2.24 avg | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI | IND | MIN | SF | BUF | DET | LAC |
+| 41 | **Giants D/ST** NY Giants | DST | NYG | 7th-Easy2.24 avg | TEN | CHI | IND | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE | KC | NO | TB | CHI | HOU | MIA |
+| 42 | **Bears D/ST** Chicago | DST | CHI | 8th-Easy2.24 avg | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB | MIA | PIT | ATL |
+| 43 | **Tyler Bass** Buffalo | K | BUF | 8th-Easy2.24 avg | DET | LAC | PHI | ARI | CLE | KC | NO | TB | CHI | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS |
+| 44 | **Zane Gonzalez** Miami | K | MIA | 9th-Easy2.24 avg | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND | NE | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC |
+| 45 | **Ja'Marr Chase** Cincinnati | WR | CIN | 6th-Easy2.29 avg | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU | MIN | SF | BAL |
+| 46 | **Christian McCaffrey** San Francisco | RB | SF | 9th-Easy2.29 avg | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG |
+| 47 | **Jaxon Smith-Njigba** Seattle | WR | SEA | 7th-Easy2.29 avg | BUF | DET | LAR | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ |
+| 48 | **Jonathan Taylor** Indianapolis | RB | IND | 10th-Easy2.29 avg | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE | KC | NO | TB | CHI | HOU | MIA | SF | BAL | DEN |
+| 49 | **Omarion Hampton** LA Chargers | RB | LAC | 11th-Easy2.29 avg | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND |
+| 50 | **A.J. Brown** Philadelphia | WR | PHI | 8th-Easy2.29 avg | ARI | CLE | KC | NO | TB | CHI | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE |
+| 51 | **Bucky Irving** Tampa Bay | RB | TB | 12th-Easy2.29 avg | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND | NE | SEA | BUF | GB | LAR | PHI |
+| 52 | **Drake Maye** New England | QB | NE | 10th-Easy2.29 avg | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI | IND | MIN | SF | BUF | DET | LAC |
+| 53 | **Brandon Aubrey** Dallas | K | DAL | 10th-Easy2.29 avg | KC | NO | TEN | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR |
+| 54 | **Dallas Goedert** Philadelphia | TE | PHI | 6th-Easy2.29 avg | ARI | CLE | KC | NO | TB | CHI | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE |
+| 55 | **Eagles D/ST** Philadelphia | DST | PHI | 9th-Easy2.29 avg | ARI | CLE | KC | NO | TB | CHI | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE |
+| 56 | **Kyler Murray** Minnesota | QB | MIN | 11th-Easy2.29 avg | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV |
+| 57 | **Tyler Loop** Baltimore | K | BAL | 11th-Easy2.29 avg | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN |
+| 58 | **AJ Barner** Seattle | TE | SEA | 7th-Easy2.29 avg | BUF | DET | LAR | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ |
+| 59 | **Bengals D/ST** Cincinnati | DST | CIN | 10th-Easy2.29 avg | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU | MIN | SF | BAL |
+| 60 | **Mike Gesicki** Cincinnati | TE | CIN | 8th-Easy2.29 avg | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU | MIN | SF | BAL |
+| 61 | **Cleveland K1** Cleveland | K | CLE | 12th-Easy2.29 avg | JAX | NE | TB | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND | NE | SEA | BUF |
+| 62 | **Bijan Robinson** Atlanta | RB | ATL | 13th-Easy2.35 avg | DAL | KC | NYG | TEN | CHI | IND | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE | KC | NO | TB |
+| 63 | **CeeDee Lamb** Dallas | WR | DAL | 9th-Easy2.35 avg | KC | NO | TEN | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR |
+| 64 | **Nico Collins** Houston | WR | HOU | 10th-Easy2.35 avg | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL |
+| 65 | **Joe Burrow** Cincinnati | QB | CIN | 12th-Easy2.35 avg | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU | MIN | SF | BAL |
+| 66 | **Harold Fannin Jr.** Cleveland | TE | CLE | 9th-Easy2.35 avg | JAX | NE | TB | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND | NE | SEA | BUF |
+| 67 | **Jake Ferguson** Dallas | TE | DAL | 10th-Easy2.35 avg | KC | NO | TEN | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR |
+| 68 | **KC Concepcion** Cleveland | WR | CLE | 11th-Easy2.35 avg | JAX | NE | TB | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND | NE | SEA | BUF |
+| 69 | **Patriots D/ST** New England | DST | NE | 11th-Easy2.35 avg | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI | IND | MIN | SF | BUF | DET | LAC |
+| 70 | **Evan McPherson** Cincinnati | K | CIN | 13th-Easy2.35 avg | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU | MIN | SF | BAL |
+| 71 | **Dalton Schultz** Houston | TE | HOU | 11th-Easy2.35 avg | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL |
+| 72 | **Falcons D/ST** Atlanta | DST | ATL | 12th-Easy2.35 avg | DAL | KC | NYG | TEN | CHI | IND | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE | KC | NO | TB |
+| 73 | **Commanders D/ST** Washington | DST | WAS | 13th-Easy2.35 avg | CIN | IND | NE | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI | IND | MIN | SF |
+| 74 | **Amon-Ra St. Brown** Detroit | WR | DET | 12th-Easy2.41 avg | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN |
+| 75 | **Chris Olave** New Orleans | WR | NO | 13th-Easy2.41 avg | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR |
+| 76 | **Ladd McConkey** LA Chargers | WR | LAC | 14th-Easy2.41 avg | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND |
+| 77 | **Sam LaPorta** Detroit | TE | DET | 12th-Easy2.41 avg | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN |
+| 78 | **Mike Evans** San Francisco | WR | SF | 15th-Easy2.41 avg | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG |
+| 79 | **DK Metcalf** Pittsburgh | WR | PIT | 16th-Easy2.41 avg | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI | DAL | KC | NO |
+| 80 | **Broncos D/ST** Denver | DST | DEN | 14th-Easy2.41 avg | LV | NYG | WAS | CIN | IND | NE | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI |
+| 81 | **George Kittle** San Francisco | TE | SF | 13th-Easy2.41 avg | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG |
+| 82 | **Chargers D/ST** LA Chargers | DST | LAC | 15th-Easy2.41 avg | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND |
+| 83 | **Juwan Johnson** New Orleans | TE | NO | 14th-Easy2.41 avg | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR |
+| 84 | **Oronde Gadsden** LA Chargers | TE | LAC | 15th-Easy2.41 avg | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND |
+| 85 | **Pat Freiermuth** Pittsburgh | TE | PIT | 16th-Easy2.41 avg | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI | DAL | KC | NO |
+| 86 | **Dolphins D/ST** Miami | DST | MIA | 16th-Easy2.41 avg | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND | NE | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC |
+| 87 | **Andy Borregales** New England | K | NE | 14th-Easy2.41 avg | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI | IND | MIN | SF | BUF | DET | LAC |
+| 88 | **Saints D/ST** New Orleans | DST | NO | 16th-Tough2.41 avg | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR |
+| 89 | **Justin Jefferson** Minnesota | WR | MIN | 16th-Tough2.47 avg | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV |
+| 90 | **Josh Jacobs** Green Bay | RB | GB | 14th-Easy2.47 avg | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI | IND | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE |
+| 91 | **Tetairoa McMillan** Carolina | WR | CAR | 15th-Tough2.47 avg | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI |
+| 92 | **Cam Skattebo** NY Giants | RB | NYG | 15th-Easy2.47 avg | TEN | CHI | IND | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE | KC | NO | TB | CHI | HOU | MIA |
+| 93 | **Terry McLaurin** Washington | WR | WAS | 14th-Tough2.47 avg | CIN | IND | NE | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI | IND | MIN | SF |
+| 94 | **Carnell Tate** Tennessee | WR | TEN | 13th-Tough2.47 avg | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT |
+| 95 | **T.J. Hockenson** Minnesota | TE | MIN | 16th-Tough2.47 avg | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV |
+| 96 | **Tyler Shough** New Orleans | QB | NO | 13th-Easy2.47 avg | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR |
+| 97 | **Chris Boswell** Pittsburgh | K | PIT | 15th-Easy2.47 avg | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI | DAL | KC | NO |
+| 98 | **Daniel Jones** Indianapolis | QB | IND | 14th-Easy2.47 avg | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE | KC | NO | TB | CHI | HOU | MIA | SF | BAL | DEN |
+| 99 | **Packers D/ST** Green Bay | DST | GB | 15th-Tough2.47 avg | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI | IND | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE |
+| 100 | **Aaron Rodgers** Pittsburgh | QB | PIT | 15th-Easy2.47 avg | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI | DAL | KC | NO |
+| 101 | **Chig Okonkwo** Washington | TE | WAS | 15th-Tough2.47 avg | CIN | IND | NE | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI | IND | MIN | SF |
+| 102 | **Raiders D/ST** Las Vegas | DST | LV | 14th-Tough2.47 avg | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU |
+| 103 | **Wil Lutz** Denver | K | DEN | 16th-Easy2.47 avg | LV | NYG | WAS | CIN | IND | NE | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI |
+| 104 | **Gunnar Helm** Tennessee | TE | TEN | 14th-Tough2.47 avg | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT |
+| 105 | **Cade York** NY Jets | K | NYJ | 16th-Tough2.47 avg | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN |
+| 106 | **Carolina TE1** Carolina | TE | CAR | 13th-Tough2.47 avg | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI |
+| 107 | **Breece Hall** NY Jets | RB | NYJ | 16th-Easy2.53 avg | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN |
+| 108 | **Jaylen Warren** Pittsburgh | RB | PIT | 16th-Tough2.53 avg | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI | DAL | KC | NO |
+| 109 | **J.K. Dobbins** Denver | RB | DEN | 15th-Tough2.53 avg | LV | NYG | WAS | CIN | IND | NE | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI |
+| 110 | **Cam Ward** Tennessee | QB | TEN | 16th-Easy2.53 avg | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT |
+| 111 | **Trey Smack** Green Bay | K | GB | 15th-Tough2.53 avg | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI | IND | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE |
+| 112 | **Jason Sanders** NY Giants | K | NYG | 14th-Tough2.53 avg | TEN | CHI | IND | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE | KC | NO | TB | CHI | HOU | MIA |
+| 113 | **Tua Tagovailoa** Atlanta | QB | ATL | 16th-Tough2.53 avg | DAL | KC | NYG | TEN | CHI | IND | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE | KC | NO | TB |
+| 114 | **Brock Bowers** Las Vegas | TE | LV | 12th-Tough2.59 avg | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU |
+| 115 | **Malik Nabers** NY Giants | WR | NYG | 12th-Tough2.59 avg | TEN | CHI | IND | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE | KC | NO | TB | CHI | HOU | MIA |
+| 116 | **Colston Loveland** Chicago | TE | CHI | 11th-Tough2.59 avg | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB | MIA | PIT | ATL |
+| 117 | **TreVeyon Henderson** New England | RB | NE | 14th-Tough2.59 avg | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI | IND | MIN | SF | BUF | DET | LAC |
+| 118 | **Jalen Hurts** Philadelphia | QB | PHI | 15th-Tough2.59 avg | ARI | CLE | KC | NO | TB | CHI | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE |
+| 119 | **Rome Odunze** Chicago | WR | CHI | 11th-Tough2.59 avg | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB | MIA | PIT | ATL |
+| 120 | **Christian Watson** Green Bay | WR | GB | 10th-Tough2.59 avg | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI | IND | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE |
+| 121 | **Brian Thomas Jr.** Jacksonville | WR | JAX | 9th-Tough2.59 avg | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET |
+| 122 | **Tucker Kraft** Green Bay | TE | GB | 10th-Tough2.59 avg | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI | IND | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE |
+| 123 | **Isaiah Likely** NY Giants | TE | NYG | 9th-Tough2.59 avg | TEN | CHI | IND | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE | KC | NO | TB | CHI | HOU | MIA |
+| 124 | **Brenton Strange** Jacksonville | TE | JAX | 8th-Tough2.59 avg | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET |
+| 125 | **Tre Tucker** Las Vegas | WR | LV | 8th-Tough2.59 avg | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU |
+| 126 | **Chase Brown** Cincinnati | RB | CIN | 13th-Tough2.65 avg | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU | MIN | SF | BAL |
+| 127 | **Emeka Egbuka** Tampa Bay | WR | TB | 7th-Tough2.65 avg | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND | NE | SEA | BUF | GB | LAR | PHI |
+| 128 | **Jaxson Dart** NY Giants | QB | NYG | 14th-Tough2.65 avg | TEN | CHI | IND | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE | KC | NO | TB | CHI | HOU | MIA |
+| 129 | **Dak Prescott** Dallas | QB | DAL | 13th-Tough2.65 avg | KC | NO | TEN | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR |
+| 130 | **Lions D/ST** Detroit | DST | DET | 13th-Tough2.65 avg | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN |
+| 131 | **Fernando Mendoza** Las Vegas | QB | LV | 12th-Tough2.65 avg | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU |
+| 132 | **49ers D/ST** San Francisco | DST | SF | 12th-Tough2.65 avg | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG |
+| 133 | **Colts D/ST** Indianapolis | DST | IND | 11th-Tough2.65 avg | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE | KC | NO | TB | CHI | HOU | MIA | SF | BAL | DEN |
+| 134 | **Nick Folk** Atlanta | K | ATL | 13th-Tough2.65 avg | DAL | KC | NYG | TEN | CHI | IND | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE | KC | NO | TB |
+| 135 | **Tampa Bay TE1** Tampa Bay | TE | TB | 7th-Tough2.65 avg | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND | NE | SEA | BUF | GB | LAR | PHI |
+| 136 | **Derrick Henry** Baltimore | RB | BAL | 12th-Tough2.71 avg | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN |
+| 137 | **Javonte Williams** Dallas | RB | DAL | 11th-Tough2.71 avg | KC | NO | TEN | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR |
+| 138 | **Quinshon Judkins** Cleveland | RB | CLE | 10th-Tough2.71 avg | JAX | NE | TB | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND | NE | SEA | BUF |
+| 139 | **Texans D/ST** Houston | DST | HOU | 10th-Tough2.71 avg | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL |
+| 140 | **Cameron Dicker** LA Chargers | K | LAC | 12th-Tough2.71 avg | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND |
+| 141 | **Ravens D/ST** Baltimore | DST | BAL | 9th-Tough2.71 avg | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN |
+| 142 | **Eddy Pineiro** San Francisco | K | SF | 11th-Tough2.71 avg | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG |
+| 143 | **Baker Mayfield** Tampa Bay | QB | TB | 11th-Tough2.71 avg | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND | NE | SEA | BUF | GB | LAR | PHI |
+| 144 | **Jaguars D/ST** Jacksonville | DST | JAX | 8th-Tough2.71 avg | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET |
+| 145 | **Chase McLaughlin** Tampa Bay | K | TB | 10th-Tough2.71 avg | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND | NE | SEA | BUF | GB | LAR | PHI |
+| 146 | **Blake Grupe** Indianapolis | K | IND | 9th-Tough2.71 avg | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE | KC | NO | TB | CHI | HOU | MIA | SF | BAL | DEN |
+| 147 | **Jahmyr Gibbs** Detroit | RB | DET | 9th-Tough2.76 avg | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN |
+| 148 | **Puka Nacua** LA Rams | WR | LAR | 6th-Tough2.76 avg | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX |
+| 149 | **De'Von Achane** Miami | RB | MIA | 8th-Tough2.76 avg | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND | NE | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC |
+| 150 | **James Cook III** Buffalo | RB | BUF | 7th-Tough2.76 avg | DET | LAC | PHI | ARI | CLE | KC | NO | TB | CHI | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS |
+| 151 | **Jayden Daniels** Washington | QB | WAS | 10th-Tough2.76 avg | CIN | IND | NE | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI | IND | MIN | SF |
+| 152 | **Harrison Butker** Kansas City | K | KC | 8th-Tough2.76 avg | NO | TB | CHI | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB |
+| 153 | **Terrance Ferguson** LA Rams | TE | LAR | 6th-Tough2.76 avg | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX |
+| 154 | **Matt Gay** Las Vegas | K | LV | 7th-Tough2.76 avg | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU |
+| 155 | **Cardinals D/ST** Arizona | DST | ARI | 7th-Tough2.76 avg | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA |
+| 156 | **Rashee Rice** Kansas City | WR | KC | 5th-Tough2.82 avg | NO | TB | CHI | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB |
+| 157 | **Zay Flowers** Baltimore | WR | BAL | 4th-Tough2.82 avg | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN |
+| 158 | **Chuba Hubbard** Carolina | RB | CAR | 6th-Tough2.82 avg | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI |
+| 159 | **Travis Kelce** Kansas City | TE | KC | 5th-Tough2.82 avg | NO | TB | CHI | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB |
+| 160 | **Aaron Jones Sr.** Minnesota | RB | MIN | 5th-Tough2.82 avg | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV |
+| 161 | **Mark Andrews** Baltimore | TE | BAL | 4th-Tough2.82 avg | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN |
+| 162 | **Sam Darnold** Seattle | QB | SEA | 9th-Tough2.82 avg | BUF | DET | LAR | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ |
+| 163 | **Titans D/ST** Tennessee | DST | TEN | 6th-Tough2.82 avg | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT |
+| 164 | **Arizona K1** Arizona | K | ARI | 6th-Tough2.82 avg | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA |
+| 165 | **Saquon Barkley** Philadelphia | RB | PHI | 4th-Tough2.88 avg | ARI | CLE | KC | NO | TB | CHI | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE |
+| 166 | **Kyren Williams** LA Rams | RB | LAR | 3rd-Tough2.88 avg | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX |
+| 167 | **Trevor Lawrence** Jacksonville | QB | JAX | 8th-Tough2.88 avg | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET |
+| 168 | **Steelers D/ST** Pittsburgh | DST | PIT | 5th-Tough2.88 avg | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET | LAR | PHI | ARI | DAL | KC | NO |
+| 169 | **Jordan Love** Green Bay | QB | GB | 7th-Tough2.88 avg | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI | IND | MIN | SF | BUF | DET | LAC | PHI | ARI | CLE |
+| 170 | **Buccaneers D/ST** Tampa Bay | DST | TB | 4th-Tough2.88 avg | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND | NE | SEA | BUF | GB | LAR | PHI |
+| 171 | **Chris Bell** Miami | WR | MIA | 3rd-Tough2.88 avg | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND | NE | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC |
+| 172 | **Bills D/ST** Buffalo | DST | BUF | 3rd-Tough2.88 avg | DET | LAC | PHI | ARI | CLE | KC | NO | TB | CHI | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS |
+| 173 | **Shedeur Sanders** Cleveland | QB | CLE | 6th-Tough2.88 avg | JAX | NE | TB | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND | NE | SEA | BUF |
+| 174 | **Jake Moody** Washington | K | WAS | 5th-Tough2.88 avg | CIN | IND | NE | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI | IND | MIN | SF |
+| 175 | **Will Kacmarek** Miami | TE | MIA | 3rd-Tough2.88 avg | PIT | ATL | DEN | LV | NYG | WAS | CIN | IND | NE | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC |
+| 176 | **D'Andre Swift** Chicago | RB | CHI | 2nd-Tough2.94 avg | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB | MIA | PIT | ATL |
+| 177 | **Bo Nix** Denver | QB | DEN | 5th-Tough2.94 avg | LV | NYG | WAS | CIN | IND | NE | SEA | BUF | GB | LAR | PHI | ATL | DAL | KC | NYG | TEN | CHI |
+| 178 | **Jared Goff** Detroit | QB | DET | 4th-Tough2.94 avg | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN |
+| 179 | **Chiefs D/ST** Kansas City | DST | KC | 2nd-Tough2.94 avg | NO | TB | CHI | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB |
+| 180 | **Geno Smith** NY Jets | QB | NYJ | 3rd-Tough2.94 avg | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN |
+| 181 | **Trey McBride** Arizona | TE | ARI | 2nd-Tough3.00 avg | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA |
+| 182 | **Travis Etienne Jr.** New Orleans | RB | NO | 1st-Tough3.00 avg | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR |
+| 183 | **Marvin Harrison Jr.** Arizona | WR | ARI | 2nd-Tough3.00 avg | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA |
+| 184 | **Rams D/ST** LA Rams | DST | LAR | 1st-Tough3.00 avg | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX |
+| 185 | **Ka'imi Fairbairn** Houston | K | HOU | 4th-Tough3.00 avg | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL |
+| 186 | **Cam Little** Jacksonville | K | JAX | 3rd-Tough3.00 avg | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL | LV | NYG | TEN | CIN | IND | MIN | SEA | BUF | DET |
+| 187 | **Jason Myers** Seattle | K | SEA | 2nd-Tough3.06 avg | BUF | DET | LAR | PHI | ARI | DAL | KC | NO | TEN | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ |
+| 188 | **DJ Moore** Buffalo | WR | BUF | 1st-Tough3.12 avg | DET | LAC | PHI | ARI | CLE | KC | NO | TB | CHI | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS |
+| 189 | **Dalton Kincaid** Buffalo | TE | BUF | 1st-Tough3.12 avg | DET | LAC | PHI | ARI | CLE | KC | NO | TB | CHI | HOU | MIA | SF | BAL | DEN | LAC | NYJ | WAS |
+| 190 | **C.J. Stroud** Houston | QB | HOU | 2nd-Tough3.12 avg | MIA | PIT | BAL | DEN | LV | NYJ | WAS | CIN | JAX | NE | SEA | CAR | GB | LAR | PIT | ATL | DAL |
+| 191 | **Tennessee K1** Tennessee | K | TEN | 1st-Tough3.12 avg | CHI | HOU | MIN | SF | BAL | DET | LAC | NYJ | ARI | CLE | JAX | NO | TB | CAR | HOU | MIA | PIT |
+| 192 | **Brock Purdy** San Francisco | QB | SF | 1st-Tough3.18 avg | BAL | DEN | LAC | NYJ | WAS | CLE | JAX | NE | TB | CAR | GB | MIA | PIT | ATL | DEN | LV | NYG |
+
+**Draft complete**: 75/75 picks completed. Public demo league is connected; subscribers get their ESPN league configured after checkout. This public demo uses sanitized sample rosters, not a live customer ESPN league.
+
+**PPR league profile** 12 teams with 1 QB / 2 RB / 2 WR / 1 TE / 1 FLEX / 1 DST / 1 K. Live sync is using the saved ESPN league.
+
+Live ESPN draft URL or leagueId
+
+Team ID
+Use Draft LeagueSaved League
+
+ESPN drafted players
+Import Drafted Players
+
+Open ESPN Draft [Install Companion](https://myfantasyiq.com/draft-sync-companion/install.html) Emergency ScriptPaste the ESPN draft URL or leagueId above to prepare automatic draft sync.
+
+ Pre-draft readiness is loading.
+
+
+On The Clock **Draft complete** All picks are complete.Picks Made **75** of 75
+
+Last Sync **11:45:35 PM** ESPN public demo leagueMy Draft Slot **Pick 3** Live ESPN order. First pick overall 3.
+My ESPN Team
+Choose your teamAnchor RB Room (Demo Rival A)Receiver Heavy (Demo Rival B)FantasyIQ Demo Squad (Demo Manager)QB Advantage (Demo Rival C)Balanced Build (Demo Rival D)
+
+Main Move Signal **Bijan Robinson** Board value / RB / RB EliteScarcity **QB: 2 left** QB EliteMarket **K run** 4 of last 12 picksBuild **Too much QB** Move capital back to RB/WR upsideLeverage **Attack** Action mode
+
+War Room Command
+
+### Bijan Robinson
+
+Board value: Best available FLEX/bench value. Proj PPR 353.2 / value 80.6 / RB RB Elite.
+
+Open Player CardBig Board
+
+Why **Board value: Best available FLEX/bench value. 12 teams / 1 QB / 2 RB / 2 WR / 1 TE / 1 FLEX / 1 DST / 1 K. ESPN ADP 2.3 is close to FantasyIQ rank 1.**Market **Fair market**League Fit **depth fit in PPR**Risk **Stable 2/10**
+
+League-aware board is active for 12 teams, PPR, 1 QB / 2 RB / 2 WR / 1 TE / 1 FLEX / 1 DST / 1 K. Select your ESPN team for survival odds.
+
+Pick Queue
+
+### Best next moves
+
+Hide drafted
+
+#### Pick Now
+
+#1 / RB / ATL
+
+Bijan RobinsonMark Drafted
+
+_Board value_ **team needed** **RB Elite**
+
+Best available FLEX/bench value. Proj PPR: 353.2. League value: 80.6. Choose your ESPN team for survival odds.
+
+Based on: Proj PPR / 12 teams / 1 QB / 2 RB / 2 WR / 1 TE / 1 FLEX / 1 DST / 1 K / selected roster / 79 drafted filtered
+
+Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-04-10**
+
+Bijan Robinson is a RB Elite RB for ATL. FantasyIQ has him #1 overall and RB1. Draft him at this tier if the position fits your build. Do not reach far.
+
+#2 / RB / DET
+
+Jahmyr GibbsMark Drafted
+
+_Board value_ **team needed** **RB Elite**
+
+Best available FLEX/bench value. Proj PPR: 358.9. League value: 80.4. Choose your ESPN team for survival odds.
+
+Based on: Proj PPR / 12 teams / 1 QB / 2 RB / 2 WR / 1 TE / 1 FLEX / 1 DST / 1 K / selected roster / 79 drafted filtered
+
+Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-04-28**
+
+Jahmyr Gibbs is a RB Elite RB for DET. FantasyIQ has him #2 overall and RB2. Draft him at this tier if the position fits your build. Do not reach far.
+
+#3 / WR / LAR
+
+Puka NacuaMark Drafted
+
+_Board value_ **team needed** **WR Elite**
+
+Best available FLEX/bench value. Proj PPR: 356.8. League value: 80.5. Choose your ESPN team for survival odds.
+
+Based on: Proj PPR / 12 teams / 1 QB / 2 RB / 2 WR / 1 TE / 1 FLEX / 1 DST / 1 K / selected roster / 79 drafted filtered
+
+Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-04-20**
+
+Puka Nacua is a WR Elite WR for LAR. FantasyIQ has him #3 overall and WR1. Draft him at this tier if the position fits your build. Do not reach far above.
+
+#### Can Wait
+
+Not enough separation yet for a confident wait list.
+
+#### Avoid Under Clock
+
+#21 / QB / BUF
+
+Josh AllenMark Drafted
+
+_Board value_ **team needed** **QB Elite**
+
+Depth or late-round utility. Proj PPR: 368.9. League value: 56.2. Choose your ESPN team for survival odds.
+
+Based on: Proj PPR / 12 teams / 1 QB / 2 RB / 2 WR / 1 TE / 1 FLEX / 1 DST / 1 K / selected roster / 79 drafted filtered
+
+Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-05-19**
+
+Josh Allen is a QB Elite QB for BUF. FantasyIQ has him #21 overall and QB1. Draft him at this tier if the position fits your build. Do not reach far.
+
+#24 / TE / LV
+
+Brock BowersMark Drafted
+
+_Board value_ **team needed** **TE Elite**
+
+Best available FLEX/bench value. Proj PPR: 240.2. League value: 76.6. Choose your ESPN team for survival odds.
+
+Based on: Proj PPR / 12 teams / 1 QB / 2 RB / 2 WR / 1 TE / 1 FLEX / 1 DST / 1 K / selected roster / 79 drafted filtered
+
+Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2025-12-24**
+
+Brock Bowers is a TE Elite TE for LV. FantasyIQ has him #24 overall and TE2. Draft him at this tier if the position fits your build. Do not reach far.
+
+My Build
+
+### Roster tracker
+
+QB 2RB 4WR 5TE 2DST 1K 1
+
+QB / QBJordan Love _#170_ League value 32.7. Take at fair priceDaily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-01-11**
+
+Jordan Love is a QB Bench QB for GB. FantasyIQ has him #170 overall and QB21. Take at fair price
+
+RB / RBJonathan Taylor _#7_ League value 79.9. Anchor if price matches tierDaily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-01-04**
+
+Jonathan Taylor is a RB Elite RB for IND. FantasyIQ has him #7 overall and RB4. Draft him at this tier if the position fits your build. Do not reach far.
+
+RB / RBJames Conner _#205_ League value 29.7. Draft only at discountDaily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-04-24**
+
+James Conner is a RB Deep RB for ARI. FantasyIQ has him #205 overall and RB53. Only draft him if he falls below the usual price.
+
+WR / WRTee Higgins _#44_ League value 60.5. Take at fair priceDaily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-01-04**
+
+Tee Higgins is a WR Starter WR for CIN. FantasyIQ has him #44 overall and WR19. Take at fair price
+
+WR / WRJordan Addison _#124_ League value 52.0. Take at fair priceDaily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-04-27**
+
+Jordan Addison is a WR Bench WR for MIN. FantasyIQ has him #124 overall and WR49. Take at fair price
+
+TE / TEJake Ferguson _#101_ League value 42.1. Take at fair priceDaily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-01-05**
+
+Jake Ferguson is a TE Starter TE for DAL. FantasyIQ has him #101 overall and TE11. Take at fair price
+
+FLEX / WRGeorge Pickens _#27_ League value 77.3. Draft-room value targetDaily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-04-29**
+
+George Pickens is a WR Elite WR for DAL. FantasyIQ has him #27 overall and WR11. Treat him as a value target, not a must-pick.
+
+DST / DSTTexans D/ST _#73_ League value 37.2. Stream only if schedule fitsDaily Player Synopsis **Updated 2026-05-26 / Latest note: No dated update**
+
+Texans D/ST is a DST Stream DST for HOU. FantasyIQ has him #73 overall and DST1. Stream only if schedule fits
+
+K / KBrandon Aubrey _#72_ League value 35.6. Stream only if schedule fitsDaily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-04-20**
+
+Brandon Aubrey is a K Stream K for DAL. FantasyIQ has him #72 overall and K1. Stream only if schedule fits
+
+BE / QBCaleb Williams _#94_ League value 38.8. Take at fair priceDaily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-01-19**
+
+Caleb Williams is a QB Starter QB for CHI. FantasyIQ has him #94 overall and QB11. Take at fair price
+
+BE / RBZach Charbonnet _#135_ League value 46.2. Take at fair priceDaily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-04-24**
+
+Zach Charbonnet is a RB Bench RB for SEA. FantasyIQ has him #135 overall and RB41. Take at fair price
+
+BE / RBJaylen Warren _#83_ League value 52.2. Take at fair priceDaily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-03-13**
+
+Jaylen Warren is a RB Flex RB for PIT. FantasyIQ has him #83 overall and RB29. Take at fair price
+
+BE / WRJameson Williams _#61_ League value 60.5. Under-ADP targetDaily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-01-05**
+
+Jameson Williams is a WR Flex WR for DET. FantasyIQ has him #61 overall and WR26. Target him when he is cheaper than the room expects.
+
+BE / WRRashee Rice _#20_ League value 76.1. Draft only at discountDaily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-05-19**
+
+Rashee Rice is a WR Elite WR for KC. FantasyIQ has him #20 overall and WR8. Only draft him if he falls below the usual price.
+
+BE / TEDallas Goedert _#93_ League value 42.3. Take at fair priceDaily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-03-15**
+
+Dallas Goedert is a TE Starter TE for PHI. FantasyIQ has him #93 overall and TE10. Take at fair price
+
+League Draft Board
+
+### Live pick grid
+
+75/75 picks complete
+
+Slot 1 **Anchor RB Room** Demo Rival A / 15/15
+
+R1.1 **Lamar Jackson** QB / BAL / #34
+
+R2.1 **Saquon Barkley** RB / PHI / #14
+
+R3.1 **Bucky Irving** RB / TB / #45
+
+R4.1 **Justin Jefferson** WR / MIN / #11
+
+R5.1 **Mike Evans** WR / SF / #71
+
+R6.1 **Trey McBride** TE / ARI / #18
+
+R7.1 **Malik Nabers** WR / NYG / #25
+
+R8.1 **De'Von Achane** RB / MIA / #9
+
+R9.1 **Drake London** WR / ATL / #17
+
+R10.1 **Baker Mayfield** QB / TB / #158
+
+R11.1 **Chuba Hubbard** RB / CAR / #69
+
+R12.1 **Rome Odunze** WR / CHI / #65
+
+R13.1 **David Njoku** TE / LAC / #209
+
+R14.1 **Pittsburgh Steelers** DST / PIT / #116
+
+R15.1 **Jake Bates** K / DET / #147
+
+R16 **Pending** Awaiting ESPN
+
+Slot 2 **Receiver Heavy** Demo Rival B / 15/15
+
+R1.2 **Jayden Daniels** QB / WAS / #50
+
+R2.2 **Jonathan Taylor** RB / IND / #7
+
+R3.2 **Kyren Williams** RB / LAR / #33
+
+R4.2 **Amon-Ra St. Brown** WR / DET / #8
+
+R5.2 **CeeDee Lamb** WR / DAL / #10
+
+R6.2 **T.J. Hockenson** TE / MIN / #142
+
+R7.2 **Derrick Henry** RB / BAL / #16
+
+R8.2 **Nico Collins** WR / HOU / #23
+
+R9.2 **Ladd McConkey** WR / LAC / #52
+
+R10.2 **Dak Prescott** QB / DAL / #81
+
+R11.2 **Tony Pollard** RB / TEN / #82
+
+R12.2 **David Montgomery** RB / HOU / #64
+
+R13.2 **Ricky Pearsall** WR / SF / #114
+
+R14.2 **Buffalo Bills** DST / BUF / #208
+
+R15.2 **Cameron Dicker** K / LAC / #107
+
+R16 **Pending** Awaiting ESPN
+
+Slot 3 / You **FantasyIQ Demo Squad** Demo Manager / 15/15
+
+R1.3 **Jordan Love** QB / GB / #170
+
+R2.3 **Jonathan Taylor** RB / IND / #7
+
+R3.3 **James Conner** RB / ARI / #205
+
+R4.3 **Tee Higgins** WR / CIN / #44
+
+R5.3 **Jordan Addison** WR / MIN / #124
+
+R6.3 **Jake Ferguson** TE / DAL / #101
+
+R7.3 **George Pickens** WR / DAL / #27
+
+R8.3 **Houston Texans** DST / HOU / #73
+
+R9.3 **Brandon Aubrey** K / DAL / #72
+
+R10.3 **Caleb Williams** QB / CHI / #94
+
+R11.3 **Zach Charbonnet** RB / SEA / #135
+
+R12.3 **Jaylen Warren** RB / PIT / #83
+
+R13.3 **Jameson Williams** WR / DET / #61
+
+R14.3 **Rashee Rice** WR / KC / #20
+
+R15.3 **Dallas Goedert** TE / PHI / #93
+
+R16 **Pending** Awaiting ESPN
+
+Slot 4 **QB Advantage** Demo Rival C / 15/15
+
+R1.4 **Jalen Hurts** QB / PHI / #55
+
+R2.4 **Ashton Jeanty** RB / LV / #13
+
+R3.4 **Josh Jacobs** RB / GB / #22
+
+R4.4 **A.J. Brown** WR / PHI / #30
+
+R5.4 **Brian Thomas Jr.** WR / JAX / #91
+
+R6.4 **Sam LaPorta** TE / DET / #66
+
+R7.4 **Marvin Harrison Jr.** WR / ARI / #70
+
+R8.4 **Kenneth Walker III** RB / KC / #28
+
+R9.4 **Terry McLaurin** WR / WAS / #49
+
+R10.4 **Bo Nix** QB / DEN / #113
+
+R11.4 **TreVeyon Henderson** RB / NE / #54
+
+R12.4 **DJ Moore** WR / BUF / #59
+
+R13.4 **Tucker Kraft** TE / GB / #109
+
+R14.4 **Denver Broncos** DST / DEN / #79
+
+R15.4 **Ka'imi Fairbairn** K / HOU / #123
+
+R16 **Pending** Awaiting ESPN
+
+Slot 5 **Balanced Build** Demo Rival D / 15/15
+
+R1.5 **Joe Burrow** QB / CIN / #51
+
+R2.5 **Christian McCaffrey** RB / SF / #5
+
+R3.5 **Breece Hall** RB / NYJ / #29
+
+R4.5 **Garrett Wilson** WR / NYJ / #36
+
+R5.5 **Davante Adams** WR / LAR / #41
+
+R6.5 **Mark Andrews** TE / BAL / #132
+
+R7.5 **Courtland Sutton** WR / DEN / #77
+
+R8.5 **Omarion Hampton** RB / LAC / #19
+
+R9.5 **Zay Flowers** WR / BAL / #40
+
+R10.5 **Justin Herbert** QB / LAC / #118
+
+R11.5 **Rhamondre Stevenson** RB / NE / #102
+
+R12.5 **Darnell Mooney** WR / NYG / #230
+
+R13.5 **Evan Engram** TE / DEN / #280
+
+R14.5 **Philadelphia Eagles** DST / PHI / #130
+
+R15.5 **Harrison Butker** K / KC / #151
+
+R16 **Pending** Awaiting ESPN
+
+Post-Draft Plan
+
+### Grade + next moves
+
+Updates from your selected ESPN team.
+
+Grade **B- (74)** Solid teamRoster Source **ESPN Team** 15 matched playersMain Need **RB** 2 target gap
+
+#### Next 7 Days
+
+Waiver priority: add RB depth before chasing luxury bench points.
+
+Trade lane: shop extra TE for a RB upgrade.
+
+Stabilize the bench: pair high-risk upside with one safer weekly role.
+
+Watch injury/news changes before waivers lock; prioritize roles that can become weekly starters.
+
+#### Strengths
+
+TE: Dallas Goedert, Jake Ferguson
+
+QB: Caleb Williams, Jordan Love
+
+RB: Jonathan Taylor, Jaylen Warren
+
+#### Grade Notes
+
+Consensus score 53.3 using board value, projections, rank, and market support.
+
+Main need: RB / WR.
+
+7/7 consensus-weighted starter slots matched.
+
+Live Board
+
+### Available players by tier
+
+Filter fast. Draft the tier, not the name.
+
+AllQBRBWRTEFLEXSFLEXDSTK
+
+Bijan Robinson#1 / RB / ATL / Proj PPR 353.2 / RB Elite
+
+Jahmyr Gibbs#2 / RB / DET / Proj PPR 358.9 / RB Elite
+
+Puka Nacua#3 / WR / LAR / Proj PPR 356.8 / WR Elite
+
+Ja'Marr Chase#4 / WR / CIN / Proj PPR 335.9 / WR Elite
+
+Jaxon Smith-Njigba#6 / WR / SEA / Proj PPR 326.5 / WR Elite
+
+James Cook III#12 / RB / BUF / Proj PPR 279.3 / RB Elite
+
+Jeremiyah Love#15 / RB / ARI / Proj PPR 278.7 / RB Elite
+
+Josh Allen#21 / QB / BUF / Proj PPR 368.9 / QB Elite
+
+Brock Bowers#24 / TE / LV / Proj PPR 240.2 / TE Elite
+
+Chase Brown#26 / RB / CIN / Proj PPR 271.9 / RB Starter
+
+Chris Olave#31 / WR / NO / Proj PPR 244.7 / WR Starter
+
+Javonte Williams#32 / RB / DAL / Proj PPR 259.1 / RB Starter
+
+Tetairoa McMillan#35 / WR / CAR / Proj PPR 238.5 / WR Starter
+
+DeVonta Smith#37 / WR / PHI / Proj PPR 238.3 / WR Starter
+
+Cam Skattebo#38 / RB / NYG / Proj PPR 241.8 / RB Starter
+
+Travis Etienne Jr.#39 / RB / NO / Proj PPR 241.5 / RB Starter
+
+Colston Loveland#42 / TE / CHI / Proj PPR 205.9 / TE Elite
+
+Tyler Warren#43 / TE / IND / Proj PPR 208.0 / TE Elite
+
+Drake Maye#46 / QB / NE / Proj PPR 318.3 / QB Elite
+
+Emeka Egbuka#47 / WR / TB / Proj PPR 209.5 / WR Starter
+
+Quinshon Judkins#48 / RB / CLE / Proj PPR 225.1 / RB Starter
+
+Carnell Tate#53 / WR / TEN / Proj PPR 210.9 / WR Starter
+
+Jaylen Waddle#56 / WR / DEN / Proj PPR 213.1 / WR Starter
+
+Jadarian Price#57 / RB / SEA / Proj PPR 195.3 / RB Starter
+
+Harold Fannin Jr.#58 / TE / CLE / Proj PPR 187.4 / TE Elite
+
+Kyle Pitts Sr.#60 / TE / ATL / Proj PPR 185.6 / TE Elite
+
+D'Andre Swift#62 / RB / CHI / Proj PPR 211.6 / RB Starter
+
+Jaxson Dart#63 / QB / NYG / Proj PPR 300.7 / QB Starter
+
+Bhayshul Tuten#67 / RB / JAX / Proj PPR 204.9 / RB Flex
+
+Luther Burden III#68 / WR / CHI / Proj PPR 205.8 / WR Flex
+
+DK Metcalf#74 / WR / PIT / Proj PPR 195.0 / WR Flex
+
+Michael Pittman Jr.#75 / WR / PIT / Proj PPR 196.4 / WR Flex
+
+Jordyn Tyson#76 / WR / NO / Proj PPR 188.3 / WR Flex
+
+Alec Pierce#78 / WR / IND / Proj PPR 202.7 / WR Flex
+
+Travis Kelce#80 / TE / KC / Proj PPR 175.5 / TE Starter
+
+Christian Watson#84 / WR / GB / Proj PPR 186.0 / WR Flex
+
+George Kittle#85 / TE / SF / Proj PPR 139.1 / TE Starter
+
+Aaron Jones Sr.#86 / RB / MIN / Proj PPR 188.3 / RB Flex
+
+Seahawks D/ST#87 / DST / SEA / Proj PPR 108.0 / DST Stream
+
+Brock Purdy#88 / QB / SF / Proj PPR 292.9 / QB Starter
+
+Rico Dowdle#89 / RB / PIT / Proj PPR 185.0 / RB Flex
+
+Makai Lemon#90 / WR / PHI / Proj PPR 182.0 / WR Bench
+
+Matthew Stafford#92 / QB / LAR / Proj PPR 293.4 / QB Starter
+
+Parker Washington#95 / WR / JAX / Proj PPR 184.2 / WR Bench
+
+Jakobi Meyers#96 / WR / JAX / Proj PPR 181.8 / WR Bench
+
+Chris Godwin Jr.#97 / WR / TB / Proj PPR 167.3 / WR Bench
+
+Patrick Mahomes#98 / QB / KC / Proj PPR 289.3 / QB Starter
+
+J.K. Dobbins#99 / RB / DEN / Proj PPR 178.1 / RB Flex
+
+Kenneth Gainwell#100 / RB / TB / Proj PPR 172.7 / RB Flex
+
+Rachaad White#103 / RB / WAS / Proj PPR 174.7 / RB Flex
+
+Extra draft context
+
+Decision Backup
+
+### Expanded read
+
+Big Board
+
+**Live intelligence ready**: null picks until you. Board value: Bijan Robinson.
+
+Cheatcode read **Bijan Robinson** Board value / RB / ATL / RB Elite
+
+Next pick **Complete** No remaining ESPN picks found
+
+Roster shape **RB 4 / WR 5** QB 2, TE 2, DST 1, K 1
+
+Now
+
+### Best move
+
+#1 / RB / ATL
+
+Bijan RobinsonMark Drafted
+
+_Board value_ **team needed** **RB Elite**
+
+Best available FLEX/bench value. Proj PPR: 353.2. League value: 80.6. Choose your ESPN team for survival odds.
+
+Based on: Proj PPR / 12 teams / 1 QB / 2 RB / 2 WR / 1 TE / 1 FLEX / 1 DST / 1 K / selected roster / 79 drafted filtered
+
+Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-04-10**
+
+Bijan Robinson is a RB Elite RB for ATL. FantasyIQ has him #1 overall and RB1. Draft him at this tier if the position fits your build. Do not reach far.
+
+Value
+
+### Board edge
+
+Best value / #1 / RB / ATLBijan Robinson _RB Elite_ League value 80.6. Anchor if price matches tierDaily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-04-10**
+
+Bijan Robinson is a RB Elite RB for ATL. FantasyIQ has him #1 overall and RB1. Draft him at this tier if the position fits your build. Do not reach far.
+
+Safety
+
+### Low-regret pick
+
+Low-regret / #1 / RB / ATLBijan Robinson _RB Elite_ Risk 2/10 with strong board rank for the current room.Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-04-10**
+
+Bijan Robinson is a RB Elite RB for ATL. FantasyIQ has him #1 overall and RB1. Draft him at this tier if the position fits your build. Do not reach far.
+
+Upside
+
+### Swing pick
+
+Upside swing / #1 / RB / ATLBijan Robinson _RB Elite_ Upside 99/100. Best used after the foundation is protected.Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-04-10**
+
+Bijan Robinson is a RB Elite RB for ATL. FantasyIQ has him #1 overall and RB1. Draft him at this tier if the position fits your build. Do not reach far.
+
+Tier Cliff
+
+### Do not miss
+
+**QB: 2 left in QB Elite** Josh Allen, Drake Maye
+
+**WR: 3 left in WR Elite** Puka Nacua, Ja'Marr Chase, Jaxon Smith-Njigba
+
+**RB: 4 left in RB Elite** Bijan Robinson, Jahmyr Gibbs, James Cook III
+
+**TE: 5 left in TE Elite** Brock Bowers, Colston Loveland, Tyler Warren
+
+Wait
+
+### Likely returns
+
+Select your team during a live draft to see who can wait.
+
+Avoid
+
+### Under clock
+
+#21 / QB / BUF
+
+Josh AllenMark Drafted
+
+_Board value_ **team needed** **QB Elite**
+
+Depth or late-round utility. Proj PPR: 368.9. League value: 56.2. Choose your ESPN team for survival odds.
+
+Based on: Proj PPR / 12 teams / 1 QB / 2 RB / 2 WR / 1 TE / 1 FLEX / 1 DST / 1 K / selected roster / 79 drafted filtered
+
+Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-05-19**
+
+Josh Allen is a QB Elite QB for BUF. FantasyIQ has him #21 overall and QB1. Draft him at this tier if the position fits your build. Do not reach far.
+
+#24 / TE / LV
+
+Brock BowersMark Drafted
+
+_Board value_ **team needed** **TE Elite**
+
+Best available FLEX/bench value. Proj PPR: 240.2. League value: 76.6. Choose your ESPN team for survival odds.
+
+Based on: Proj PPR / 12 teams / 1 QB / 2 RB / 2 WR / 1 TE / 1 FLEX / 1 DST / 1 K / selected roster / 79 drafted filtered
+
+Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2025-12-24**
+
+Brock Bowers is a TE Elite TE for LV. FantasyIQ has him #24 overall and TE2. Draft him at this tier if the position fits your build. Do not reach far.
+
+#38 / RB / NYG
+
+Cam SkatteboMark Drafted
+
+_Board value_ **team needed** **RB Starter**
+
+Best available FLEX/bench value. Proj PPR: 241.8. League value: 54.2. Choose your ESPN team for survival odds.
+
+Based on: Proj PPR / 12 teams / 1 QB / 2 RB / 2 WR / 1 TE / 1 FLEX / 1 DST / 1 K / selected roster / 79 drafted filtered
+
+Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-05-20**
+
+Cam Skattebo is a RB Starter RB for NYG. FantasyIQ has him #38 overall and RB18. Only draft him if he falls below the usual price.
+
+Room
+
+### Draft pulse
+
+**K pressure: 4 of last 12** Check the tier cliff before reacting.
+
+#### Last 12
+
+K **4**DST **4**TE **3**WR **1**
+
+Next Pick Radar
+
+### Will it make it back?
+
+**Draft complete** No remaining picks for your team.
+
+Tier Cliffs
+
+### Scarcity alerts
+
+**RB: Watch this tier. 4 left in RB Elite.** Bijan Robinson, Jahmyr Gibbs, James Cook III
+
+**WR: Watch this tier. 3 left in WR Elite.** Puka Nacua, Ja'Marr Chase, Jaxon Smith-Njigba
+
+**TE: 5 left in the current TE tier.** Brock Bowers, Colston Loveland, Tyler Warren
+
+**QB: Hard cliff. Only 2 left in QB Elite.** Josh Allen, Drake Maye
+
+**FLEX pool: QB 0, RB 6, WR 5, TE 1** Top 12 eligible players left. Use this to avoid chasing a fake run.
+
+Room Behavior
+
+### Run detector
+
+**K pressure is building: 4 of last 12.** Exploit it by taking falling RB/WR value unless your tier cliff says otherwise.
+
+#### Last 12
+
+K **4**DST **4**TE **3**WR **1**
+
+#### Value Signal
+
+Reaches **1**Values/steals **11**
+
+Golden Zone
+
+### Risk meter
+
+**Baseline plan** Golden zone means stable early foundation, then 2-4 upside swings after your starters are protected.
+
+ESPN Feed
+
+### Recent picks
+
+R15 P5 / Overall 75Harrison Butker _Steal_. K / KC / board rank 151Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-01-06**
+
+Harrison Butker is a K Stream K for KC. FantasyIQ has him #151 overall and K9. Stream only if schedule fits
+
+R15 P4 / Overall 74Ka'imi Fairbairn _Steal_. K / HOU / board rank 123Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-03-10**
+
+Ka'imi Fairbairn is a K Stream K for HOU. FantasyIQ has him #123 overall and K4. Stream only if schedule fits
+
+R15 P3 / Overall 73Dallas Goedert _Steal_. TE / PHI / board rank 93Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-03-15**
+
+Dallas Goedert is a TE Starter TE for PHI. FantasyIQ has him #93 overall and TE10. Take at fair price
+
+R15 P2 / Overall 72Cameron Dicker _Steal_. K / LAC / board rank 107Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-01-07**
+
+Cameron Dicker is a K Stream K for LAC. FantasyIQ has him #107 overall and K2. Stream only if schedule fits
+
+R15 P1 / Overall 71Jake Bates _Steal_. K / DET / board rank 147Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-03-25**
+
+Jake Bates is a K Stream K for DET. FantasyIQ has him #147 overall and K8. Stream only if schedule fits
+
+R14 P5 / Overall 70Eagles D/ST _Steal_. DST / PHI / board rank 130Daily Player Synopsis **Updated 2026-05-26 / Latest note: No dated update**
+
+Eagles D/ST is a DST Stream DST for PHI. FantasyIQ has him #130 overall and DST7. Stream only if schedule fits
+
+R14 P4 / Overall 69Broncos D/ST _Good value_. DST / DEN / board rank 79Daily Player Synopsis **Updated 2026-05-26 / Latest note: No dated update**
+
+Broncos D/ST is a DST Stream DST for DEN. FantasyIQ has him #79 overall and DST2. Stream only if schedule fits
+
+R14 P3 / Overall 68Rashee Rice _Reach_. WR / KC / board rank 20Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-05-19**
+
+Rashee Rice is a WR Elite WR for KC. FantasyIQ has him #20 overall and WR8. Only draft him if he falls below the usual price.
+
+R14 P2 / Overall 67Bills D/ST _Steal_. DST / BUF / board rank 208Daily Player Synopsis **Updated 2026-05-26 / Latest note: No dated update**
+
+Bills D/ST is a DST Stream DST for BUF. FantasyIQ has him #208 overall and DST21. Stream only if schedule fits
+
+R14 P1 / Overall 66Steelers D/ST _Steal_. DST / PIT / board rank 116Daily Player Synopsis **Updated 2026-05-26 / Latest note: No dated update**
+
+Steelers D/ST is a DST Stream DST for PIT. FantasyIQ has him #116 overall and DST4. Stream only if schedule fits
+
+R13 P5 / Overall 65Evan Engram _Steal_. TE / DEN / board rank 280Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-02-12**
+
+Evan Engram is a TE Deep TE for DEN. FantasyIQ has him #280 overall and TE34. Take at fair price
+
+R13 P4 / Overall 64Tucker Kraft _Steal_. TE / GB / board rank 109Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-05-06**
+
+Tucker Kraft is a TE Starter TE for GB. FantasyIQ has him #109 overall and TE12. Only draft him if he falls below the usual price.
+
+Upcoming
+
+### Next picks
+
+No upcoming picks found.
+
+Round 1
+
+### Draft order from ESPN
+
+**1** Manager TBD
+
+**2** Manager TBD
+
+**3** Manager TBD
+
+**4** Manager TBD
+
+**5** Manager TBD
+
+Mock Simulator
+
+## Practice draft room
+
+Draft Slot
+Random123456789101112Start MockAuto To My PickReset
+
+Start a mock, then practice making picks while the room auto-drafts around you.
+
+Practice Clock **No mock started** Choose a slot and start.Mock Progress **0** of 192
+
+Roster Shape **0 players** QB 0 / RB 0 / WR 0 / TE 0 / DST 0 / K 0Mock Grade **Pending** Start a mock.
+
+Practice Radar
+
+### Next turn
+
+Start a mock to unlock pick radar.
+
+Tier Cliffs
+
+### Practice scarcity
+
+Waiting for mock.
+
+Room Behavior
+
+### Run detector
+
+Waiting for picks.
+
+Golden Zone
+
+### Practice risk meter
+
+Waiting for your roster.
+
+Decision Engine
+
+### Recommended picks
+
+Start a mock to see recommendations.
+
+Available Board
+
+### Click to draft
+
+AllQBRBWRTEFLEXSUPERFLEXDSTK
+
+AllQBRBWRTEFLEXSFLEXDSTK
+
+Start a mock to load players.
+
+My Practice Roster
+
+### Build tracker
+
+No picks yet.
+
+Draft Log
+
+### Recent picks
+
+No mock picks yet.
+
+External Mock Draft Grader
+
+### Grade mocks from ESPN, Sleeper, Yahoo, or another draft room
+
+This is for other mock drafts separate from FantasyIQ.
+
+Paste your drafted players in pick order
+
+Grade External MockClear
+
+Scoring
+Full PPRHalf PPRStandard
+Teams
+8 teams10 teams12 teams14 teams16 teams
+Draft Spot
+123456789101112
+Superflex
+
+Double flex
+
+
+Choose your draft spot, then paste player names from an outside mock draft to get a format-aware grade, build notes, reaches, steals, and roster fixes.
+
+Trade IQ
+
+## Roster-aware trade decision desk
+
+Decision Mode
+
+BalancedWin nowUpside
+
+Save trade note
+
+You Send **0.0**
+
+Give 1
+
+Give 2
+
+Give 3
+
+No outgoing players yet.
+
+You Receive **0.0**
+
+Receive 1
+
+Receive 2
+
+Receive 3
+
+No incoming players yet.
+
+Package Shape **1-for-1**
+
+1 for 12 for 11 for 22 for 23 for 23 for 3
+
+Roster Context **ESPN**
+
+QB 2RB 4WR 5TE 2DST 1K 1
+
+Trade verdict **Enter both sides**
+
+Type one player per line on each side. Trade IQ updates from the live ESPN board.
+
+Send Value **0.0**
+
+Receive Value **0.0**
+
+Roster Context **Ready** Using your active roster.
+
+Trade Finder **Targets**
+
+**No verified Fantasy IQ Data trade ideas yet** No package cleared the Fantasy IQ Data market value, accepted-trade activity, acceptance, and roster-fit quality gate. FantasyIQ is holding back trade suggestions instead of showing loose or unrealistic offers.
+
+For this roster, Fantasy IQ Data did not find three clean 1-for-1 or 2-for-1 ideas that help both managers and pass the quality gate.
+
+Use the manual trade checker for a specific offer, or check back after rosters/trade market data move.
+
+Waiver IQ **Watchlist**
+
+**Best available adds** Filtered against active ESPN rosters.
+
+Bijan Robinsondepth fit in PPRTrade value 88.7 / Proj PPR 353.2 / Risk 2/10
+
+Jahmyr Gibbsdepth fit in PPRTrade value 87.9 / Proj PPR 358.9 / Risk 2/10
+
+James Cook IIIdepth fit in PPRTrade value 77.0 / Proj PPR 279.3 / Risk 2/10
+
+Chase Browndepth fit in PPRTrade value 68.5 / Proj PPR 271.9 / Risk 2/10
+
+Ja'Marr Chasedepth fit in PPRTrade value 86.5 / Proj PPR 335.9 / Risk 2/10
+
+Puka Nacuadepth fit in PPRTrade value 82.2 / Proj PPR 356.8 / Risk 2/10
+
+Saved Trade Notes **Local**
+
+No saved trade checks yet.
+
+Green lights **Accept when it improves starters**
+
+Prefer trades that add value, solve a weak position, or turn bench depth into weekly points.
+
+Red flags **Counter when value is cloudy**
+
+Be careful giving up the best player, stacking one position, or buying a name after a spike week.
+
+Roster fit **Paste your roster for context**
+
+Trade IQ checks whether the deal creates a thin RB/WR/TE room or fixes a real need.
+
+**Live-season trade intelligence stays ready.** When current-season trades are available, FantasyIQ can add manager tendencies and roster-fit reads. For now, Trade IQ handles value, risk, and fit.
+
+Big Board
+
+## Ranked player board
+
+CombinedEliteStaplesRookiesSleepersK/DSTRisers/FallersUDK View
+
+Search
+
+
+Draft View
+
+AllQBRBWRTEFLEXSFLEXDSTK
+
+Hide drafted
+Reload Boards
+
+**Live Combined Big Board**: showing 246 players in ESPN ADP order. Click any player name for analysis. Live ESPN public fantasy player feed + Sleeper add/drop trends + optional private UDK+ signals synced 11:45:42 PM. ESPN live sync has 75 drafted players.
+
+| ADP Rank | ESPN ADP | Player | Pos | Team | Tier | Proj PPR | League Edge | Last Yr PPR | League Value | Risk | Action | Bye | Category |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 2.3 | Bijan Robinson | RB | ATL | RB Elite | 353.2 | Even | 370.8 | 80.6 | 2 | Anchor if price matches tier |  | Elite |
+| 2 | 2.4 | Jahmyr Gibbs | RB | DET | RB Elite | 358.9 | Even | 366.9 | 80.4 | 2 | Anchor if price matches tier |  | Elite |
+| 3 | 4.1 | Puka Nacua | WR | LAR | WR Elite | 356.8 | Even | 375 | 80.5 | 2 | Anchor if price matches tier |  | Elite |
+| 4 | 5.2 | Ja'Marr Chase | WR | CIN | WR Elite | 335.9 | Even | 313.6 | 80.6 | 2 | Anchor if price matches tier |  | Elite |
+| 6 | 6.4 | Jaxon Smith-Njigba | WR | SEA | WR Elite | 326.5 | Even | 359.9 | 80.0 | 2 | Anchor if price matches tier |  | Elite |
+| 12 | 13.4 | James Cook III | RB | BUF | RB Elite | 279.3 | Even | 302.2 | 79.3 | 2 | Anchor if price matches tier |  | Elite |
+| 15 | 17.0 | Jeremiyah Love | RB | ARI | RB Elite | 278.7 | Even | No 2025 | 77.4 | 5 | Anchor if price matches tier |  | Elite |
+| 21 | 24.1 | Josh Allen | QB | BUF | QB Elite | 368.9 | Even | 364.6 | 56.2 | 3 | Anchor if price matches tier |  | Elite |
+| 24 | 25.3 | Brock Bowers | TE | LV | TE Elite | 240.2 | Even | 176.2 | 76.6 | 4 | Anchor if price matches tier |  | Elite |
+| 26 | 27.4 | Chase Brown | RB | CIN | RB Starter | 271.9 | Even | 282.6 | 79.1 | 2 | Draft-room value target |  | Elite |
+| 31 | 33.2 | Chris Olave | WR | NO | WR Starter | 244.7 | Even | 268 | 80.5 | 2 | Draft-room value target |  | Elite |
+| 32 | 35.8 | Javonte Williams | RB | DAL | RB Starter | 259.1 | Even | 242.8 | 77.6 | 2 | Draft-room value target |  | Elite |
+| 35 | 38.5 | Tetairoa McMillan | WR | CAR | WR Starter | 238.5 | Even | 211.4 | 79.3 | 2 | Draft-room value target |  | Elite |
+| 37 | 40.1 | DeVonta Smith | WR | PHI | WR Starter | 238.3 | Even | 201.8 | 79.4 | 2 | Draft-room value target |  | Staple |
+| 38 | 41.8 | Cam Skattebo | RB | NYG | RB Starter | 241.8 | Even | 127.7 | 54.2 | 7 | Draft only at discount |  | Staple |
+| 39 | 42.6 | Travis Etienne Jr. | RB | NO | RB Starter | 241.5 | Even | 253.9 | 79.0 | 2 | Draft-room value target |  | Staple |
+| 42 | 45.3 | Colston Loveland | TE | CHI | TE Elite | 205.9 | Even | 165.1 | 56.0 | 3 | Take at fair price |  | Staple |
+| 43 | 47.3 | Tyler Warren | TE | IND | TE Elite | 208.0 | Even | 188.5 | 54.1 | 3 | Take at fair price |  | Staple |
+| 46 | 52.0 | Drake Maye | QB | NE | QB Elite | 318.3 | Even | 352 | 51.1 | 3 | Take at fair price |  | Staple |
+| 47 | 52.5 | Emeka Egbuka | WR | TB | WR Starter | 209.5 | Even | 195.7 | 56.9 | 3 | Take at fair price |  | Staple |
+| 48 | 53.2 | Quinshon Judkins | RB | CLE | RB Starter | 225.1 | Even | 169.8 | 56.7 | 5 | Take at fair price |  | Staple |
+| 53 | 58.5 | Carnell Tate | WR | TEN | WR Starter | 210.9 | Even | Rookie | 60.8 | 4 | Take at fair price |  | Rookie |
+| 56 | 60.0 | Jaylen Waddle | WR | DEN | WR Starter | 213.1 | Even | 194.1 | 58.8 | 3 | Under-ADP target |  | Sleeper |
+| 57 | 62.0 | Jadarian Price | RB | SEA | RB Starter | 195.3 | Even | Rookie | 57.4 | 4 | Under-ADP target |  | Rookie |
+| 58 | 65.0 | Harold Fannin Jr. | TE | CLE | TE Elite | 187.4 | Even | 186.4 | 53.8 | 3 | Take at fair price |  | Staple |
+| 60 | 66.6 | Kyle Pitts Sr. | TE | ATL | TE Elite | 185.6 | Even | 210.8 | 50.3 | 3 | Take at fair price |  | Staple |
+| 62 | 68.0 | D'Andre Swift | RB | CHI | RB Starter | 211.6 | Even | 228.6 | 55.5 | 3 | Take at fair price |  | Staple |
+| 63 | 70.8 | Jaxson Dart | QB | NYG | QB Starter | 300.7 | Even | 241.9 | 48.9 | 3 | Take at fair price |  | Staple |
+| 67 | 74.5 | Bhayshul Tuten | RB | JAX | RB Flex | 204.9 | Even | 90.1 | 56.6 | 5 | Under-ADP target |  | Sleeper |
+| 68 | 75.8 | Luther Burden III | WR | CHI | WR Flex | 205.8 | Even | 127.9 | 61.0 | 4 | Under-ADP target |  | Sleeper |
+| 74 | 83.8 | DK Metcalf | WR | PIT | WR Flex | 195.0 | Even | 187.2 | 55.1 | 3 | Take at fair price |  | Staple |
+| 75 | 85.2 | Michael Pittman Jr. | WR | PIT | WR Flex | 196.4 | Even | 202.4 | 60.4 | 2 | Under-ADP target |  | Sleeper |
+| 76 | 86.1 | Jordyn Tyson | WR | NO | WR Flex | 188.3 | Even | Rookie | 57.7 | 5 | Under-ADP target |  | Rookie |
+| 78 | 87.4 | Alec Pierce | WR | IND | WR Flex | 202.7 | Even | 183.3 | 55.4 | 5 | Take at fair price |  | Staple |
+| 80 | 88.5 | Travis Kelce | TE | KC | TE Starter | 175.5 | Even | 193.2 | 45.0 | 4 | Take at fair price |  | Staple |
+| 84 | 95.0 | Christian Watson | WR | GB | WR Flex | 186.0 | Even | 132.4 | 53.6 | 4 | Take at fair price |  | Staple |
+| 85 | 95.6 | George Kittle | TE | SF | TE Starter | 139.1 | Even | 161.5 | 41.4 | 5 | Take at fair price |  | Staple |
+| 86 | 96.5 | Aaron Jones Sr. | RB | MIN | RB Flex | 188.3 | Even | 118.7 | 54.6 | 5 | Take at fair price |  | Staple |
+| 87 | 98.3 | Seahawks D/ST | DST | SEA | DST Stream | 108.0 | Even | 194 | 35.9 | 4 | Stream only if schedule fits |  | K/DST |
+| 88 | 98.5 | Brock Purdy | QB | SF | QB Starter | 292.9 | Even | 177.4 | 42.4 | 5 | Take at fair price |  | Staple |
+| 89 | 98.5 | Rico Dowdle | RB | PIT | RB Flex | 185.0 | Even | 216.3 | 49.5 | 4 | Take at fair price |  | Staple |
+| 90 | 99.8 | Makai Lemon | WR | PHI | WR Bench | 182.0 | Even | Rookie | 47.8 | 5 | Take at fair price |  | Rookie |
+| 92 | 101.2 | Matthew Stafford | QB | LAR | QB Starter | 293.4 | Even | 350.4 | 35.6 | 4 | Take at fair price |  | Staple |
+| 95 | 102.9 | Parker Washington | WR | JAX | WR Bench | 184.2 | Even | 172.8 | 67.1 | 4 | Under-ADP target |  | Sleeper |
+| 96 | 104.0 | Jakobi Meyers | WR | JAX | WR Bench | 181.8 | Even | 175.8 | 56.3 | 3 | Under-ADP target |  | Sleeper |
+| 97 | 104.9 | Chris Godwin Jr. | WR | TB | WR Bench | 167.3 | Even | 83 | 55.2 | 5 | Take at fair price |  | Staple |
+| 98 | 105.4 | Patrick Mahomes | QB | KC | QB Starter | 289.3 | Even | 285.7 | 35.6 | 5 | Take at fair price |  | Staple |
+| 99 | 105.8 | J.K. Dobbins | RB | DEN | RB Flex | 178.1 | Even | 115.9 | 50.7 | 5 | Take at fair price |  | Staple |
+| 100 | 106.5 | Kenneth Gainwell | RB | TB | RB Flex | 172.7 | Even | 221.3 | 55.8 | 3 | Take at fair price |  | Staple |
+| 103 | 108.3 | Rachaad White | RB | WAS | RB Flex | 174.7 | Even | 143 | 53.9 | 4 | Take at fair price |  | Staple |
+| 104 | 109.4 | Wan'Dale Robinson | WR | TEN | WR Bench | 173.9 | Even | 217.9 | 55.7 | 3 | Take at fair price |  | Staple |
+| 105 | 110.9 | Trevor Lawrence | QB | JAX | QB Bench | 288.1 | Even | 338.2 | 40.3 | 4 | Take at fair price |  | Staple |
+| 106 | 111.0 | RJ Harvey | RB | DEN | RB Flex | 166.8 | Even | 206.6 | 48.9 | 4 | Take at fair price |  | Staple |
+| 108 | 113.0 | Michael Wilson | WR | ARI | WR Bench | 167.4 | Even | 220.6 | 50.1 | 4 | Take at fair price |  | Staple |
+| 110 | 113.9 | Matthew Golden | WR | GB | WR Bench | 184.9 | Even | 70 | 50.4 | 6 | Take at fair price |  | Staple |
+| 111 | 114.7 | Kyle Monangai | RB | CHI | RB Bench | 176.1 | Even | 146.7 | 49.2 | 4 | Take at fair price |  | Staple |
+| 112 | 116.3 | Travis Hunter | WR | JAX | WR Bench | 112.0 | Even | 63.8 | 54.7 | 6 | Take at fair price |  | Staple |
+| 115 | 120.7 | KC Concepcion | WR | CLE | WR Bench | 162.3 | Even | Rookie | 52.2 | 5 | Take at fair price |  | Rookie |
+| 117 | 121.9 | Jason Myers | K | SEA | K Stream | TBD | Even | 141 | 30.4 | 7 | Stream only if schedule fits |  | K/DST |
+| 119 | 124.5 | Xavier Worthy | WR | KC | WR Bench | 171.3 | Even | 109.9 | 48.9 | 5 | Take at fair price |  | Staple |
+| 120 | 124.7 | Blake Corum | RB | LAR | RB Bench | 149.8 | Even | 122.2 | 53.3 | 3 | Take at fair price |  | Staple |
+| 121 | 125.3 | Patriots D/ST | DST | NE | DST Stream | 91.3 | Even | 134 | 34.9 | 4 | Stream only if schedule fits |  | K/DST |
+| 122 | 126.7 | Rams D/ST | DST | LAR | DST Stream | 106.5 | Even | 128 | 33.0 | 5 | Stream only if schedule fits |  | K/DST |
+| 125 | 129.6 | Isaiah Likely | TE | NYG | TE Bench | 155.8 | Even | 61.7 | 36.0 | 6 | Take at fair price |  | Staple |
+| 126 | 129.6 | Kenyon Sadiq | TE | NYJ | TE Bench | 162.4 | Even | Rookie | 31.0 | 6 | Take at fair price |  | Rookie |
+| 127 | 130.7 | Jacory Croskey-Merritt | RB | WAS | RB Bench | 151.8 | Even | 140.3 | 47.9 | 4 | Take at fair price |  | Staple |
+| 128 | 131.3 | Jonathon Brooks | RB | CAR | RB Bench | 131.7 | Even | No 2025 | 50.0 | 6 | Take at fair price |  | Staple |
+| 129 | 132.2 | Josh Downs | WR | IND | WR Bench | 164.2 | Even | 136.4 | 56.8 | 3 | Under-ADP target |  | Sleeper |
+| 131 | 133.4 | Khalil Shakir | WR | BUF | WR Bench | 170.1 | Even | 166.4 | 48.6 | 4 | Take at fair price |  | Staple |
+| 133 | 137.4 | Cam Little | K | JAX | K Stream | TBD | Even | 151 | 29.7 | 7 | Stream only if schedule fits |  | K/DST |
+| 134 | 137.7 | Ravens D/ST | DST | BAL | DST Stream | 105.8 | Even | 97 | 32.8 | 5 | Stream only if schedule fits |  | K/DST |
+| 136 | 139.9 | Harrison Mevis | K | LAR | K Stream | TBD | Even | 68 | 29.7 | 7 | Stream only if schedule fits |  | K/DST |
+| 137 | 141.2 | Romeo Doubs | WR | NE | WR Bench | 170.9 | Even | 165.4 | 44.4 | 4 | Take at fair price |  | Staple |
+| 138 | 141.3 | Woody Marks | RB | HOU | RB Bench | 127.2 | Even | 145.1 | 50.6 | 3 | Take at fair price |  | Staple |
+| 139 | 142.3 | Quentin Johnston | WR | LAC | WR Bench | 164.5 | Even | 171.2 | 45.6 | 4 | Take at fair price |  | Staple |
+| 140 | 143.1 | Jayden Reed | WR | GB | WR Bench | 170.6 | Even | 48.5 | 47.2 | 6 | Take at fair price |  | Staple |
+| 141 | 143.6 | Isiah Pacheco | RB | DET | RB Bench | 129.6 | Even | 87.3 | 47.9 | 5 | Take at fair price |  | Staple |
+| 143 | 146.9 | Browns D/ST | DST | CLE | DST Stream | 97.8 | Even | 143 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 144 | 147.0 | Eddy Pineiro | K | SF | K Stream | TBD | Even | 128 | 29.7 | 7 | Stream only if schedule fits |  | K/DST |
+| 145 | 147.9 | Tyjae Spears | RB | TEN | RB Bench | 149.0 | Even | 111.7 | 52.5 | 4 | Take at fair price |  | Staple |
+| 146 | 150.7 | Alvin Kamara | RB | NO | RB Bench | 124.5 | Even | 100.7 | 44.9 | 6 | Take at fair price |  | Staple |
+| 148 | 151.5 | Jared Goff | QB | DET | QB Bench | 268.0 | Even | 297.1 | 32.7 | 4 | Take at fair price |  | Staple |
+| 149 | 151.9 | Dalton Kincaid | TE | BUF | TE Bench | 155.4 | Even | 126.1 | 31.7 | 5 | Take at fair price |  | Staple |
+| 150 | 152.1 | Jordan Mason | RB | MIN | RB Bench | 129.6 | Even | 128.9 | 47.4 | 4 | Take at fair price |  | Staple |
+| 152 | 154.6 | Kyler Murray | QB | MIN | QB Bench | 248.7 | Even | 77.8 | 28.7 | 8 | Draft only at discount |  | Staple |
+| 153 | 156.5 | Lions D/ST | DST | DET | DST Stream | 100.0 | Even | 102 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 154 | 156.7 | Omar Cooper Jr. | WR | NYJ | WR Bench | 143.8 | Even | Rookie | 47.1 | 5 | Take at fair price |  | Rookie |
+| 155 | 156.8 | Tyler Shough | QB | NO | QB Bench | 264.7 | Even | 158 | 39.6 | 6 | Take at fair price |  | Staple |
+| 156 | 156.9 | Vikings D/ST | DST | MIN | DST Stream | 78.3 | Even | 134 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 157 | 158.0 | Hunter Henry | TE | NE | TE Bench | 149.8 | Even | 178.8 | 32.7 | 4 | Take at fair price |  | Staple |
+| 159 | 159.7 | Jalen Coker | WR | CAR | WR Bench | 148.1 | Even | 90.4 | 49.4 | 4 | Take at fair price |  | Staple |
+| 160 | 159.9 | Tyler Loop | K | BAL | K Stream | TBD | Even | 113 | 29.7 | 7 | Stream only if schedule fits |  | K/DST |
+| 161 | 160.4 | Jaguars D/ST | DST | JAX | DST Stream | 84.2 | Even | 140 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 162 | 160.9 | Chris Boswell | K | PIT | K Stream | TBD | Even | 106 | 29.7 | 7 | Stream only if schedule fits |  | K/DST |
+| 163 | 161.6 | Tyreek Hill | WR | FA | WR Bench | TBD | Even | 53.5 | 25.8 | 8 | Draft only at discount |  | Staple |
+| 164 | 162.0 | Jayden Higgins | WR | HOU | WR Bench | 141.5 | Even | 129.5 | 49.3 | 3 | Take at fair price |  | Staple |
+| 165 | 162.5 | Fernando Mendoza | QB | LV | QB Bench | 191.4 | Even | Rookie | 30.7 | 6 | Take at fair price |  | Rookie |
+| 166 | 162.6 | Chris Rodriguez Jr. | RB | JAX | RB Bench | 71.5 | Even | 92 | 47.5 | 3 | Take at fair price |  | Staple |
+| 167 | 162.8 | Stefon Diggs | WR | FA | WR Bench | TBD | Even | 210.3 | 30.7 | 6 | Take at fair price |  | Staple |
+| 168 | 163.0 | Rashid Shaheed | WR | SEA | WR Bench | 139.2 | Even | 144.6 | 35.8 | 4 | Take at fair price |  | Staple |
+| 169 | 163.9 | Will Reichard | K | MIN | K Stream | TBD | Even | 151 | 29.7 | 7 | Stream only if schedule fits |  | K/DST |
+| 171 | 164.3 | Chiefs D/ST | DST | KC | DST Stream | 90.0 | Even | 93 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 172 | 164.5 | Chargers D/ST | DST | LAC | DST Stream | 88.6 | Even | 125 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 173 | 164.8 | Juwan Johnson | TE | NO | TE Bench | 142.6 | Even | 179.9 | 32.7 | 4 | Take at fair price |  | Staple |
+| 174 | 165.5 | Cairo Santos | K | CHI | K Stream | TBD | Even | 79 | 29.7 | 7 | Stream only if schedule fits |  | K/DST |
+| 175 | 165.6 | Jalen McMillan | WR | TB | WR Deep | 133.1 | Even | 29.9 | 45.7 | 7 | Draft only at discount |  | Staple |
+| 176 | 165.7 | Calvin Ridley | WR | TEN | WR Deep | 152.7 | Even | 47.3 | 39.7 | 8 | Draft only at discount |  | Staple |
+| 177 | 165.8 | Tyler Allgeier | RB | ARI | RB Bench | 91.4 | Even | 123 | 44.6 | 4 | Take at fair price |  | Staple |
+| 178 | 165.9 | Sam Darnold | QB | SEA | QB Bench | 242.1 | Even | 235.4 | 32.7 | 4 | Take at fair price |  | Staple |
+| 179 | 166.1 | Daniel Jones | QB | IND | QB Bench | 266.2 | Even | 226.4 | 30.7 | 6 | Take at fair price |  | Staple |
+| 180 | 166.1 | Jerry Jeudy | WR | CLE | WR Deep | 138.3 | Even | 120.7 | 40.2 | 4 | Take at fair price |  | Staple |
+| 181 | 166.4 | Cowboys D/ST | DST | DAL | DST Stream | 74.2 | Even | 58 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 182 | 166.8 | Denzel Boston | WR | CLE | WR Deep | 140.3 | Even | Rookie | 30.7 | 6 | Take at fair price |  | Rookie |
+| 183 | 167.1 | Chase McLaughlin | K | TB | K Stream | TBD | Even | 105 | 29.7 | 7 | Stream only if schedule fits |  | K/DST |
+| 184 | 167.3 | Cam Ward | QB | TEN | QB Bench | 218.5 | Even | 186.7 | 32.7 | 4 | Take at fair price |  | Staple |
+| 185 | 167.3 | Tyrone Tracy Jr. | RB | NYG | RB Bench | 80.3 | Even | 160.8 | 32.7 | 4 | Take at fair price |  | Staple |
+| 186 | 167.5 | Packers D/ST | DST | GB | DST Stream | 84.7 | Even | 90 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 187 | 167.6 | C.J. Stroud | QB | HOU | QB Deep | 245.1 | Even | 208.5 | 32.7 | 4 | Take at fair price |  | Staple |
+| 188 | 167.6 | Brian Robinson Jr. | RB | ATL | RB Bench | 94.0 | Even | 62.5 | 32.9 | 5 | Take at fair price |  | Staple |
+| 189 | 167.6 | Jauan Jennings | WR | MIN | WR Deep | 114.4 | Even | 173.3 | 32.7 | 4 | Take at fair price |  | Staple |
+| 190 | 167.6 | Malik Willis | QB | MIA | QB Deep | 238.4 | Even | 51.2 | 39.3 | 8 | Draft only at discount |  | Staple |
+| 191 | 167.7 | 49ers D/ST | DST | SF | DST Stream | 81.4 | Even | 75 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 192 | 167.7 | Tank Bigsby | RB | PHI | RB Deep | 64.0 | Even | 53.8 | 53.7 | 4 | Take at fair price |  | Staple |
+| 193 | 167.8 | Brenton Strange | TE | JAX | TE Bench | 142.3 | Even | 118 | 31.7 | 5 | Take at fair price |  | Staple |
+| 194 | 168.0 | Buccaneers D/ST | DST | TB | DST Stream | 85.8 | Even | 97 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 195 | 168.0 | Germie Bernard | WR | PIT | WR Deep | 126.4 | Even | No 2025 | 31.3 | 6 | Take at fair price |  | Staple |
+| 196 | 168.1 | Cooper Kupp | WR | SEA | WR Deep | 101.4 | Even | 116.3 | 31.7 | 5 | Take at fair price |  | Staple |
+| 197 | 168.2 | Chris Bell | WR | MIA | WR Deep | 114.1 | Even | No 2025 | 30.2 | 7 | Draft only at discount |  | Staple |
+| 198 | 168.5 | Jake Elliott | K | PHI | K Stream | TBD | Even | 76 | 29.7 | 7 | Stream only if schedule fits |  | K/DST |
+| 199 | 168.5 | Oronde Gadsden | TE | LAC | TE Bench | 115.9 | Even | 131.4 | 31.7 | 5 | Take at fair price |  | Staple |
+| 200 | 168.5 | Evan McPherson | K | CIN | K Stream | TBD | Even | 121 | 29.7 | 7 | Stream only if schedule fits |  | K/DST |
+| 201 | 168.5 | Deebo Samuel | WR | FA | WR Deep | TBD | Even | 188.2 | 30.7 | 6 | Take at fair price |  | Staple |
+| 202 | 168.6 | Giants D/ST | DST | NYG | DST Stream | 76.3 | Even | 71 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 203 | 168.6 | Mike Washington Jr. | RB | LV | RB Deep | 65.3 | Even | Rookie | 30.7 | 6 | Take at fair price |  | Rookie |
+| 204 | 168.6 | Bryce Young | QB | CAR | QB Deep | 237.3 | Even | 218 | 32.7 | 4 | Take at fair price |  | Staple |
+| 206 | 168.6 | Trey Smack | K | GB | K Stream | TBD | Even | No 2025 | 28.7 | 8 | Stream only if schedule fits |  | K/DST |
+| 207 | 168.7 | Bears D/ST | DST | CHI | DST Stream | 88.1 | Even | 105 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 210 | 168.8 | Antonio Williams | WR | WAS | WR Deep | 115.4 | Even | Rookie | 30.7 | 6 | Take at fair price |  | Rookie |
+| 211 | 168.9 | Pat Freiermuth | TE | PIT | TE Bench | 135.8 | Even | 113.6 | 31.7 | 5 | Take at fair price |  | Staple |
+| 212 | 168.9 | Aaron Rodgers | QB | PIT | QB Deep | 217.4 | Even | 227.1 | 41.9 | 4 | Take at fair price |  | Staple |
+| 213 | 168.9 | Tre Tucker | WR | LV | WR Deep | 136.4 | Even | 161.7 | 41.7 | 4 | Take at fair price |  | Staple |
+| 214 | 168.9 | Ja'Kobi Lane | WR | BAL | WR Deep | 81.9 | Even | No 2025 | 31.7 | 5 | Take at fair price |  | Staple |
+| 215 | 169.0 | Titans D/ST | DST | TEN | DST Stream | 77.4 | Even | 75 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 216 | 169.0 | Chig Okonkwo | TE | WAS | TE Bench | 122.4 | Even | 124 | 31.7 | 5 | Take at fair price |  | Staple |
+| 217 | 169.0 | Tank Dell | WR | HOU | WR Deep | 105.5 | Even | No 2025 | 38.7 | 7 | Draft only at discount |  | Staple |
+| 218 | 169.0 | Brandon Aiyuk | WR | SF | WR Deep | TBD | Even | No 2025 | 26.7 | 10 | Draft only at discount |  | Staple |
+| 219 | 169.1 | AJ Barner | TE | SEA | TE Deep | 113.7 | Even | 147.3 | 31.7 | 5 | Take at fair price |  | Staple |
+| 220 | 169.1 | Jason Sanders | K | NYG | K Stream | TBD | Even | No 2025 | 28.7 | 8 | Stream only if schedule fits |  | K/DST |
+| 221 | 169.2 | Nicholas Singleton | RB | TEN | RB Deep | 19.2 | Even | Rookie | 30.7 | 6 | Take at fair price |  | Rookie |
+| 222 | 169.2 | Jonah Coleman | RB | DEN | RB Deep | 21.0 | Even | Rookie | 30.7 | 6 | Take at fair price |  | Rookie |
+| 223 | 169.2 | Braelon Allen | RB | NYJ | RB Deep | 87.2 | Even | 15.3 | 31.7 | 5 | Take at fair price |  | Staple |
+| 224 | 169.2 | Colts D/ST | DST | IND | DST Stream | 82.2 | Even | 85 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 225 | 169.3 | Terrance Ferguson | TE | LAR | TE Deep | 125.4 | Even | 52.1 | 18.0 | 9 | Draft only at discount |  | Staple |
+| 226 | 169.3 | Emmett Johnson | RB | KC | RB Deep | 58.4 | Even | Rookie | 30.7 | 6 | Take at fair price |  | Rookie |
+| 227 | 169.3 | Dolphins D/ST | DST | MIA | DST Stream | 52.4 | Even | 91 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 228 | 169.4 | Andy Borregales | K | NE | K Stream | TBD | Even | 100 | 29.7 | 7 | Stream only if schedule fits |  | K/DST |
+| 229 | 169.4 | Bengals D/ST | DST | CIN | DST Stream | 82.8 | Even | 65 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 231 | 169.4 | Dalton Schultz | TE | HOU | TE Deep | 133.5 | Even | 177.7 | 30.7 | 6 | Take at fair price |  | Staple |
+| 232 | 169.5 | Isaac TeSlaa | WR | DET | WR Deep | 73.0 | Even | 75.9 | 40.5 | 5 | Take at fair price |  | Staple |
+| 233 | 169.5 | Justice Hill | RB | BAL | RB Deep | 114.1 | Even | 65.3 | 28.4 | 6 | Take at fair price |  | Staple |
+| 234 | 169.5 | Jalen Nailor | WR | LV | WR Deep | 114.8 | Even | 100.7 | 42.4 | 5 | Take at fair price |  | Staple |
+| 235 | 169.5 | Kaelon Black | RB | SF | RB Deep | 34.5 | Even | Rookie | 45.0 | 6 | Take at fair price |  | Rookie |
+| 236 | 169.5 | Raiders D/ST | DST | LV | DST Stream | 67.7 | Even | 85 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 237 | 169.6 | De'Zhaun Stribling | WR | SF | WR Deep | 67.4 | Even | Rookie | 30.7 | 6 | Take at fair price |  | Rookie |
+| 238 | 169.6 | Falcons D/ST | DST | ATL | DST Stream | 69.7 | Even | 117 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 239 | 169.6 | Malachi Fields | WR | NYG | WR Deep | 42.6 | Even | Rookie | 30.7 | 6 | Take at fair price |  | Rookie |
+| 240 | 169.6 | Shedeur Sanders | QB | CLE | QB Deep | 105.4 | Even | 84.9 | 31.7 | 5 | Take at fair price |  | Staple |
+| 241 | 169.6 | Eli Stowers | TE | PHI | TE Deep | 37.6 | Even | Rookie | 30.7 | 6 | Take at fair price |  | Rookie |
+| 242 | 169.6 | Wil Lutz | K | DEN | K Stream | TBD | Even | 112 | 29.7 | 7 | Stream only if schedule fits |  | K/DST |
+| 243 | 169.6 | Rashod Bateman | WR | BAL | WR Deep | 122.5 | Even | 55.4 | 30.7 | 6 | Take at fair price |  | Staple |
+| 244 | 169.6 | Darnell Washington | TE | PIT | TE Deep | 72.2 | Even | 73.4 | 26.9 | 6 | Take at fair price |  | Staple |
+| 245 | 169.7 | Kaytron Allen | RB | WAS | RB Deep | 15.8 | Even | Rookie | 30.7 | 6 | Take at fair price |  | Rookie |
+| 246 | 169.7 | Keon Coleman | WR | BUF | WR Deep | 68.9 | Even | 102.4 | 31.7 | 5 | Take at fair price |  | Staple |
+| 247 | 169.7 | Kimani Vidal | RB | LAC | RB Deep | 74.0 | Even | 117.9 | 20.9 | 6 | Take at fair price |  | Staple |
+| 248 | 169.7 | Nick Folk | K | ATL | K Stream | TBD | Even | 116 | 29.7 | 7 | Stream only if schedule fits |  | K/DST |
+| 249 | 169.7 | Zachariah Branch | WR | ATL | WR Deep | 53.5 | Even | Rookie | 43.9 | 6 | Take at fair price |  | Rookie |
+| 250 | 169.7 | Matt Gay | K | LV | K Stream | TBD | Even | 56 | 29.7 | 7 | Stream only if schedule fits |  | K/DST |
+| 251 | 169.7 | Jordan James | RB | SF | RB Deep | 64.5 | Even | Rookie | 42.2 | 6 | Take at fair price |  | Rookie |
+| 252 | 169.7 | Panthers D/ST | DST | CAR | DST Stream | 73.5 | Even | 104 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 253 | 169.7 | Ray Davis | RB | BUF | RB Deep | 36.0 | Even | 64.1 | 31.7 | 5 | Take at fair price |  | Staple |
+| 254 | 169.7 | Saints D/ST | DST | NO | DST Stream | 79.7 | Even | 126 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 255 | 169.7 | Dylan Sampson | RB | CLE | RB Deep | 86.2 | Even | 87.8 | 31.7 | 5 | Take at fair price |  | Staple |
+| 256 | 169.7 | Commanders D/ST | DST | WAS | DST Stream | 73.5 | Even | 60 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 257 | 169.7 | Ryan Flournoy | WR | DAL | WR Deep | 89.7 | Even | 114 | 35.1 | 5 | Take at fair price |  | Staple |
+| 258 | 169.7 | KaVontae Turpin | WR | DAL | WR Deep | 63.9 | Even | 84.5 | 31.7 | 5 | Take at fair price |  | Staple |
+| 259 | 169.8 | Skyler Bell | WR | BUF | WR Deep | 34.1 | Even | Rookie | 44.3 | 6 | Take at fair price |  | Rookie |
+| 260 | 169.8 | Carson Beck | QB | ARI | QB Deep | 30.4 | Even | No 2025 | 31.7 | 5 | Take at fair price |  | Staple |
+| 261 | 169.8 | Christian Kirk | WR | SF | WR Deep | 72.1 | Even | 57.9 | 31.7 | 5 | Take at fair price |  | Staple |
+| 262 | 169.8 | Mike Gesicki | TE | CIN | TE Deep | 107.0 | Even | 70.7 | 40.2 | 6 | Take at fair price |  | Staple |
+| 263 | 169.8 | Tyler Bass | K | BUF | K Stream | TBD | Even | No 2025 | 26.7 | 10 | Stream only if schedule fits |  | K/DST |
+| 264 | 169.8 | Caleb Douglas | WR | MIA | WR Deep | 114.1 | Even | Rookie | 45.7 | 6 | Take at fair price |  | Rookie |
+| 265 | 169.8 | Ryan Fitzgerald | K | CAR | K Stream | TBD | Even | 100 | 29.7 | 7 | Stream only if schedule fits |  | K/DST |
+| 266 | 169.8 | Cardinals D/ST | DST | ARI | DST Stream | 60.2 | Even | 80 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 267 | 169.8 | Ty Simpson | QB | LAR | QB Deep | 10.1 | Even | Rookie | 30.7 | 6 | Take at fair price |  | Rookie |
+| 268 | 169.8 | Isaac Guerendo | RB | SF | RB Deep | 1.3 | Even | No 2025 | 31.7 | 5 | Take at fair price |  | Staple |
+| 269 | 169.8 | Tom Kennedy | WR | DET | WR Deep | TBD | Even | 7.6 | 29.7 | 7 | Draft only at discount |  | Staple |
+| 270 | 169.8 | Dawson Knox | TE | BUF | TE Deep | 68.2 | Even | 103.7 | 40.6 | 5 | Take at fair price |  | Staple |
+| 271 | 169.8 | Hollywood Brown | WR | PHI | WR Deep | 50.7 | Even | 137.7 | 31.7 | 5 | Take at fair price |  | Staple |
+| 272 | 169.8 | Cyrus Allen | WR | KC | WR Deep | 17.2 | Even | Rookie | 45.9 | 6 | Take at fair price |  | Rookie |
+| 273 | 169.8 | Jake Moody | K | WAS | K Stream | TBD | Even | 52 | 29.7 | 7 | Stream only if schedule fits |  | K/DST |
+| 274 | 169.8 | Tutu Atwell | WR | MIA | WR Deep | 53.7 | Even | 31.2 | 21.0 | 6 | Take at fair price |  | Staple |
+| 275 | 169.8 | Devontez Walker | WR | BAL | WR Deep | 35.1 | Even | 37.6 | 31.7 | 5 | Take at fair price |  | Staple |
+| 276 | 169.8 | Zavion Thomas | WR | CHI | WR Deep | 8.7 | Even | Rookie | 46.0 | 6 | Take at fair price |  | Rookie |
+| 277 | 169.8 | Gunnar Helm | TE | TEN | TE Deep | 126.4 | Even | 91.7 | 41.4 | 5 | Take at fair price |  | Staple |
+| 278 | 169.8 | Jake Tonges | TE | SF | TE Deep | 63.2 | Even | 93.3 | 40.4 | 6 | Take at fair price |  | Staple |
+| 279 | 169.8 | Kayshon Boutte | WR | NE | WR Deep | 67.7 | Even | 124.1 | 31.7 | 5 | Take at fair price |  | Staple |
+| 281 | 169.8 | Will Kacmarek | TE | MIA | TE Deep | 40.1 | Even | Rookie | 44.9 | 6 | Take at fair price |  | Rookie |
+| 282 | 169.8 | Calvin Austin III | WR | NYG | WR Deep | 23.6 | Even | 86.2 | 31.7 | 5 | Take at fair price |  | Staple |
+| 283 | 169.9 | Jack Bech | WR | LV | WR Deep | 99.8 | Even | 42.4 | 31.7 | 5 | Take at fair price |  | Staple |
+| 284 | 169.9 | Ted Hurst | WR | TB | WR Deep | 65.0 | Even | Rookie | 44.1 | 6 | Take at fair price |  | Rookie |
+| 285 | 169.9 | Kirk Cousins | QB | LV | QB Deep | 42.2 | Even | 103.5 | 28.3 | 5 | Take at fair price |  | Staple |
+| 286 | 169.9 | Cole Kmet | TE | CHI | TE Deep | 53.6 | Even | 78.7 | 25.2 | 6 | Take at fair price |  | Staple |
+| 287 | 169.9 | Durham Smythe | TE | BAL | TE Deep | 23.6 | Even | 6.5 | 31.7 | 5 | Take at fair price |  | Staple |
+| 288 | 169.9 | Oscar Delp | TE | NO | TE Deep | 9.0 | Even | Rookie | 44.7 | 6 | Take at fair price |  | Rookie |
+| 289 | 169.9 | Samaje Perine | RB | CIN | RB Deep | 100.3 | Even | 77.9 | 31.7 | 5 | Take at fair price |  | Staple |
+| 290 | 169.9 | Jaydon Blue | RB | DAL | RB Deep | 54.8 | Even | 20.4 | 26.0 | 6 | Take at fair price |  | Staple |
+| 291 | 169.9 | Jacoby Brissett | QB | ARI | QB Deep | 198.1 | Even | 227.4 | 32.7 | 4 | Take at fair price |  | Staple |
+| 292 | 169.9 | Jets D/ST | DST | NYJ | DST Stream | 81.8 | Even | 62 | 31.7 | 5 | Stream only if schedule fits |  | K/DST |
+| 293 | 169.9 | Blake Grupe | K | IND | K Stream | TBD | Even | 91 | 29.7 | 7 | Stream only if schedule fits |  | K/DST |
+| 294 | 169.9 | Luke Schoonmaker | TE | DAL | TE Deep | 27.8 | Even | 27.2 | 31.7 | 5 | Take at fair price |  | Staple |
+| 295 | 169.9 | Tyler Huntley | QB | BAL | QB Deep | 8.6 | Even | 40.4 | 31.7 | 5 | Take at fair price |  | Staple |
+| 296 | 169.9 | Cade York | K | NYJ | K Stream | TBD | Even | No 2025 | 28.7 | 8 | Stream only if schedule fits |  | K/DST |
+| 297 | 169.9 | Tez Johnson | WR | TB | WR Deep | 21.6 | Even | 92.4 | 31.7 | 5 | Take at fair price |  | Staple |
+| 298 | 169.9 | Drew Lock | QB | SEA | QB Deep | 8.0 | Even | 0.5 | 31.7 | 5 | Take at fair price |  | Staple |
+| 299 | 169.9 | Quinn Ewers | QB | MIA | QB Deep | 7.3 | Even | 33.2 | 19.5 | 7 | Draft only at discount |  | Staple |
+| 300 | 169.9 | Malik Washington | WR | MIA | WR Deep | 95.4 | Even | 110.7 | 41.4 | 5 | Take at fair price |  | Staple |
+| 301 | 169.9 | Tyquan Thornton | WR | KC | WR Deep | 66.7 | Even | 80.8 | 42.1 | 5 | Take at fair price |  | Staple |
+| 302 | 169.9 | Kalif Raymond | WR | CHI | WR Deep | 64.0 | Even | 60.8 | 31.7 | 5 | Take at fair price |  | Staple |
+| 303 | 169.9 | Kendrick Bourne | WR | ARI | WR Deep | 50.3 | Even | 92.1 | 31.7 | 5 | Take at fair price |  | Staple |
+| 304 | 169.9 | Dont'e Thornton Jr. | WR | LV | WR Deep | 40.5 | Even | 23.5 | 31.7 | 5 | Take at fair price |  | Staple |
+| 305 | 169.9 | Jalen Royals | WR | KC | WR Deep | 36.5 | Even | 2.4 | 31.7 | 5 | Take at fair price |  | Staple |
+| 306 | 169.9 | Brock Wright | TE | DET | TE Deep | 18.6 | Even | 36.8 | 30.7 | 6 | Take at fair price |  | Staple |
+| 307 | 169.9 | Greg Dortch | WR | DET | WR Deep | 14.2 | Even | 75.1 | 20.9 | 6 | Take at fair price |  | Staple |
+| 308 | 169.9 | Luke Farrell | TE | SF | TE Deep | 12.4 | Even | 29.5 | 31.7 | 5 | Take at fair price |  | Staple |
+| 309 | 169.9 | Brevyn Spann-Ford | TE | DAL | TE Deep | 9.5 | Even | 24 | 31.7 | 5 | Take at fair price |  | Staple |
+| 310 | 169.9 | Teddy Bridgewater | QB | DET | QB Deep | 9.4 | Even | 3.1 | 31.7 | 5 | Take at fair price |  | Staple |
+| 311 | 169.9 | Eli Raridon | TE | NE | TE Deep | 9.2 | Even | Rookie | 45.2 | 6 | Take at fair price |  | Rookie |
+| 312 | 169.9 | Tyler Johnson | WR | DAL | WR Deep | TBD | Even | 37.7 | 29.7 | 7 | Draft only at discount |  | Staple |
+| 313 | 169.9 | Geno Smith | QB | NYJ | QB Deep | 231.0 | Even | 173.9 | 40.7 | 5 | Take at fair price |  | Staple |
+| 314 | 169.9 | Tua Tagovailoa | QB | ATL | QB Deep | 115.5 | Even | 162.1 | 32.7 | 4 | Take at fair price |  | Staple |
+| 315 | 169.9 | Mac Jones | QB | SF | QB Deep | 8.6 | Even | 130.6 | 31.7 | 5 | Take at fair price |  | Staple |
+| 316 | 169.9 | Jameis Winston | QB | NYG | QB Deep | 8.6 | Even | 43.3 | 31.7 | 5 | Take at fair price |  | Staple |
+| 317 | 169.9 | Zane Gonzalez | K | MIA | K Stream | TBD | Even | 65 | 29.7 | 7 | Stream only if schedule fits |  | K/DST |
+| 318 | 169.9 | DeMario Douglas | WR | NE | WR Deep | 61.5 | Even | 95.8 | 31.7 | 5 | Take at fair price |  | Staple |
+| 319 | 169.9 | Ashton Dulin | WR | IND | WR Deep | 46.6 | Even | 20 | 31.7 | 5 | Take at fair price |  | Staple |
+| 320 | 169.9 | Brenen Thompson | WR | LAC | WR Deep | 27.4 | Even | Rookie | 43.9 | 6 | Take at fair price |  | Rookie |
+
+RB / ATL / Bye
+
+### Bijan Robinson
+
+Rank **1**
+
+Precise Tier **RB Elite**
+
+Position Tier **RB Elite**
+
+Pos Rank **RB1**
+
+Proj PPR **353.2**
+
+League Edge **Even**
+
+Last Year **370.8**
+
+League Value **80.6**
+
+Risk **2/10**
+
+Volume **90**
+
+Upside **99**
+
+Live Status **Available**
+
+Daily Player Synopsis **Updated 2026-05-26 / Latest note: 2026-04-10**
+
+**Bottom line:** Bijan Robinson is a RB Elite RB for ATL. FantasyIQ has him #1 overall and RB1.
+
+**Why it matters:** Proj PPR 353.2; last year: 370.8. No strong live market move yet.
+
+**Risk:** Lower risk (2/10). Useful when you need stability.
+
+**Draft move:** Draft him at this tier if the position fits your build. Do not reach far above the tier.
+
+Latest ESPN player note is dated 2026-04-10; synopsis refreshed from the live board on 2026-05-26.
+
+**Anchor if price matches tier**
+
+**Projection source:** ESPN raw-stat projections scored natively for PPR
+
+**League profile:** PPR / 1 QB / 2 RB / 2 WR / 1 TE / 1 FLEX / 1 DST / 1 K. Values are scored from raw ESPN stat projections for this format.
+
+**Prior-year source:** ESPN 2025 raw stats scored natively for PPR
+
+**Risk read:** healthy profile with projection, ADP, and prior-year production in range
+
+### FantasyIQ Read
+
+**Move:** Draft him at this tier if the position fits your build. Do not reach far above the tier.
+
+**Fit:** RB in RB Elite with league value 80.6.
+
+**Risk:** Lower risk (2/10). Useful when you need stability.
+
+**Plain English:** Proj PPR 353.2; last year: 370.8. No strong live market move yet.
+
+The table is interactive and built for live sorting, filtering, and player review.
+
+
+Account
+
+## Leagues and access
+
+[Help Center](https://myfantasyiq.com/help.html) Manage BillingAdd included league
+
+Dashboard **Demo Manager**
+
+Demo Mode: sample league only. No customer account is loaded.
+
+League slots **1/3 included leagues**
+
+2 included slots available before an add-on is needed.
+
+Support **support@myfantasyiq.com**
+
+Use support when ESPN public sync fails or a league profile looks wrong.
+
+Account access **Needs sign in**League profiles **1 connected**Included slots **2 open**Draft room **Demo mode**Fantasy IQ Data **Needs retry** Player values and trade signalsDaily refresh **May 25, 3:38 PM** Scheduled production refreshData refresh **May 25, 9:33 PM** Latest successful update
+
+Active league **Full Demo League**
+
+Full Demo League / Team 5 / PPR
+
+Active [Revalidate](https://myfantasyiq.com/setup.html?league=full-demo-league)

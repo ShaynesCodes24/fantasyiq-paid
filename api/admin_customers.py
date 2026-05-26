@@ -66,7 +66,7 @@ def public_site_url() -> str:
 
 
 def dashboard_url(customer_slug: str) -> str:
-    return f"{public_site_url()}/?customer={urllib.parse.quote(customer_slug)}"
+    return f"{public_site_url()}/FantasyIQ/?customer={urllib.parse.quote(customer_slug)}"
 
 
 def setup_url(customer_slug: str) -> str:

@@ -57,7 +57,8 @@ function showCustomerAccessGate(message = "") {
   const recoveryPanel = gate.querySelector(".access-recovery");
   const output = gate.querySelector(".access-message");
   const authButtons = Array.from(gate.querySelectorAll("button"));
-  const identityValue = () => (needsIdentity ? identityInput.value.trim() : appConfig.customerEmail || appConfig.email || "");
+  const identityValue = () =>
+    needsIdentity ? identityInput.value.trim() : appConfig.customerEmail || appConfig.email || "";
   const identityIsEmail = () => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(identityValue());
   const passwordSetupMessage =
     "This account does not have a saved password yet. Use the access code from the setup email below, enter the password twice, then click Create / Reset Password. You can also click Unlock With Code for one-time access.";
@@ -66,13 +67,18 @@ function showCustomerAccessGate(message = "") {
       return "Could not reach the FantasyIQ login service. Check your connection and try again.";
     }
     if (/create a password/i.test(message)) return passwordSetupMessage;
-    if (/valid email|customer account was not found|could not find that checkout email|could not find that customer dashboard/i.test(message)) {
+    if (
+      /valid email|customer account was not found|could not find that checkout email|could not find that customer dashboard/i.test(
+        message,
+      )
+    ) {
       return "Use the exact email from checkout.";
     }
     if (/access code does not match/i.test(message)) {
       return "That access code does not match this checkout email. Check your setup email or contact support.";
     }
-    if (/email or password/i.test(message)) return "That email and password did not match. Try again, or use your setup access code below to reset/create the password.";
+    if (/email or password/i.test(message))
+      return "That email and password did not match. Try again, or use your setup access code below to reset/create the password.";
     return message || "Could not sign in. Refresh and try again.";
   };
   const fetchJsonWithRetry = async (path, body, fallbackMessage, attempts = 2) => {
@@ -196,7 +202,10 @@ function showCustomerAccessGate(message = "") {
     try {
       finishCustomerSignIn(await postAuth("/api/customer-login", customerBody({ accessCode: code })), code);
     } catch (error) {
-      showAuthMessage(friendlyAuthMessage(error.message || "Could not verify the code. Refresh and try again."), "error");
+      showAuthMessage(
+        friendlyAuthMessage(error.message || "Could not verify the code. Refresh and try again."),
+        "error",
+      );
     } finally {
       setAuthBusy(false);
     }
@@ -306,7 +315,12 @@ function updateAccountControl() {
   if (!accountCard) return;
   const customerLabel = appConfig.customerName || appConfig.customerTeamName || appConfig.loadoutKey || "Dashboard";
   if (accountLabel) accountLabel.textContent = requiresCustomerAccess() ? customerLabel : "Public Demo";
-  if (accountState) accountState.textContent = requiresCustomerAccess() ? (hasCustomerAccess() ? "Signed In" : "Signed Out") : "Preview";
+  if (accountState)
+    accountState.textContent = requiresCustomerAccess()
+      ? hasCustomerAccess()
+        ? "Signed In"
+        : "Signed Out"
+      : "Preview";
   if (accountAction) {
     accountAction.textContent = requiresCustomerAccess() ? (hasCustomerAccess() ? "Sign Out" : "Sign In") : "Sign In";
     accountAction.disabled = false;
@@ -376,7 +390,7 @@ function applyAppConfig() {
   if (logo && appConfig.logoUrl) logo.src = appConfig.logoUrl;
   if (logo) logo.alt = appConfig.logoAlt || `${siteName} league logo`;
   if (draftCardLabel) draftCardLabel.textContent = appConfig.draftCardLabel || "Subscription";
-  if (draftCardValue) draftCardValue.textContent = appConfig.draftCardValue || "$30 / year";
+  if (draftCardValue) draftCardValue.textContent = appConfig.draftCardValue || "$30 / season";
   if (draftCardNote) draftCardNote.textContent = appConfig.draftCardNote || "Configured for your ESPN league";
   if (subscribeButton && appConfig.showSubscribeButton === false) {
     subscribeButton.remove();
@@ -396,9 +410,7 @@ function applyAppConfig() {
     const message = demoBanner.querySelector("span");
     if (label) label.textContent = appConfig.demoLabel || "Demo Mode";
     if (message) {
-      message.textContent =
-        appConfig.demoMessage ||
-        "Sample league only. No customer account is loaded.";
+      message.textContent = appConfig.demoMessage || "Sample league only. No customer account is loaded.";
     }
   }
   renderLeagueProfile();

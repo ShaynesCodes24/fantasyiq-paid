@@ -255,7 +255,7 @@ function earlyQbBiasFor(summary: EventSummary, context: ResolvedOpponentContext)
   return clamp(earlyQbs / Math.max(1, summary.draftPicks.length * 0.28) + superflexBoost, 0, 1);
 }
 
-function rbHoardingBiasFor(summary: EventSummary, context: ResolvedOpponentContext): number {
+function rbHoardingBiasFor(summary: EventSummary, _context: ResolvedOpponentContext): number {
   const rbEvents = summary.positionCounts.RB ?? 0;
   const expected = Math.max(1, summary.draftPicks.length * 0.32 + summary.waiverAdds.length * 0.22);
   return clamp((rbEvents - expected) / Math.max(1, expected) + 0.35, 0, 1);

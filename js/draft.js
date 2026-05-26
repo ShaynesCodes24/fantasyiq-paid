@@ -40,7 +40,9 @@ function countsFromRosterItems(items) {
 
 function draftRosterCountsFor(teamId) {
   const counts = emptyPositionCounts();
-  const picks = (liveDraft?.picks || []).filter((pick) => String(pick.teamId) === String(teamId) && pick.status === "drafted");
+  const picks = (liveDraft?.picks || []).filter(
+    (pick) => String(pick.teamId) === String(teamId) && pick.status === "drafted",
+  );
   picks.forEach((pick) => {
     const row = pickBoardRow(pick);
     const pos = row?.Pos || pick.pos;
@@ -117,9 +119,7 @@ function rosterWeaknesses(snapshot) {
       const starterGap = Math.max(0, Number(starters[pos] || 0) - Number(counts[pos] || 0));
       const depthGap = Math.max(0, Number(targets[pos] || 0) - Number(counts[pos] || 0));
       const specialTeams = ["DST", "K"].includes(pos);
-      const weight = specialTeams
-        ? starterGap * 2 + depthGap * 0.2
-        : starterGap * 8 + depthGap * 0.75;
+      const weight = specialTeams ? starterGap * 2 + depthGap * 0.2 : starterGap * 8 + depthGap * 0.75;
       return { pos, starterGap, depthGap, weight };
     })
     .filter((item) => item.weight > 0)
@@ -174,10 +174,7 @@ function averageConsensusScore(rows) {
 function consensusRosterBreakdown(snapshot) {
   const rows = snapshot.rows || [];
   const slots = activeLineupSlots();
-  const starterLimit = Math.max(
-    1,
-    starterSlotTotal() - Number(slots.DST || 0) - Number(slots.K || 0),
-  );
+  const starterLimit = Math.max(1, starterSlotTotal() - Number(slots.DST || 0) - Number(slots.K || 0));
   const fantasyRows = rows
     .filter((row) => !["DST", "K"].includes(row.Pos))
     .sort((a, b) => consensusPlayerScore(b) - consensusPlayerScore(a));
@@ -195,7 +192,9 @@ function rosterStrengths(snapshot) {
   const targets = draftTargetCounts();
   return ["QB", "RB", "WR", "TE", "DST", "K"]
     .map((pos) => {
-      const rows = snapshot.rows.filter((row) => row.Pos === pos).sort((a, b) => leagueValueScore(b) - leagueValueScore(a));
+      const rows = snapshot.rows
+        .filter((row) => row.Pos === pos)
+        .sort((a, b) => leagueValueScore(b) - leagueValueScore(a));
       const surplus = Math.max(0, Number(counts[pos] || 0) - Number(targets[pos] || 0));
       const topValue = rows[0] ? leagueValueScore(rows[0]) : 0;
       return { pos, surplus, rows, topValue };
@@ -271,14 +270,26 @@ function postDraftGrade(snapshot) {
   const notes = [
     `Consensus score ${avgValue.toFixed(1)} using board value, projections, rank, and market support.`,
     coreWeaknesses.length
-      ? `Main need: ${coreWeaknesses.slice(0, 2).map((item) => item.pos).join(" / ")}.`
+      ? `Main need: ${coreWeaknesses
+          .slice(0, 2)
+          .map((item) => item.pos)
+          .join(" / ")}.`
       : "Starter and bench targets are mostly covered.",
     `${consensus.starterRows.length}/${consensus.starterLimit} consensus-weighted starter slots matched.`,
   ];
   return {
     score,
     grade: `${gradeLetter(score)} (${score})`,
-    label: score >= 90 ? "Elite build" : score >= 82 ? "Strong contender" : score >= 74 ? "Solid team" : score >= 66 ? "Playable build" : "Needs work",
+    label:
+      score >= 90
+        ? "Elite build"
+        : score >= 82
+          ? "Strong contender"
+          : score >= 74
+            ? "Solid team"
+            : score >= 66
+              ? "Playable build"
+              : "Needs work",
     notes,
     scoreBreakdown,
   };
@@ -293,7 +304,8 @@ function postDraftActions(snapshot) {
   const topSurplus = strengths.find((item) => item.surplus > 0)?.pos;
   if (topNeed) actions.push(`Waiver priority: add ${topNeed} depth before chasing luxury bench points.`);
   if (topNeed && topSurplus) actions.push(`Trade lane: shop extra ${topSurplus} for a ${topNeed} upgrade.`);
-  if (snapshot.rows.some((row) => Number(row.Risk || 0) >= 7)) actions.push("Stabilize the bench: pair high-risk upside with one safer weekly role.");
+  if (snapshot.rows.some((row) => Number(row.Risk || 0) >= 7))
+    actions.push("Stabilize the bench: pair high-risk upside with one safer weekly role.");
   if (!actions.length) actions.push("Hold the core. Your first move should be opportunistic, not forced.");
   actions.push("Watch injury/news changes before waivers lock; prioritize roles that can become weekly starters.");
   return actions.slice(0, 4);
@@ -330,7 +342,9 @@ function waiverPoolRows() {
 }
 
 function waiverPoolIsReliable() {
-  return liveLeagueHasRosters() || Boolean(liveDraft?.draftedNames?.length) || Boolean(liveDraft?.rosteredNames?.length);
+  return (
+    liveLeagueHasRosters() || Boolean(liveDraft?.draftedNames?.length) || Boolean(liveDraft?.rosteredNames?.length)
+  );
 }
 
 function waiverPoolSourceLabel() {
@@ -391,9 +405,7 @@ function tradeNeedProfiles(snapshot) {
       pos: item.pos,
       weight: item.weight,
       label: `${item.pos} need`,
-      detail: item.starterGap
-        ? `${item.starterGap} starter gap`
-        : `${item.depthGap} depth gap`,
+      detail: item.starterGap ? `${item.starterGap} starter gap` : `${item.depthGap} depth gap`,
     }));
   if (weaknesses.length) return weaknesses;
 
@@ -447,7 +459,17 @@ function bestTradePair(giveRows, getRows) {
       if (!Number.isFinite(Number(marketGive)) || !Number.isFinite(Number(marketGet))) return;
       const marketDiff = Number(marketGet) - Number(marketGive);
       const projectionDiff = projectionValue(get) - projectionValue(give);
-      if (!tradePackageMakesSense([1, 1], diff, marketDiff, tradeAssetValue(get) - tradeAssetValue(give), projectionDiff, { weight: 8 })) return;
+      if (
+        !tradePackageMakesSense(
+          [1, 1],
+          diff,
+          marketDiff,
+          tradeAssetValue(get) - tradeAssetValue(give),
+          projectionDiff,
+          { weight: 8 },
+        )
+      )
+        return;
       const evidence = tradePackageEvidence([give], [get]);
       if (!fantasyCalcTradeDatabaseReady()) return;
       const score =
@@ -500,9 +522,7 @@ function tradePackageCombinations(rows, count, limit = 10) {
       combos.push([pool[left], pool[right]]);
     }
   }
-  return combos
-    .sort((a, b) => tradePackageValue(b) - tradePackageValue(a))
-    .slice(0, limit);
+  return combos.sort((a, b) => tradePackageValue(b) - tradePackageValue(a)).slice(0, limit);
 }
 
 function tradePackageValue(rows) {
@@ -529,7 +549,10 @@ function tradePackageBestValue(rows) {
 }
 
 function tradePackageKey(rows) {
-  return rows.map((row) => normalizePlayerName(row.Player)).sort().join("+");
+  return rows
+    .map((row) => normalizePlayerName(row.Player))
+    .sort()
+    .join("+");
 }
 
 function tradePackageMarketActivity(rows) {
@@ -574,7 +597,12 @@ function tradeDatabaseSamplesRequestUrl(giveRows, getRows = []) {
   const getIds = tradePackageDatabaseIds(getRows);
   const settings = activeLeagueSettings();
   const slots = settings.lineupSlots || {};
-  const ppr = settings.scoringType === "standard" ? 0 : settings.scoringType === "half-ppr" ? 0.5 : Number(settings.receptionPoints ?? 1);
+  const ppr =
+    settings.scoringType === "standard"
+      ? 0
+      : settings.scoringType === "half-ppr"
+        ? 0.5
+        : Number(settings.receptionPoints ?? 1);
   const totalPlayers = giveRows.length + getRows.length;
   const params = {
     v: Date.now(),
@@ -674,9 +702,10 @@ function tradeDatabaseExactSupport(givePackage, getPackage) {
 
 function tradePackageNeed(needs, rows) {
   const positions = new Set(rows.map((row) => row.Pos));
-  return needs
-    .filter((need) => positions.has(need.pos))
-    .sort((a, b) => Number(b.weight || 0) - Number(a.weight || 0))[0] || null;
+  return (
+    needs.filter((need) => positions.has(need.pos)).sort((a, b) => Number(b.weight || 0) - Number(a.weight || 0))[0] ||
+    null
+  );
 }
 
 function tradePackageName(rows) {
@@ -722,11 +751,15 @@ function tradePackageEvidence(givePackage, getPackage, requestExact = false) {
     exactCount,
     activity,
     allRealActivity,
-    sampleStatus: databaseSupport.ready ? "ready" : databaseSupport.count ? "ready" : requestExact ? "loading" : "missing",
+    sampleStatus: databaseSupport.ready
+      ? "ready"
+      : databaseSupport.count
+        ? "ready"
+        : requestExact
+          ? "loading"
+          : "missing",
     tier: exactCount > 0 ? "exact" : activity > 0 ? "market-backed" : "insufficient",
-    score: exactCount > 0
-      ? 7 + Math.min(8, exactCount * 1.6)
-      : Math.min(4, activity / 550),
+    score: exactCount > 0 ? 7 + Math.min(8, exactCount * 1.6) : Math.min(4, activity / 550),
   };
 }
 
@@ -754,7 +787,10 @@ function tradeCountsFromRows(rows) {
 }
 
 function tradeNeedScoreForRows(rows) {
-  return rosterWeaknesses({ rows, counts: tradeCountsFromRows(rows) }).reduce((sum, item) => sum + Number(item.weight || 0), 0);
+  return rosterWeaknesses({ rows, counts: tradeCountsFromRows(rows) }).reduce(
+    (sum, item) => sum + Number(item.weight || 0),
+    0,
+  );
 }
 
 function tradeFitScore(beforeRows, afterRows, addressedNeed, receivingRows) {
@@ -793,7 +829,9 @@ function tradeAcceptanceRead(shape, marketDiff, userFitScore, partnerFitScore, e
     label: probability >= 66 ? "likely" : probability >= 42 ? "negotiable" : "long shot",
     reasons: [
       `partner fit ${partnerFitScore}/100`,
-      evidence.exactCount > 0 ? `${evidence.exactCount} exact accepted sample${evidence.exactCount === 1 ? "" : "s"}` : `${Math.round(evidence.activity).toLocaleString()} accepted-trade activity`,
+      evidence.exactCount > 0
+        ? `${evidence.exactCount} exact accepted sample${evidence.exactCount === 1 ? "" : "s"}`
+        : `${Math.round(evidence.activity).toLocaleString()} accepted-trade activity`,
     ],
   };
 }
@@ -809,9 +847,13 @@ function tradeIdeaQualityGate(idea, context = {}) {
   const evidence = tradePackageEvidence(givePackage, getPackage, true);
   const marketGive = tradePackageMarketValue(givePackage);
   const marketGet = tradePackageMarketValue(getPackage);
-  const marketDiff = Number.isFinite(Number(idea.marketDiff)) ? Number(idea.marketDiff) : Number(marketGet) - Number(marketGive);
+  const marketDiff = Number.isFinite(Number(idea.marketDiff))
+    ? Number(idea.marketDiff)
+    : Number(marketGet) - Number(marketGive);
   const localDiff = Number(idea.diff || tradePackageValue(getPackage) - tradePackageValue(givePackage));
-  const projectionDiff = Number(idea.projectionDiff ?? tradePackageProjection(getPackage) - tradePackageProjection(givePackage));
+  const projectionDiff = Number(
+    idea.projectionDiff ?? tradePackageProjection(getPackage) - tradePackageProjection(givePackage),
+  );
   const bestDelta = Number(idea.bestDelta ?? tradePackageBestValue(getPackage) - tradePackageBestValue(givePackage));
   const allowedShape = (shapeParts[0] === 1 && shapeParts[1] === 1) || (shapeParts[0] === 2 && shapeParts[1] === 1);
   if (!allowedShape) blocked.push("Only realistic 1-for-1 and 2-for-1 ideas are enabled.");
@@ -837,11 +879,18 @@ function tradeIdeaQualityGate(idea, context = {}) {
   const userAfter = userBefore.length ? tradeRowsAfterPackage(context.userSnapshot, givePackage, getPackage) : [];
   const partnerAfter = partnerBefore.length ? tradeRowsAfterPackage(idea.team, getPackage, givePackage) : [];
   const userFitScore = userBefore.length ? tradeFitScore(userBefore, userAfter, idea.yourNeed, getPackage) : 62;
-  const partnerFitScore = partnerBefore.length ? tradeFitScore(partnerBefore, partnerAfter, idea.theirNeed, givePackage) : 58;
-  const userDepthRisk = context.userSnapshot ? tradeDepthRisk(context.userSnapshot, givePackage, getPackage) : { level: "none", positions: [] };
-  const partnerDepthRisk = idea.team ? tradeDepthRisk(idea.team, getPackage, givePackage) : { level: "none", positions: [] };
+  const partnerFitScore = partnerBefore.length
+    ? tradeFitScore(partnerBefore, partnerAfter, idea.theirNeed, givePackage)
+    : 58;
+  const userDepthRisk = context.userSnapshot
+    ? tradeDepthRisk(context.userSnapshot, givePackage, getPackage)
+    : { level: "none", positions: [] };
+  const partnerDepthRisk = idea.team
+    ? tradeDepthRisk(idea.team, getPackage, givePackage)
+    : { level: "none", positions: [] };
   if (userDepthRisk.level === "thin") blocked.push(`This creates a thin ${userDepthRisk.positions.join("/")} room.`);
-  if (partnerDepthRisk.level === "thin") warnings.push(`Partner may hesitate because ${partnerDepthRisk.positions.join("/")} gets thin.`);
+  if (partnerDepthRisk.level === "thin")
+    warnings.push(`Partner may hesitate because ${partnerDepthRisk.positions.join("/")} gets thin.`);
   if (userFitScore < 60) blocked.push("User roster fit is not strong enough.");
   if (partnerFitScore < 55) blocked.push("Partner roster fit is not strong enough.");
 
@@ -880,14 +929,19 @@ function tradeIdeaQualityGate(idea, context = {}) {
     userFit: {
       score: userFitScore,
       needAddressed: idea.yourNeed?.pos || "",
-      lineupDelta: userBefore.length ? Math.round((lineupValue(fillLineup(userAfter)) - lineupValue(fillLineup(userBefore))) * 10) / 10 : 0,
+      lineupDelta: userBefore.length
+        ? Math.round((lineupValue(fillLineup(userAfter)) - lineupValue(fillLineup(userBefore))) * 10) / 10
+        : 0,
       depthRisk: userDepthRisk.level,
     },
     partnerFit: {
       score: partnerFitScore,
       needAddressed: idea.theirNeed?.pos || "",
-      rosterBalanceDelta: partnerBefore.length ? Math.round((tradeNeedScoreForRows(partnerBefore) - tradeNeedScoreForRows(partnerAfter)) * 10) / 10 : 0,
-      givesUpStarterRisk: partnerDepthRisk.level === "thin" ? "high" : partnerDepthRisk.level === "watch" ? "medium" : "low",
+      rosterBalanceDelta: partnerBefore.length
+        ? Math.round((tradeNeedScoreForRows(partnerBefore) - tradeNeedScoreForRows(partnerAfter)) * 10) / 10
+        : 0,
+      givesUpStarterRisk:
+        partnerDepthRisk.level === "thin" ? "high" : partnerDepthRisk.level === "watch" ? "medium" : "low",
     },
     acceptance,
     market: {
@@ -931,10 +985,7 @@ function bestTradePackage(giveRows, getRows, shape, myNeeds, theirNeeds) {
       const evidence = tradePackageEvidence(givePackage, getPackage);
       if (!fantasyCalcTradeDatabaseReady()) return;
 
-      const shapeBonus =
-        giveCount > getCount
-          ? Math.max(-2, Math.min(9, bestDelta * 0.55 + 4))
-          : 3;
+      const shapeBonus = giveCount > getCount ? Math.max(-2, Math.min(9, bestDelta * 0.55 + 4)) : 3;
       const score =
         58 -
         Math.abs(diff) * (giveCount > getCount ? 0.55 : 1.15) -
@@ -1009,14 +1060,21 @@ function finalizeLeagueTradeIdeas(ideas, limit, context = {}) {
       seen.add(key);
       const giveKey = tradePackageKey(givePackage);
       const getKey = tradePackageKey(getPackage);
-      const repeatedPlayer = giveKey.split("+").some((item) => usedGive.has(item)) || getKey.split("+").some((item) => usedGet.has(item));
+      const repeatedPlayer =
+        giveKey.split("+").some((item) => usedGive.has(item)) || getKey.split("+").some((item) => usedGet.has(item));
       if (repeatedPlayer) {
         repeats.push(idea);
         return;
       }
       selected.push(idea);
-      giveKey.split("+").filter(Boolean).forEach((item) => usedGive.add(item));
-      getKey.split("+").filter(Boolean).forEach((item) => usedGet.add(item));
+      giveKey
+        .split("+")
+        .filter(Boolean)
+        .forEach((item) => usedGive.add(item));
+      getKey
+        .split("+")
+        .filter(Boolean)
+        .forEach((item) => usedGet.add(item));
     });
 
   repeats.forEach((idea) => {
@@ -1044,13 +1102,15 @@ function leagueTradeIdeas(snapshot, limit = 3) {
       const giveMatches = myStrengths.filter((strength) => theirNeeds.some((need) => need.pos === strength.pos));
       const getMatches = theirStrengths.filter((strength) => myNeeds.some((need) => need.pos === strength.pos));
       const givePool = uniqueTradeRows(giveMatches.flatMap((strength) => strength.rows));
-      const getConsolidationPool = uniqueTradeRows(getMatches.flatMap((strength) => {
-        const keep = tradeKeepCount(strength.pos);
-        return other.rows
-          .filter((row) => row.Pos === strength.pos)
-          .sort((a, b) => tradeAssetValue(b) - tradeAssetValue(a))
-          .slice(Math.max(0, keep - 3), keep + 3);
-      }));
+      const getConsolidationPool = uniqueTradeRows(
+        getMatches.flatMap((strength) => {
+          const keep = tradeKeepCount(strength.pos);
+          return other.rows
+            .filter((row) => row.Pos === strength.pos)
+            .sort((a, b) => tradeAssetValue(b) - tradeAssetValue(a))
+            .slice(Math.max(0, keep - 3), keep + 3);
+        }),
+      );
 
       giveMatches.forEach((giveStrength) => {
         getMatches.forEach((getStrength) => {
@@ -1082,19 +1142,19 @@ function leagueTradeIdeas(snapshot, limit = 3) {
         });
       });
 
-      [
-        { shape: [2, 1], sourcePool: givePool, targetPool: getConsolidationPool },
-      ].forEach(({ shape, sourcePool, targetPool }) => {
-        if (sourcePool.length < shape[0] || targetPool.length < shape[1]) return;
-        const tradePackage = bestTradePackage(sourcePool, targetPool, shape, myNeeds, theirNeeds);
-        if (!tradePackage) return;
-        ideas.push({
-          team: other,
-          ...tradePackage,
-          giveStrength: giveMatches[0],
-          getStrength: getMatches[0],
-        });
-      });
+      [{ shape: [2, 1], sourcePool: givePool, targetPool: getConsolidationPool }].forEach(
+        ({ shape, sourcePool, targetPool }) => {
+          if (sourcePool.length < shape[0] || targetPool.length < shape[1]) return;
+          const tradePackage = bestTradePackage(sourcePool, targetPool, shape, myNeeds, theirNeeds);
+          if (!tradePackage) return;
+          ideas.push({
+            team: other,
+            ...tradePackage,
+            giveStrength: giveMatches[0],
+            getStrength: getMatches[0],
+          });
+        },
+      );
     });
 
   return finalizeLeagueTradeIdeas(ideas, limit, { userSnapshot: snapshot });
@@ -1104,7 +1164,9 @@ function tradeAwayCandidates(snapshot, limit = 3) {
   const strengths = rosterStrengths(snapshot);
   const surplusPositions = new Set(strengths.filter((item) => item.surplus > 0).map((item) => item.pos));
   return snapshot.rows
-    .filter((row) => surplusPositions.has(row.Pos) || Number(row.Risk || 0) >= 6 || marketSignal(row).className === "good")
+    .filter(
+      (row) => surplusPositions.has(row.Pos) || Number(row.Risk || 0) >= 6 || marketSignal(row).className === "good",
+    )
     .sort((a, b) => {
       const surplusBonus = Number(surplusPositions.has(b.Pos)) - Number(surplusPositions.has(a.Pos));
       return surplusBonus || leagueValueScore(b) - leagueValueScore(a);
@@ -1130,7 +1192,9 @@ function tradeTargetCandidates(snapshot, limit = 5) {
   }
   const draftedTargets = (liveDraft?.picks || [])
     .map((pick) => ({ pick, row: pickBoardRow(pick) }))
-    .filter((item) => item.row && !rostered.has(normalizePlayerName(item.row.Player)) && needPositions.has(item.row.Pos));
+    .filter(
+      (item) => item.row && !rostered.has(normalizePlayerName(item.row.Player)) && needPositions.has(item.row.Pos),
+    );
   const pool = draftedTargets.length
     ? draftedTargets
     : (boardData?.boards?.combined?.rows || [])
@@ -1174,7 +1238,8 @@ function renderTradeIdeaCard(idea) {
   const diff = Number(idea.diff || 0);
   const diffLabel = Math.abs(diff) < 1 ? "even value" : `${diff > 0 ? "+" : ""}${diff.toFixed(1)} value`;
   const marketDiff = Number(idea.marketDiff || 0);
-  const marketLabel = Math.abs(marketDiff) < 1 ? "market even" : `${marketDiff > 0 ? "+" : ""}${marketDiff.toFixed(1)} market`;
+  const marketLabel =
+    Math.abs(marketDiff) < 1 ? "market even" : `${marketDiff > 0 ? "+" : ""}${marketDiff.toFixed(1)} market`;
   const shape = idea.shape || tradeShapeLabel(givePackage.length, getPackage.length);
   const quality = idea.quality || {};
   const acceptance = idea.acceptance || {};
@@ -1203,7 +1268,14 @@ function renderTradeIdeaCard(idea) {
       </section>
     </div>
     <p>${htmlEscape(`Why it fits: you need ${idea.yourNeed?.pos || idea.get.Pos}, and ${teamSnapshotLabel(idea.team)} needs ${idea.theirNeed?.pos || idea.give.Pos}. FantasyIQ ${tradeIdeaEvidenceDetail(idea, shape)}, then checked for a slight value edge before showing it.`)}</p>
-    ${quality.reasons?.length ? `<ul class="trade-quality-reasons">${quality.reasons.slice(0, 3).map((reason) => `<li>${htmlEscape(reason)}</li>`).join("")}</ul>` : ""}
+    ${
+      quality.reasons?.length
+        ? `<ul class="trade-quality-reasons">${quality.reasons
+            .slice(0, 3)
+            .map((reason) => `<li>${htmlEscape(reason)}</li>`)
+            .join("")}</ul>`
+        : ""
+    }
   </article>`;
 }
 
@@ -1256,7 +1328,10 @@ function renderMyTeamEmpty(message = "Select your ESPN team or paste a roster in
       ? ""
       : ["QB", "RB", "WR", "TE", "DST", "K"]
           .filter((pos) => positionHasDraftSlot(pos))
-          .map((pos) => `<article class="my-team-position-card"><span>${pos}</span><strong>--</strong><small>Waiting</small></article>`)
+          .map(
+            (pos) =>
+              `<article class="my-team-position-card"><span>${pos}</span><strong>--</strong><small>Waiting</small></article>`,
+          )
           .join("");
   }
   if (myTeamStarters) myTeamStarters.textContent = message;
@@ -1314,7 +1389,9 @@ function renderMyTeam(snapshot = activeRosterSnapshot({ preferPasted: false })) 
     renderMyTeamEmpty("Waiting for board data.");
     return;
   }
-  const rosterEntries = Array.isArray(snapshot?.rosterEntries) ? snapshot.rosterEntries.filter((entry) => rosterEntryName(entry)) : [];
+  const rosterEntries = Array.isArray(snapshot?.rosterEntries)
+    ? snapshot.rosterEntries.filter((entry) => rosterEntryName(entry))
+    : [];
   const matchedRows = snapshot?.rows || [];
   const hasRosterContext = matchedRows.length || rosterEntries.length;
   if (!hasRosterContext) {
@@ -1332,7 +1409,10 @@ function renderMyTeam(snapshot = activeRosterSnapshot({ preferPasted: false })) 
   const strengths = rosterStrengths(snapshot);
   const topNeed = weaknesses[0] || null;
   const topStrength = strengths[0] || null;
-  const cleanStrength = strengths.find((item) => item.pos !== topNeed?.pos && item.surplus > 0) || strengths.find((item) => item.pos !== topNeed?.pos) || null;
+  const cleanStrength =
+    strengths.find((item) => item.pos !== topNeed?.pos && item.surplus > 0) ||
+    strengths.find((item) => item.pos !== topNeed?.pos) ||
+    null;
   const sourceLabel = myTeamSourceLabel(snapshot);
   const starterTargets = starterTargetCounts();
   const depthTargets = draftTargetCounts();
@@ -1403,7 +1483,9 @@ function renderMyTeam(snapshot = activeRosterSnapshot({ preferPasted: false })) 
   const rosterBench = rosterEntries.filter((entry) => ["BE", "IR"].includes(rosterEntrySlot(entry)));
 
   if (myTeamStarters) {
-    myTeamStarters.innerHTML = matchedRoster ? renderMyTeamLineup(lineup) : renderRosterEntryRows(rosterStarters.length ? rosterStarters : rosterEntries);
+    myTeamStarters.innerHTML = matchedRoster
+      ? renderMyTeamLineup(lineup)
+      : renderRosterEntryRows(rosterStarters.length ? rosterStarters : rosterEntries);
   }
   if (myTeamBench) {
     if (matchedRoster) {
@@ -1545,7 +1627,20 @@ function renderPostDraftPlan(snapshot = activeRosterSnapshot()) {
       </section>
       <section>
         <h4>Strengths</h4>
-        ${strengths.length ? strengths.slice(0, 3).map((item) => `<p>${item.pos}: ${item.rows.slice(0, 2).map((row) => htmlEscape(row.Player)).join(", ")}</p>`).join("") : "<p>No standout surplus yet.</p>"}
+        ${
+          strengths.length
+            ? strengths
+                .slice(0, 3)
+                .map(
+                  (item) =>
+                    `<p>${item.pos}: ${item.rows
+                      .slice(0, 2)
+                      .map((row) => htmlEscape(row.Player))
+                      .join(", ")}</p>`,
+                )
+                .join("")
+            : "<p>No standout surplus yet.</p>"
+        }
       </section>
       <section>
         <h4>Grade Notes</h4>
@@ -1634,7 +1729,8 @@ function renderWaiverAssistant(snapshot = activeRosterSnapshot({ preferPasted: t
     return;
   }
   if (!snapshot.rows.length) {
-    waiverAssistant.textContent = "Select your ESPN team or paste your roster above to generate a real waiver watchlist.";
+    waiverAssistant.textContent =
+      "Select your ESPN team or paste your roster above to generate a real waiver watchlist.";
     return;
   }
   const candidates = waiverCandidates(snapshot);
@@ -1733,8 +1829,12 @@ function renderWaiversIqEmpty(message) {
     `;
   }
   if (waiverIqSupportingReasons) waiverIqSupportingReasons.innerHTML = `<p>${htmlEscape(message)}</p>`;
-  if (waiverIqRiskWarning) waiverIqRiskWarning.textContent = "FantasyIQ will not recommend a claim until the add clears the replacement-value threshold.";
-  if (waiverIqAlternativePath) waiverIqAlternativePath.textContent = "Connect an ESPN team, paste a roster in Trade IQ, or use the Big Board as a temporary watchlist.";
+  if (waiverIqRiskWarning)
+    waiverIqRiskWarning.textContent =
+      "FantasyIQ will not recommend a claim until the add clears the replacement-value threshold.";
+  if (waiverIqAlternativePath)
+    waiverIqAlternativePath.textContent =
+      "Connect an ESPN team, paste a roster in Trade IQ, or use the Big Board as a temporary watchlist.";
   if (waiverIqWatchlist) waiverIqWatchlist.textContent = "Waiting for waiver pool.";
   if (waiverIqDrops) waiverIqDrops.textContent = "Waiting for roster.";
   if (waiverIqPlan) waiverIqPlan.textContent = "No claim plan yet.";
@@ -1772,8 +1872,12 @@ function renderWaiversIQ(snapshot = activeRosterSnapshot({ preferPasted: true })
   const market = marketSignal(top.row);
   const claimReasons = [
     `${top.row.Player} is the top available add after roster need, league value, upside, and risk are weighted.`,
-    top.dropRow ? `The claim projects ${gainLabel} versus ${top.dropRow.Player}.` : "FantasyIQ does not see a clean cut yet, so treat this as a watchlist add.",
-    topNeed ? `${top.row.Pos} is measured against your top roster gap: ${topNeed.pos}.` : "Your roster has no forced gap, so waiver action must beat replacement value.",
+    top.dropRow
+      ? `The claim projects ${gainLabel} versus ${top.dropRow.Player}.`
+      : "FantasyIQ does not see a clean cut yet, so treat this as a watchlist add.",
+    topNeed
+      ? `${top.row.Pos} is measured against your top roster gap: ${topNeed.pos}.`
+      : "Your roster has no forced gap, so waiver action must beat replacement value.",
     `${waiverPoolSourceLabel()} ${fit.detail}`,
   ];
 
@@ -1808,7 +1912,9 @@ function renderWaiversIQ(snapshot = activeRosterSnapshot({ preferPasted: true })
   }
   if (waiverIqAlternativePath) {
     waiverIqAlternativePath.textContent =
-      top.gain >= 3 ? `If ${top.row.Player} is claimed, pivot to ${profiles[1]?.row?.Player || "the next same-position value"} or hold priority.` : "Hold priority and monitor news-driven roles.";
+      top.gain >= 3
+        ? `If ${top.row.Player} is claimed, pivot to ${profiles[1]?.row?.Player || "the next same-position value"} or hold priority.`
+        : "Hold priority and monitor news-driven roles.";
   }
   if (waiverIqWatchlist) {
     waiverIqWatchlist.innerHTML = profiles.length
@@ -1817,7 +1923,9 @@ function renderWaiversIQ(snapshot = activeRosterSnapshot({ preferPasted: true })
   }
   if (waiverIqDrops) {
     waiverIqDrops.innerHTML = dropCandidates.length
-      ? dropCandidates.map((row) => renderPlayerMiniCard(row, `Cut line / ${row.Pos} / value ${valueDisplay(row)}`)).join("")
+      ? dropCandidates
+          .map((row) => renderPlayerMiniCard(row, `Cut line / ${row.Pos} / value ${valueDisplay(row)}`))
+          .join("")
       : "<p>No cut candidates found.</p>";
   }
   if (waiverIqPlan) {
@@ -1894,7 +2002,10 @@ function commandScoreDetailText(score, data, snapshot) {
   if (snapshot?.rows?.length) {
     const grade = postDraftGrade(snapshot);
     const breakdown = grade.scoreBreakdown || {};
-    const penalties = Number(breakdown.constructionPenalty || 0) + Number(breakdown.depthPenalty || 0) + Number(breakdown.riskPenalty || 0);
+    const penalties =
+      Number(breakdown.constructionPenalty || 0) +
+      Number(breakdown.depthPenalty || 0) +
+      Number(breakdown.riskPenalty || 0);
     const penaltyText = penalties > 0 ? ` / ${penalties.toFixed(1)} construction drag` : " / clean construction";
     return `Consensus starters ${Number(breakdown.consensusStarterAvg || 0).toFixed(1)} / roster ${Number(breakdown.consensusRosterAvg || 0).toFixed(1)}${penaltyText}`;
   }
@@ -1904,7 +2015,8 @@ function commandScoreDetailText(score, data, snapshot) {
   }
   const strength = Number(data?.engine?.teamStrength);
   const starterQuality = Number(data?.engine?.starterQuality);
-  if (Number.isFinite(strength) && strength > 0) return `Team strength ${strength.toFixed(1)} / starter quality ${starterQuality.toFixed(1)}`;
+  if (Number.isFinite(strength) && strength > 0)
+    return `Team strength ${strength.toFixed(1)} / starter quality ${starterQuality.toFixed(1)}`;
   return "Draft-board score until roster sync is available";
 }
 
@@ -1915,29 +2027,52 @@ function renderCommandDecision(data = null) {
   const weakness = commandWeaknessFromData(data, snapshot);
   const reasons = rec.supportingQuantitativeReasons || [];
   const action = rec.action || (intelligenceInFlight ? "RUNNING" : "WAIT");
-  const mainMove = rec.mainMove || (intelligenceInFlight ? "Calculating best move" : "Waiting for recommendation sync");
+  const mainMove = rec.mainMove || (intelligenceInFlight ? "Reading every viable move" : "Run IQ Brief");
+  const commandPanel = document.querySelector("#command");
+  const scoreTone = score >= 88 ? "elite" : score >= 74 ? "strong" : score >= 55 ? "watch" : score ? "limited" : "idle";
+
+  document.documentElement.dataset.intelligenceState = intelligenceInFlight ? "syncing" : score ? "ready" : "idle";
+  commandPanel?.classList.toggle("is-syncing", intelligenceInFlight);
+  if (commandPanel) commandPanel.dataset.briefState = intelligenceInFlight ? "syncing" : score ? "ready" : "idle";
 
   if (commandMainMoveCard) commandMainMoveCard.dataset.action = action.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   if (commandMainMove) commandMainMove.textContent = mainMove;
   if (commandMainReason) {
     commandMainReason.textContent =
-      reasons[0] || (intelligenceInFlight ? "FantasyIQ is checking roster, board, schedule, trade, and waiver signals." : "Refresh to compare action against doing nothing.");
+      reasons[0] ||
+      (intelligenceInFlight
+        ? "FantasyIQ is ranking roster, board, schedule, trade, and waiver signals."
+        : "Run the brief to compare every action against doing nothing.");
   }
-  if (commandFantasyIqScore) commandFantasyIqScore.textContent = score ? String(score) : "--";
+  if (commandFantasyIqScore) {
+    commandFantasyIqScore.textContent = score ? String(score) : "--";
+    commandFantasyIqScore.dataset.scoreTone = scoreTone;
+  }
   if (commandScoreDetail) commandScoreDetail.textContent = commandScoreDetailText(score, data, snapshot);
   if (commandRosterWeakness) commandRosterWeakness.textContent = weakness.label;
   if (commandWeaknessDetail) commandWeaknessDetail.textContent = weakness.detail;
-  if (commandConfidence) commandConfidence.textContent = rec.confidenceScore ? `${rec.confidenceScore}%` : "Pending";
+  if (commandConfidence)
+    commandConfidence.textContent = rec.confidenceScore
+      ? `${rec.confidenceScore}%`
+      : intelligenceInFlight
+        ? "Scanning"
+        : "Ready";
   if (commandConfidenceDetail) {
-    commandConfidenceDetail.textContent = rec.dataFreshnessStatus || (data?.syncedAt ? `Synced ${formatSyncTime(data.syncedAt)}` : "No recommendation run yet");
+    commandConfidenceDetail.textContent =
+      rec.dataFreshnessStatus ||
+      (data?.syncedAt ? `Synced ${formatSyncTime(data.syncedAt)}` : "Awaiting the next IQ Brief");
   }
   if (commandSupportingReasons) {
     commandSupportingReasons.innerHTML = reasons.length
-      ? reasons.slice(0, 3).map((reason) => `<p>${htmlEscape(reason)}</p>`).join("")
-      : "<p>FantasyIQ needs a roster, board, or ESPN sync before it can explain the move.</p>";
+      ? reasons
+          .slice(0, 3)
+          .map((reason) => `<p>${htmlEscape(reason)}</p>`)
+          .join("")
+      : "<p>Run an IQ Brief to turn roster, board, waiver, trade, and schedule context into an executive recommendation.</p>";
   }
-  if (commandRiskWarning) commandRiskWarning.textContent = rec.riskWarning || "No risk warning yet.";
-  if (commandAlternativePath) commandAlternativePath.textContent = rec.alternativePath || "Refresh after ESPN sync or board changes.";
+  if (commandRiskWarning) commandRiskWarning.textContent = rec.riskWarning || "No elevated risk surfaced yet.";
+  if (commandAlternativePath)
+    commandAlternativePath.textContent = rec.alternativePath || "Run the next brief after ESPN sync or board changes.";
 }
 
 function compactIntelligenceRow(row) {
@@ -1965,9 +2100,14 @@ function rosterValueDelta(addRow, dropRow) {
 function weakestRosterRow(snapshot, pos = "") {
   const candidates = (snapshot?.rows || [])
     .filter((row) => !pos || row.Pos === pos)
-    .filter((row) => !["QB", "TE"].includes(row.Pos) || (snapshot.counts?.[row.Pos] || 0) > (starterTargetCounts()[row.Pos] || 1))
+    .filter(
+      (row) =>
+        !["QB", "TE"].includes(row.Pos) || (snapshot.counts?.[row.Pos] || 0) > (starterTargetCounts()[row.Pos] || 1),
+    )
     .sort((a, b) => leagueValueScore(a) - leagueValueScore(b) || Number(b.Risk || 0) - Number(a.Risk || 0));
-  return candidates[0] || (snapshot?.rows || []).slice().sort((a, b) => leagueValueScore(a) - leagueValueScore(b))[0] || null;
+  return (
+    candidates[0] || (snapshot?.rows || []).slice().sort((a, b) => leagueValueScore(a) - leagueValueScore(b))[0] || null
+  );
 }
 
 function buildClientIntelligenceData(serverData = {}) {
@@ -1987,8 +2127,10 @@ function buildClientIntelligenceData(serverData = {}) {
   const topStrength = strengths[0];
   const boardFreshness = liveDraft?.syncedAt || boardData?.syncedAt || boardData?.updated || serverData.syncedAt || "";
   const staleWarnings = [];
-  if (!snapshot.rows.length) staleWarnings.push("No selected ESPN roster or pasted roster, so roster-specific weekly logic is limited.");
-  if (!liveLeagueHasRosters()) staleWarnings.push("Opponent roster intelligence is limited until ESPN roster sync is available.");
+  if (!snapshot.rows.length)
+    staleWarnings.push("No selected ESPN roster or pasted roster, so roster-specific weekly logic is limited.");
+  if (!liveLeagueHasRosters())
+    staleWarnings.push("Opponent roster intelligence is limited until ESPN roster sync is available.");
   if (!boardData) staleWarnings.push("Player board data is not loaded yet.");
 
   let recommendation = serverData.recommendation || {};
@@ -2002,10 +2144,15 @@ function buildClientIntelligenceData(serverData = {}) {
       confidenceScore: Math.round(clampNumber(66 + waiverGain * 1.2 - Number(topWaiver.Risk || 0), 52, 88)),
       supportingQuantitativeReasons: [
         `Projected roster VOR gain is ${waiverGain > 0 ? "+" : ""}${waiverGain.toFixed(1)} versus the best drop candidate.`,
-        topNeed ? `${topWaiver.Pos} maps to your top roster need: ${topNeed.starterGap} starter gap and ${topNeed.depthGap} depth gap.` : `${topWaiver.Pos} adds usable depth without forcing a lineup downgrade.`,
+        topNeed
+          ? `${topWaiver.Pos} maps to your top roster need: ${topNeed.starterGap} starter gap and ${topNeed.depthGap} depth gap.`
+          : `${topWaiver.Pos} adds usable depth without forcing a lineup downgrade.`,
         `League-adjusted value is ${valueDisplay(topWaiver)} with projection ${projectionDisplay(topWaiver)} in ${activeLeagueSettings().scoringLabel}.`,
       ],
-      riskWarning: Number(topWaiver.Risk || 0) >= 6 ? `Risk is elevated at ${topWaiver.Risk}/10, so do not overpay FAAB.` : "Waiver value can evaporate quickly if role/news changes before claims process.",
+      riskWarning:
+        Number(topWaiver.Risk || 0) >= 6
+          ? `Risk is elevated at ${topWaiver.Risk}/10, so do not overpay FAAB.`
+          : "Waiver value can evaporate quickly if role/news changes before claims process.",
       alternativePath: tradeIsActionable
         ? `Instead, shop ${compactTradeIdeaSide(tradeIdea, "give")} for ${compactTradeIdeaSide(tradeIdea, "get")}.`
         : "Hold waiver priority/FAAB if news flow weakens the role before lock.",
@@ -2019,30 +2166,55 @@ function buildClientIntelligenceData(serverData = {}) {
     recommendation = {
       action: "ACT_NOW",
       mainMove: `Offer ${compactTradeIdeaSide(tradeIdea, "give")} for ${compactTradeIdeaSide(tradeIdea, "get")}`,
-      confidenceScore: Math.round(clampNumber(60 + Number(tradeIdea.quality?.score || tradeIdea.score || 0) / 5 + Math.max(0, gain) + Number(tradeIdea.acceptance?.probability || 0) / 18, 52, 88)),
+      confidenceScore: Math.round(
+        clampNumber(
+          60 +
+            Number(tradeIdea.quality?.score || tradeIdea.score || 0) / 5 +
+            Math.max(0, gain) +
+            Number(tradeIdea.acceptance?.probability || 0) / 18,
+          52,
+          88,
+        ),
+      ),
       supportingQuantitativeReasons: [
         `Trade quality gate cleared at ${tradeIdea.quality.score}/100 with ${tradeIdea.acceptance?.probability || "--"}% acceptance likelihood.`,
-        tradeIdea.yourNeed ? `Incoming player attacks your ${tradeIdea.yourNeed.pos} need: ${tradeIdea.yourNeed.detail}.` : "Incoming player improves the highest available lineup lane.",
+        tradeIdea.yourNeed
+          ? `Incoming player attacks your ${tradeIdea.yourNeed.pos} need: ${tradeIdea.yourNeed.detail}.`
+          : "Incoming player improves the highest available lineup lane.",
         tradeIdea.evidence?.exactAcceptedCount
           ? `Fantasy IQ Data found ${tradeIdea.evidence.exactAcceptedCount} exact accepted sample${tradeIdea.evidence.exactAcceptedCount === 1 ? "" : "s"}.`
           : `Fantasy IQ Data shows ${Math.round(Number(tradeIdea.evidence?.activity || 0)).toLocaleString()} accepted-trade activity on the package.`,
       ],
-      riskWarning: incomingRisk >= 6 ? `Incoming risk peaks at ${incomingRisk}/10, so keep the ask flexible.` : "Trade acceptance depends on opponent preference and recent news.",
-      alternativePath: topWaiver ? `Fallback waiver path: add ${compactIntelligenceRow(topWaiver)} if the manager declines.` : "Fallback path is to hold and wait for waiver or injury leverage.",
+      riskWarning:
+        incomingRisk >= 6
+          ? `Incoming risk peaks at ${incomingRisk}/10, so keep the ask flexible.`
+          : "Trade acceptance depends on opponent preference and recent news.",
+      alternativePath: topWaiver
+        ? `Fallback waiver path: add ${compactIntelligenceRow(topWaiver)} if the manager declines.`
+        : "Fallback path is to hold and wait for waiver or injury leverage.",
       dataFreshnessStatus: `Client synthesis from ESPN roster context. Synced ${formatSyncTime(boardFreshness)}.`,
     };
   } else if (topDraft && available.length) {
     recommendation = {
       action: actionFromDecision(draftDecision),
       mainMove: `${draftDecision?.label || "Target"} ${compactIntelligenceRow(topDraft)}`,
-      confidenceScore: Math.round(clampNumber(58 + leagueValueScore(topDraft) / 6 - Number(topDraft.Risk || 0), 42, 86)),
+      confidenceScore: Math.round(
+        clampNumber(58 + leagueValueScore(topDraft) / 6 - Number(topDraft.Risk || 0), 42, 86),
+      ),
       supportingQuantitativeReasons: [
         `League-adjusted value score is ${valueDisplay(topDraft)} with projection ${projectionDisplay(topDraft)}.`,
-        draftDecision?.survival ? `Estimated return probability is ${draftDecision.survival.pct}% before your next relevant pick.` : commandReason(topDraft, draftDecision, counts),
-        topNeed ? `Roster context still shows ${topNeed.pos} as the highest weighted need.` : "Roster construction does not force a lower-value position.",
+        draftDecision?.survival
+          ? `Estimated return probability is ${draftDecision.survival.pct}% before your next relevant pick.`
+          : commandReason(topDraft, draftDecision, counts),
+        topNeed
+          ? `Roster context still shows ${topNeed.pos} as the highest weighted need.`
+          : "Roster construction does not force a lower-value position.",
       ],
       riskWarning: riskSignal(topDraft).detail,
-      alternativePath: picks.bestValue?.row && picks.bestValue.row !== topDraft ? `Alternative: ${compactIntelligenceRow(picks.bestValue.row)} as the pure value play.` : "Hold if the room pushes better tier value to you.",
+      alternativePath:
+        picks.bestValue?.row && picks.bestValue.row !== topDraft
+          ? `Alternative: ${compactIntelligenceRow(picks.bestValue.row)} as the pure value play.`
+          : "Hold if the room pushes better tier value to you.",
       dataFreshnessStatus: `Client synthesis from live draft board. Board synced ${formatSyncTime(boardFreshness)}.`,
     };
   } else {
@@ -2051,12 +2223,20 @@ function buildClientIntelligenceData(serverData = {}) {
       mainMove: "Do Nothing",
       confidenceScore: snapshot.rows.length ? 72 : 40,
       supportingQuantitativeReasons: [
-        snapshot.rows.length ? "No waiver add clears the replacement-value threshold by 3.0 points." : "Roster-specific evaluation needs an ESPN team selection or pasted roster.",
-        topStrength ? `Current roster strength is ${topStrength.pos} with top value ${topStrength.topValue.toFixed(1)}.` : "No position has enough surplus to force a consolidation trade.",
+        snapshot.rows.length
+          ? "No waiver add clears the replacement-value threshold by 3.0 points."
+          : "Roster-specific evaluation needs an ESPN team selection or pasted roster.",
+        topStrength
+          ? `Current roster strength is ${topStrength.pos} with top value ${topStrength.topValue.toFixed(1)}.`
+          : "No position has enough surplus to force a consolidation trade.",
         "Preserving FAAB, waiver priority, and flexibility beats a low-edge move right now.",
       ],
-      riskWarning: snapshot.rows.length ? "Standing still can miss late injury/news leverage, so rerun after major news." : "Recommendation quality is limited until roster context is present.",
-      alternativePath: topWaiver ? `Monitor ${compactIntelligenceRow(topWaiver)} as the top watchlist add.` : "Refresh after the next ESPN sync or roster update.",
+      riskWarning: snapshot.rows.length
+        ? "Standing still can miss late injury/news leverage, so rerun after major news."
+        : "Recommendation quality is limited until roster context is present.",
+      alternativePath: topWaiver
+        ? `Monitor ${compactIntelligenceRow(topWaiver)} as the top watchlist add.`
+        : "Refresh after the next ESPN sync or roster update.",
       dataFreshnessStatus: `Client synthesis from available dashboard context. Synced ${formatSyncTime(boardFreshness)}.`,
     };
   }
@@ -2072,7 +2252,9 @@ function buildClientIntelligenceData(serverData = {}) {
       liveDraftRoom: {
         action: topDraft ? actionFromDecision(draftDecision) : "WAIT",
         mainMove: topDraft ? compactIntelligenceRow(topDraft) : "Waiting for board data",
-        supportingQuantitativeReasons: topDraft ? [`Value ${valueDisplay(topDraft)} / projection ${projectionDisplay(topDraft)}.`] : ["No live board row available."],
+        supportingQuantitativeReasons: topDraft
+          ? [`Value ${valueDisplay(topDraft)} / projection ${projectionDisplay(topDraft)}.`]
+          : ["No live board row available."],
       },
       weeklyCommandCenter: {
         action: recommendation.mainMove === "Do Nothing" ? "WAIT" : recommendation.action,
@@ -2086,14 +2268,18 @@ function buildClientIntelligenceData(serverData = {}) {
       },
       tradeFinder: {
         action: tradeIsActionable ? "ACT_NOW" : "WAIT",
-        mainMove: tradeIdea ? `Offer ${compactTradeIdeaSide(tradeIdea, "give")} for ${compactTradeIdeaSide(tradeIdea, "get")}` : "No clean trade lane",
+        mainMove: tradeIdea
+          ? `Offer ${compactTradeIdeaSide(tradeIdea, "give")} for ${compactTradeIdeaSide(tradeIdea, "get")}`
+          : "No clean trade lane",
         opponentTeam: tradeIdea ? teamSnapshotLabel(tradeIdea.team) : "",
       },
       opponentIntelligence: {
-        strongestSignals: liveLeagueTeams().slice(0, 4).map((team) => ({
-          teamId: team.teamId,
-          primaryPersona: rosterEntriesForTeam(team).length ? "Roster-aware manager" : "Sync-limited manager",
-        })),
+        strongestSignals: liveLeagueTeams()
+          .slice(0, 4)
+          .map((team) => ({
+            teamId: team.teamId,
+            primaryPersona: rosterEntriesForTeam(team).length ? "Roster-aware manager" : "Sync-limited manager",
+          })),
       },
     },
     missingDataWarnings: [...(serverData.missingDataWarnings || []), ...staleWarnings].slice(0, 4),
@@ -2108,12 +2294,20 @@ function renderIntelligenceOS() {
   if (!intelligencePanel) return;
   if (!intelligenceData) {
     renderCommandDecision();
-    if (intelligenceMainMove) intelligenceMainMove.textContent = intelligenceInFlight ? "Running league-aware engine" : "Intelligence engine ready";
-    if (intelligenceFreshness) intelligenceFreshness.textContent = intelligenceInFlight ? "Syncing ESPN and board context." : "Refresh to scan draft, weekly, waiver, trade, and opponent context.";
+    if (intelligenceMainMove)
+      intelligenceMainMove.textContent = intelligenceInFlight
+        ? "Scanning the league for leverage"
+        : "Intelligence engine ready";
+    if (intelligenceFreshness)
+      intelligenceFreshness.textContent = intelligenceInFlight
+        ? "Reading ESPN and board context."
+        : "Run an IQ Brief to scan draft, weekly, waiver, trade, and opponent context.";
     if (intelligenceMainCard) {
-      intelligenceMainCard.innerHTML = `<strong>Main move</strong><span>${intelligenceInFlight ? "Calculating..." : "Waiting for sync."}</span>`;
+      intelligenceMainCard.innerHTML = `<strong>Main move</strong><span>${intelligenceInFlight ? "Ranking every viable action." : "Awaiting the next brief."}</span>`;
     }
-    if (intelligenceReasons) intelligenceReasons.innerHTML = "<p>FantasyIQ compares every action against doing nothing once data loads.</p>";
+    if (intelligenceReasons)
+      intelligenceReasons.innerHTML =
+        "<p>FantasyIQ compares every action against doing nothing once the brief runs.</p>";
     return;
   }
   const rec = intelligenceData.recommendation || {};
@@ -2123,7 +2317,8 @@ function renderIntelligenceOS() {
   renderCommandDecision(intelligenceData);
   if (intelligenceMainMove) intelligenceMainMove.textContent = rec.mainMove || "No forced move";
   if (intelligenceFreshness) {
-    intelligenceFreshness.textContent = rec.dataFreshnessStatus || `Synced ${formatSyncTime(intelligenceData.syncedAt)}.`;
+    intelligenceFreshness.textContent =
+      rec.dataFreshnessStatus || `Synced ${formatSyncTime(intelligenceData.syncedAt)}.`;
   }
   if (intelligenceMainCard) {
     const action = rec.action || "WAIT";
@@ -2137,7 +2332,12 @@ function renderIntelligenceOS() {
   const reasons = rec.supportingQuantitativeReasons || [];
   if (intelligenceReasons) {
     intelligenceReasons.innerHTML = `
-      ${reasons.slice(0, 3).map((reason) => `<p>${htmlEscape(reason)}</p>`).join("") || "<p>No quantitative reasons available yet.</p>"}
+      ${
+        reasons
+          .slice(0, 3)
+          .map((reason) => `<p>${htmlEscape(reason)}</p>`)
+          .join("") || "<p>No quantitative reasons available yet.</p>"
+      }
       <p><strong>Risk:</strong> ${htmlEscape(rec.riskWarning || "Normal fantasy variance applies.")}</p>
       <p><strong>Backup:</strong> ${htmlEscape(rec.alternativePath || "Wait for cleaner data or rerun sync.")}</p>
       ${warnings.length ? `<p><strong>Missing:</strong> ${htmlEscape(warnings.slice(0, 2).join(" "))}</p>` : ""}
@@ -2145,7 +2345,10 @@ function renderIntelligenceOS() {
     `;
   }
   if (intelligenceGrid) {
-    const opponentCount = phases.opponentIntelligence?.managerProfiles?.length || phases.opponentIntelligence?.strongestSignals?.length || 0;
+    const opponentCount =
+      phases.opponentIntelligence?.managerProfiles?.length ||
+      phases.opponentIntelligence?.strongestSignals?.length ||
+      0;
     intelligenceGrid.innerHTML = `
       <article>
         <span>Roster IQ</span>
@@ -2191,12 +2394,16 @@ function loadIntelligence(force = false) {
       intelligenceData = buildClientIntelligenceData({
         recommendation: {
           action: "WAIT",
-          mainMove: "Intelligence sync unavailable",
+          mainMove: "Hold until the next clean read",
           confidenceScore: 20,
-          supportingQuantitativeReasons: ["The dashboard is still usable.", "Live boards and draft room can continue independently.", "Retry after ESPN/API sync recovers."],
-          riskWarning: error.message || "Unknown intelligence API error.",
+          supportingQuantitativeReasons: [
+            "The dashboard is still usable.",
+            "Live boards and draft room can continue independently.",
+            "Retry after ESPN or intelligence sync recovers.",
+          ],
+          riskWarning: error.message || "Unknown intelligence sync error.",
           alternativePath: "Use Schedule IQ, Waiver IQ, and Trade IQ manually for now.",
-          dataFreshnessStatus: "Intelligence API unavailable.",
+          dataFreshnessStatus: "Intelligence sync unavailable.",
         },
         phases: {},
         missingDataWarnings: [error.message || "Unknown intelligence API error."],
@@ -2296,7 +2503,8 @@ function draftTargetCounts() {
 function positionHasDraftSlot(pos) {
   const slots = activeLineupSlots();
   if (pos === "QB") return Number(slots.QB || 0) > 0 || Number(slots.SUPERFLEX || 0) > 0;
-  if (["RB", "WR", "TE"].includes(pos)) return Number(slots[pos] || 0) > 0 || Number(slots.FLEX || 0) > 0 || Number(slots.SUPERFLEX || 0) > 0;
+  if (["RB", "WR", "TE"].includes(pos))
+    return Number(slots[pos] || 0) > 0 || Number(slots.FLEX || 0) > 0 || Number(slots.SUPERFLEX || 0) > 0;
   if (pos === "DST") return Number(slots.DST || 0) > 0;
   if (pos === "K") return Number(slots.K || 0) > 0;
   return true;
@@ -2338,7 +2546,9 @@ function picksUntil(pick) {
 }
 
 function topAvailableByPosition(pos) {
-  return availableRows().filter((row) => row.Pos === pos).sort((a, b) => Number(a.Rank) - Number(b.Rank));
+  return availableRows()
+    .filter((row) => row.Pos === pos)
+    .sort((a, b) => Number(a.Rank) - Number(b.Rank));
 }
 
 function topTierInfo(pos) {
@@ -2376,7 +2586,12 @@ function survivalProjection(row, targetPick = nextMyPick()) {
   }
   const until = picksUntil(targetPick);
   if (until === 0) {
-    return { pct: 5, label: "On clock", className: "danger", detail: "You are on the clock. Waiting means passing on this player." };
+    return {
+      pct: 5,
+      label: "On clock",
+      className: "danger",
+      detail: "You are on the clock. Waiting means passing on this player.",
+    };
   }
   const boardRank = Number(row.Rank || 999);
   const targetOverall = Number(targetPick.overall || 999);
@@ -2458,9 +2673,11 @@ function rosterNeedScoreAdjustment(row, counts, round) {
     if (counts.TE < starters.TE && round >= 3) score += 35;
     if (counts.TE >= starters.TE && counts.TE < targets.TE && round >= 10) score += 16;
   }
-  if (["RB", "WR"].includes(row.Pos) && counts[row.Pos] < targets[row.Pos] && round >= 8) score += row.Pos === "RB" ? 60 : 50;
+  if (["RB", "WR"].includes(row.Pos) && counts[row.Pos] < targets[row.Pos] && round >= 8)
+    score += row.Pos === "RB" ? 60 : 50;
   if (row.Pos === "RB" && counts.RB < Math.min(targets.RB, starters.RB + 2) && round >= 10) score += 120;
-  if (row.Pos !== "RB" && counts.RB < Math.min(targets.RB, starters.RB + 2) && round >= 12 && round < dstTargetRound()) score -= 180;
+  if (row.Pos !== "RB" && counts.RB < Math.min(targets.RB, starters.RB + 2) && round >= 12 && round < dstTargetRound())
+    score -= 180;
   if (shouldWaitOnSpecialTeams(row.Pos, round)) score -= 360;
   if (row.Pos === "DST" && counts.DST < targets.DST && round >= dstTargetRound()) score += 620;
   if (row.Pos === "K" && counts.K < targets.K && round >= kickerTargetRound()) score += 720;
@@ -2488,34 +2705,79 @@ function recommendationDecision(row, counts) {
     return { label: "Avoid", className: "wait", survival, reason };
   }
   if (shouldWaitOnSpecialTeams(row.Pos, round)) {
-    return { label: "Wait", className: "wait", survival, reason: "K/DST are late-round tools unless the draft is already late." };
+    return {
+      label: "Wait",
+      className: "wait",
+      survival,
+      reason: "K/DST are late-round tools unless the draft is already late.",
+    };
   }
   if (need === "starter" && survival.pct < 65) {
-    return { label: "Pick now", className: "smash", survival, reason: `${row.Pos} starter slot is still open and this player may not return.` };
+    return {
+      label: "Pick now",
+      className: "smash",
+      survival,
+      reason: `${row.Pos} starter slot is still open and this player may not return.`,
+    };
   }
   if (survival.pct < 35) {
     if (marketScore <= -12 && Number(row.Risk || 0) >= 5 && round <= 10) {
-      return { label: "Controlled risk", className: "watch", survival, reason: "He may not return, but live add/drop pressure is negative. Take only at a discount." };
+      return {
+        label: "Controlled risk",
+        className: "watch",
+        survival,
+        reason: "He may not return, but live add/drop pressure is negative. Take only at a discount.",
+      };
     }
     return { label: "Pick now", className: "smash", survival, reason: "Likely gone before your next pick." };
   }
   if (marketScore >= 12 && ["RB", "WR", "TE"].includes(row.Pos) && survival.pct < 60) {
-    return { label: "Pick now", className: "smash", survival, reason: "Live add/drop momentum is strong and the make-it-back window is thin." };
+    return {
+      label: "Pick now",
+      className: "smash",
+      survival,
+      reason: "Live add/drop momentum is strong and the make-it-back window is thin.",
+    };
   }
   if (momentum.rookie && marketScore >= 8 && round >= 7 && survival.pct < 65) {
-    return { label: "Target", className: "target", survival, reason: "Rookie profile has positive live market momentum at a draftable stage." };
+    return {
+      label: "Target",
+      className: "target",
+      survival,
+      reason: "Rookie profile has positive live market momentum at a draftable stage.",
+    };
   }
   if (marketScore <= -14 && need !== "starter" && round <= 10) {
-    return { label: "Can wait", className: "wait", survival, reason: "Faller signal is active. Make the room discount him first." };
+    return {
+      label: "Can wait",
+      className: "wait",
+      survival,
+      reason: "Faller signal is active. Make the room discount him first.",
+    };
   }
   if (need === "luxury" && survival.pct > 50) {
-    return { label: "Can wait", className: "wait", survival, reason: "Roster need is lower here; use this as a tiebreaker only." };
+    return {
+      label: "Can wait",
+      className: "wait",
+      survival,
+      reason: "Roster need is lower here; use this as a tiebreaker only.",
+    };
   }
   if (Number(row.Risk || 0) >= 6 && round <= 8) {
-    return { label: "Controlled risk", className: "watch", survival, reason: "Upside is real, but this is still foundation territory." };
+    return {
+      label: "Controlled risk",
+      className: "watch",
+      survival,
+      reason: "Upside is real, but this is still foundation territory.",
+    };
   }
   if (survival.pct >= 70) {
-    return { label: "Can wait", className: "wait", survival, reason: "Good chance he survives. Prefer a scarcer tier if one exists." };
+    return {
+      label: "Can wait",
+      className: "wait",
+      survival,
+      reason: "Good chance he survives. Prefer a scarcer tier if one exists.",
+    };
   }
   return { label: "Target", className: "target", survival, reason: recommendationReason(row, counts) };
 }
@@ -2554,18 +2816,24 @@ function recommendationReason(row, counts) {
   const momentum = playerMarketMomentum(row);
   if (!positionHasDraftSlot(row.Pos)) return `${row.Pos} is not used in this league profile.`;
   if (shouldWaitOnSpecialTeams(row.Pos, currentRound())) return "Late only. Keep loading RB/WR upside first.";
-  if (row.Pos === "DST" && counts.DST < starters.DST && currentRound() >= dstTargetRound()) return "Roster requirement. Take the best DST left.";
-  if (row.Pos === "K" && counts.K < starters.K && currentRound() >= kickerTargetRound()) return "Roster requirement. Kicker should be last.";
+  if (row.Pos === "DST" && counts.DST < starters.DST && currentRound() >= dstTargetRound())
+    return "Roster requirement. Take the best DST left.";
+  if (row.Pos === "K" && counts.K < starters.K && currentRound() >= kickerTargetRound())
+    return "Roster requirement. Kicker should be last.";
   if (momentum.score <= -12) return "Faller signal. Treat him as a discounted value, not an auto-click.";
-  if (momentum.rookie && momentum.score >= 8 && currentRound() >= 7) return "Rookie with live add/drop momentum and a draftable price.";
+  if (momentum.rookie && momentum.score >= 8 && currentRound() >= 7)
+    return "Rookie with live add/drop momentum and a draftable price.";
   if (momentum.score >= 12) return "Live add/drop momentum is pushing him up the queue.";
   if (row.Pos === "RB" && counts.RB < starters.RB) return "Fills a starting RB slot.";
   if (row.Pos === "WR" && counts.WR < starters.WR) return "Fills a starting WR slot.";
   if (row.Pos === "TE" && counts.TE < starters.TE) return "Fills TE if value is real.";
   if (row.Pos === "QB" && counts.QB < starters.QB) {
-    return activeLineupSlots().SUPERFLEX ? "Superflex format keeps QB value elevated." : "QB value window if the board falls this way.";
+    return activeLineupSlots().SUPERFLEX
+      ? "Superflex format keeps QB value elevated."
+      : "QB value window if the board falls this way.";
   }
-  if (["RB", "WR", "TE"].includes(row.Pos) && flexEligibleCount(counts) < flexStarterTarget()) return "Fills a FLEX starter lane.";
+  if (["RB", "WR", "TE"].includes(row.Pos) && flexEligibleCount(counts) < flexStarterTarget())
+    return "Fills a FLEX starter lane.";
   if (["RB", "WR", "TE"].includes(row.Pos)) return "Best available FLEX/bench value.";
   return "Depth or late-round utility.";
 }
@@ -2584,7 +2852,8 @@ function positionMatches(row, pos) {
 }
 
 function tierLabel(row, pos) {
-  const tier = typeof preciseTierDisplay === "function" ? preciseTierDisplay(row, pos) : row["Pos Tier"] || row.Category || "Tier";
+  const tier =
+    typeof preciseTierDisplay === "function" ? preciseTierDisplay(row, pos) : row["Pos Tier"] || row.Category || "Tier";
   return pos === "FLEX" && row.Pos ? `${row.Pos} / ${tier}` : tier;
 }
 
@@ -2642,9 +2911,11 @@ function selectedEspnTeam() {
 
 function firstRoundPickForTeam(teamId = selectedTeamId()) {
   if (!teamId) return null;
-  return (liveDraft?.draftOrder || liveDraft?.picks || [])
-    .filter((pick) => String(pick.teamId) === String(teamId))
-    .sort((a, b) => Number(a.overall || 999) - Number(b.overall || 999))[0] || null;
+  return (
+    (liveDraft?.draftOrder || liveDraft?.picks || [])
+      .filter((pick) => String(pick.teamId) === String(teamId))
+      .sort((a, b) => Number(a.overall || 999) - Number(b.overall || 999))[0] || null
+  );
 }
 
 function liveDraftSlotStorageKey(teamId) {
@@ -2688,7 +2959,10 @@ function draftScheduleValue() {
 
 function draftScheduleDetail() {
   const date = draftScheduleDate();
-  if (!date) return liveDraft ? "ESPN has not published a scheduled draft time yet." : "Sync ESPN to detect the scheduled draft.";
+  if (!date)
+    return liveDraft
+      ? "ESPN has not published a scheduled draft time yet."
+      : "Sync ESPN to detect the scheduled draft.";
   const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZoneName: "short" });
   const seconds = Number(liveDraft?.draftTimePerSelection || 0);
   const perPick = seconds ? ` / ${seconds} sec per pick` : "";
@@ -2701,7 +2975,10 @@ function draftPositionValue(firstPick = firstRoundPickForTeam()) {
 }
 
 function draftPositionDetail(firstPick = firstRoundPickForTeam()) {
-  if (!firstPick) return selectedTeamId() ? "ESPN has not published your draft order yet." : "Choose your ESPN team to lock the slot.";
+  if (!firstPick)
+    return selectedTeamId()
+      ? "ESPN has not published your draft order yet."
+      : "Choose your ESPN team to lock the slot.";
   const team = selectedEspnTeam();
   const teamText = team?.teamName ? `${team.teamName} / ` : "";
   return `${teamText}Round 1 / Overall ${firstPick.overall}`;
@@ -2757,27 +3034,43 @@ function slotPlan(firstPick) {
     return {
       title: "Early slot: protect the anchor",
       detail: "Take the clean elite player first, then use rounds 2-4 to balance RB/WR before chasing luxury edges.",
-      bullets: ["Do not pass a true tier-one player for uniqueness.", "Your return pick should solve roster structure, not force a stack.", "QB/TE only if the board creates a real discount."],
+      bullets: [
+        "Do not pass a true tier-one player for uniqueness.",
+        "Your return pick should solve roster structure, not force a stack.",
+        "QB/TE only if the board creates a real discount.",
+      ],
     };
   }
   if (band === "middle") {
     return {
       title: "Middle slot: win the tier break",
       detail: "Let the room choose first, then take the last player in a real tier before the next shelf drops.",
-      bullets: ["Stay open across RB/WR in round 1.", "Use round 2 to punish any slide from the early turn.", "Be ready to pivot if QB/TE value falls into round 5-7."],
+      bullets: [
+        "Stay open across RB/WR in round 1.",
+        "Use round 2 to punish any slide from the early turn.",
+        "Be ready to pivot if QB/TE value falls into round 5-7.",
+      ],
     };
   }
   if (band === "late") {
     return {
       title: "Late slot: build through the turn",
       detail: "Pair two players with weekly ceiling and avoid spending both turn picks on fragile profiles.",
-      bullets: ["WR/WR or WR/RB is the default unless RB value is obvious.", "Do not leave the 3/4 turn with a luxury-heavy roster.", "Use the long wait to prioritize players unlikely to return."],
+      bullets: [
+        "WR/WR or WR/RB is the default unless RB value is obvious.",
+        "Do not leave the 3/4 turn with a luxury-heavy roster.",
+        "Use the long wait to prioritize players unlikely to return.",
+      ],
     };
   }
   return {
     title: "Pick slot needed",
     detail: "Use Schedule IQ with mock practice so FantasyIQ can pair value with schedule leverage.",
-    bullets: ["Enter the ESPN draft room before trusting the slot.", "Click Sync Now after ESPN publishes order.", "If ESPN reshuffles, FantasyIQ updates the slot from live draft order."],
+    bullets: [
+      "Enter the ESPN draft room before trusting the slot.",
+      "Click Sync Now after ESPN publishes order.",
+      "If ESPN reshuffles, FantasyIQ updates the slot from live draft order.",
+    ],
   };
 }
 
@@ -2785,12 +3078,15 @@ function settingsDraftIntel(settings = activeLeagueSettings()) {
   const slots = settings.lineupSlots || DEFAULT_LINEUP_SLOTS;
   const notes = [];
   if (settings.scoringType === "ppr") notes.push("Full PPR rewards target volume and pass-catching RBs.");
-  if (settings.scoringType === "half-ppr") notes.push("Half PPR keeps RB touchdown and carry equity closer to WR volume.");
+  if (settings.scoringType === "half-ppr")
+    notes.push("Half PPR keeps RB touchdown and carry equity closer to WR volume.");
   if (settings.scoringType === "standard") notes.push("Standard scoring pushes TD equity and early-down RB roles up.");
   if (Number(slots.SUPERFLEX || 0) > 0) notes.push("Superflex changes the board: QB becomes a premium starter slot.");
-  if (Number(slots.FLEX || 0) >= 2) notes.push("Extra flex depth makes WR/RB bench upside more valuable than backup comfort.");
+  if (Number(slots.FLEX || 0) >= 2)
+    notes.push("Extra flex depth makes WR/RB bench upside more valuable than backup comfort.");
   if (Number(slots.BE || 0) >= 7) notes.push("Deep benches reward handcuff-plus RBs and breakout WRs.");
-  if (leagueTeamTotal() >= 14) notes.push("Larger rooms dry up QB/TE depth faster; do not assume streamers stay clean.");
+  if (leagueTeamTotal() >= 14)
+    notes.push("Larger rooms dry up QB/TE depth faster; do not assume streamers stay clean.");
   return notes.slice(0, 4);
 }
 
@@ -2826,22 +3122,38 @@ function buildPlan(build) {
     balanced: {
       title: "Balanced Hammer",
       detail: "Open RB/WR flexible, then let value decide the first luxury position.",
-      rounds: ["Rounds 1-4: three RB/WR starters minimum.", "Rounds 5-8: one QB or TE edge only if the tier is discounted.", "Rounds 9+: upside bench, then DST/K late."],
+      rounds: [
+        "Rounds 1-4: three RB/WR starters minimum.",
+        "Rounds 5-8: one QB or TE edge only if the tier is discounted.",
+        "Rounds 9+: upside bench, then DST/K late.",
+      ],
     },
     "hero-rb": {
       title: "Hero RB",
       detail: "Anchor one premium RB, then flood WR and add contingent RB upside later.",
-      rounds: ["Round 1-2: one RB anchor.", "Rounds 3-7: WR target volume and one QB/TE value if it falls.", "Bench: handcuff-plus RBs with injury leverage."],
+      rounds: [
+        "Round 1-2: one RB anchor.",
+        "Rounds 3-7: WR target volume and one QB/TE value if it falls.",
+        "Bench: handcuff-plus RBs with injury leverage.",
+      ],
     },
     "wr-heavy": {
       title: "WR Heavy",
       detail: "Build weekly floor through target earners, then attack RB volatility after the room overpays.",
-      rounds: ["Rounds 1-4: at least three WR/FLEX-caliber players.", "Rounds 5-8: RB value pockets and one premium QB/TE if clean.", "Bench: prioritize RB paths to touches over safe low-ceiling WRs."],
+      rounds: [
+        "Rounds 1-4: at least three WR/FLEX-caliber players.",
+        "Rounds 5-8: RB value pockets and one premium QB/TE if clean.",
+        "Bench: prioritize RB paths to touches over safe low-ceiling WRs.",
+      ],
     },
     "elite-edge": {
       title: "Elite QB/TE Edge",
       detail: "Take a true positional separator only when RB/WR tiers remain healthy.",
-      rounds: ["Do not take both elite QB and elite TE unless RB/WR value falls hard.", "After the edge pick, spend the next two picks repairing RB/WR depth.", "If the tier is gone, skip the position and stream value later."],
+      rounds: [
+        "Do not take both elite QB and elite TE unless RB/WR value falls hard.",
+        "After the edge pick, spend the next two picks repairing RB/WR depth.",
+        "If the tier is gone, skip the position and stream value later.",
+      ],
     },
   };
   return plans[build] || plans.balanced;
@@ -2850,7 +3162,9 @@ function buildPlan(build) {
 function draftAvoidWindows() {
   const round = currentRound();
   const rows = avoidRows({ QB: 0, RB: 0, WR: 0, TE: 0, DST: 0, K: 0 }).slice(0, 3);
-  const playerLine = rows.length ? rows.map((row) => `${row.Player} (${row.Pos})`).join(", ") : "No board-specific fade is urgent yet.";
+  const playerLine = rows.length
+    ? rows.map((row) => `${row.Player} (${row.Pos})`).join(", ")
+    : "No board-specific fade is urgent yet.";
   return [
     `Before round ${Math.max(9, round)}: avoid K/DST unless your league is already in endgame.`,
     "Before your RB/WR base is stable: do not buy backup QB or second TE.",
@@ -2862,8 +3176,12 @@ function benchRules() {
   const slots = activeLineupSlots();
   const bench = Number(slots.BE || 0);
   return [
-    bench >= 7 ? "Deep bench: chase upside, not floor. Handcuff-plus RBs and route-growth WRs matter." : "Short bench: avoid clogging spots with low-ceiling backups.",
-    Number(slots.FLEX || 0) >= 2 ? "Multiple flexes: WR/RB depth beats backup QB/TE comfort." : "Single flex: keep the bench liquid for waiver pivots.",
+    bench >= 7
+      ? "Deep bench: chase upside, not floor. Handcuff-plus RBs and route-growth WRs matter."
+      : "Short bench: avoid clogging spots with low-ceiling backups.",
+    Number(slots.FLEX || 0) >= 2
+      ? "Multiple flexes: WR/RB depth beats backup QB/TE comfort."
+      : "Single flex: keep the bench liquid for waiver pivots.",
     "Final rounds: DST only with early schedule value, kicker last.",
   ];
 }
@@ -2871,7 +3189,8 @@ function benchRules() {
 function addDraftWatchlistItem() {
   const name = (draftWatchlistInput?.value || "").trim();
   if (!name) return;
-  const row = findPlayer(name) || availableRows().find((item) => item.Player.toLowerCase().includes(name.toLowerCase()));
+  const row =
+    findPlayer(name) || availableRows().find((item) => item.Player.toLowerCase().includes(name.toLowerCase()));
   const item = {
     name: row?.Player || name,
     pos: row?.Pos || "",
@@ -2891,7 +3210,8 @@ function renderWatchlist() {
   if (!draftWatchlistList) return;
   const items = draftWatchlistItems();
   if (!items.length) {
-    draftWatchlistList.innerHTML = "<p>No saved watchlist yet. Add targets, fades, sleepers, or must-drafts before your room opens.</p>";
+    draftWatchlistList.innerHTML =
+      "<p>No saved watchlist yet. Add targets, fades, sleepers, or must-drafts before your room opens.</p>";
     return;
   }
   draftWatchlistList.innerHTML = items
@@ -2926,24 +3246,80 @@ function renderDraftPrep() {
   const slots = settings.lineupSlots || {};
   const rosterDetected = Object.values(slots).some((value) => Number(value) > 0);
   const checks = [
-    { label: "League Public", ok: Boolean(liveDraft), value: liveDraft ? "Verified" : "Pending", detail: liveDraft ? "ESPN public sync reached this league" : "Run Sync Now before draft day" },
-    { label: "League IDs", ok: Boolean(appConfig.leagueId && (appConfig.customerTeamId || teamId)), value: appConfig.leagueId ? "Saved" : "Missing", detail: teamId ? `Team ${teamId}` : "Save ESPN league and team IDs" },
-    { label: "Draft Date", ok: Boolean(scheduleDate || liveDraft?.drafted || liveDraft?.inProgress), value: liveDraft?.drafted ? "Complete" : liveDraft?.inProgress ? "Live" : draftScheduleValue(), detail: draftScheduleDetail() },
-    { label: "Draft Position", ok: Boolean(firstPick), value: draftPositionValue(firstPick), detail: draftPositionDetail(firstPick) },
-    { label: "Scoring", ok: Boolean(settings.scoringType || settings.scoringLabel), value: settings.scoringLabel || settings.scoringType || "Missing", detail: settings.source || "ESPN scoring profile" },
-    { label: "Roster Slots", ok: rosterDetected, value: rosterDetected ? lineupSummary(settings) : "Missing", detail: rosterDetected ? "Lineup shape loaded" : "Open setup to detect roster slots" },
-    { label: "Draft Rounds", ok: Boolean(draftRoundTotal(settings)), value: `${draftRoundTotal(settings)} rounds`, detail: "Used for mock and live pick pacing" },
-    { label: "Board Loaded", ok: boardReady, value: boardReady ? `${availableRows().length} available` : "Loading", detail: boardReady ? "Tier and value data ready" : "Load Big Board data" },
-    { label: "ESPN Sync", ok: Boolean(liveDraft && !liveDraft.staleError), value: liveDraft?.staleError ? "Cached" : liveDraft ? "Live" : "Pending", detail: liveDraft?.staleError ? "Using cached board mode" : "Click Sync Now on draft day" },
-    { label: "Fallback Mode", ok: Boolean(boardReady), value: boardReady ? "Ready" : "Pending", detail: boardReady ? "Manual draft tracking can continue if ESPN lags" : "Board data must load first" },
-    { label: "Watchlist", ok: watchlist.length >= 3, value: `${watchlist.length} saved`, detail: watchlist.length >= 3 ? "Targets are staged" : "Save at least 3 names" },
+    {
+      label: "League Public",
+      ok: Boolean(liveDraft),
+      value: liveDraft ? "Verified" : "Pending",
+      detail: liveDraft ? "ESPN public sync reached this league" : "Run Sync Now before draft day",
+    },
+    {
+      label: "League IDs",
+      ok: Boolean(appConfig.leagueId && (appConfig.customerTeamId || teamId)),
+      value: appConfig.leagueId ? "Saved" : "Missing",
+      detail: teamId ? `Team ${teamId}` : "Save ESPN league and team IDs",
+    },
+    {
+      label: "Draft Date",
+      ok: Boolean(scheduleDate || liveDraft?.drafted || liveDraft?.inProgress),
+      value: liveDraft?.drafted ? "Complete" : liveDraft?.inProgress ? "Live" : draftScheduleValue(),
+      detail: draftScheduleDetail(),
+    },
+    {
+      label: "Draft Position",
+      ok: Boolean(firstPick),
+      value: draftPositionValue(firstPick),
+      detail: draftPositionDetail(firstPick),
+    },
+    {
+      label: "Scoring",
+      ok: Boolean(settings.scoringType || settings.scoringLabel),
+      value: settings.scoringLabel || settings.scoringType || "Missing",
+      detail: settings.source || "ESPN scoring profile",
+    },
+    {
+      label: "Roster Slots",
+      ok: rosterDetected,
+      value: rosterDetected ? lineupSummary(settings) : "Missing",
+      detail: rosterDetected ? "Lineup shape loaded" : "Open setup to detect roster slots",
+    },
+    {
+      label: "Draft Rounds",
+      ok: Boolean(draftRoundTotal(settings)),
+      value: `${draftRoundTotal(settings)} rounds`,
+      detail: "Used for mock and live pick pacing",
+    },
+    {
+      label: "Board Loaded",
+      ok: boardReady,
+      value: boardReady ? `${availableRows().length} available` : "Loading",
+      detail: boardReady ? "Tier and value data ready" : "Load Big Board data",
+    },
+    {
+      label: "ESPN Sync",
+      ok: Boolean(liveDraft && !liveDraft.staleError),
+      value: liveDraft?.staleError ? "Cached" : liveDraft ? "Live" : "Pending",
+      detail: liveDraft?.staleError ? "Using cached board mode" : "Click Sync Now on draft day",
+    },
+    {
+      label: "Fallback Mode",
+      ok: Boolean(boardReady),
+      value: boardReady ? "Ready" : "Pending",
+      detail: boardReady ? "Manual draft tracking can continue if ESPN lags" : "Board data must load first",
+    },
+    {
+      label: "Watchlist",
+      ok: watchlist.length >= 3,
+      value: `${watchlist.length} saved`,
+      detail: watchlist.length >= 3 ? "Targets are staged" : "Save at least 3 names",
+    },
   ];
   const score = Math.round((checks.filter((item) => item.ok).length / checks.length) * 100);
   draftPrepScore.textContent = `${score}%`;
   if (draftPrepScoreNote) {
-    draftPrepScoreNote.textContent = score >= 100
-      ? "Ready for draft day; slot will keep updating from ESPN."
-      : "Finish the watchlist and select your team; the draft slot updates when ESPN publishes order.";
+    draftPrepScoreNote.textContent =
+      score >= 100
+        ? "Ready for draft day; slot will keep updating from ESPN."
+        : "Finish the watchlist and select your team; the draft slot updates when ESPN publishes order.";
   }
   if (draftPrepReadiness) {
     draftPrepReadiness.innerHTML = checks
@@ -2975,20 +3351,31 @@ function renderDraftPrep() {
     draftPrepTiers.innerHTML = `<p class="eyebrow">Tier Pressure</p><h3>${tiers.length ? "Current cliffs" : "Loading tiers"}</h3><div class="draft-chip-list">${tiers.map((info) => `<span>${htmlEscape(info.pos)}: ${info.count} in ${htmlEscape(info.tier)}</span>`).join("") || "<span>Board loading</span>"}</div>`;
   }
   if (draftPrepValues) {
-    draftPrepValues.innerHTML = `<p class="eyebrow">Value Pockets</p><h3>Round map</h3><div class="draft-pocket-list">${valuePocketRows().map((pocket) => `<article><strong>${htmlEscape(pocket.label)}: ${htmlEscape(pocket.positions)}</strong><small>${htmlEscape(pocket.names)}</small></article>`).join("")}</div>`;
+    draftPrepValues.innerHTML = `<p class="eyebrow">Value Pockets</p><h3>Round map</h3><div class="draft-pocket-list">${valuePocketRows()
+      .map(
+        (pocket) =>
+          `<article><strong>${htmlEscape(pocket.label)}: ${htmlEscape(pocket.positions)}</strong><small>${htmlEscape(pocket.names)}</small></article>`,
+      )
+      .join("")}</div>`;
   }
 
   const build = selectedDraftBuild();
-  draftBuildButtons.forEach((button) => button.classList.toggle("active", (button.dataset.draftBuild || "balanced") === build));
+  draftBuildButtons.forEach((button) =>
+    button.classList.toggle("active", (button.dataset.draftBuild || "balanced") === build),
+  );
   const plan = buildPlan(build);
   if (draftBuildPlan) {
     draftBuildPlan.innerHTML = `<p class="eyebrow">Roster Build Plan</p><h3>${htmlEscape(plan.title)}</h3><p>${htmlEscape(plan.detail)}</p><ul>${plan.rounds.map((item) => `<li>${htmlEscape(item)}</li>`).join("")}</ul>`;
   }
   if (draftPrepAvoid) {
-    draftPrepAvoid.innerHTML = `<p class="eyebrow">Do Not Draft Too Early</p><h3>Price discipline</h3><ul>${draftAvoidWindows().map((item) => `<li>${htmlEscape(item)}</li>`).join("")}</ul>`;
+    draftPrepAvoid.innerHTML = `<p class="eyebrow">Do Not Draft Too Early</p><h3>Price discipline</h3><ul>${draftAvoidWindows()
+      .map((item) => `<li>${htmlEscape(item)}</li>`)
+      .join("")}</ul>`;
   }
   if (draftPrepBench) {
-    draftPrepBench.innerHTML = `<p class="eyebrow">Bench Strategy</p><h3>Upside over comfort</h3><ul>${benchRules().map((item) => `<li>${htmlEscape(item)}</li>`).join("")}</ul>`;
+    draftPrepBench.innerHTML = `<p class="eyebrow">Bench Strategy</p><h3>Upside over comfort</h3><ul>${benchRules()
+      .map((item) => `<li>${htmlEscape(item)}</li>`)
+      .join("")}</ul>`;
   }
   renderWatchlist();
 }
@@ -3007,7 +3394,9 @@ function renderPreDraftPanel() {
   const bestWr = topTierNames("WR", 2) || "WR tier loading";
   const format = `${leagueTeamTotal()} teams / ${settings.scoringLabel || SCORING_LABELS[settings.scoringType] || "Custom scoring"}`;
   const orderText = orderCount ? `${orderCount} draft slots loaded` : "Draft order pending";
-  const slotText = firstPick ? `Your first pick: Round 1, Pick ${firstPick.roundPick}, Overall ${firstPick.overall}` : "Choose your ESPN team to personalize the board.";
+  const slotText = firstPick
+    ? `Your first pick: Round 1, Pick ${firstPick.roundPick}, Overall ${firstPick.overall}`
+    : "Choose your ESPN team to personalize the board.";
   const tierText = `Watch early RB/WR value: ${bestRb}; ${bestWr}`;
   preDraftPanel.hidden = false;
   preDraftPanel.innerHTML = `
@@ -3058,7 +3447,11 @@ function preDraftNoTeamEmpty() {
   return emptyStateHtml(
     "Pick your ESPN team",
     "The board is live, but roster pressure and next-pick survival need your team slot.",
-    ["Use the My ESPN Team selector above.", "FantasyIQ will remember it on this device.", "Then the first-pick radar and build tracker become personalized."],
+    [
+      "Use the My ESPN Team selector above.",
+      "FantasyIQ will remember it on this device.",
+      "Then the first-pick radar and build tracker become personalized.",
+    ],
     "watch",
   );
 }
@@ -3067,7 +3460,10 @@ function preDraftRecentPicksEmpty() {
   return emptyStateHtml(
     "No picks yet",
     "ESPN has the order loaded, but the room has not started drafting.",
-    ["Keep Sync Now handy near draft time.", "Recent picks will appear here as soon as ESPN records the first selection."],
+    [
+      "Keep Sync Now handy near draft time.",
+      "Recent picks will appear here as soon as ESPN records the first selection.",
+    ],
     "good",
   );
 }
@@ -3131,7 +3527,9 @@ function renderRecommendations() {
     .sort((a, b) => b.score - a.score)
     .map((item) => item.row);
   const pickNow = teamId
-    ? ranked.filter((row) => !["Wait", "Can wait", "Avoid"].includes(recommendationDecision(row, counts).label)).slice(0, 3)
+    ? ranked
+        .filter((row) => !["Wait", "Can wait", "Avoid"].includes(recommendationDecision(row, counts).label))
+        .slice(0, 3)
     : ranked.slice(0, 3);
   const waitList = teamId
     ? ranked.filter((row) => recommendationDecision(row, counts).label === "Can wait").slice(0, 2)
@@ -3170,7 +3568,11 @@ function renderLiveTierBoard() {
   const pos = activeLiveTierPosition();
   const rows = availableRows()
     .filter((row) => positionMatches(row, pos))
-    .filter((row) => !query || `${row.Player} ${row.Pos} ${row.Team} ${row.Action} ${row["Pos Tier"] || ""}`.toLowerCase().includes(query))
+    .filter(
+      (row) =>
+        !query ||
+        `${row.Player} ${row.Pos} ${row.Team} ${row.Action} ${row["Pos Tier"] || ""}`.toLowerCase().includes(query),
+    )
     .sort((a, b) => Number(a.Rank) - Number(b.Rank))
     .slice(0, pos ? 120 : 50);
   liveTierBoard.innerHTML = renderTieredRows(rows, pos, {
@@ -3181,10 +3583,18 @@ function renderLiveTierBoard() {
 function renderTeamOptions() {
   if (!myTeamSelect || !liveDraft?.teams) return;
   const teamStorageKey = loadoutStorageKey("my-team");
-  const saved = activeDraftLeagueOverride()?.teamId || localStorage.getItem(teamStorageKey) || myTeamSelect.value || appConfig.customerTeamId || "";
+  const saved =
+    activeDraftLeagueOverride()?.teamId ||
+    localStorage.getItem(teamStorageKey) ||
+    myTeamSelect.value ||
+    appConfig.customerTeamId ||
+    "";
   const validIds = new Set((liveDraft.teams || []).map((team) => String(team.teamId)));
   myTeamSelect.innerHTML = `<option value="">Choose your team</option>${liveDraft.teams
-    .map((team) => `<option value="${htmlEscape(team.teamId)}">${htmlEscape(team.teamName)}${team.manager ? ` (${htmlEscape(team.manager)})` : ""}</option>`)
+    .map(
+      (team) =>
+        `<option value="${htmlEscape(team.teamId)}">${htmlEscape(team.teamName)}${team.manager ? ` (${htmlEscape(team.manager)})` : ""}</option>`,
+    )
     .join("")}`;
   if (saved && validIds.has(String(saved))) {
     myTeamSelect.value = saved;
@@ -3192,7 +3602,11 @@ function renderTeamOptions() {
     myTeamSelect.value = "";
     localStorage.removeItem(teamStorageKey);
   }
-  if (!localStorage.getItem(teamStorageKey) && appConfig.customerTeamId && validIds.has(String(appConfig.customerTeamId))) {
+  if (
+    !localStorage.getItem(teamStorageKey) &&
+    appConfig.customerTeamId &&
+    validIds.has(String(appConfig.customerTeamId))
+  ) {
     localStorage.setItem(teamStorageKey, appConfig.customerTeamId);
   }
 }
@@ -3220,18 +3634,19 @@ function renderLiveDraftSlot() {
   const nextPick = upcoming[0];
   const changeNote = liveDraftSlotChangeNote(teamId, firstPick);
   liveMySlot.textContent = `Pick ${firstPick.roundPick}`;
-  liveMySlotNote.textContent =
-    `Live ESPN order. First pick overall ${firstPick.overall}.${nextPick ? ` Next turn overall ${nextPick.overall}.` : ""}${changeNote}`;
+  liveMySlotNote.textContent = `Live ESPN order. First pick overall ${firstPick.overall}.${nextPick ? ` Next turn overall ${nextPick.overall}.` : ""}${changeNote}`;
 }
 
 function renderPickCards(container, picks, emptyMessage) {
   if (!container) return;
   if (!picks?.length) {
-    container.innerHTML = String(emptyMessage || "").includes("<") ? emptyMessage : `<p>${htmlEscape(emptyMessage)}</p>`;
+    container.innerHTML = String(emptyMessage || "").includes("<")
+      ? emptyMessage
+      : `<p>${htmlEscape(emptyMessage)}</p>`;
     return;
   }
   container.innerHTML = picks
-    .map((pick) => {
+    .map((pick, index) => {
       const value = pick.status === "drafted" ? valueForPick(pick) : null;
       const playerText = pick.player || "Pending";
       const valueLabel = value ? `<em>${value.label}</em>` : `<em>Upcoming</em>`;
@@ -3240,7 +3655,8 @@ function renderPickCards(container, picks, emptyMessage) {
         : pick.status === "drafted"
           ? "No board match yet."
           : `${pick.fantasyTeam} is queued here.`;
-      return `<div class="pick-card ${pick.status === "drafted" ? "made" : ""}">
+      const newest = container === liveRecentPicks && pick.status === "drafted" && index === 0;
+      return `<div class="pick-card ${pick.status === "drafted" ? "made" : ""} ${newest ? "newest" : ""}">
         <span>R${pick.round} P${pick.roundPick} / Overall ${pick.overall}</span>
         ${value?.row ? playerFocusButton(value.row) : `<strong>${htmlEscape(playerText)}</strong>`}
         ${valueLabel}
@@ -3375,7 +3791,11 @@ function renderTierAlerts() {
   const cards = positions.map((pos) => {
     const info = topTierInfo(pos);
     const severity = info.count <= 2 ? "danger" : info.count <= 4 ? "watch" : "good";
-    const names = info.rows.slice(0, 3).map((row) => row.Player).join(", ") || "No players left";
+    const names =
+      info.rows
+        .slice(0, 3)
+        .map((row) => row.Player)
+        .join(", ") || "No players left";
     const message =
       info.count <= 2
         ? `Hard cliff. Only ${info.count} left in ${info.tier}.`
@@ -3388,7 +3808,9 @@ function renderTierAlerts() {
     </div>`;
   });
   const flexPositions = activeLineupSlots().SUPERFLEX ? ["QB", "RB", "WR", "TE"] : ["RB", "WR", "TE"];
-  const flexRows = availableRows().filter((row) => flexPositions.includes(row.Pos)).slice(0, 12);
+  const flexRows = availableRows()
+    .filter((row) => flexPositions.includes(row.Pos))
+    .slice(0, 12);
   const flexMix = flexRows.reduce((counts, row) => {
     counts[row.Pos] = (counts[row.Pos] || 0) + 1;
     return counts;
@@ -3505,10 +3927,16 @@ function cheatcodePlayerCard(row, label, detail = "") {
 function bestCheatcodeRows(counts) {
   const rows = availableRows();
   const ranked = rows
-    .map((row) => ({ row, score: adjustedRecommendationScore(row, counts), decision: recommendationDecision(row, counts) }))
+    .map((row) => ({
+      row,
+      score: adjustedRecommendationScore(row, counts),
+      decision: recommendationDecision(row, counts),
+    }))
     .sort((a, b) => b.score - a.score);
   const usable = ranked.filter((item) => item.decision.label !== "Avoid");
-  const bestNow = usable.find((item) => ["Pick now", "Target", "Controlled risk", "Board value"].includes(item.decision.label)) || usable[0];
+  const bestNow =
+    usable.find((item) => ["Pick now", "Target", "Controlled risk", "Board value"].includes(item.decision.label)) ||
+    usable[0];
   const bestValue = usable
     .filter((item) => !positionClosed(item.row, counts))
     .sort((a, b) => leagueValueScore(b.row) - leagueValueScore(a.row) || Number(a.row.Rank) - Number(b.row.Rank))[0];
@@ -3516,7 +3944,9 @@ function bestCheatcodeRows(counts) {
     .filter((item) => Number(item.row.Risk || 0) <= 4 && !["DST", "K"].includes(item.row.Pos))
     .sort((a, b) => Number(a.row.Rank) - Number(b.row.Rank))[0];
   const upside = usable
-    .filter((item) => ["RB", "WR", "TE"].includes(item.row.Pos) && Number(item.row.Upside || item.row.Ceiling || 0) >= 65)
+    .filter(
+      (item) => ["RB", "WR", "TE"].includes(item.row.Pos) && Number(item.row.Upside || item.row.Ceiling || 0) >= 65,
+    )
     .sort((a, b) => Number(b.row.Upside || b.row.Ceiling || 0) - Number(a.row.Upside || a.row.Ceiling || 0))[0];
   return { ranked, usable, bestNow, bestValue, safe, upside };
 }
@@ -3587,17 +4017,19 @@ function setAlphaText(node, value) {
 }
 
 function renderAlphaLayer(counts = emptyPositionCounts(), picks = {}) {
-  const alpha = boardData ? alphaRead(counts, picks) : {
-    signal: "Loading",
-    signalMeta: "Waiting for board data",
-    scarcity: "Loading",
-    scarcityMeta: "Tier pressure",
-    market: "Loading",
-    marketMeta: "Room behavior",
-    build: "Loading",
-    buildMeta: "Roster posture",
-    leverage: "Calibrating",
-  };
+  const alpha = boardData
+    ? alphaRead(counts, picks)
+    : {
+        signal: "Loading",
+        signalMeta: "Waiting for board data",
+        scarcity: "Loading",
+        scarcityMeta: "Tier pressure",
+        market: "Loading",
+        marketMeta: "Room behavior",
+        build: "Loading",
+        buildMeta: "Roster posture",
+        leverage: "Calibrating",
+      };
   setAlphaText(alphaCommandSignal, alpha.signal);
   setAlphaText(alphaCommandMeta, alpha.signalMeta);
   setAlphaText(alphaCommandLeverage, alpha.leverage);
@@ -3620,7 +4052,10 @@ function renderWarRoomCommand(counts = emptyPositionCounts(), picks = {}) {
   if (!warRoomCommand) return;
   if (!boardData) {
     setWarRoomText(warRoomPlayer, "Loading best move");
-    setWarRoomText(warRoomAction, "FantasyIQ is connecting board value, roster build, market signal, and league settings.");
+    setWarRoomText(
+      warRoomAction,
+      "FantasyIQ is connecting board value, roster build, market signal, and league settings.",
+    );
     setWarRoomText(warRoomWhy, "Waiting");
     setWarRoomText(warRoomMarket, "Waiting");
     setWarRoomText(warRoomFit, "Waiting");
@@ -3669,7 +4104,17 @@ function renderCheatcodeMode() {
   if (!cheatcodeStatus) return;
   if (!boardData) {
     cheatcodeStatus.textContent = "Loading player board and draft intelligence.";
-    [cheatcodeHero, cheatcodeNow, cheatcodeValue, cheatcodeSafe, cheatcodeUpside, cheatcodeTier, cheatcodeWait, cheatcodeAvoid, cheatcodeRoom]
+    [
+      cheatcodeHero,
+      cheatcodeNow,
+      cheatcodeValue,
+      cheatcodeSafe,
+      cheatcodeUpside,
+      cheatcodeTier,
+      cheatcodeWait,
+      cheatcodeAvoid,
+      cheatcodeRoom,
+    ]
       .filter(Boolean)
       .forEach((node) => {
         node.textContent = "Waiting for board data.";
@@ -3741,7 +4186,9 @@ function renderCheatcodeMode() {
     cheatcodeUpside.innerHTML = cheatcodePlayerCard(
       upside?.row,
       "Upside swing",
-      upside ? `Upside ${upside.row.Upside || upside.row.Ceiling}/100. Best used after the foundation is protected.` : "",
+      upside
+        ? `Upside ${upside.row.Upside || upside.row.Ceiling}/100. Best used after the foundation is protected.`
+        : "",
     );
   }
 
@@ -3751,7 +4198,10 @@ function renderCheatcodeMode() {
       ? cliffs
           .map((info) => {
             const severity = info.count <= 2 ? "danger" : info.count <= 4 ? "watch" : "good";
-            const names = info.rows.slice(0, 3).map((row) => row.Player).join(", ");
+            const names = info.rows
+              .slice(0, 3)
+              .map((row) => row.Player)
+              .join(", ");
             return `<div class="intel-card ${severity}">
               <strong>${info.pos}: ${info.count} left in ${htmlEscape(info.tier)}</strong>
               <small>${htmlEscape(names)}</small>
@@ -3763,9 +4213,7 @@ function renderCheatcodeMode() {
 
   if (cheatcodeWait) {
     const waitList = teamId
-      ? ranked
-          .filter((item) => recommendationDecision(item.row, counts).label === "Can wait")
-          .slice(0, 3)
+      ? ranked.filter((item) => recommendationDecision(item.row, counts).label === "Can wait").slice(0, 3)
       : [];
     cheatcodeWait.innerHTML = waitList.length
       ? waitList.map((item) => renderRecommendationCard(item.row, counts)).join("")
@@ -3860,7 +4308,9 @@ function pickPositionForDraftBoard(pick) {
 }
 
 function draftBoardPositionClass(pos) {
-  const normalized = String(pos || "pending").toLowerCase().replace(/[^a-z]/g, "");
+  const normalized = String(pos || "pending")
+    .toLowerCase()
+    .replace(/[^a-z]/g, "");
   if (["qb", "rb", "wr", "te", "dst", "k"].includes(normalized)) return `pick-pos-${normalized}`;
   return "pick-pos-pending";
 }
@@ -3907,7 +4357,10 @@ function renderAllTeamsDraftBoard() {
     allTeamsDraftBoard.innerHTML = emptyStateHtml(
       "Waiting for ESPN draft board",
       "Keep Auto sync on, then hit Sync Now once the room publishes order or the first pick.",
-      ["The grid fills by team slot as ESPN records each pick.", "Use My ESPN Team above first so your build stays personalized."],
+      [
+        "The grid fills by team slot as ESPN records each pick.",
+        "Use My ESPN Team above first so your build stays personalized.",
+      ],
       "watch",
     );
     return;
@@ -3918,13 +4371,13 @@ function renderAllTeamsDraftBoard() {
       <div class="draft-board-grid" style="--draft-team-count: ${teams.length}; --draft-round-count: ${roundCount};">
         ${teams
           .map((team, index) => {
-      const teamPicks = picks
-        .filter((pick) => String(pick.teamId) === String(team.teamId))
-        .sort((a, b) => Number(a.overall || 0) - Number(b.overall || 0));
-      const draftedCount = teamPicks.filter((pick) => pick.status === "drafted").length;
-      const isMine = String(team.teamId) === String(selectedTeamId());
-      const picksByRound = new Map(teamPicks.map((pick) => [Number(pick.round || 0), pick]));
-      return `<section class="draft-board-column ${isMine ? "mine" : ""}">
+            const teamPicks = picks
+              .filter((pick) => String(pick.teamId) === String(team.teamId))
+              .sort((a, b) => Number(a.overall || 0) - Number(b.overall || 0));
+            const draftedCount = teamPicks.filter((pick) => pick.status === "drafted").length;
+            const isMine = String(team.teamId) === String(selectedTeamId());
+            const picksByRound = new Map(teamPicks.map((pick) => [Number(pick.round || 0), pick]));
+            return `<section class="draft-board-column ${isMine ? "mine" : ""}">
         <header class="draft-board-team">
           <span>Slot ${index + 1}${isMine ? " / You" : ""}</span>
           <strong>${htmlEscape(team.teamName)}</strong>
@@ -3932,7 +4385,7 @@ function renderAllTeamsDraftBoard() {
         </header>
         ${Array.from({ length: roundCount }, (_, roundIndex) => draftBoardPickTile(picksByRound.get(roundIndex + 1), roundIndex + 1)).join("")}
       </section>`;
-    })
+          })
           .join("")}
       </div>
     </div>
@@ -3963,7 +4416,9 @@ function liveDraftRenderSignature(data = liveDraft) {
     teamNames: (data.teams || []).map((team) => team.teamName || team.name || team.fantasyTeam || "").join("|"),
     recent: recent.map((pick) => `${pick.overall || ""}:${pick.player || pick.playerName || ""}`).join("|"),
     next: next.map((pick) => `${pick.overall || ""}:${pick.fantasyTeam || ""}`).join("|"),
-    draftOrder: draftOrder.map((pick) => `${pick.overall || ""}:${pick.roundPick || ""}:${pick.fantasyTeam || ""}`).join("|"),
+    draftOrder: draftOrder
+      .map((pick) => `${pick.overall || ""}:${pick.roundPick || ""}:${pick.fantasyTeam || ""}`)
+      .join("|"),
     staleError: data.staleError || "",
   });
 }
@@ -4002,19 +4457,29 @@ function renderLiveDraftSummary() {
   const total = Number(liveDraft.totalPicks || 0);
   const totalFallback = leagueTeamTotal() * draftRoundTotal();
   const pct = total || totalFallback ? Math.round((completed / (total || totalFallback)) * 100) : 0;
-  const stale = liveDraft.staleError ? ` ESPN sync is delayed. FantasyIQ is using cached board mode. Click Sync Now or continue with manual draft tracking. ${liveDraft.staleError}` : "";
-  const syncWarnings = Array.isArray(liveDraft.fallbackStates) && liveDraft.fallbackStates.length
-    ? ` ${liveDraft.fallbackStates.join(" ")}`
+  const stale = liveDraft.staleError
+    ? ` ESPN sync is delayed. FantasyIQ is using cached board mode. Click Sync Now or continue with manual draft tracking. ${liveDraft.staleError}`
     : "";
+  const syncWarnings =
+    Array.isArray(liveDraft.fallbackStates) && liveDraft.fallbackStates.length
+      ? ` ${liveDraft.fallbackStates.join(" ")}`
+      : "";
   const preDraft = isPreDraftLeague();
-  const state = liveDraft.inProgress ? "Draft live" : liveDraft.drafted ? "Draft complete" : preDraft ? "Pre-draft board ready" : "Draft board loaded";
-  const sourceNote = liveDraft.draftSyncMode === "rosterFallback"
-    ? " ESPN roster fallback is active for drafted-player filtering."
-    : liveDraft.draftSyncMode === "espnDraftRoomBridge"
-      ? " ESPN public picks are hidden, so FantasyIQ is using authenticated draft-room bridge events."
-    : liveDraft.draftSyncMode === "espnLiveHidden"
-      ? " ESPN has started this draft but is not exposing live picks through the public feed. Use the drafted-player paste importer below."
-    : "";
+  const state = liveDraft.inProgress
+    ? "Draft live"
+    : liveDraft.drafted
+      ? "Draft complete"
+      : preDraft
+        ? "Pre-draft board ready"
+        : "Draft board loaded";
+  const sourceNote =
+    liveDraft.draftSyncMode === "rosterFallback"
+      ? " ESPN roster fallback is active for drafted-player filtering."
+      : liveDraft.draftSyncMode === "espnDraftRoomBridge"
+        ? " ESPN public picks are hidden, so FantasyIQ is using authenticated draft-room bridge events."
+        : liveDraft.draftSyncMode === "espnLiveHidden"
+          ? " ESPN has started this draft but is not exposing live picks through the public feed. Use the drafted-player paste importer below."
+          : "";
   const draftOverride = activeDraftLeagueOverride();
   const overrideNote = draftOverride?.leagueId
     ? ` Draft-room override is using ESPN league ${draftOverride.leagueId}.`
@@ -4032,17 +4497,24 @@ function renderLiveDraftSummary() {
     liveStatus.innerHTML = `<strong>${state}</strong>: ${completed}/${total || totalFallback} picks completed.${syncContext}${overrideNote}${sourceNote}${syncWarnings}${manualNote}${stale}`;
   }
   if (liveSyncStatus) {
-    liveSyncStatus.textContent = liveDraft.demoMode ? "Demo league connected" : liveDraft.inProgress ? "Draft live" : preDraft ? "Pre-draft ready" : "ESPN connected";
+    liveSyncStatus.textContent = liveDraft.demoMode
+      ? "Demo league connected"
+      : liveDraft.inProgress
+        ? "Draft live"
+        : preDraft
+          ? "Pre-draft ready"
+          : "ESPN connected";
   }
   if (liveCurrentPick) {
     liveCurrentPick.textContent = current ? `Round ${current.round}, Pick ${current.roundPick}` : "Draft complete";
   }
   if (liveCurrentTeam) {
-    liveCurrentTeam.textContent = preDraft && selectedTeamId()
-      ? preDraftSlotSummary()
-      : current
-        ? `Overall ${current.overall}: ${current.fantasyTeam}${current.manager ? ` / ${current.manager}` : ""}`
-        : "All picks are complete.";
+    liveCurrentTeam.textContent =
+      preDraft && selectedTeamId()
+        ? preDraftSlotSummary()
+        : current
+          ? `Overall ${current.overall}: ${current.fantasyTeam}${current.manager ? ` / ${current.manager}` : ""}`
+          : "All picks are complete.";
   }
   if (liveCompleted) liveCompleted.textContent = String(completed);
   if (liveTotal) liveTotal.textContent = `of ${total || totalFallback}`;
@@ -4055,11 +4527,11 @@ function renderLiveDraftSummary() {
         ? "ESPN roster fallback"
         : liveDraft.draftSyncMode === "espnDraftRoomBridge"
           ? "ESPN draft-room bridge"
-        : liveDraft.draftSyncMode === "espnLiveHidden"
-          ? "ESPN live picks hidden"
-        : activeDraftLeagueOverride()?.leagueId
-          ? `ESPN override ${activeDraftLeagueOverride().leagueId}`
-        : liveDraft.source || "ESPN public league API";
+          : liveDraft.draftSyncMode === "espnLiveHidden"
+            ? "ESPN live picks hidden"
+            : activeDraftLeagueOverride()?.leagueId
+              ? `ESPN override ${activeDraftLeagueOverride().leagueId}`
+              : liveDraft.source || "ESPN public league API";
   }
   renderLiveDraftSlot();
   renderPreDraftPanel();
@@ -4090,7 +4562,11 @@ function renderLiveDraft(options = {}) {
   renderRiskMeter();
   renderRosterEngines();
   renderCheatcodeMode();
-  renderPickCards(liveRecentPicks, liveDraft.recentPicks, isPreDraftLeague() ? preDraftRecentPicksEmpty() : "No picks have been made yet.");
+  renderPickCards(
+    liveRecentPicks,
+    liveDraft.recentPicks,
+    isPreDraftLeague() ? preDraftRecentPicksEmpty() : "No picks have been made yet.",
+  );
   renderPickCards(liveNextPicks, liveDraft.nextPicks, "No upcoming picks found.");
   renderLiveTierBoard();
   renderDraftOrder();

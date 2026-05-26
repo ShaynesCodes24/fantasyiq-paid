@@ -49,7 +49,7 @@ def dashboard_url(customer_slug: str, league_key: str = "") -> str:
         query["league"] = league_key
     from urllib.parse import urlencode
 
-    return f"/?{urlencode(query)}"
+    return f"/FantasyIQ/?{urlencode(query)}"
 
 
 def log_login_event(event_type: str, message: str, raw: dict[str, Any], severity: str = "info") -> None:

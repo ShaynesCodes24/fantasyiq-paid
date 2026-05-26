@@ -211,7 +211,7 @@ Required environment variables:
 ```text
 STRIPE_SECRET_KEY=sk_live_...
 FANTASYIQ_SITE_URL=https://myfantasyiq.com
-FANTASYIQ_STRIPE_PORTAL_RETURN_URL=https://myfantasyiq.com/?login=1
+FANTASYIQ_STRIPE_PORTAL_RETURN_URL=https://myfantasyiq.com/FantasyIQ/?login=1
 ```
 
 In Stripe Dashboard, configure the Customer Portal rules for cancellations,

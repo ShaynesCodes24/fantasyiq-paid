@@ -12,7 +12,7 @@
       name="description"
       content="FantasyIQ checkout is complete. Finish self-serve setup, check your email, and open your ESPN fantasy football dashboard."
     />
-    <link rel="stylesheet" href="./site.css?v=20260522_logo_home_1" />
+    <link rel="stylesheet" href="./site.css?v=20260526_contrast_1" />
   </head>
   <body class="policy-page success-page">
     <header class="site-header">
@@ -25,7 +25,7 @@
         <a href="./help.html">Help</a>
         <a href="./feedback.html">Feedback</a>
         <a href="mailto:support@myfantasyiq.com">Support</a>
-        <a class="dashboard-link" href="/?login=1">Customer Login</a>
+        <a class="dashboard-link" href="/FantasyIQ/?login=1">Customer Login</a>
       </nav>
     </header>
 
@@ -40,7 +40,7 @@
         </p>
         <div class="actions">
           <a class="primary" id="success-setup-link" href="./setup.html">Finish league setup</a>
-          <a class="secondary" id="success-dashboard-link" href="/?login=1">Customer login</a>
+          <a class="secondary" id="success-dashboard-link" href="/FantasyIQ/?login=1">Customer login</a>
           <a class="secondary" id="success-feedback-link" href="./feedback.html">Share feedback</a>
         </div>
       </section>
@@ -138,7 +138,7 @@
       }
 
       if (setupLink) setupLink.href = successUrlWithParams("./setup.html");
-      if (dashboardLink) dashboardLink.href = successUrlWithParams("/", { login: true });
+      if (dashboardLink) dashboardLink.href = successUrlWithParams("/FantasyIQ/", { login: true });
       if (feedbackLink) feedbackLink.href = successUrlWithParams("./feedback.html");
 
       try {

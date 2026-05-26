@@ -3,23 +3,20 @@ const path = require("path");
 
 const root = path.resolve(__dirname, "..");
 const sourceRoot = path.join(root, "public", "FantasyIQ");
-const targets = [
-  path.join(root, "public"),
-  path.join(root),
-  path.join(root, "FantasyIQ"),
-];
+const targets = [path.join(root, "public"), path.join(root), path.join(root, "FantasyIQ")];
+const shellTargets = [path.join(root, "FantasyIQ")];
 
 const files = [
   "app.js",
   "config.js",
-  "index.html",
-  "styles.css",
   path.join("assets", "fantasy-iq-logo.svg"),
   path.join("assets", "myfantasyiq-wordmark.svg"),
   path.join("assets", "league-logo.jpeg"),
   path.join("data", "boards.json"),
   path.join("data", "boards_data.js"),
 ];
+
+const shellFiles = ["index.html", "styles.css"];
 
 const directories = ["js"];
 
@@ -29,6 +26,18 @@ for (const relativePath of files) {
     throw new Error(`Missing dashboard source file: ${source}`);
   }
   for (const targetRoot of targets) {
+    const target = path.join(targetRoot, relativePath);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(source, target);
+  }
+}
+
+for (const relativePath of shellFiles) {
+  const source = path.join(sourceRoot, relativePath);
+  if (!fs.existsSync(source)) {
+    throw new Error(`Missing dashboard source file: ${source}`);
+  }
+  for (const targetRoot of shellTargets) {
     const target = path.join(targetRoot, relativePath);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.copyFileSync(source, target);
@@ -60,4 +69,4 @@ function copyDirectory(from, to) {
   }
 }
 
-console.log(`Synced apex app and compatibility mirrors from public/FantasyIQ to ${targets.length} target roots.`);
+console.log(`Synced dashboard compatibility mirrors from public/FantasyIQ to ${targets.length} target roots.`);

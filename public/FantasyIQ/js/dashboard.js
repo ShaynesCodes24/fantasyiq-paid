@@ -1,5 +1,6 @@
 ﻿function activeLeagueSettings() {
-  const liveSettings = liveDraft?.leagueSettings || liveDraft?.customer?.leagueSettings || boardData?.customer?.leagueSettings || {};
+  const liveSettings =
+    liveDraft?.leagueSettings || liveDraft?.customer?.leagueSettings || boardData?.customer?.leagueSettings || {};
   return mergeLeagueSettings(appConfig.leagueSettings, liveSettings);
 }
 
@@ -13,7 +14,10 @@ function activeLineupSlots() {
 
 function starterSlotTotal(settings = activeLeagueSettings()) {
   const slots = settings.lineupSlots || DEFAULT_LINEUP_SLOTS;
-  return ["QB", "RB", "WR", "TE", "FLEX", "SUPERFLEX", "DST", "K"].reduce((sum, key) => sum + Number(slots[key] || 0), 0);
+  return ["QB", "RB", "WR", "TE", "FLEX", "SUPERFLEX", "DST", "K"].reduce(
+    (sum, key) => sum + Number(slots[key] || 0),
+    0,
+  );
 }
 
 function draftRoundTotal(settings = activeLeagueSettings()) {
@@ -111,7 +115,12 @@ function leagueValueScore(row) {
   if (teamCount <= 10 && Number(row.Upside || row.Ceiling || 0) >= 65) score += 2;
   score += clampNumber(externalTrendScore(row) * 0.25, -5, 5);
   score += clampNumber(udkSignalScore(row), -4, 5);
-  if ((row.Category === "Rookie" || row["Rookie Signal"]) && externalTrendScore(row) >= 7 && Number(row.Rank || 999) > 55) score += 2;
+  if (
+    (row.Category === "Rookie" || row["Rookie Signal"]) &&
+    externalTrendScore(row) >= 7 &&
+    Number(row.Rank || 999) > 55
+  )
+    score += 2;
   if (!slots.K && row.Pos === "K") score -= 25;
   if (!slots.DST && row.Pos === "DST") score -= 25;
   return Math.round(score * 10) / 10;
@@ -202,20 +211,23 @@ function fantasyCalcTradeDatabasePlayer(row) {
   const id = fantasyCalcPlayerId(row);
   if (id && fantasyCalcTradeDatabase.mostTradedById?.has(id)) return fantasyCalcTradeDatabase.mostTradedById.get(id);
   const espnId = row.PlayerId || row.EspnId || row.ESPNID || fantasyCalcPlayer(row)?.espnId || "";
-  if (espnId && fantasyCalcTradeDatabase.mostTradedById?.has(`espn:${espnId}`)) return fantasyCalcTradeDatabase.mostTradedById.get(`espn:${espnId}`);
+  if (espnId && fantasyCalcTradeDatabase.mostTradedById?.has(`espn:${espnId}`))
+    return fantasyCalcTradeDatabase.mostTradedById.get(`espn:${espnId}`);
   const mostTraded = fantasyCalcTradeDatabase.mostTradedByKey?.get(normalizePlayerName(row.Player || ""));
   if (mostTraded) return mostTraded;
   const market = fantasyCalcPlayer(row);
-  return market?.id ? { id: String(market.id), name: market.name || row.Player || "", activity: 0, sampleRequired: true } : null;
+  return market?.id
+    ? { id: String(market.id), name: market.name || row.Player || "", activity: 0, sampleRequired: true }
+    : null;
 }
 
 function fantasyCalcTradeDatabaseReady() {
   return Boolean(
     fantasyCalcMarket?.ok &&
-      fantasyCalcMarket.playerCount &&
-      fantasyCalcTradeDatabase?.ok &&
-      fantasyCalcTradeDatabase.tradeCount &&
-      fantasyCalcTradeDatabase.mostTradedByKey?.size,
+    fantasyCalcMarket.playerCount &&
+    fantasyCalcTradeDatabase?.ok &&
+    fantasyCalcTradeDatabase.tradeCount &&
+    fantasyCalcTradeDatabase.mostTradedByKey?.size,
   );
 }
 
@@ -316,10 +328,20 @@ function udkAlignmentSignal(row) {
     return { label: "UDK agrees", detail, className: "good", score: 3.5 };
   }
   if (alignment === "UDK higher") {
-    return { label: "UDK higher", detail, className: "good", score: delta !== null ? clampNumber(Math.abs(delta) / 6, 1, 5) : 2 };
+    return {
+      label: "UDK higher",
+      detail,
+      className: "good",
+      score: delta !== null ? clampNumber(Math.abs(delta) / 6, 1, 5) : 2,
+    };
   }
   if (alignment === "FantasyIQ higher") {
-    return { label: "UDK lower", detail, className: "watch", score: delta !== null ? -clampNumber(delta / 8, 1, 4) : -1.5 };
+    return {
+      label: "UDK lower",
+      detail,
+      className: "watch",
+      score: delta !== null ? -clampNumber(delta / 8, 1, 4) : -1.5,
+    };
   }
   return { label: alignment, detail, className: "watch", score: 1 };
 }
@@ -470,22 +492,44 @@ function leagueHealthItems() {
       ? `${liveDraft.demoMode ? "Demo league" : "Public ESPN league"} synced ${formatSyncTime(liveDraft.syncedAt)}`
       : liveSyncInFlight
         ? "Connecting to the selected ESPN league now"
-      : appConfig.leagueId
-        ? "Waiting for first ESPN sync"
-        : requiresCustomerAccess()
-          ? "League setup is still needed"
-          : "Demo league will connect automatically";
-  const draftState = liveDraft?.inProgress ? "Draft live" : liveDraft?.drafted ? "Draft complete" : isPreDraftLeague() ? "Pre-draft ready" : liveDraft ? "Board loaded" : "Pending";
+        : appConfig.leagueId
+          ? "Waiting for first ESPN sync"
+          : requiresCustomerAccess()
+            ? "League setup is still needed"
+            : "Demo league will connect automatically";
+  const draftState = liveDraft?.inProgress
+    ? "Draft live"
+    : liveDraft?.drafted
+      ? "Draft complete"
+      : isPreDraftLeague()
+        ? "Pre-draft ready"
+        : liveDraft
+          ? "Board loaded"
+          : "Awaiting sync";
   return [
     {
       label: "Account",
       value: requiresCustomerAccess() ? (hasCustomerAccess() ? "Signed in" : "Sign in needed") : "Demo preview",
-      detail: requiresCustomerAccess() ? (hasCustomerAccess() ? "Dashboard access is active on this device." : "Unlock to save and read paid league profiles.") : "Public preview with sample data.",
+      detail: requiresCustomerAccess()
+        ? hasCustomerAccess()
+          ? "Dashboard access is active on this device."
+          : "Unlock to save and read paid league profiles."
+        : "Public preview with sample data.",
       state: requiresCustomerAccess() && !hasCustomerAccess() ? "warn" : "good",
     },
     {
       label: "ESPN Sync",
-      value: liveDraft?.staleError ? "Needs review" : liveDraft ? "Connected" : liveSyncInFlight ? "Syncing" : appConfig.leagueId ? "Pending" : requiresCustomerAccess() ? "Setup needed" : "Demo pending",
+      value: liveDraft?.staleError
+        ? "Needs review"
+        : liveDraft
+          ? "Connected"
+          : liveSyncInFlight
+            ? "Syncing"
+            : appConfig.leagueId
+              ? "Awaiting sync"
+              : requiresCustomerAccess()
+                ? "Setup needed"
+                : "Demo ready",
       detail: publicSyncDetail,
       state: liveDraft?.staleError ? "danger" : liveDraft ? "good" : "warn",
     },
@@ -555,7 +599,7 @@ function additionalLeaguePaymentUrl() {
 
 function leagueSlotText(count = configuredLeagueCount()) {
   const limit = includedLeagueLimit();
-  const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
+  const price = appConfig.additionalLeaguePriceLabel || "$5 / season";
   if (count < limit) return `${count}/${limit} included leagues`;
   if (count === limit) return `${limit}/${limit} included / + extra ${price}`;
   return `${count} leagues / extras ${price} each`;
@@ -608,27 +652,36 @@ function accountFreshnessDateValue(row) {
 
 function accountFreshnessCards(rows) {
   const grouped = new Map();
-  rows.filter((row) => row?.source).forEach((row) => {
-    const label = accountFreshnessLabel(row);
-    const existing = grouped.get(label);
-    if (!existing || accountFreshnessDateValue(row) > accountFreshnessDateValue(existing)) {
-      grouped.set(label, { ...row, is_stale: Boolean(row.is_stale || existing?.is_stale) });
-    } else if (existing && row.is_stale) {
-      existing.is_stale = true;
-    }
-  });
+  rows
+    .filter((row) => row?.source)
+    .forEach((row) => {
+      const label = accountFreshnessLabel(row);
+      const existing = grouped.get(label);
+      if (!existing || accountFreshnessDateValue(row) > accountFreshnessDateValue(existing)) {
+        grouped.set(label, { ...row, is_stale: Boolean(row.is_stale || existing?.is_stale) });
+      } else if (existing && row.is_stale) {
+        existing.is_stale = true;
+      }
+    });
   return Array.from(grouped.values())
     .sort((left, right) => accountFreshnessPriority(left) - accountFreshnessPriority(right))
     .slice(0, 4);
 }
 
+function skeletonCards(count = 3) {
+  return Array.from(
+    { length: count },
+    () => `<article class="pending skeleton-card" aria-hidden="true">
+      <span class="skeleton-line short"></span>
+      <strong class="skeleton-line"></strong>
+      <small class="skeleton-line long"></small>
+    </article>`,
+  ).join("");
+}
+
 function renderDataFreshnessPanel() {
   if (!dataFreshness) {
-    return `<section class="account-progress" aria-label="Data freshness">
-      <article class="pending"><span>Daily data</span><strong>Checking</strong></article>
-      <article class="pending"><span>Fantasy IQ Data</span><strong>Checking</strong></article>
-      <article class="pending"><span>Live board</span><strong>Checking</strong></article>
-    </section>`;
+    return `<section class="account-progress" aria-label="Data freshness" aria-busy="true">${skeletonCards(3)}</section>`;
   }
   const rows = Array.isArray(dataFreshness.freshness) ? dataFreshness.freshness : [];
   if (!dataFreshness.ok) {
@@ -639,21 +692,24 @@ function renderDataFreshnessPanel() {
   }
   const important = accountFreshnessCards(rows);
   const cards = important.length
-    ? important.map((row) => {
-      const stale = Boolean(row.is_stale);
-      return `<article class="${stale ? "pending" : "complete"}">
+    ? important
+        .map((row) => {
+          const stale = Boolean(row.is_stale);
+          return `<article class="${stale ? "pending" : "complete"}">
         <span>${htmlEscape(accountFreshnessLabel(row))}</span>
         <strong>${htmlEscape(stale ? "Needs retry" : accountFreshnessTime(row.last_success_at || row.last_attempt_at))}</strong>
         <small>${htmlEscape(accountFreshnessDetail(row))}</small>
       </article>`;
-    }).join("")
+        })
+        .join("")
     : `<article class="pending"><span>Daily data</span><strong>Ready after first cron</strong><small>${htmlEscape(dataFreshness.message || "Production cron will record status.")}</small></article>`;
   return `<section class="account-progress" aria-label="Data freshness">${cards}</section>`;
 }
 
 function leagueSetupUrl(league = null) {
   const setupUrl = new URL("../setup.html", window.location.href);
-  if (appConfig.loadoutKey && appConfig.loadoutKey !== "default") setupUrl.searchParams.set("customer", appConfig.loadoutKey);
+  if (appConfig.loadoutKey && appConfig.loadoutKey !== "default")
+    setupUrl.searchParams.set("customer", appConfig.loadoutKey);
   if (league?.key) setupUrl.searchParams.set("league", league.key);
   return `${setupUrl.pathname}${setupUrl.search}`;
 }
@@ -664,10 +720,11 @@ function renderAccountPanel() {
   const count = configuredLeagueCount(options);
   const limit = includedLeagueLimit();
   const active = activeLeagueOption();
-  const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
+  const price = appConfig.additionalLeaguePriceLabel || "$5 / season";
   const support = appConfig.supportEmail || "support@myfantasyiq.com";
 
-  if (accountDashboardName) accountDashboardName.textContent = appConfig.customerName || appConfig.loadoutKey || "MyFantasyIQ";
+  if (accountDashboardName)
+    accountDashboardName.textContent = appConfig.customerName || appConfig.loadoutKey || "MyFantasyIQ";
   if (accountDashboardStatus) accountDashboardStatus.textContent = accountStatusText();
   if (accountLeagueSlots) accountLeagueSlots.textContent = leagueSlotText(count);
   if (accountLeagueSlotDetail) {
@@ -683,25 +740,28 @@ function renderAccountPanel() {
     ? options
     : hasPrimaryLeagueProfile()
       ? [
-        {
-          key: appConfig.leagueKey || "current",
-          label: currentLeagueDisplayLabel(),
-          leagueName: appConfig.leagueName,
-          leagueId: appConfig.leagueId,
-          teamId: appConfig.customerTeamId,
-          teamName: appConfig.customerTeamName,
-          leagueSettings: appConfig.leagueSettings,
-        },
-      ]
+          {
+            key: appConfig.leagueKey || "current",
+            label: currentLeagueDisplayLabel(),
+            leagueName: appConfig.leagueName,
+            leagueId: appConfig.leagueId,
+            teamId: appConfig.customerTeamId,
+            teamName: appConfig.customerTeamName,
+            leagueSettings: appConfig.leagueSettings,
+          },
+        ]
       : [];
 
   const statusSteps = renderAccountProgress(count, limit);
   const leagueMarkup = leagues.length
     ? leagues
-      .map((league) => {
-        const settings = mergeLeagueSettings(appConfig.baseLeagueSettings || DEFAULT_LEAGUE_SETTINGS, league.leagueSettings || {});
-        const isActive = active?.key === league.key || (!active && league.key === appConfig.leagueKey);
-        return `<article class="${isActive ? "active" : ""}">
+        .map((league) => {
+          const settings = mergeLeagueSettings(
+            appConfig.baseLeagueSettings || DEFAULT_LEAGUE_SETTINGS,
+            league.leagueSettings || {},
+          );
+          const isActive = active?.key === league.key || (!active && league.key === appConfig.leagueKey);
+          return `<article class="${isActive ? "active" : ""}">
         <div>
           <span>${isActive ? "Active league" : "League profile"}</span>
           <strong>${htmlEscape(league.label || league.leagueName || league.key)}</strong>
@@ -712,10 +772,10 @@ function renderAccountPanel() {
           <a href="${htmlEscape(leagueSetupUrl(league))}">Revalidate</a>
         </div>
       </article>`;
-      })
-      .join("")
+        })
+        .join("")
     : requiresCustomerAccess()
-    ? `<article class="setup-needed">
+      ? `<article class="setup-needed">
         <div>
           <span>League setup</span>
           <strong>Connect your ESPN league</strong>
@@ -725,7 +785,7 @@ function renderAccountPanel() {
           <a href="${htmlEscape(leagueSetupUrl())}" data-open-setup>Open setup</a>
         </div>
       </article>`
-    : `<article>
+      : `<article>
         <div>
           <span>Preview mode</span>
           <strong>Demo League</strong>
@@ -763,7 +823,7 @@ function renderAccountProgress(count, limit) {
 
 function addLeagueActionTitle(count = configuredLeagueCount()) {
   const limit = includedLeagueLimit();
-  const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
+  const price = appConfig.additionalLeaguePriceLabel || "$5 / season";
   if (requiresCustomerAccess() && count <= 0) return "Finish league setup";
   return count < limit ? "Add included league" : `Add extra league (${price})`;
 }
@@ -820,12 +880,19 @@ function applyLeagueOption(option) {
   appConfig.leagueName = option.leagueName || option.label || appConfig.leagueName;
   appConfig.customerTeamId = String(option.customerTeamId || option.teamId || option.team_id || "");
   appConfig.customerTeamName = option.customerTeamName || option.teamName || option.team_name || "";
-  appConfig.leagueSettings = mergeLeagueSettings(appConfig.baseLeagueSettings || DEFAULT_LEAGUE_SETTINGS, option.leagueSettings || {});
+  appConfig.leagueSettings = mergeLeagueSettings(
+    appConfig.baseLeagueSettings || DEFAULT_LEAGUE_SETTINGS,
+    option.leagueSettings || {},
+  );
 }
 
 function inactiveSubscriptionStatus(customer = {}) {
-  const status = String(customer.status || "").trim().toLowerCase();
-  const subscriptionStatus = String(customer.subscriptionStatus || "").trim().toLowerCase();
+  const status = String(customer.status || "")
+    .trim()
+    .toLowerCase();
+  const subscriptionStatus = String(customer.subscriptionStatus || "")
+    .trim()
+    .toLowerCase();
   const blocked = new Set(["canceled", "cancelled", "expired", "suspended", "unpaid", "incomplete_expired"]);
   return blocked.has(status) || blocked.has(subscriptionStatus);
 }
@@ -860,8 +927,10 @@ function applyServerCustomerContext(customer = {}) {
   if (customer.customerTeamId) appConfig.customerTeamId = String(customer.customerTeamId);
   if (customer.customerTeamName) appConfig.customerTeamName = customer.customerTeamName;
   if (customer.includedLeagueLimit) appConfig.includedLeagueLimit = Number(customer.includedLeagueLimit);
-  if (customer.additionalLeagueCount !== undefined) appConfig.additionalLeagueCount = Number(customer.additionalLeagueCount || 0);
-  if (customer.leagueSettings) appConfig.leagueSettings = mergeLeagueSettings(appConfig.leagueSettings, customer.leagueSettings);
+  if (customer.additionalLeagueCount !== undefined)
+    appConfig.additionalLeagueCount = Number(customer.additionalLeagueCount || 0);
+  if (customer.leagueSettings)
+    appConfig.leagueSettings = mergeLeagueSettings(appConfig.leagueSettings, customer.leagueSettings);
   if (!serverLeagues.length && !customer.leagueId) {
     appConfig.leagueId = "";
     appConfig.leagueKey = "";
@@ -906,7 +975,10 @@ function renderLeagueSwitcher() {
   const active = activeLeagueOption();
   leagueSelect.hidden = false;
   leagueSelect.innerHTML = options
-    .map((league) => `<option value="${htmlEscape(league.key)}">${htmlEscape(league.label || league.leagueName || league.key)}</option>`)
+    .map(
+      (league) =>
+        `<option value="${htmlEscape(league.key)}">${htmlEscape(league.label || league.leagueName || league.key)}</option>`,
+    )
     .join("");
   if (active?.key) leagueSelect.value = active.key;
   if (leagueSwitcherLabel) leagueSwitcherLabel.textContent = currentLeagueDisplayLabel();
@@ -919,7 +991,13 @@ function setActiveLeague(leagueKey) {
   applyLeagueOption(next);
   localStorage.setItem(`fantasy-dashboard:${appConfig.loadoutKey || "default"}:last-league`, next.key);
   const params = new URLSearchParams(window.location.search);
-  if (appConfig.loadoutKey && appConfig.loadoutKey !== "default" && !params.get("customer") && !params.get("loadout") && !params.get("dashboard")) {
+  if (
+    appConfig.loadoutKey &&
+    appConfig.loadoutKey !== "default" &&
+    !params.get("customer") &&
+    !params.get("loadout") &&
+    !params.get("dashboard")
+  ) {
     params.set("customer", appConfig.loadoutKey);
   }
   params.set("league", next.key);
@@ -954,7 +1032,9 @@ async function removeActiveLeague() {
   const count = configuredLeagueCount();
   if (!active || count <= 1) return;
   const label = active.label || active.leagueName || active.key;
-  const confirmed = window.confirm(`Remove ${label} from this FantasyIQ account? This archives the league profile and switches you to another saved league.`);
+  const confirmed = window.confirm(
+    `Remove ${label} from this FantasyIQ account? This archives the league profile and switches you to another saved league.`,
+  );
   if (!confirmed) return;
   if (!hasCustomerAccess()) {
     showCustomerAccessGate("Sign in before removing a league profile.");
@@ -1024,7 +1104,7 @@ function openAddLeagueDialog() {
   const dialog = ensureAddLeagueDialog();
   const count = configuredLeagueCount();
   const limit = includedLeagueLimit();
-  const price = appConfig.additionalLeaguePriceLabel || "$5 / year";
+  const price = appConfig.additionalLeaguePriceLabel || "$5 / season";
   const includedRemaining = Math.max(0, limit - count);
   const needsPayment = count >= limit;
   const needsInitialSetup = requiresCustomerAccess() && count <= 0;
@@ -1033,13 +1113,18 @@ function openAddLeagueDialog() {
   const summary = dialog.querySelector("#add-league-summary");
   const primary = dialog.querySelector("#add-league-primary");
 
-  if (title) title.textContent = needsInitialSetup ? "Finish League Setup" : needsPayment ? "Add Extra League" : "Add Included League";
+  if (title)
+    title.textContent = needsInitialSetup
+      ? "Finish League Setup"
+      : needsPayment
+        ? "Add Extra League"
+        : "Add Included League";
   if (message) {
     message.textContent = needsInitialSetup
       ? "Your FantasyIQ account is active. Open setup once to save the ESPN league ID and team ID to this dashboard."
       : needsPayment
-      ? `Your Season Pass includes ${limit} leagues. Extra league profiles are ${price} each and can be added after checkout.`
-      : `You have ${includedRemaining} included league ${includedRemaining === 1 ? "slot" : "slots"} left in your Season Pass. Open the setup validator to confirm the public ESPN league ID and team ID.`;
+        ? `Your Season Pass includes ${limit} leagues. Extra league profiles are ${price} each and can be added after checkout.`
+        : `You have ${includedRemaining} included league ${includedRemaining === 1 ? "slot" : "slots"} left in your Season Pass. Open the setup validator to confirm the public ESPN league ID and team ID.`;
   }
   if (summary) {
     summary.innerHTML = `
@@ -1159,7 +1244,8 @@ function liveDraftedKeys() {
 }
 
 function manualDraftStorageKey() {
-  const segment = normalizeDashboardSlug(appConfig.leagueKey || "") || numericText(appConfig.leagueId || "") || "default";
+  const segment =
+    normalizeDashboardSlug(appConfig.leagueKey || "") || numericText(appConfig.leagueId || "") || "default";
   return loadoutStorageKey(`manual-draft-overrides:${segment}`);
 }
 
@@ -1210,7 +1296,10 @@ function applyManualDraftOverrides(data = liveDraft) {
   manualDraftOverrides
     .filter((override) => override?.player && !serverKeys.has(normalizePlayerName(override.player)))
     .forEach((override) => {
-      const alreadyApplied = picks.some((pick) => pick?.status === "drafted" && normalizePlayerName(pick.player) === normalizePlayerName(override.player));
+      const alreadyApplied = picks.some(
+        (pick) =>
+          pick?.status === "drafted" && normalizePlayerName(pick.player) === normalizePlayerName(override.player),
+      );
       if (alreadyApplied) return;
       const matchingPick = picks.find(
         (pick) => Number(pick.overall || 0) === Number(override.overall || 0) && pick.status !== "drafted",
@@ -1289,7 +1378,8 @@ function importDraftedPlayersFromText() {
     return;
   }
   if (!boardData) {
-    if (liveStatus) liveStatus.innerHTML = "<strong>Player board is still loading.</strong> Try again in a few seconds.";
+    if (liveStatus)
+      liveStatus.innerHTML = "<strong>Player board is still loading.</strong> Try again in a few seconds.";
     return;
   }
   const normalizedText = normalizePlayerName(raw);
@@ -1315,7 +1405,8 @@ function importDraftedPlayersFromText() {
 function clearManualDraftOverrides() {
   manualDraftOverrides = [];
   saveManualDraftOverrides();
-  if (liveStatus) liveStatus.innerHTML = "<strong>Manual draft tracker cleared.</strong> Pulling a fresh ESPN sync now.";
+  if (liveStatus)
+    liveStatus.innerHTML = "<strong>Manual draft tracker cleared.</strong> Pulling a fresh ESPN sync now.";
   loadLiveDraft(true);
 }
 
@@ -1361,9 +1452,11 @@ function boardAdpValue(row) {
 }
 
 function boardAdpCompare(a, b) {
-  return boardAdpValue(a) - boardAdpValue(b) ||
+  return (
+    boardAdpValue(a) - boardAdpValue(b) ||
     Number(a?.Rank || 9999) - Number(b?.Rank || 9999) ||
-    String(a?.Player || "").localeCompare(String(b?.Player || ""));
+    String(a?.Player || "").localeCompare(String(b?.Player || ""))
+  );
 }
 
 function simplifiedPositionTier(pos, posRank) {
@@ -1432,7 +1525,11 @@ function precisionTierMaps() {
   const overall = assignPrecisionTiers(rows, "overall");
   const positions = {};
   ["QB", "RB", "WR", "TE", "DST", "K"].forEach((pos) => {
-    positions[pos] = assignPrecisionTiers(rows.filter((row) => row.Pos === pos), "position", pos);
+    positions[pos] = assignPrecisionTiers(
+      rows.filter((row) => row.Pos === pos),
+      "position",
+      pos,
+    );
   });
   precisionTierCacheKey = cacheKey;
   precisionTierCache = { overall, positions };
@@ -1470,19 +1567,23 @@ function fallbackSleeperRows() {
       const sleeperActivity = Number(row["Sleeper Add Count"] || 0) + Number(row["Sleeper Drop Count"] || 0);
       const sleeperNet = Number(row["Sleeper Net Adds"] || 0);
       const trendScore = Number(row["External Trend Score"] || 0);
-      return row.Pos !== "K" && row.Pos !== "DST" && (
-        row.Category === "Sleeper" ||
-        (value >= 52 && rank > 55) ||
-        (rank > 45 && sleeperActivity > 0 && sleeperNet >= 0) ||
-        (rank > 80 && trendScore >= 4)
+      return (
+        row.Pos !== "K" &&
+        row.Pos !== "DST" &&
+        (row.Category === "Sleeper" ||
+          (value >= 52 && rank > 55) ||
+          (rank > 45 && sleeperActivity > 0 && sleeperNet >= 0) ||
+          (rank > 80 && trendScore >= 4))
       );
     })
     .sort((a, b) => {
       const categoryDelta = (a.Category === "Sleeper" ? 0 : 1) - (b.Category === "Sleeper" ? 0 : 1);
       if (categoryDelta) return categoryDelta;
-      return Number(b["External Trend Score"] || 0) - Number(a["External Trend Score"] || 0) ||
+      return (
+        Number(b["External Trend Score"] || 0) - Number(a["External Trend Score"] || 0) ||
         leagueValueScore(b) - leagueValueScore(a) ||
-        Number(a.Rank || 999) - Number(b.Rank || 999);
+        Number(a.Rank || 999) - Number(b.Rank || 999)
+      );
     })
     .slice(0, 45);
 }
@@ -1506,10 +1607,14 @@ function dashboardUrlWithHash(hash = "") {
 function dashboardHomeUrl() {
   const currentParams = new URLSearchParams(window.location.search);
   const params = new URLSearchParams();
-  const customerSlug = appConfig.loadoutKey && appConfig.loadoutKey !== "default"
-    ? appConfig.loadoutKey
-    : normalizeDashboardSlug(currentParams.get("customer") || currentParams.get("loadout") || currentParams.get("dashboard") || "");
-  const leagueSlug = appConfig.leagueKey || normalizeDashboardSlug(currentParams.get("league") || currentParams.get("leagueKey") || "");
+  const customerSlug =
+    appConfig.loadoutKey && appConfig.loadoutKey !== "default"
+      ? appConfig.loadoutKey
+      : normalizeDashboardSlug(
+          currentParams.get("customer") || currentParams.get("loadout") || currentParams.get("dashboard") || "",
+        );
+  const leagueSlug =
+    appConfig.leagueKey || normalizeDashboardSlug(currentParams.get("league") || currentParams.get("leagueKey") || "");
   if (customerSlug) {
     params.set("customer", customerSlug);
   }
@@ -1554,18 +1659,21 @@ function ensureCustomerUrlContext() {
     params.set("league", appConfig.leagueKey);
     changed = true;
   }
-  if (changed) history.replaceState(null, "", `${window.location.pathname}?${params.toString()}${window.location.hash}`);
+  if (changed)
+    history.replaceState(null, "", `${window.location.pathname}?${params.toString()}${window.location.hash}`);
   updateBrandHomeLink();
 }
 
 function scrollDashboardTop(behavior = "auto") {
+  const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+  const requestedBehavior = reducedMotion ? "auto" : behavior;
   const snapTop = () => {
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   };
-  if (behavior === "smooth") {
-    window.scrollTo({ top: 0, left: 0, behavior });
+  if (requestedBehavior === "smooth") {
+    window.scrollTo({ top: 0, left: 0, behavior: requestedBehavior });
   } else {
     snapTop();
   }
@@ -1691,7 +1799,9 @@ function lastYearValue(row) {
 }
 
 function compactText(value, limit = 170) {
-  const text = String(value || "").replace(/\s+/g, " ").trim();
+  const text = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
   if (text.length <= limit) return text;
   return `${text.slice(0, limit - 1).replace(/\s+\S*$/, "")}.`;
 }
@@ -1709,10 +1819,12 @@ function actionPlainText(row) {
   const action = String(row?.Action || row?.["Draft Action"] || "").trim();
   const lower = action.toLowerCase();
   if (!action) return "Use him as a tiebreaker against players in the same tier.";
-  if (lower.includes("anchor")) return "Draft him at this tier if the position fits your build. Do not reach far above the tier.";
+  if (lower.includes("anchor"))
+    return "Draft him at this tier if the position fits your build. Do not reach far above the tier.";
   if (lower.includes("discount")) return "Only draft him if he falls below the usual price.";
   if (lower.includes("wait")) return "Wait for the room to discount him before clicking.";
-  if (lower.includes("golden-zone")) return "He has upside, but make sure your roster already has enough safe starters.";
+  if (lower.includes("golden-zone"))
+    return "He has upside, but make sure your roster already has enough safe starters.";
   if (lower.includes("under-adp")) return "Target him when he is cheaper than the room expects.";
   if (lower.includes("value")) return "Treat him as a value target, not a must-pick.";
   if (lower.includes("upside")) return "Draft for upside after your core starters are protected.";
@@ -1763,7 +1875,9 @@ function playerSynopsisHtml(row, compact = false) {
 function fantasyIqReadHtml(row, decision = null) {
   const parts = playerSynopsisParts(row);
   const verdict = decision?.label ? `${decision.label}: ${decision.reason}` : parts.move;
-  const fit = row ? `${row.Pos} in ${row["Pos Tier"] || row.Category || "current tier"} with league value ${valueDisplay(row)}.` : "No player fit available yet.";
+  const fit = row
+    ? `${row.Pos} in ${row["Pos Tier"] || row.Category || "current tier"} with league value ${valueDisplay(row)}.`
+    : "No player fit available yet.";
   return `<div class="player-read-copy">
     <p><strong>Move:</strong> ${htmlEscape(verdict)}</p>
     <p><strong>Fit:</strong> ${htmlEscape(fit)}</p>
@@ -1825,7 +1939,8 @@ function marketSignal(row) {
     };
   }
   if (adpValue >= 74) return { label: "Positive value", detail: `ADP value score ${adpValue}/100.`, className: "good" };
-  if (adpValue <= 48) return { label: "Needs discount", detail: `ADP value score ${adpValue}/100.`, className: "danger" };
+  if (adpValue <= 48)
+    return { label: "Needs discount", detail: `ADP value score ${adpValue}/100.`, className: "danger" };
   return { label: "Neutral market", detail: `ADP value score ${adpValue || "TBD"}.`, className: "watch" };
 }
 
@@ -1848,9 +1963,23 @@ function riskSignal(row) {
   const risk = Number(row.Risk || 0);
   const floor = Number(row.Floor || 0);
   const upside = Number(row.Upside || row.Ceiling || 0);
-  if (risk >= 7) return { label: `High risk ${risk}/10`, detail: `Upside ${upside || "TBD"} but fragile profile.`, className: "danger" };
-  if (risk >= 5) return { label: `Volatile ${risk}/10`, detail: `Pair with stable picks. Floor ${floor || "TBD"}.`, className: "watch" };
-  return { label: `Stable ${risk || "low"}/10`, detail: `Floor ${floor || "TBD"} / upside ${upside || "TBD"}.`, className: "good" };
+  if (risk >= 7)
+    return {
+      label: `High risk ${risk}/10`,
+      detail: `Upside ${upside || "TBD"} but fragile profile.`,
+      className: "danger",
+    };
+  if (risk >= 5)
+    return {
+      label: `Volatile ${risk}/10`,
+      detail: `Pair with stable picks. Floor ${floor || "TBD"}.`,
+      className: "watch",
+    };
+  return {
+    label: `Stable ${risk || "low"}/10`,
+    detail: `Floor ${floor || "TBD"} / upside ${upside || "TBD"}.`,
+    className: "good",
+  };
 }
 
 function commandReason(row, decision, counts) {
@@ -1868,7 +1997,8 @@ function filteredRows() {
   const board = activeBoardPayload();
   const rows = (board.rows || []).filter((row) => {
     const matchesPosition = !pos || (pos === "FLEX" ? ["RB", "WR", "TE"].includes(row.Pos) : row.Pos === pos);
-    const searchable = `${row.Player} ${row.Pos} ${row.Team} ${row.Category} ${row.Tier} ${row["Pos Tier"]} ${row.Action} ${row.Analysis} ${row["Projection Edge"]} ${row["Daily Synopsis"]} ${row["Player Outlook"]} ${row["Risk Notes"]} ${row.Trend} ${row["Source Signal"]} ${row["External Signal"]} ${row.Catalyst} ${row["Why Rising/Falling"]} ${row["Draft Action"]} ${row["UDK Alignment"]} ${row["UDK Signal"]} ${row["UDK Tier"]}`.toLowerCase();
+    const searchable =
+      `${row.Player} ${row.Pos} ${row.Team} ${row.Category} ${row.Tier} ${row["Pos Tier"]} ${row.Action} ${row.Analysis} ${row["Projection Edge"]} ${row["Daily Synopsis"]} ${row["Player Outlook"]} ${row["Risk Notes"]} ${row.Trend} ${row["Source Signal"]} ${row["External Signal"]} ${row.Catalyst} ${row["Why Rising/Falling"]} ${row["Draft Action"]} ${row["UDK Alignment"]} ${row["UDK Signal"]} ${row["UDK Tier"]}`.toLowerCase();
     const matchesDraftStatus = !hideDraftedEnabled() || !drafted.has(normalizePlayerName(row.Player));
     return matchesPosition && matchesDraftStatus && (!query || searchable.includes(query));
   });
@@ -1921,16 +2051,19 @@ function renderBoard() {
   tbody.innerHTML = rows
     .map((row, index) => {
       const currentTier = showTierDividers ? tierLabel(row, activePosition) : "";
-      const divider = showTierDividers && currentTier !== previousTier
-        ? `<tr class="board-tier-divider-row"><td colspan="${columns.length}">${renderTierDivider(currentTier, boardTierCounts[currentTier])}</td></tr>`
-        : "";
+      const divider =
+        showTierDividers && currentTier !== previousTier
+          ? `<tr class="board-tier-divider-row"><td colspan="${columns.length}">${renderTierDivider(currentTier, boardTierCounts[currentTier])}</td></tr>`
+          : "";
       if (currentTier) previousTier = currentTier;
-      const color = boardData.positionColors[row.Pos] || "FFFFFF";
+      const color = /^[0-9a-f]{3,6}$/i.test(String(boardData.positionColors[row.Pos] || ""))
+        ? boardData.positionColors[row.Pos]
+        : "6ee3a3";
       const tierClass = positionFilter?.value ? `tier-${row["Tier Sort"] || 99}` : "";
       const draftedClass = isDrafted(row) ? "drafted-row" : "";
       const selectedClass = selectedBoardPlayerKey === normalizePlayerName(row.Player) ? "selected-row" : "";
       const draftedBadge = draftedClass ? `<span class="drafted-badge">Drafted</span>` : "";
-      return `${divider}<tr class="${tierClass} ${draftedClass} ${selectedClass}" style="background:#${color}" data-index="${index}">
+      return `${divider}<tr class="${tierClass} ${draftedClass} ${selectedClass}" style="--board-position-color:#${color}" data-pos="${htmlEscape(row.Pos || "")}" data-index="${index}">
         ${columns
           .map((column) => {
             if (column === "Player") {
@@ -1945,7 +2078,7 @@ function renderBoard() {
             if (column === "Last Year PPR") {
               return `<td class="number">${lastYearValue(row)}</td>`;
             }
-            const numberClass = typeof row[column] === "number" ? " class=\"number\"" : "";
+            const numberClass = typeof row[column] === "number" ? ' class="number"' : "";
             return `<td${numberClass}>${cellValue(row, column)}</td>`;
           })
           .join("")}
@@ -2421,7 +2554,10 @@ function gradePick(round, pick, row) {
 }
 
 function parseLines(text) {
-  return text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 function tradeSideValue(text) {

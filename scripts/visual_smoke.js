@@ -21,7 +21,10 @@ function urlFor(route) {
 }
 
 function cleanName(value) {
-  return value.replace(/[^a-z0-9-]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
+  return value
+    .replace(/[^a-z0-9-]+/gi, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
 }
 
 async function ensureDir() {
@@ -89,14 +92,18 @@ async function checkPublicPages(browser, viewport) {
     await expectBodyText(page, item.text, `${viewport.name} ${item.name}`);
     if (item.name === "success") {
       const href = await page.locator("#success-dashboard-link").getAttribute("href");
-      if (!href || !href.includes("login=1")) {
-        throw new Error(`${viewport.name} success customer login link must preserve login=1, found ${href || "missing"}`);
+      if (!href || !href.startsWith("/FantasyIQ/") || !href.includes("login=1")) {
+        throw new Error(
+          `${viewport.name} success customer login link must target /FantasyIQ/ and preserve login=1, found ${href || "missing"}`,
+        );
       }
     }
     if (item.name === "setup") {
       const href = await page.locator("#setup-open-dashboard-link").getAttribute("href");
-      if (!href || !href.includes("login=1")) {
-        throw new Error(`${viewport.name} setup dashboard link must preserve login=1, found ${href || "missing"}`);
+      if (!href || !href.startsWith("/FantasyIQ/") || !href.includes("login=1")) {
+        throw new Error(
+          `${viewport.name} setup dashboard link must target /FantasyIQ/ and preserve login=1, found ${href || "missing"}`,
+        );
       }
     }
     const file = await screenshot(page, `${viewport.name}-${item.name}`);
@@ -113,7 +120,7 @@ async function checkLoginRoute(browser, viewport) {
   await waitForQuietPage(page);
   const gate = page.locator("#customer-access-gate");
   if ((await gate.count()) === 0) {
-    response = await page.goto(urlFor("/?login=1"), { waitUntil: "domcontentloaded", timeout: 45000 });
+    response = await page.goto(urlFor("/FantasyIQ/?login=1"), { waitUntil: "domcontentloaded", timeout: 45000 });
     await waitForQuietPage(page);
   }
   await gate.waitFor({ state: "visible", timeout: 15000 });
@@ -254,7 +261,11 @@ async function main() {
 
   await fs.writeFile(
     path.join(OUTPUT_DIR, "summary.json"),
-    JSON.stringify({ baseUrl: BASE_URL, viewports: VIEWPORTS, results, responseIssues, consoleIssues, pageErrors }, null, 2),
+    JSON.stringify(
+      { baseUrl: BASE_URL, viewports: VIEWPORTS, results, responseIssues, consoleIssues, pageErrors },
+      null,
+      2,
+    ),
   );
   console.log(`PASS visual smoke complete: ${results.length} checks, screenshots in ${OUTPUT_DIR}`);
 }

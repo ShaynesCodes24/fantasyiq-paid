@@ -41,12 +41,30 @@ function scheduleNextLiveSync() {
   liveTimer = window.setTimeout(() => loadLiveDraft(), liveSyncIntervalMs());
 }
 
+function setLiveSyncPhase(phase = "idle") {
+  const livePanel = document.querySelector("#live");
+  const commandPanel = document.querySelector("#command");
+  const busy = !["idle", "error"].includes(phase);
+  if (livePanel) {
+    livePanel.dataset.syncPhase = phase;
+    livePanel.setAttribute("aria-busy", busy ? "true" : "false");
+  }
+  if (commandPanel) {
+    commandPanel.dataset.syncPhase = phase;
+    commandPanel.setAttribute("aria-busy", busy ? "true" : "false");
+  }
+  if (manualSync) manualSync.disabled = busy;
+  if (liveSyncStatus && phase === "fetching") liveSyncStatus.textContent = "Syncing ESPN";
+  if (liveSyncStatus && phase === "rendering") liveSyncStatus.textContent = "Building IQ brief";
+}
+
 function loadLiveDraft(force = false) {
   if (!ensureCustomerAccess()) return Promise.resolve();
   if (liveSyncInFlight) {
     return Promise.resolve();
   }
   liveSyncInFlight = true;
+  setLiveSyncPhase("fetching");
   if (force) stopLiveSyncTimer();
   return fetch(apiUrl("/api/live-draft", { force: force ? 1 : "" }), { cache: "no-store", headers: apiHeaders() })
     .then((response) => jsonOrAccessError(response, `HTTP ${response.status}`))
@@ -63,14 +81,17 @@ function loadLiveDraft(force = false) {
       liveSyncFailureCount = 0;
       const nextSignature = liveDraftRenderSignature(liveDraft);
       const unchanged = !force && lastLiveDraftRenderSignature && nextSignature === lastLiveDraftRenderSignature;
+      setLiveSyncPhase("rendering");
       renderLiveDraft({ full: !unchanged });
     })
     .catch((error) => {
       liveSyncFailureCount += 1;
+      setLiveSyncPhase("error");
       liveServerHelp(error.message);
     })
     .finally(() => {
       liveSyncInFlight = false;
+      setLiveSyncPhase("idle");
       scheduleNextLiveSync();
     });
 }
@@ -191,7 +212,12 @@ function applyBoardPayload(data) {
 function fantasyCalcMarketRequestUrl() {
   const settings = activeLeagueSettings();
   const slots = settings.lineupSlots || {};
-  const ppr = settings.scoringType === "standard" ? 0 : settings.scoringType === "half-ppr" ? 0.5 : Number(settings.receptionPoints ?? 1);
+  const ppr =
+    settings.scoringType === "standard"
+      ? 0
+      : settings.scoringType === "half-ppr"
+        ? 0.5
+        : Number(settings.receptionPoints ?? 1);
   return apiUrl("/api/fantasycalc-market", {
     v: Date.now(),
     isDynasty: settings.leagueType === "dynasty" || settings.isDynasty ? "true" : "false",
@@ -204,7 +230,12 @@ function fantasyCalcMarketRequestUrl() {
 function fantasyCalcTradeDatabaseRequestUrl() {
   const settings = activeLeagueSettings();
   const slots = settings.lineupSlots || {};
-  const ppr = settings.scoringType === "standard" ? 0 : settings.scoringType === "half-ppr" ? 0.5 : Number(settings.receptionPoints ?? 1);
+  const ppr =
+    settings.scoringType === "standard"
+      ? 0
+      : settings.scoringType === "half-ppr"
+        ? 0.5
+        : Number(settings.receptionPoints ?? 1);
   return apiUrl("/api/fantasycalc-trades", {
     v: Date.now(),
     isDynasty: settings.leagueType === "dynasty" || settings.isDynasty ? "true" : "false",
@@ -271,7 +302,12 @@ function loadFantasyCalcTradeDatabase() {
       loadIntelligence(false);
     })
     .catch((error) => {
-      fantasyCalcTradeDatabase = { ok: false, mostTradedById: new Map(), mostTradedByKey: new Map(), error: error.message };
+      fantasyCalcTradeDatabase = {
+        ok: false,
+        mostTradedById: new Map(),
+        mostTradedByKey: new Map(),
+        error: error.message,
+      };
       fantasyCalcTradeDatabaseKey = "";
       console.warn("FantasyCalc trade database unavailable; Trade IQ package ideas are disabled.", error);
       renderRosterEngines();
@@ -313,20 +349,20 @@ function loadFullBoardInBackground() {
   fullBoardLoadStarted = true;
   scheduleIdleTask(() => {
     fetch(liveBoardRequestUrl(), { cache: "no-store", headers: apiHeaders() })
-    .then((response) => {
-      if (!response.ok) throw new Error(`Full board returned HTTP ${response.status}`);
-      return response.json();
-    })
-    .then((data) => {
-      if (combinedBoardCount(data) <= combinedBoardCount()) return;
-      applyBoardPayload(data);
-      if (boardStatus) {
-        boardStatus.textContent = `Full board loaded: ${combinedBoardCount(data)} players with live league scoring.`;
-      }
-    })
-    .catch((error) => {
-      console.warn("Full board background load failed.", error);
-    });
+      .then((response) => {
+        if (!response.ok) throw new Error(`Full board returned HTTP ${response.status}`);
+        return response.json();
+      })
+      .then((data) => {
+        if (combinedBoardCount(data) <= combinedBoardCount()) return;
+        applyBoardPayload(data);
+        if (boardStatus) {
+          boardStatus.textContent = `Full board loaded: ${combinedBoardCount(data)} players with live league scoring.`;
+        }
+      })
+      .catch((error) => {
+        console.warn("Full board background load failed.", error);
+      });
   }, 2400);
 }
 
@@ -443,7 +479,8 @@ sosTableHead?.addEventListener("click", (event) => {
   const descendingDefault = ["tough", "easy"].includes(key);
   sosSort = {
     key,
-    direction: sosSort.key === key ? (sosSort.direction === "asc" ? "desc" : "asc") : (descendingDefault ? "desc" : "asc"),
+    direction:
+      sosSort.key === key ? (sosSort.direction === "asc" ? "desc" : "asc") : descendingDefault ? "desc" : "asc",
   };
   renderSosHeatMap();
 });
@@ -569,7 +606,8 @@ liveSyncToggle?.addEventListener("change", () => {
     startLiveSync();
   } else {
     stopLiveSyncTimer();
-    if (liveStatus) liveStatus.innerHTML = "<strong>Auto sync paused.</strong> Use Sync Now for a one-time ESPN refresh.";
+    if (liveStatus)
+      liveStatus.innerHTML = "<strong>Auto sync paused.</strong> Use Sync Now for a one-time ESPN refresh.";
   }
 });
 

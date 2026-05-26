@@ -51,7 +51,7 @@ def return_url() -> str:
     configured = env("FANTASYIQ_STRIPE_PORTAL_RETURN_URL")
     if configured:
         return configured
-    return f"{env('FANTASYIQ_SITE_URL', 'https://myfantasyiq.com').rstrip('/')}?login=1"
+    return f"{env('FANTASYIQ_SITE_URL', 'https://myfantasyiq.com').rstrip('/')}/FantasyIQ/?login=1"
 
 
 def stripe_secret_key() -> str:

@@ -1,0 +1,53 @@
+{
+  "cSpell.words": [
+    "FantasyIQ",
+    "fantasycalc",
+    "myfantasyiq",
+    "Postgres",
+    "predeploy",
+    "roster",
+    "rosters",
+    "superflex",
+    "Vercel",
+    "waiver",
+    "waivers"
+  ],
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.fixAll.stylelint": "explicit"
+  },
+  "editor.defaultFormatter": "prettier.prettier-vscode",
+  "editor.formatOnSave": true,
+  "eslint.useFlatConfig": true,
+  "eslint.validate": ["javascript", "typescript"],
+  "eslint.workingDirectories": [{ "mode": "auto" }],
+  "files.eol": "\n",
+  "files.exclude": {
+    "**/__pycache__": true,
+    ".venv": true,
+    "dist": true,
+    "dist-ts": true,
+    "node_modules": true
+  },
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "nanoBanana.defaultAspectRatio": "21:9",
+  "nanoBanana.defaultStyle": "product-showcase",
+  "nanoBanana.displayLanguage": "en",
+  "nanoBanana.imageOutputFormat": "png",
+  "nanoBanana.imageSize": "2K",
+  "nanoBanana.modelId": "gemini-3-pro-image-preview",
+  "nanoBanana.outputDirectory": "C:\\Users\\shayn\\Pay to Play Fantasy IQ\\public\\assets\\generated",
+  "playwright.reuseBrowser": true,
+  "prettier.requireConfig": true,
+  "search.exclude": {
+    ".vercel": true,
+    ".venv": true,
+    "artifacts": true,
+    "dist": true,
+    "dist-ts": true,
+    "node_modules": true
+  },
+  "stylelint.validate": ["css"],
+  "typescript.tsdk": "node_modules/typescript/lib"
+}

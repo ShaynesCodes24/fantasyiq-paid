@@ -18,7 +18,7 @@ def site_url() -> str:
 
 
 def dashboard_url(customer_slug: str = "", league_key: str = "") -> str:
-    url = f"{site_url()}/"
+    url = f"{site_url()}/FantasyIQ/"
     params = {}
     if customer_slug:
         params["customer"] = customer_slug

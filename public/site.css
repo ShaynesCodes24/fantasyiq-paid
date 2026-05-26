@@ -499,6 +499,121 @@ footer {
   line-height: 1.45;
 }
 
+.setup-season-pass {
+  display: grid;
+  gap: 16px;
+  border: 1px solid rgba(231, 185, 90, 0.34);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(231, 185, 90, 0.13), rgba(255, 248, 232, 0.045)),
+    rgba(0, 17, 15, 0.82);
+  padding: 20px;
+  box-shadow: var(--soft-shadow);
+}
+
+.setup-pass-copy h2 {
+  margin: 0 0 8px;
+  color: var(--cream);
+  font-size: clamp(26px, 3.4vw, 40px);
+  line-height: 1.04;
+}
+
+.setup-pass-copy p {
+  margin-bottom: 0;
+  color: rgba(249, 240, 220, 0.82);
+  font-weight: 750;
+}
+
+.setup-pass-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.setup-pass-metrics div,
+.setup-price-calculator {
+  min-width: 0;
+  border: 1px solid rgba(255, 232, 163, 0.18);
+  border-radius: 8px;
+  background: rgba(0, 17, 15, 0.48);
+  padding: 13px 14px;
+}
+
+.setup-pass-metrics dt,
+.setup-price-calculator span {
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.setup-pass-metrics dd {
+  margin: 6px 0 0;
+  color: var(--cream);
+  font-size: 18px;
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+.setup-price-calculator {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.35fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.setup-price-calculator strong,
+.setup-price-calculator output {
+  display: block;
+  color: var(--cream);
+  font-size: 24px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.setup-price-calculator p {
+  margin: 0;
+  color: var(--cream);
+  font-weight: 900;
+}
+
+.setup-price-calculator small {
+  display: block;
+  margin-top: 5px;
+  color: rgba(249, 240, 220, 0.7);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.calculator-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.calculator-controls button {
+  display: inline-grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgba(255, 232, 163, 0.42);
+  border-radius: 8px;
+  background: rgba(255, 248, 232, 0.07);
+  color: var(--cream);
+  font-size: 20px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.calculator-controls button:hover {
+  border-color: rgba(255, 232, 163, 0.7);
+  background: rgba(255, 248, 232, 0.12);
+}
+
+.setup-pass-actions {
+  margin-top: 0;
+}
+
 .setup-password-card,
 .setup-league-card {
   margin-top: 14px;
@@ -1310,7 +1425,9 @@ footer a {
   .setup-steps,
   .setup-account-grid,
   .setup-basic-grid,
-  .precheck-grid {
+  .precheck-grid,
+  .setup-pass-metrics,
+  .setup-price-calculator {
     grid-template-columns: 1fr;
   }
 }
@@ -2224,4 +2341,44 @@ footer {
   .hero-logo {
     width: min(218px, 66vw);
   }
+}
+
+/* Contrast hardening pass: keep public pages dark, legible, and less glare-prone. */
+.success-hero {
+  background:
+    linear-gradient(90deg, rgba(0, 17, 15, 0.995), rgba(0, 17, 15, 0.94)),
+    url("./fantasyiq_product_preview.png") center / cover no-repeat;
+  box-shadow: 0 28px 90px rgba(0, 8, 7, 0.42);
+}
+
+.success-hero p {
+  color: rgba(255, 248, 232, 0.96);
+}
+
+.setup-mode-note {
+  border-color: rgba(255, 232, 163, 0.28);
+  background:
+    linear-gradient(145deg, rgba(231, 185, 90, 0.12), rgba(255, 248, 232, 0.035)),
+    rgba(0, 17, 15, 0.78);
+  color: var(--cream);
+}
+
+.feedback-page .survey-email input,
+.feedback-page .survey-textarea textarea {
+  border-color: rgba(231, 185, 90, 0.36);
+  background: rgba(0, 17, 15, 0.82);
+  color: var(--cream);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 232, 0.08);
+}
+
+.feedback-page .survey-email input::placeholder,
+.feedback-page .survey-textarea textarea::placeholder {
+  color: rgba(249, 240, 220, 0.52);
+}
+
+.primary,
+.primary.dark,
+.login-link {
+  background: linear-gradient(135deg, #f0cb72, #d49b3f 52%, #8f611f 100%);
+  color: #120c06 !important;
 }

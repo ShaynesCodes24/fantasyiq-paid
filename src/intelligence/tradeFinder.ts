@@ -325,7 +325,7 @@ function userBundles(
   return bundles.sort((a, b) => bundleFitScore(b, opponentProfile, context) - bundleFitScore(a, opponentProfile, context));
 }
 
-function bundleFitScore(bundle: TradeSignalPlayer[], opponentProfile: TeamProfile, context: ResolvedTradeContext): number {
+function bundleFitScore(bundle: TradeSignalPlayer[], opponentProfile: TeamProfile, _context: ResolvedTradeContext): number {
   return bundle.reduce((sum, player) => sum + needAtPosition(player.position, opponentProfile) * 18 + baseProjection(player) * 0.2, 0) - (bundle.length - 1) * 2;
 }
 

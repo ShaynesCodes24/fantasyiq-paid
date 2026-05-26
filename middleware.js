@@ -18,6 +18,20 @@ function canonicalRedirect(request, url) {
   return Response.redirect(url, 308);
 }
 
+function dashboardRootRedirect(url) {
+  if (url.pathname !== "/") return null;
+  const dashboardQuery =
+    url.searchParams.has("login") ||
+    url.searchParams.has("customer") ||
+    url.searchParams.has("dashboard") ||
+    url.searchParams.has("loadout") ||
+    url.searchParams.get("auth") === "login";
+  if (!dashboardQuery) return null;
+
+  url.pathname = "/FantasyIQ/";
+  return Response.redirect(url, 302);
+}
+
 function adminGateMaxAge() {
   const raw = Number.parseInt(process.env.FANTASYIQ_ADMIN_GATE_MAX_AGE_SECONDS || "", 10);
   if (!Number.isFinite(raw)) return DEFAULT_MAX_AGE_SECONDS;
@@ -79,6 +93,8 @@ export default async function middleware(request) {
   const url = new URL(request.url);
   const redirect = canonicalRedirect(request, url);
   if (redirect) return redirect;
+  const dashboardRedirect = dashboardRootRedirect(url);
+  if (dashboardRedirect) return dashboardRedirect;
 
   if (url.pathname !== "/admin.html" && url.pathname !== "/api/admin-customers") return;
 

@@ -6,6 +6,7 @@ node_modules/
 dist/
 artifacts/
 test-results/
+playwright-report/
 private/
 .env
 .env.local

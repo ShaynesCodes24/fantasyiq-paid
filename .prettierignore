@@ -1,0 +1,16 @@
+node_modules
+dist
+dist-ts
+artifacts
+.vercel
+.venv
+**/__pycache__
+*.bak
+*.log
+.env*
+package-lock.json
+uv.lock
+data/**
+FantasyIQ/data/**
+public/data/**
+public/FantasyIQ/data/**

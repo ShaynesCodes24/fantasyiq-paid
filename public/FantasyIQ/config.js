@@ -9,24 +9,23 @@ window.FANTASY_IQ_CONFIG = {
   logoUrl: "./assets/myfantasyiq-wordmark.svg?v=20260522-wordmark-safe-1",
   logoAlt: "MyFantasyIQ league logo",
   draftCardLabel: "Subscription",
-  draftCardValue: "$30 / year",
+  draftCardValue: "$30 / season",
   draftCardNote: "Season Pass for up to 3 ESPN leagues",
   paymentLinkUrl: "../setup.html?mode=precheck",
   additionalLeaguePaymentLinkUrl: "https://buy.stripe.com/dRmcN5aAV1GX0Cc7X3efC02",
   includedLeagueLimit: 3,
-  additionalLeaguePriceLabel: "$5 / year",
+  additionalLeaguePriceLabel: "$5 / season",
   showSubscribeButton: true,
   supportEmail: "support@myfantasyiq.com",
   liveBoardUrl: "/api/live-boards",
   isDemoPreview: true,
   demoLabel: "Demo Mode",
-  demoMessage:
-    "Full sample league with roster, waiver, trade, schedule, and draft-prep examples.",
+  demoMessage: "Full sample league with roster, waiver, trade, schedule, and draft-prep examples.",
   fieldLeftLabel: "Fantasy",
   fieldRightLabel: "IQ",
-  heroTitle: "Your smartest next move, explained.",
+  heroTitle: "Decision desk for the next winning move.",
   heroSubtitle:
-    "FantasyIQ reads league context, roster shape, player values, schedule leverage, trade lanes, and waiver opportunities before recommending what to do next.",
+    "FantasyIQ reads league shape, roster leverage, waiver pressure, trade lanes, and schedule edges, then returns one ranked brief with confidence, risk, and the counter-move.",
   useEspnLeagueBranding: false,
   leagueSettings: {
     teamCount: 12,
@@ -70,7 +69,7 @@ window.FANTASY_IQ_CONFIG = {
         source: "Customer setup profile",
       },
       heroSubtitle:
-        "Demo Manager's Sample Team command center for next-move recommendations, roster weakness, confidence, and risk.",
+        "Demo Manager's Sample Team decision desk for ranked actions, roster exposure, confidence, and risk limits.",
     },
     "sample-owner": {
       customerName: "Demo Owner",
@@ -93,7 +92,7 @@ window.FANTASY_IQ_CONFIG = {
         source: "Customer setup profile",
       },
       heroSubtitle:
-        "Demo Owner's Demo League command center for next-move recommendations, roster weakness, confidence, and risk.",
+        "Demo Owner's Demo League decision desk for ranked actions, roster exposure, confidence, and risk limits.",
     },
   },
 };

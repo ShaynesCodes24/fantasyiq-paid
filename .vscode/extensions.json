@@ -1,0 +1,27 @@
+{
+  "recommendations": [
+    "ms-playwright.playwright",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "stylelint.vscode-stylelint",
+    "bradlc.vscode-tailwindcss",
+    "figma.figma-vscode-extension",
+    "doggy8088.nanobanana",
+    "deque-systems.vscode-axe-linter",
+    "eamodio.gitlens",
+    "github.vscode-github-actions",
+    "github.vscode-pull-request-github",
+    "usernamehw.errorlens",
+    "streetsidesoftware.code-spell-checker",
+    "chrischinchilla.vale-vscode",
+    "davidanson.vscode-markdownlint",
+    "eliostruyf.vscode-front-matter",
+    "yoavbls.pretty-ts-errors",
+    "humao.rest-client",
+    "ms-edgedevtools.vscode-edge-devtools",
+    "sonarsource.sonarlint-vscode",
+    "stripe.vscode-stripe",
+    "prisma.prisma",
+    "miclmn451.css-variables-vscode"
+  ]
+}
