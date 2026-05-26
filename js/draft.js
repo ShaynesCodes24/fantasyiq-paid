@@ -1220,31 +1220,44 @@ function myTeamPositionState(count, starterTarget, depthTarget) {
   return "good";
 }
 
-function renderMyTeamEmpty(message = "Select your ESPN team or paste a roster in Trade IQ.") {
+function renderMyTeamEmpty(message = "Select your ESPN team or paste a roster in Trade IQ.", options = {}) {
+  const waitingForDraft = Boolean(options.waitingForDraft);
   if (myTeamHero) {
-    myTeamHero.innerHTML = `
-      <article>
-        <span>Roster IQ</span>
-        <strong>Pending</strong>
-        <small>${htmlEscape(message)}</small>
-      </article>
-      <article>
-        <span>Biggest Weakness</span>
-        <strong>Unknown</strong>
-        <small>Needs roster context</small>
-      </article>
-      <article>
-        <span>Next Move</span>
-        <strong>Connect</strong>
-        <small>Roster unlocks the move</small>
-      </article>
-    `;
+    myTeamHero.classList.toggle("waiting-draft", waitingForDraft);
+    myTeamHero.innerHTML = waitingForDraft
+      ? `
+        <article>
+          <span>Roster IQ</span>
+          <strong>Waiting until draft</strong>
+          <small>${htmlEscape(message)}</small>
+        </article>
+      `
+      : `
+        <article>
+          <span>Roster IQ</span>
+          <strong>Pending</strong>
+          <small>${htmlEscape(message)}</small>
+        </article>
+        <article>
+          <span>Biggest Weakness</span>
+          <strong>Unknown</strong>
+          <small>Needs roster context</small>
+        </article>
+        <article>
+          <span>Next Move</span>
+          <strong>Connect</strong>
+          <small>Roster unlocks the move</small>
+        </article>
+      `;
   }
   if (myTeamPositionGrid) {
-    myTeamPositionGrid.innerHTML = ["QB", "RB", "WR", "TE", "DST", "K"]
-      .filter((pos) => positionHasDraftSlot(pos))
-      .map((pos) => `<article class="my-team-position-card"><span>${pos}</span><strong>--</strong><small>Waiting</small></article>`)
-      .join("");
+    myTeamPositionGrid.hidden = waitingForDraft;
+    myTeamPositionGrid.innerHTML = waitingForDraft
+      ? ""
+      : ["QB", "RB", "WR", "TE", "DST", "K"]
+          .filter((pos) => positionHasDraftSlot(pos))
+          .map((pos) => `<article class="my-team-position-card"><span>${pos}</span><strong>--</strong><small>Waiting</small></article>`)
+          .join("");
   }
   if (myTeamStarters) myTeamStarters.textContent = message;
   if (myTeamBench) myTeamBench.textContent = "Bench depth appears after FantasyIQ has a matched roster.";
@@ -1305,7 +1318,11 @@ function renderMyTeam(snapshot = activeRosterSnapshot({ preferPasted: false })) 
   const matchedRows = snapshot?.rows || [];
   const hasRosterContext = matchedRows.length || rosterEntries.length;
   if (!hasRosterContext) {
-    renderMyTeamEmpty(isPreDraftLeague() ? "Draft or paste players to build My Team." : "Select your ESPN team or paste a roster in Trade IQ.");
+    if (isPreDraftLeague()) {
+      renderMyTeamEmpty("My Team unlocks after your league has drafted.", { waitingForDraft: true });
+    } else {
+      renderMyTeamEmpty("Select your ESPN team or paste a roster in Trade IQ.");
+    }
     return;
   }
 
@@ -1328,6 +1345,7 @@ function renderMyTeam(snapshot = activeRosterSnapshot({ preferPasted: false })) 
   const entryCount = rosterEntries.length || snapshot.players?.length || matchedRows.length;
 
   if (myTeamHero) {
+    myTeamHero.classList.remove("waiting-draft");
     myTeamHero.innerHTML = `
       <article>
         <span>Roster IQ</span>
@@ -1348,6 +1366,7 @@ function renderMyTeam(snapshot = activeRosterSnapshot({ preferPasted: false })) 
   }
 
   if (myTeamPositionGrid) {
+    myTeamPositionGrid.hidden = false;
     myTeamPositionGrid.innerHTML = ["QB", "RB", "WR", "TE", "DST", "K"]
       .filter((pos) => positionHasDraftSlot(pos))
       .map((pos) => {

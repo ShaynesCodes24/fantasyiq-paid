@@ -7547,6 +7547,10 @@ small,
   gap: 12px;
 }
 
+.my-team-hero.waiting-draft {
+  grid-template-columns: 1fr;
+}
+
 .my-team-hero article,
 .my-team-position-card,
 .my-team-card {
@@ -7565,6 +7569,19 @@ small,
   background:
     linear-gradient(135deg, rgba(0, 17, 15, 0.98), rgba(18, 63, 52, 0.92) 56%, rgba(159, 51, 57, 0.84)),
     var(--field-dark);
+}
+
+.my-team-hero.waiting-draft article {
+  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(120px, 0.2fr) minmax(180px, 0.35fr) minmax(240px, 1fr);
+  gap: 16px;
+  min-height: 72px;
+}
+
+.my-team-hero.waiting-draft strong {
+  margin: 0;
+  font-size: 28px;
 }
 
 .my-team-hero span,
@@ -7721,6 +7738,12 @@ small,
   .my-team-hero,
   .my-team-layout {
     grid-template-columns: 1fr;
+  }
+
+  .my-team-hero.waiting-draft article {
+    align-items: start;
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
 
   .my-team-position-grid {
