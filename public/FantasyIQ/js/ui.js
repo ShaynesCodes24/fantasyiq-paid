@@ -8,7 +8,7 @@ function liveServerHelp(error) {
     if (liveStatus) {
       liveStatus.innerHTML = `
         <strong>Connect your ESPN league after subscribing.</strong>
-        Live draft sync is configured for each paid league dashboard.
+        Public ESPN league profiles are configured for each paid dashboard.
         <a class="inline-subscribe" href="${subscribeUrl}">Subscribe to connect a league</a>
       `;
     }
@@ -20,12 +20,12 @@ function liveServerHelp(error) {
     : " If this keeps happening, contact dashboard support.";
   if (liveStatus) {
     liveStatus.innerHTML = `
-      <strong>Live sync is unavailable.</strong>
+      <strong>ESPN refresh is unavailable.</strong>
       Confirm the ESPN league is public and that the league ID/season were configured correctly.${support}
       ${error ? `<p>${htmlEscape(error)}</p>` : ""}
     `;
   }
-  if (liveSyncStatus) liveSyncStatus.textContent = "Sync unavailable";
+  if (liveSyncStatus) liveSyncStatus.textContent = "ESPN refresh unavailable";
   renderLeagueHealth();
 }
 
@@ -54,7 +54,7 @@ function setLiveSyncPhase(phase = "idle") {
     commandPanel.setAttribute("aria-busy", busy ? "true" : "false");
   }
   if (manualSync) manualSync.disabled = busy;
-  if (liveSyncStatus && phase === "fetching") liveSyncStatus.textContent = "Syncing ESPN";
+  if (liveSyncStatus && phase === "fetching") liveSyncStatus.textContent = "Checking ESPN";
   if (liveSyncStatus && phase === "rendering") liveSyncStatus.textContent = "Building IQ brief";
 }
 
@@ -69,7 +69,7 @@ function loadLiveDraft(force = false) {
   return fetch(apiUrl("/api/live-draft", { force: force ? 1 : "" }), { cache: "no-store", headers: apiHeaders() })
     .then((response) => jsonOrAccessError(response, `HTTP ${response.status}`))
     .then((data) => {
-      if (!data) throw new Error("Live sync returned an empty response");
+      if (!data) throw new Error("ESPN refresh returned an empty response");
       if (data.ok) {
         liveDraft = data;
       } else if (data.fallback) {
@@ -98,17 +98,25 @@ function loadLiveDraft(force = false) {
 
 function startLiveSync() {
   if (!ensureCustomerAccess()) return;
+  if (appConfig.isDemoPreview && !requiresCustomerAccess()) return;
   stopLiveSyncTimer();
   loadLiveDraft();
 }
 
-function scheduleIdleTask(callback, timeout = 1200) {
+function scheduleIdleTask(callback, delay = 0) {
   if (typeof callback !== "function") return;
-  if ("requestIdleCallback" in window) {
-    window.requestIdleCallback(callback, { timeout });
+  const runWhenIdle = () => {
+    if ("requestIdleCallback" in window) {
+      window.requestIdleCallback(callback, { timeout: 1200 });
+      return;
+    }
+    window.setTimeout(callback, 0);
+  };
+  if (delay > 0) {
+    window.setTimeout(runWhenIdle, delay);
     return;
   }
-  window.setTimeout(callback, timeout);
+  runWhenIdle();
 }
 
 function liveBoardRequestUrl(limit = "") {
@@ -122,15 +130,24 @@ function liveBoardRequestUrl(limit = "") {
 }
 
 const BUNDLED_BOARD_VERSION = "20260525_boot_speed_1";
+const BUNDLED_STARTER_BOARD_VERSION = "20260528_instant_starter_1";
+const STARTER_BOARD_FALLBACK_DELAY_MS = 450;
 let deferredDashboardRenderQueued = false;
 
 function activeDashboardSection() {
   return document.querySelector(".panel.active")?.id || "command";
 }
 
+function needsFullBoardData() {
+  return Boolean(boardData && combinedBoardCount() && combinedBoardCount() <= INITIAL_BOARD_LIMIT);
+}
+
 function renderBoardDependentSection(section = activeDashboardSection(), options = {}) {
   if (!boardData) return;
   const activated = Boolean(options.userActivated);
+  if (needsFullBoardData() && !["command", "account"].includes(section)) {
+    loadFullBoardInBackground();
+  }
   if (section === "command") {
     renderLeagueHealth();
     renderIntelligenceOS();
@@ -203,10 +220,12 @@ function applyBoardPayload(data) {
   renderBoardDependentSection(activeDashboardSection());
   loadIntelligence(false);
   scheduleDeferredDashboardSections();
-  scheduleIdleTask(() => {
-    loadFantasyCalcMarket();
-    loadFantasyCalcTradeDatabase();
-  }, 1800);
+  if (!(appConfig.isDemoPreview && !requiresCustomerAccess())) {
+    scheduleIdleTask(() => {
+      loadFantasyCalcMarket();
+      loadFantasyCalcTradeDatabase();
+    }, 1800);
+  }
 }
 
 function fantasyCalcMarketRequestUrl() {
@@ -318,6 +337,11 @@ function loadFantasyCalcTradeDatabase() {
 }
 
 function loadDataFreshness() {
+  if (appConfig.isDemoPreview && !requiresCustomerAccess()) {
+    dataFreshness = { ok: true, rows: [], source: "Demo mode" };
+    renderAccountPanel();
+    return Promise.resolve(dataFreshness);
+  }
   if (dataFreshnessLoading) return Promise.resolve(dataFreshness);
   dataFreshnessLoading = true;
   return fetch(apiUrl("/api/data-freshness", { v: Date.now() }), { cache: "no-store", headers: apiHeaders() })
@@ -344,15 +368,35 @@ function combinedBoardCount(data = boardData) {
   return data?.boards?.combined?.rows?.length || 0;
 }
 
+function fetchJsonResource(url, options = {}) {
+  return fetch(url, options).then((response) => {
+    if (!response.ok) throw new Error(`${url} returned HTTP ${response.status}`);
+    return response.json();
+  });
+}
+
+function fetchBundledStarterBoard() {
+  return fetchJsonResource(`./data/boards-starter.json?v=${BUNDLED_STARTER_BOARD_VERSION}`);
+}
+
+function fetchBundledFullBoard() {
+  if (window.FANTASY_BOARDS) return Promise.resolve(window.FANTASY_BOARDS);
+  return fetchJsonResource(`./data/boards.json?v=${BUNDLED_BOARD_VERSION}`);
+}
+
 function loadFullBoardInBackground() {
-  if (fullBoardLoadStarted || !(appConfig.liveBoardUrl || "/api/live-boards").startsWith("/api/")) return;
+  const useBundledFullOnly = appConfig.isDemoPreview && !requiresCustomerAccess();
+  if (fullBoardLoadStarted || (!useBundledFullOnly && !(appConfig.liveBoardUrl || "/api/live-boards").startsWith("/api/")))
+    return;
   fullBoardLoadStarted = true;
   scheduleIdleTask(() => {
-    fetch(liveBoardRequestUrl(), { cache: "no-store", headers: apiHeaders() })
-      .then((response) => {
-        if (!response.ok) throw new Error(`Full board returned HTTP ${response.status}`);
-        return response.json();
-      })
+    const fullBoardPromise = useBundledFullOnly
+      ? fetchBundledFullBoard()
+      : fetchJsonResource(liveBoardRequestUrl(), { cache: "no-store", headers: apiHeaders() }).catch((error) => {
+          console.warn("Full live board unavailable, using bundled full board.", error);
+          return fetchBundledFullBoard();
+        });
+    fullBoardPromise
       .then((data) => {
         if (combinedBoardCount(data) <= combinedBoardCount()) return;
         applyBoardPayload(data);
@@ -372,31 +416,70 @@ function loadBoards() {
   if (boardStatus) {
     boardStatus.textContent = "Loading starter ESPN board...";
   }
-  fetch(liveBoardRequestUrl(INITIAL_BOARD_LIMIT), { cache: "no-store", headers: apiHeaders() })
-    .then((response) => {
-      if (!response.ok) throw new Error(`Live board returned HTTP ${response.status}`);
-      return response.json();
-    })
-    .catch((error) => {
-      console.warn("Live board unavailable, using bundled board.", error);
-      if (boardStatus) {
-        boardStatus.textContent = "Live board unavailable. Loading bundled board fallback...";
-      }
-      if (window.FANTASY_BOARDS) {
-        return window.FANTASY_BOARDS;
-      }
-      return fetch(`./data/boards.json?v=${BUNDLED_BOARD_VERSION}`).then((response) => {
-        if (!response.ok) throw new Error(`Bundled board returned HTTP ${response.status}`);
-        return response.json();
+  if (appConfig.isDemoPreview && !requiresCustomerAccess()) {
+    fetchBundledStarterBoard()
+      .then((data) => {
+        applyBoardPayload(data);
+        if (boardStatus) {
+          boardStatus.textContent = `Starter board ready: ${combinedBoardCount(data)} players. Open a board-heavy module to load every player.`;
+        }
+      })
+      .catch((error) => {
+        console.warn("Bundled starter board unavailable, using bundled full board.", error);
+        return fetchBundledFullBoard().then((data) => {
+          applyBoardPayload(data);
+        });
       });
+    return;
+  }
+  const liveStarterPromise = fetchJsonResource(liveBoardRequestUrl(INITIAL_BOARD_LIMIT), {
+    cache: "no-store",
+    headers: apiHeaders(),
+  });
+  liveStarterPromise.catch(() => {});
+  let starterSettled = false;
+  const bundledStarterPromise = new Promise((resolve, reject) => {
+    window.setTimeout(() => {
+      if (starterSettled) return;
+      fetchBundledStarterBoard().then(resolve, reject);
+    }, STARTER_BOARD_FALLBACK_DELAY_MS);
+  });
+  let usedBundledStarter = false;
+
+  Promise.race([
+    liveStarterPromise,
+    bundledStarterPromise.then((data) => {
+      usedBundledStarter = true;
+      return data;
+    }),
+    ])
+    .catch((error) => {
+      starterSettled = true;
+      console.warn("Player board unavailable, using bundled starter board.", error);
+      if (boardStatus) {
+        boardStatus.textContent = "Player board unavailable. Loading starter board fallback...";
+      }
+      usedBundledStarter = true;
+      return fetchBundledStarterBoard().catch(() => fetchBundledFullBoard());
     })
     .then((data) => {
+      starterSettled = true;
       applyBoardPayload(data);
       if (combinedBoardCount(data) >= INITIAL_BOARD_LIMIT) {
         if (boardStatus) {
-          boardStatus.textContent = `Starter board loaded: ${combinedBoardCount(data)} players. Loading full board quietly...`;
+          boardStatus.textContent = `${usedBundledStarter ? "Starter board ready" : "ESPN board ready"}: ${combinedBoardCount(data)} players. Open a board-heavy module to load every player.`;
         }
-        loadFullBoardInBackground();
+      }
+      if (usedBundledStarter) {
+        liveStarterPromise
+          .then((liveData) => {
+            if (combinedBoardCount(liveData) < combinedBoardCount() && !liveData.live) return;
+            applyBoardPayload(liveData);
+            if (boardStatus) {
+              boardStatus.textContent = `ESPN board ready: ${combinedBoardCount(liveData)} players. Open a board-heavy module to load every player.`;
+            }
+          })
+          .catch(() => {});
       }
     })
     .catch((error) => {
@@ -601,13 +684,13 @@ draftPasteApply?.addEventListener("click", importDraftedPlayersFromText);
 draftBridgeOpen?.addEventListener("click", openEspnDraftRoomWithCompanion);
 draftBridgeCopy?.addEventListener("click", copyEspnDraftBridgeScript);
 liveSyncToggle?.addEventListener("change", () => {
-  localStorage.setItem(loadoutStorageKey("auto-sync"), String(liveSyncToggle.checked));
+  localStorage.setItem(loadoutStorageKey("periodic-espn-check"), String(liveSyncToggle.checked));
   if (liveSyncToggle.checked) {
     startLiveSync();
   } else {
     stopLiveSyncTimer();
     if (liveStatus)
-      liveStatus.innerHTML = "<strong>Auto sync paused.</strong> Use Sync Now for a one-time ESPN refresh.";
+      liveStatus.innerHTML = "<strong>Periodic ESPN checks paused.</strong> Use Refresh ESPN for a one-time public ESPN check.";
   }
 });
 
@@ -631,7 +714,7 @@ addLeagueAction?.addEventListener("click", openAddLeagueDialog);
 accountAddLeague?.addEventListener("click", openAddLeagueDialog);
 accountManageBilling?.addEventListener("click", openBillingPortal);
 
-const savedAutoSync = localStorage.getItem(loadoutStorageKey("auto-sync"));
-if (liveSyncToggle && savedAutoSync !== null) {
+const savedAutoSync = localStorage.getItem(loadoutStorageKey("periodic-espn-check"));
+if (liveSyncToggle) {
   liveSyncToggle.checked = savedAutoSync === "true";
 }

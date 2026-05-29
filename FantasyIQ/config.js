@@ -9,12 +9,12 @@ window.FANTASY_IQ_CONFIG = {
   logoUrl: "./assets/myfantasyiq-wordmark.svg?v=20260522-wordmark-safe-1",
   logoAlt: "MyFantasyIQ league logo",
   draftCardLabel: "Subscription",
-  draftCardValue: "$30 / season",
+  draftCardValue: "$30/year",
   draftCardNote: "Season Pass for up to 3 ESPN leagues",
   paymentLinkUrl: "../setup.html?mode=precheck",
   additionalLeaguePaymentLinkUrl: "https://buy.stripe.com/dRmcN5aAV1GX0Cc7X3efC02",
   includedLeagueLimit: 3,
-  additionalLeaguePriceLabel: "$5 / season",
+  additionalLeaguePriceLabel: "$5/year",
   showSubscribeButton: true,
   supportEmail: "support@myfantasyiq.com",
   liveBoardUrl: "/api/live-boards",
@@ -23,9 +23,9 @@ window.FANTASY_IQ_CONFIG = {
   demoMessage: "Full sample league with roster, waiver, trade, schedule, and draft-prep examples.",
   fieldLeftLabel: "Fantasy",
   fieldRightLabel: "IQ",
-  heroTitle: "Decision desk for the next winning move.",
+  heroTitle: "Your best fantasy move, ranked fast.",
   heroSubtitle:
-    "FantasyIQ reads league shape, roster leverage, waiver pressure, trade lanes, and schedule edges, then returns one ranked brief with confidence, risk, and the counter-move.",
+    "MyFantasyIQ reads league shape, roster leverage, waiver pressure, trade lanes, and schedule edges, then returns a Main Move Brief with confidence, risk, and the next-best option.",
   useEspnLeagueBranding: false,
   leagueSettings: {
     teamCount: 12,
@@ -69,7 +69,7 @@ window.FANTASY_IQ_CONFIG = {
         source: "Customer setup profile",
       },
       heroSubtitle:
-        "Demo Manager's Sample Team decision desk for ranked actions, roster exposure, confidence, and risk limits.",
+        "Demo Manager's Sample Team Main Move Brief for ranked actions, roster exposure, confidence, and risk limits.",
     },
     "sample-owner": {
       customerName: "Demo Owner",
@@ -92,7 +92,7 @@ window.FANTASY_IQ_CONFIG = {
         source: "Customer setup profile",
       },
       heroSubtitle:
-        "Demo Owner's Demo League decision desk for ranked actions, roster exposure, confidence, and risk limits.",
+        "Demo Owner's Demo League Main Move Brief for ranked actions, roster exposure, confidence, and risk limits.",
     },
   },
 };

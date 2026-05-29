@@ -152,10 +152,10 @@
   <body>
     <main>
       <p class="eyebrow">Chrome Web Store Reviewer Check</p>
-      <h1>Draft Sync Companion</h1>
+      <h1>Draft Bridge Companion</h1>
       <p>
         This page lets Chrome Web Store reviewers verify that the installed extension can run on MyFantasyIQ
-        without requiring a live ESPN draft room.
+        without requiring an active ESPN draft room.
       </p>
 
       <section class="status" id="review-status-card" data-installed="false">
@@ -169,7 +169,7 @@
           <ul>
             <li>The MyFantasyIQ content script is active.</li>
             <li>The extension can confirm installed status to MyFantasyIQ pages.</li>
-            <li>The test does not require ESPN credentials or a live draft room.</li>
+            <li>The test does not require ESPN credentials or an active draft room.</li>
           </ul>
         </article>
         <article class="panel">
@@ -178,13 +178,13 @@
             <li>No ESPN passwords are collected.</li>
             <li>No ESPN session cookies are sent to MyFantasyIQ.</li>
             <li>ESPN's draft security token is used locally in Chrome and is not stored or transmitted to MyFantasyIQ.</li>
-            <li>Live pick-event sync requires a user-owned ESPN fantasy football draft room.</li>
+            <li>Experimental pick-event bridging requires a user-owned ESPN fantasy football draft room and is not a production promise.</li>
           </ul>
         </article>
       </section>
 
       <div class="actions">
-        <a class="button" href="/#live">Open Draft Room</a>
+        <a class="button" href="/FantasyIQ/#live">Open Schedule IQ</a>
         <a class="button secondary" href="/draft-sync-companion/install.html">Open Install Page</a>
         <a class="button secondary" href="/privacy.html">Privacy Policy</a>
       </div>
@@ -198,7 +198,7 @@
       function setInstalled() {
         card.dataset.installed = "true";
         status.textContent = "Installed";
-        detail.textContent = "The MyFantasyIQ Draft Sync Companion is installed and can communicate with MyFantasyIQ pages.";
+        detail.textContent = "The MyFantasyIQ Draft Bridge Companion is installed and can communicate with MyFantasyIQ pages.";
       }
 
       window.addEventListener("message", (event) => {

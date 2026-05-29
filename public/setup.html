@@ -8,9 +8,9 @@
     <link rel="icon" type="image/svg+xml" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
     <link rel="shortcut icon" href="/favicon-myfantasyiq.svg?v=20260521-premium-3" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260521-premium-3" />
-    <link rel="stylesheet" href="./site.css?v=20260526_contrast_1" />
+    <link rel="stylesheet" href="./site.css?v=20260528_price_fit_2" />
   </head>
-  <body class="policy-page">
+  <body class="policy-page setup-page">
     <header class="site-header">
       <a class="brand" href="./">
         <img src="/assets/myfantasyiq-wordmark.svg?v=20260522-wordmark-safe-1" alt="MyFantasyIQ logo" />
@@ -26,22 +26,28 @@
     <main class="policy-main">
       <section class="policy-card">
         <p class="eyebrow">Customer Setup</p>
-        <h1 id="setup-title">Set up FantasyIQ in two minutes</h1>
+        <h1 id="setup-title">Check your ESPN league before checkout</h1>
         <p id="setup-intro">
-          Start with the access code from your setup email. Then paste your ESPN league ID and team ID. FantasyIQ
-          auto-fills scoring, roster, flex, bench, and draft settings from ESPN.
+          Paste your ESPN league ID and team ID. MyFantasyIQ checks public access, finds your team, and reads the
+          league settings that power your Main Move.
         </p>
         <div class="setup-mode-note" id="setup-mode-note" hidden>
-          Checking before checkout? Skip password creation and use Step 2 as a free ESPN compatibility check.
+          Free precheck mode. No ESPN password, no checkout required.
+        </div>
+        <div class="setup-trust-rail" aria-label="Setup trust signals">
+          <span class="setup-espn-signal"><img class="espn-logo-mark" src="/assets/espn-green-wordmark.svg" alt="ESPN">No ESPN password</span>
+          <span><svg class="taste-icon" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11"/><path d="m10.5 16.5 3.5 3.5 7.5-8"/></svg>No checkout required for precheck</span>
+          <span class="setup-espn-signal"><img class="espn-logo-mark" src="/assets/espn-green-wordmark.svg" alt="ESPN">Public league compatibility</span>
+          <span><svg class="taste-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 27 7v8c0 7-4.5 11-11 14C9.5 26 5 22 5 15V7l11-4Z"/><path d="m11.5 16 3 3 6.5-7"/></svg>Stripe-secured Season Pass</span>
         </div>
 
         <section class="setup-season-pass" id="season-pass-summary" aria-labelledby="season-pass-title">
           <div class="setup-pass-copy">
             <p class="eyebrow">Season Pass</p>
-            <h2 id="season-pass-title">$30/year for your fantasy football decision desk.</h2>
+            <h2 id="season-pass-title">$30/year for your fantasy football decision engine.</h2>
             <p>
-              Includes up to 3 public ESPN leagues, every IQ module, Stripe-secured billing, and no ESPN password
-              requirement.
+              Includes up to 3 public ESPN leagues, every IQ module, Stripe-secured billing, and the full Main Move
+              brief: confidence, risk, and backup plan.
             </p>
           </div>
           <dl class="setup-pass-metrics" aria-label="Season Pass details">
@@ -72,6 +78,10 @@
               <small id="setup-price-note">3 leagues included. No extras selected.</small>
             </p>
           </div>
+          <div class="setup-stripe-seal" aria-label="Stripe secured checkout">
+            <span>Secured by <strong>stripe</strong></span>
+            <small>SSL secured</small>
+          </div>
           <div class="button-row setup-pass-actions">
             <a class="primary dark" href="#setup-form">Check ESPN compatibility</a>
             <a class="secondary dark-outline" href="https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01" data-checkout-link>
@@ -83,18 +93,18 @@
         <div class="setup-steps" aria-label="Setup steps">
           <article>
             <span>1</span>
-            <strong>Create login</strong>
-            <p>Use the access code from your email once.</p>
+            <strong>Check ESPN</strong>
+            <p>Confirm public access before you buy.</p>
           </article>
           <article>
             <span>2</span>
-            <strong>Connect ESPN</strong>
-            <p>Paste league ID, team ID, and season.</p>
+            <strong>Start pass</strong>
+            <p>$30/year, up to 3 ESPN leagues.</p>
           </article>
           <article>
             <span>3</span>
-            <strong>Open dashboard</strong>
-            <p>Your league profile stays saved.</p>
+            <strong>Open decisions</strong>
+            <p>Main Move, confidence, risk, backup plan.</p>
           </article>
         </div>
 
@@ -102,7 +112,7 @@
           <div>
             <p class="eyebrow">Step 1</p>
             <h2>Create or reset your password</h2>
-            <p>Use the FantasyIQ access code from your setup email. This is not your ESPN password.</p>
+            <p>Use the MyFantasyIQ access code from your setup email. This is never your ESPN password.</p>
           </div>
           <div class="field-grid setup-account-grid">
             <label id="setup-access-wrap">
@@ -127,14 +137,14 @@
             <button class="secondary" id="reset-email-button" type="button">Email reset link</button>
             <a class="primary dark" id="setup-sign-in-link" href="/FantasyIQ/?login=1">Open dashboard</a>
           </div>
-          <div class="result-panel" id="password-result">Create a password, or use the same access code below to connect a league.</div>
+          <div class="result-panel" id="password-result">Create a password, or use the same access code below to save a league.</div>
         </section>
 
         <form class="tool-card setup-league-card" id="setup-form">
           <div>
             <p class="eyebrow">Step 2</p>
-            <h2>Connect your ESPN league</h2>
-            <p>Paste the IDs from ESPN. FantasyIQ checks the public league and saves it to your account.</p>
+            <h2>Validate your ESPN league</h2>
+            <p>Paste the IDs from ESPN. MyFantasyIQ checks compatibility first, then saves the league after checkout.</p>
           </div>
           <div class="field-grid setup-basic-grid">
             <label>
@@ -201,11 +211,49 @@
             </div>
           </details>
 
+          <section class="setup-preview-panel" aria-label="Decision engine preview">
+            <div>
+              <p class="eyebrow">After Compatibility Check</p>
+              <h3>Main Move Brief unlocks from this league profile.</h3>
+              <strong class="setup-compatible-pill">Compatible</strong>
+            </div>
+            <div class="setup-compatibility-card" aria-label="ESPN league compatibility">
+              <img class="espn-wordmark" src="/assets/espn-green-wordmark.svg" alt="ESPN">
+              <div>
+                <span>Main Move</span>
+                <strong>Enabled</strong>
+                <small>Your league supports MyFantasyIQ's Main Move recommendations.</small>
+              </div>
+            </div>
+            <div class="setup-preview-grid">
+              <article>
+                <span>Main Move</span>
+                <strong>Ranked action</strong>
+                <small>Trade, waiver, roster, draft, or schedule edge.</small>
+              </article>
+              <article>
+                <span>Confidence</span>
+                <strong>Decision strength</strong>
+                <small>How hard to lean into the move.</small>
+              </article>
+              <article>
+                <span>Risk</span>
+                <strong>Visible limits</strong>
+                <small>What can go wrong before you act.</small>
+              </article>
+              <article>
+                <span>Backup Plan</span>
+                <strong>Next-best option</strong>
+                <small>What to do if the first move closes.</small>
+              </article>
+            </div>
+          </section>
+
           <div class="button-row">
-            <button class="primary" id="setup-submit-button" type="submit">Connect league</button>
+            <button class="primary" id="setup-submit-button" type="submit">Check league</button>
             <a class="primary dark" id="setup-open-dashboard-link" href="/FantasyIQ/?login=1">Open dashboard</a>
           </div>
-          <div class="result-panel" id="setup-result">Paste your ESPN IDs and click Connect league.</div>
+          <div class="result-panel" id="setup-result">Paste your ESPN IDs and click Check league.</div>
         </form>
       </section>
     </main>
@@ -321,14 +369,14 @@
         setupSeasonPassCard.hidden = true;
       }
       if (precheckMode) {
-        if (setupTitle) setupTitle.textContent = "Check ESPN compatibility before checkout";
+        if (setupTitle) setupTitle.textContent = "Check your ESPN league before checkout";
         if (setupIntro) {
           setupIntro.textContent =
-            "Paste your ESPN league ID, team ID, and season. FantasyIQ confirms public access, finds your team, and detects scoring before you buy.";
+            "Paste your ESPN league ID, team ID, and season. MyFantasyIQ confirms public access, finds your team, and detects scoring before you buy.";
         }
         if (setupModeNote) setupModeNote.hidden = false;
         if (setupPasswordCard) setupPasswordCard.hidden = true;
-        if (setupSubmitButton) setupSubmitButton.textContent = "Check league compatibility";
+        if (setupSubmitButton) setupSubmitButton.textContent = "Check league";
         if (setupOpenDashboardLink) setupOpenDashboardLink.hidden = true;
       } else if (!customerSlug && setupModeNote) {
         setupModeNote.hidden = false;
@@ -493,7 +541,7 @@
             applyLeagueSettings(payload.leagueSettings);
             if (!quiet) {
               if (payload.ok) {
-                result.innerHTML = `<strong>ESPN settings found.</strong><p>${escapeHtml(payload.leagueName)} / ${escapeHtml(payload.teamName)} is ready. Click Connect league to save it.</p>`;
+                result.innerHTML = `<strong>ESPN settings found.</strong><p>${escapeHtml(payload.leagueName)} / ${escapeHtml(payload.teamName)} is ready for MyFantasyIQ.</p>`;
               } else {
                 result.innerHTML = `<strong>ESPN settings found.</strong><p>${escapeHtml(payload.message || "Enter your ESPN team ID to finish validation.")}</p>${renderTeams(payload.teams)}`;
               }
@@ -648,11 +696,11 @@
             const nextActions = payload.saved
               ? `<a class="primary dark" href="${escapeHtml(nextUrl)}">Open saved dashboard</a>`
               : precheckMode
-                ? `<a class="primary dark" href="${seasonPassPaymentLink}" data-checkout-link>Start Season Pass</a><a class="secondary dark-outline" href="${escapeHtml(nextUrl)}">Preview dashboard settings</a><p class="fine-print">Software subscription only. Does not include league buy-ins, prize pools, payouts, or winnings.</p>`
+                ? `<a class="primary dark" href="${seasonPassPaymentLink}" data-checkout-link>Start Season Pass</a><a class="secondary dark-outline" href="${escapeHtml(nextUrl)}">Preview decision engine</a><p class="fine-print">Software subscription only. Does not include league buy-ins, prize pools, payouts, or winnings.</p>`
                 : `<a class="primary dark" href="${escapeHtml(nextUrl)}">Preview dashboard settings</a>`;
             result.innerHTML = `
               <strong>Ready: ${escapeHtml(payload.leagueName)} / ${escapeHtml(payload.teamName)}</strong>
-              <p>Team ID ${escapeHtml(payload.teamId)} was found for the ${escapeHtml(payload.season)} season. ${escapeHtml(saveNote)}${payload.saved ? " Opening the saved dashboard now." : precheckMode ? " Your league is compatible with FantasyIQ." : ""}</p>
+              <p>Team ID ${escapeHtml(payload.teamId)} was found for the ${escapeHtml(payload.season)} season. ${escapeHtml(saveNote)}${payload.saved ? " Opening the saved dashboard now." : precheckMode ? " Your league is compatible with MyFantasyIQ." : ""}</p>
               <div class="button-row setup-actions">
                 ${nextActions}
               </div>

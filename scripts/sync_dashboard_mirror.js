@@ -13,12 +13,13 @@ const files = [
   path.join("assets", "myfantasyiq-wordmark.svg"),
   path.join("assets", "league-logo.jpeg"),
   path.join("data", "boards.json"),
+  path.join("data", "boards-starter.json"),
   path.join("data", "boards_data.js"),
 ];
 
 const shellFiles = ["index.html", "styles.css"];
 
-const directories = ["js"];
+const directories = ["js", path.join("assets", "premium-icons")];
 
 for (const relativePath of files) {
   const source = path.join(sourceRoot, relativePath);

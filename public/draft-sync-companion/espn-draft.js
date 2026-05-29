@@ -12,7 +12,7 @@
   let fallbackStarted = false;
 
   function log(message) {
-    console.log(`[MyFantasyIQ Draft Sync] ${message}`);
+    console.log(`[MyFantasyIQ Draft Bridge] ${message}`);
   }
 
   function normalizeName(value = "") {

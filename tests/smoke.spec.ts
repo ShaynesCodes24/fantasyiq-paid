@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const pages = [
   { route: "/", text: "FantasyIQ" },
-  { route: "/setup.html", text: "Set up FantasyIQ in two minutes" },
+  { route: "/setup.html", text: "Check your ESPN league before checkout" },
   { route: "/help.html", text: "FantasyIQ Q&A" },
   { route: "/feedback.html", text: "Help improve MyFantasyIQ" },
   { route: "/FantasyIQ/", text: "FantasyIQ" },

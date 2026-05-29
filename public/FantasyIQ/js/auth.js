@@ -390,7 +390,7 @@ function applyAppConfig() {
   if (logo && appConfig.logoUrl) logo.src = appConfig.logoUrl;
   if (logo) logo.alt = appConfig.logoAlt || `${siteName} league logo`;
   if (draftCardLabel) draftCardLabel.textContent = appConfig.draftCardLabel || "Subscription";
-  if (draftCardValue) draftCardValue.textContent = appConfig.draftCardValue || "$30 / season";
+  if (draftCardValue) draftCardValue.textContent = appConfig.draftCardValue || "$30/year";
   if (draftCardNote) draftCardNote.textContent = appConfig.draftCardNote || "Configured for your ESPN league";
   if (subscribeButton && appConfig.showSubscribeButton === false) {
     subscribeButton.remove();
@@ -399,7 +399,7 @@ function applyAppConfig() {
   if (heroSubtitle) {
     heroSubtitle.textContent =
       appConfig.heroSubtitle ||
-      "FantasyIQ reads league context, roster shape, player values, schedule leverage, trade lanes, and waiver opportunities before recommending what to do next.";
+      "MyFantasyIQ reads league context, roster shape, player values, schedule leverage, trade lanes, and waiver opportunities before returning a Main Move Brief.";
   }
   if (leftEndzone) leftEndzone.textContent = appConfig.fieldLeftLabel || "Fantasy";
   if (rightEndzone) rightEndzone.textContent = appConfig.fieldRightLabel || "IQ";

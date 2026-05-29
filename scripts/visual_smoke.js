@@ -78,8 +78,8 @@ async function newPage(browser, viewport) {
 async function checkPublicPages(browser, viewport) {
   const pages = [
     { route: "/", name: "home", text: "FantasyIQ" },
-    { route: "/setup.html", name: "setup", text: "Set up FantasyIQ in two minutes" },
-    { route: "/success.html", name: "success", text: "Welcome to FantasyIQ" },
+    { route: "/setup.html", name: "setup", text: "Check your ESPN league before checkout" },
+    { route: "/success.html", name: "success", text: "Season Pass confirmed" },
     { route: "/admin-login.html", name: "admin-gate", text: "Admin sign in" },
     { route: "/help.html", name: "help", text: "FantasyIQ Q&A" },
     { route: "/feedback.html", name: "feedback", text: "Help improve MyFantasyIQ" },

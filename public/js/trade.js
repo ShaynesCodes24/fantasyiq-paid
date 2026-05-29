@@ -272,7 +272,7 @@ function tradeRiskRead(giveTotals, getTotals, get) {
   const comparison = !get.length
     ? "Add the players you would receive to get a risk read."
     : giveTotals.risk === 0
-      ? "The number is a 1-10 average from the live board, where higher means less predictable."
+      ? "The number is a 1-10 average from the player board, where higher means less predictable."
       : riskDelta >= 2
         ? `That is ${riskDelta.toFixed(1)} points riskier than what you are sending.`
         : riskDelta <= -2

@@ -6,7 +6,7 @@
     <title>MyFantasyIQ</title>
     <meta
       name="description"
-      content="Your ESPN fantasy football command center for roster sync, waiver reads, trade lanes, schedule edges, draft prep, and mock draft decisions.">
+      content="Your ESPN fantasy football command center for roster reads, waiver decisions, trade lanes, schedule edges, draft prep, and mock draft decisions.">
     <link rel="canonical" href="https://myfantasyiq.com/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="MyFantasyIQ">
@@ -30,11 +30,10 @@
       content="Your ESPN fantasy football command center for smarter roster, waiver, trade, schedule, and draft decisions.">
     <meta name="twitter:image" content="https://myfantasyiq.com/social-preview.png?v=20260524-link-preview-1">
     <link rel="image_src" href="https://myfantasyiq.com/social-preview.png?v=20260524-link-preview-1">
-    <meta name="theme-color" content="#001915">
     <link rel="icon" type="image/svg+xml" href="/favicon-myfantasyiq.svg?v=20260521-premium-3">
     <link rel="shortcut icon" href="/favicon-myfantasyiq.svg?v=20260521-premium-3">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260521-premium-3">
-    <link rel="stylesheet" href="./styles.css?v=20260526_big_board_1">
+    <link rel="stylesheet" href="./styles.css?v=20260528_command_status_2">
   </head>
   <body>
     <div class="field-overlay" aria-hidden="true">
@@ -61,7 +60,7 @@
     </div>
     <header class="topbar">
       <a class="brand-lockup" href="./" aria-label="Go to your FantasyIQ dashboard home">
-        <img src="./assets/fantasy-iq-logo.svg" alt="MyFantasyIQ league logo">
+        <img src="./assets/fantasy-iq-logo.svg" alt="MyFantasyIQ league logo" decoding="async" fetchpriority="high">
         <div>
           <p class="eyebrow">Command Center</p>
           <h1>MyFantasyIQ</h1>
@@ -69,9 +68,12 @@
         </div>
       </a>
       <div class="draft-card">
-        <span>Subscription</span>
-        <strong>Active</strong>
-        <small>Demo League</small>
+        <img class="pass-card-icon reference-icon" src="./assets/premium-icons/fast/season-pass.png" alt="" decoding="async">
+        <div class="draft-card-copy">
+          <span>Subscription</span>
+          <strong>Active</strong>
+          <small>Demo League</small>
+        </div>
         <a class="subscribe-button" href="/setup.html?mode=precheck">Start Season Pass</a>
       </div>
       <div class="league-switcher" id="league-switcher" hidden>
@@ -92,8 +94,11 @@
         </div>
       </div>
       <div class="account-card" id="account-card">
-        <span id="account-label">Account Access</span>
-        <strong id="account-state">Demo</strong>
+        <img class="account-card-icon reference-icon" src="./assets/premium-icons/fast/account.png" alt="" decoding="async">
+        <div class="account-card-copy">
+          <span id="account-label">Account Access</span>
+          <strong id="account-state">Demo</strong>
+        </div>
         <button id="account-action" type="button">Sign In</button>
       </div>
     </header>
@@ -106,15 +111,42 @@
 
     <main class="layout">
       <nav class="sidebar" aria-label="Dashboard sections">
-        <button type="button" class="nav-item active" data-section="command">Command Center</button>
-        <button type="button" class="nav-item" data-section="my-team">My Team</button>
-        <button type="button" class="nav-item" data-section="workbooks">Big Board</button>
-        <button type="button" class="nav-item" data-section="draft">Draft Prep IQ</button>
-        <button type="button" class="nav-item" data-section="simulator">Mock Simulator</button>
-        <button type="button" class="nav-item" data-section="live">Schedule IQ</button>
-        <button type="button" class="nav-item" data-section="waivers">Waivers IQ</button>
-        <button type="button" class="nav-item" data-section="trade">Trade IQ</button>
-        <button type="button" class="nav-item" data-section="account">Account</button>
+        <button type="button" class="nav-item active" data-section="command">
+          <img class="nav-icon reference-icon" src="./assets/premium-icons/fast/command-center.png" alt="" decoding="async">
+          <span class="nav-label">Command Center</span>
+        </button>
+        <button type="button" class="nav-item" data-section="my-team">
+          <img class="nav-icon reference-icon" src="./assets/premium-icons/fast/my-team.png" alt="" decoding="async">
+          <span class="nav-label">My Team</span>
+        </button>
+        <button type="button" class="nav-item" data-section="workbooks">
+          <img class="nav-icon reference-icon" src="./assets/premium-icons/fast/big-board.png" alt="" decoding="async">
+          <span class="nav-label">Big Board</span>
+        </button>
+        <button type="button" class="nav-item" data-section="draft">
+          <img class="nav-icon reference-icon" src="./assets/premium-icons/fast/draft-prep-iq.png" alt="" decoding="async">
+          <span class="nav-label">Draft Prep IQ</span>
+        </button>
+        <button type="button" class="nav-item" data-section="simulator">
+          <img class="nav-icon reference-icon" src="./assets/premium-icons/fast/mock-simulator.png" alt="" decoding="async">
+          <span class="nav-label">Mock Simulator</span>
+        </button>
+        <button type="button" class="nav-item" data-section="live">
+          <img class="nav-icon reference-icon" src="./assets/premium-icons/fast/schedule-iq.png" alt="" decoding="async">
+          <span class="nav-label">Schedule IQ</span>
+        </button>
+        <button type="button" class="nav-item" data-section="waivers">
+          <img class="nav-icon reference-icon" src="./assets/premium-icons/fast/waiver-iq.png" alt="" decoding="async">
+          <span class="nav-label">Waiver IQ</span>
+        </button>
+        <button type="button" class="nav-item" data-section="trade">
+          <img class="nav-icon reference-icon" src="./assets/premium-icons/fast/trade-iq.png" alt="" decoding="async">
+          <span class="nav-label">Trade IQ</span>
+        </button>
+        <button type="button" class="nav-item" data-section="account">
+          <img class="nav-icon reference-icon" src="./assets/premium-icons/fast/account.png" alt="" decoding="async">
+          <span class="nav-label">Account</span>
+        </button>
       </nav>
 
       <section class="content">
@@ -122,41 +154,41 @@
           <div class="command-hero premium-command-hero">
             <div class="command-hero-copy">
               <p class="eyebrow">Command Center</p>
-              <h2>Decision desk for the next winning move.</h2>
+              <h2>Your best fantasy move, ranked fast.</h2>
               <p>
-                FantasyIQ reads league shape, roster leverage, waiver pressure, trade lanes, and schedule edges, then
-                returns one ranked brief with confidence, risk, and the counter-move.
+                MyFantasyIQ reads league shape, roster leverage, waiver pressure, trade lanes, and schedule edges, then
+                returns a Main Move Brief with confidence, risk, and the next-best option.
               </p>
               <div class="hero-actions command-primary-actions">
-                <button class="primary-action" id="command-refresh" type="button">Run IQ Brief</button>
+                <button class="primary-action" id="command-refresh" type="button">Run Main Move Brief</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="my-team">Open Roster IQ</button>
               </div>
             </div>
-            <div role="group" class="command-hero-orbit" aria-label="Command intelligence stages">
+            <div class="command-hero-orbit">
               <span>League Profile</span>
               <span>Roster Shape</span>
               <span>Waiver Pressure</span>
               <span>Trade Lanes</span>
               <span>Schedule Edge</span>
-              <strong>IQ Brief Ready</strong>
+              <strong>Main Move Ready</strong>
             </div>
           </div>
 
-          <div role="group" class="command-lane-strip" aria-label="Command Center modules">
+          <div class="command-lane-strip">
             <button class="nav-jump" type="button" data-jump="workbooks">Big Board</button>
             <button class="nav-jump" type="button" data-jump="draft">Draft Prep IQ</button>
             <button class="nav-jump" type="button" data-jump="simulator">Mock Simulator</button>
             <button class="nav-jump" type="button" data-jump="live">Schedule IQ</button>
-            <button class="nav-jump" type="button" data-jump="waivers">Waivers IQ</button>
+            <button class="nav-jump" type="button" data-jump="waivers">Waiver IQ</button>
             <button class="nav-jump" type="button" data-jump="trade">Trade IQ</button>
           </div>
 
           <section class="next-move-panel premium-iq-brief" aria-label="FantasyIQ next move">
             <article class="next-move-primary" id="command-main-move-card">
-              <span>Recommended Action</span>
+              <span>Main Move</span>
               <strong id="command-main-move"><span class="skeleton-line wide"></span></strong>
               <p id="command-main-reason">
-                Run the brief to compare every roster, waiver, trade, schedule, and draft action against standing still.
+                Run the Main Move Brief to compare every roster, waiver, trade, schedule, and draft action against standing still.
               </p>
             </article>
             <article class="next-move-score">
@@ -231,7 +263,7 @@
                 <p class="eyebrow">Decision Engine</p>
                 <h3 id="intelligence-main-move">League-aware engine standing by</h3>
                 <p id="intelligence-freshness">
-                  Run an IQ Brief to scan draft, roster, waiver, trade, schedule, and opponent context.
+                  Run a Main Move Brief to scan draft, roster, waiver, trade, schedule, and opponent context.
                 </p>
               </div>
               <button id="intelligence-refresh" type="button">Refresh</button>
@@ -282,7 +314,7 @@
                 <small>Customer access state</small>
               </article>
               <article>
-                <span>ESPN Sync</span>
+                <span>ESPN Access</span>
                 <strong>Checking</strong>
                 <small>Public league connection</small>
               </article>
@@ -299,7 +331,7 @@
             </div>
           </section>
 
-          <div role="group" class="first-run-guide" aria-label="First run checklist">
+          <div class="first-run-guide">
             <article>
               <span>1</span>
               <strong>Confirm league</strong>
@@ -312,26 +344,26 @@
             </article>
             <article>
               <span>3</span>
-              <strong>Sync once</strong>
-              <small>Run Sync Now before draft day to verify ESPN access.</small>
+              <strong>Check ESPN</strong>
+              <small>Run Refresh ESPN before draft day to verify public ESPN access.</small>
             </article>
             <article>
               <span>4</span>
               <strong>Mock from slot</strong>
-              <small>Practice the build before the room is live.</small>
+              <small>Practice the build before draft night.</small>
             </article>
           </div>
 
-          <div role="group" class="command-sync-controls live-switches" aria-label="ESPN sync controls">
-            <button id="manual-sync" type="button">Sync Now</button>
+          <div class="command-sync-controls live-switches">
+            <button id="manual-sync" type="button">Refresh ESPN</button>
             <label>
-              <input id="live-sync-toggle" type="checkbox" checked>
-              Auto sync
+              <input id="live-sync-toggle" type="checkbox">
+              Periodic ESPN checks
             </label>
-            <span>Public ESPN profile, roster, and schedule context feed the next IQ Brief.</span>
+            <span>Uses public ESPN data when available. Draft-day picks still need manual review or import.</span>
           </div>
 
-          <div role="group" class="sync-stage-track" aria-label="Sync intelligence stages">
+          <div class="sync-stage-track">
             <span>League Profile</span>
             <span>Roster Shape</span>
             <span>Waiver Pool</span>
@@ -405,7 +437,7 @@
               <h2>Roster Portfolio</h2>
             </div>
             <div class="live-switches">
-              <button class="secondary-action nav-jump" type="button" data-jump="waivers">Waivers IQ</button>
+              <button class="secondary-action nav-jump" type="button" data-jump="waivers">Waiver IQ</button>
               <button class="secondary-action nav-jump" type="button" data-jump="trade">Trade IQ</button>
               <button class="secondary-action nav-jump" type="button" data-jump="live">Schedule IQ</button>
             </div>
@@ -467,7 +499,7 @@
         <section class="panel" id="waivers">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Waivers IQ</p>
+              <p class="eyebrow">Waiver IQ</p>
               <h2>Claims, drops, and watchlist priority.</h2>
             </div>
             <div class="live-switches">
@@ -477,7 +509,7 @@
             </div>
           </div>
 
-          <section class="waiver-iq-command" aria-label="Waivers IQ command">
+          <section class="waiver-iq-command" aria-label="Waiver IQ command">
             <div class="waiver-iq-hero" id="waiver-iq-hero">
               <article>
                 <span>Main Claim</span>
@@ -492,7 +524,7 @@
               <article>
                 <span>Confidence</span>
                 <strong>--</strong>
-                <small>Updates after board sync</small>
+                <small>Updates after board refresh</small>
               </article>
             </div>
           </section>
@@ -585,7 +617,7 @@
           </div>
 
           <section class="draft-prep-workbench" aria-label="Draft build workbench">
-            <div role="group" class="draft-build-controls" aria-label="Roster build plans">
+            <div class="draft-build-controls">
               <button class="draft-build-toggle active" type="button" data-draft-build="balanced">Balanced</button>
               <button class="draft-build-toggle" type="button" data-draft-build="hero-rb">Hero RB</button>
               <button class="draft-build-toggle" type="button" data-draft-build="wr-heavy">WR Heavy</button>
@@ -705,7 +737,7 @@
                   <option value="custom">Custom playoff weeks</option>
                 </select>
               </label>
-              <div role="group" class="sos-week-toggles" id="sos-week-toggles" aria-label="Custom playoff weeks">
+              <div class="sos-week-toggles" id="sos-week-toggles">
                 <button type="button" data-sos-week="14">14</button>
                 <button type="button" data-sos-week="15" class="active">15</button>
                 <button type="button" data-sos-week="16" class="active">16</button>
@@ -736,9 +768,9 @@
               </article>
             </div>
 
-            <div role="group" class="sos-insights" id="sos-insights" aria-label="Heat map insights"></div>
+            <div class="sos-insights" id="sos-insights"></div>
 
-            <div role="group" class="sos-legend" aria-label="Heat map legend">
+            <div class="sos-legend">
               <span class="sos-cell tier-elite">Start Edge</span>
               <span class="sos-cell tier-easy">Plus Matchup</span>
               <span class="sos-cell tier-neutral">Neutral</span>
@@ -749,19 +781,27 @@
 
             <div class="sos-table-shell">
               <table class="sos-table">
-                <thead id="sos-table-head"></thead>
+                <thead id="sos-table-head">
+                  <tr>
+                    <th scope="col">Rank</th>
+                    <th scope="col">Player</th>
+                    <th scope="col">Pos</th>
+                    <th scope="col">Team</th>
+                    <th scope="col">Overall</th>
+                  </tr>
+                </thead>
                 <tbody id="sos-table-body"></tbody>
               </table>
             </div>
           </section>
 
-          <div class="result live-alert" id="live-status">Connecting to ESPN public draft sync...</div>
+          <div class="result live-alert" id="live-status">Ready to check public ESPN league data.</div>
 
           <div class="league-room-note" id="league-room-note">League profile is loading.</div>
 
           <div class="draft-league-override" id="draft-league-override">
             <label>
-              Live ESPN draft URL or leagueId
+              ESPN draft URL or leagueId
               <input
                 id="draft-league-input"
                 type="text"
@@ -788,14 +828,14 @@
             <button id="draft-paste-apply" type="button">Import Drafted Players</button>
           </div>
 
-          <div class="draft-bridge-sync" id="draft-bridge-sync">
+          <div class="draft-bridge-sync" id="draft-bridge-sync" hidden>
             <button id="draft-bridge-open" type="button">Open ESPN Draft</button>
             <a id="draft-companion-install" href="/draft-sync-companion/install.html" target="_blank" rel="noopener">
               Install Companion
             </a>
             <button id="draft-bridge-copy" class="draft-bridge-emergency" type="button">Emergency Script</button>
             <span id="draft-bridge-status">
-              Automatic sync uses the Draft Sync Companion when ESPN hides live picks.
+              Companion bridge is experimental. Use pasted drafted players as the source of truth.
             </span>
           </div>
 
@@ -805,8 +845,8 @@
 
           <div class="live-hero-grid">
             <article class="live-clock">
-              <span>On The Clock</span>
-              <strong id="live-current-pick">Waiting for ESPN</strong>
+              <span>Current Pick</span>
+              <strong id="live-current-pick">Check ESPN</strong>
               <small id="live-current-team">Draft has not started yet.</small>
             </article>
             <article class="live-stat">
@@ -816,14 +856,14 @@
               <div class="progress-shell"><div id="live-progress-bar"></div></div>
             </article>
             <article class="live-stat">
-              <span>Last Sync</span>
+              <span>Last Refresh</span>
               <strong id="live-last-sync">Pending</strong>
               <small id="live-source">ESPN public league API</small>
             </article>
             <article class="live-stat live-slot-stat">
               <span>My Draft Slot</span>
               <strong id="live-my-slot">Select team</strong>
-              <small id="live-my-slot-note">Slot updates from ESPN when the draft room opens.</small>
+              <small id="live-my-slot-note">Slot appears when ESPN exposes the draft order.</small>
             </article>
             <label class="live-select">
               My ESPN Team
@@ -833,7 +873,7 @@
             </label>
           </div>
 
-          <div role="group" class="alpha-strip compact-alpha-strip" aria-label="FantasyIQ alpha signals">
+          <div class="alpha-strip compact-alpha-strip">
             <article>
               <span>Main Move Signal</span>
               <strong id="alpha-signal">Loading</strong>
@@ -875,7 +915,7 @@
                 </button>
               </div>
             </div>
-            <div role="group" class="war-room-signals" aria-label="Draft room command signals">
+            <div class="war-room-signals">
               <article>
                 <span>Why</span>
                 <strong id="war-room-why">Waiting</strong>
@@ -921,7 +961,7 @@
             <div class="live-section-head">
               <div>
                 <p class="eyebrow">League Draft Board</p>
-                <h3>Live pick grid</h3>
+                <h3>Draft pick tracker</h3>
               </div>
               <span class="tier-note" id="all-teams-draft-summary">Waiting for ESPN draft order.</span>
             </div>
@@ -944,14 +984,14 @@
           <section class="live-panel live-tier-panel compact-tier-panel">
             <div class="live-section-head">
               <div>
-                <p class="eyebrow">Live Board</p>
+                <p class="eyebrow">Draft Board</p>
                 <h3>Available players by tier</h3>
               </div>
               <span class="tier-note">Filter fast. Draft the tier, not the name.</span>
             </div>
             <div class="tier-board-tools">
               <input id="live-tier-search" type="search" placeholder="Search available player">
-              <div role="group" class="position-toggles draft-position-tabs" aria-label="Live draft position tier filters">
+              <div class="position-toggles draft-position-tabs">
                 <button type="button" class="live-tier-toggle active" data-live-tier-pos="">All</button>
                 <button type="button" class="live-tier-toggle" data-live-tier-pos="QB">QB</button>
                 <button type="button" class="live-tier-toggle" data-live-tier-pos="RB">RB</button>
@@ -983,7 +1023,7 @@
               </div>
 
               <div class="result cheatcode-status" id="cheatcode-status">
-                Loading the board, live draft state, and roster context.
+                Loading the board, ESPN draft state, and roster context.
               </div>
 
               <div class="cheatcode-hero" id="cheatcode-hero">
@@ -1032,7 +1072,7 @@
                 <section class="live-panel cheatcode-panel">
                   <p class="eyebrow">Room</p>
                   <h3>Draft pulse</h3>
-                  <div id="cheatcode-room" class="intel-list">Waiting for live picks.</div>
+                  <div id="cheatcode-room" class="intel-list">Waiting for drafted-player updates.</div>
                 </section>
               </div>
             </div>
@@ -1174,7 +1214,11 @@
               <h3>Click to draft</h3>
               <div class="sim-tools">
                 <input id="sim-search" type="search" placeholder="Search player">
-                <select id="sim-position">
+                <select
+                  id="sim-position"
+                  aria-label="Mock simulator position filter"
+                  title="Mock simulator position filter"
+                >
                   <option value="">All</option>
                   <option value="QB">QB</option>
                   <option value="RB">RB</option>
@@ -1186,7 +1230,7 @@
                   <option value="K">K</option>
                 </select>
               </div>
-              <div role="group" class="position-toggles sim-position-tabs" aria-label="Mock simulator position tier filters">
+              <div class="position-toggles sim-position-tabs">
                 <button type="button" class="sim-position-toggle active" data-sim-pos="">All</button>
                 <button type="button" class="sim-position-toggle" data-sim-pos="QB">QB</button>
                 <button type="button" class="sim-position-toggle" data-sim-pos="RB">RB</button>
@@ -1290,7 +1334,7 @@
           <div class="panel-head">
             <div>
               <p class="eyebrow">Trade IQ</p>
-              <h2>Roster-aware trade decision desk</h2>
+              <h2>Trade verdict before you accept.</h2>
             </div>
           </div>
 
@@ -1312,7 +1356,7 @@
                 <span>Outgoing Package</span>
                 <strong id="trade-give-total">0.0</strong>
               </div>
-              <div role="group" class="trade-package-builder" aria-label="Players you send">
+              <div class="trade-package-builder">
                 <label>
                   <span>Give 1</span>
                   <input data-trade-side="give" data-trade-slot="1" type="text" placeholder="Player you send">
@@ -1335,7 +1379,7 @@
                 <span>Incoming Package</span>
                 <strong id="trade-get-total">0.0</strong>
               </div>
-              <div role="group" class="trade-package-builder" aria-label="Players you receive">
+              <div class="trade-package-builder">
                 <label>
                   <span>Receive 1</span>
                   <input data-trade-side="get" data-trade-slot="1" type="text" placeholder="Player you receive">
@@ -1358,7 +1402,7 @@
                 <span>Package Shape</span>
                 <strong id="trade-package-label">1-for-1</strong>
               </div>
-              <div role="group" class="trade-package-options" aria-label="Trade package shapes">
+              <div class="trade-package-options">
                 <button type="button" data-trade-package="1-1">1 for 1</button>
                 <button type="button" data-trade-package="2-1">2 for 1</button>
                 <button type="button" data-trade-package="1-2">1 for 2</button>
@@ -1448,7 +1492,7 @@
             </div>
           </div>
 
-          <div class="tabs workbook-tabs" role="tablist" aria-label="Workbook boards">
+          <div class="tabs workbook-tabs">
             <button type="button" class="tab active" data-board="combined">Combined</button>
             <button type="button" class="tab" data-board="elite">Elite</button>
             <button type="button" class="tab" data-board="staples">Staples</button>
@@ -1467,7 +1511,7 @@
             <div class="position-filter">
               <span>Draft View</span>
               <input id="position-filter" type="hidden" value="">
-              <div role="group" class="position-toggles" aria-label="Draft board position filters">
+              <div class="position-toggles">
                 <button class="position-toggle active" type="button" data-position="">All</button>
                 <button class="position-toggle" type="button" data-position="QB">QB</button>
                 <button class="position-toggle" type="button" data-position="RB">RB</button>
@@ -1491,7 +1535,16 @@
           <div class="web-board">
             <div class="table-wrap">
               <table id="board-table">
-                <thead></thead>
+                <thead>
+                  <tr>
+                    <th scope="col">Rank</th>
+                    <th scope="col">Player</th>
+                    <th scope="col">Pos</th>
+                    <th scope="col">Team</th>
+                    <th scope="col">Tier</th>
+                    <th scope="col">Value</th>
+                  </tr>
+                </thead>
                 <tbody></tbody>
               </table>
             </div>
@@ -1532,7 +1585,7 @@
             <article>
               <span>Support</span>
               <strong id="account-support-email">support@myfantasyiq.com</strong>
-              <p>Use support when ESPN public sync fails or a league profile looks wrong.</p>
+              <p>Use support when ESPN public access fails or a league profile looks wrong.</p>
             </article>
           </div>
 
@@ -1546,16 +1599,16 @@
       </section>
     </main>
 
-    <script src="./config.js?v=20260524_demo_full_roster_1"></script>
-    <script src="./js/state.js?v=20260524_split_1"></script>
-    <script src="./js/api.js?v=20260524_trade_database_1"></script>
-    <script src="./js/auth.js?v=20260524_email_login_1"></script>
-    <script src="./js/dashboard.js?v=20260526_big_board_2"></script>
-    <script src="./js/trade.js?v=20260525_trade_quality_5"></script>
-    <script src="./js/sos.js?v=20260525_schedule_iq_1"></script>
-    <script src="./js/draft.js?v=20260525_trade_quality_5"></script>
-    <script src="./js/simulator.js?v=20260524_split_1"></script>
-    <script src="./js/ui.js?v=20260524_trade_database_1"></script>
-    <script src="./app.js?v=20260524_split_1"></script>
+    <script src="./config.js?v=20260524_demo_full_roster_1" defer></script>
+    <script src="./js/state.js?v=20260524_split_1" defer></script>
+    <script src="./js/api.js?v=20260528_fix_pass_1" defer></script>
+    <script src="./js/auth.js?v=20260524_email_login_1" defer></script>
+    <script src="./js/dashboard.js?v=20260528_fix_pass_1" defer></script>
+    <script src="./js/trade.js?v=20260525_trade_quality_5" defer></script>
+    <script src="./js/sos.js?v=20260525_schedule_iq_1" defer></script>
+    <script src="./js/draft.js?v=20260528_fix_pass_1" defer></script>
+    <script src="./js/simulator.js?v=20260524_split_1" defer></script>
+    <script src="./js/ui.js?v=20260528_fix_pass_1" defer></script>
+    <script src="./app.js?v=20260524_split_1" defer></script>
   </body>
 </html>

@@ -386,14 +386,14 @@ function renderDraftLeagueOverrideControls() {
     draftBridgeStatus.textContent = bridgeReady
       ? draftOverride?.memberId
         ? draftCompanionInstalled
-          ? "Automatic sync ready. Open ESPN from here and leave both tabs open."
-          : "Install the Draft Sync Companion once, then this opens ESPN and syncs automatically."
+          ? "Experimental companion ready. Verify picks with the manual importer."
+          : "Companion bridge is experimental. Use the manual importer as the source of truth."
         : draftCompanionInstalled
-          ? "Automatic sync ready. The companion will infer memberId from ESPN."
-          : "Install the Draft Sync Companion once. It can infer memberId from ESPN."
+          ? "Experimental companion ready. It may infer memberId from ESPN."
+          : "Companion bridge is experimental and may not work for every ESPN room."
       : draftOverride?.leagueId
-        ? "Add your ESPN teamId so automatic sync can connect to the draft room."
-        : "Paste the ESPN draft URL or leagueId above to prepare automatic draft sync.";
+        ? "Add your ESPN teamId if you want to test the experimental companion."
+        : "Paste an ESPN draft URL or leagueId above only if you need a separate draft profile.";
   }
 }
 
@@ -429,7 +429,7 @@ function clearDraftLeagueOverride() {
   if (draftLeagueInput) draftLeagueInput.value = "";
   if (draftTeamInput) draftTeamInput.value = "";
   renderDraftLeagueOverrideControls();
-  if (liveStatus) liveStatus.innerHTML = "<strong>Back to saved league.</strong> Pulling a fresh ESPN sync now.";
+  if (liveStatus) liveStatus.innerHTML = "<strong>Back to saved league.</strong> Pulling a fresh ESPN refresh now.";
   loadLiveDraft(true);
 }
 
@@ -744,8 +744,8 @@ function openEspnDraftRoomWithCompanion() {
   sendDraftBridgeConfigToCompanion();
   if (draftBridgeStatus) {
     draftBridgeStatus.textContent = draftCompanionInstalled
-      ? "Opening ESPN. The companion will connect automatically in the draft room."
-      : "Opening ESPN. Install the companion once for automatic live sync.";
+      ? "Opening ESPN. Verify picks with the manual importer."
+      : "Opening ESPN. Companion bridge is experimental; manual import remains the source of truth.";
   }
   const draftUrl = espnDraftRoomUrl();
   const draftWindow = draftUrl ? window.open("about:blank", "_blank") : null;
@@ -765,7 +765,7 @@ function openEspnDraftRoomWithCompanion() {
       } catch (closeError) {
         // Browser-managed popup cleanup is best effort.
       }
-      if (draftBridgeStatus) draftBridgeStatus.textContent = `Automatic sync setup failed: ${error.message}`;
+      if (draftBridgeStatus) draftBridgeStatus.textContent = `Companion setup failed: ${error.message}`;
     });
 }
 
@@ -775,7 +775,7 @@ window.addEventListener("message", (event) => {
   if (message.type !== "FANTASYIQ_DRAFT_COMPANION_STATUS") return;
   draftCompanionInstalled = Boolean(message.installed);
   if (draftBridgeStatus && message.reason === "configured") {
-    draftBridgeStatus.textContent = "Companion configured. Open ESPN from here and live picks will sync automatically.";
+    draftBridgeStatus.textContent = "Companion configured for testing. Verify picks with the manual importer.";
   }
   renderDraftLeagueOverrideControls();
 });

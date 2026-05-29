@@ -3,7 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Install MyFantasyIQ Draft Sync Companion</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Install MyFantasyIQ Draft Bridge Companion</title>
     <style>
       :root {
         --ink: #102c25;
@@ -170,10 +171,10 @@
     <main>
       <div class="hero">
         <section>
-          <h1>Install Draft Sync Companion</h1>
+          <h1>Install Draft Bridge Companion</h1>
           <p>
-            The companion lets MyFantasyIQ follow ESPN draft-room pick events from your logged-in ESPN tab
-            when ESPN does not publish live picks through the public league feed.
+            This beta bridge is for testing ESPN draft-room event access from your logged-in ESPN tab. It is not
+            part of the public product promise; use manual drafted-player import as the source of truth.
           </p>
           <div class="actions">
             <a class="button secondary" href="https://chromewebstore.google.com/" target="_blank" rel="noopener">
@@ -182,7 +183,7 @@
             <a class="button" href="/draft-sync-companion/myfantasyiq-draft-sync-companion.zip" download>
               Beta Download
             </a>
-            <a class="button secondary" href="/#live">Back to Draft Room</a>
+            <a class="button secondary" href="/FantasyIQ/#live">Back to Schedule IQ</a>
           </div>
         </section>
 
@@ -208,13 +209,13 @@
         <article class="step">
           <span>3</span>
           <strong>Return to Draft Room</strong>
-          <p>Refresh MyFantasyIQ, confirm the installed status, then open ESPN from the Draft Room.</p>
+          <p>Refresh MyFantasyIQ, confirm the installed status, then use manual import to verify drafted players.</p>
         </article>
       </section>
 
       <p class="note">
         Beta download is temporary. The production install should be the Chrome Web Store listing so customers only click Add to Chrome.
-        The companion does not collect ESPN passwords or send ESPN session cookies to MyFantasyIQ. ESPN's draft security token is used locally in Chrome to connect to the active draft room and is not stored or sent to MyFantasyIQ.
+        The companion does not collect ESPN passwords or send ESPN session cookies to MyFantasyIQ. ESPN's draft security token is used locally in Chrome for bridge testing and is not stored or sent to MyFantasyIQ.
         MyFantasyIQ is not affiliated with, endorsed by, or sponsored by ESPN.
       </p>
     </main>
@@ -234,7 +235,7 @@
         if (event.origin !== window.location.origin) return;
         const payload = event.data || {};
         if (payload.type !== "FANTASYIQ_DRAFT_COMPANION_STATUS") return;
-        if (payload.installed) setInstalled(payload.reason === "configured" ? "Installed and ready for Draft Room sync." : "");
+        if (payload.installed) setInstalled(payload.reason === "configured" ? "Installed for draft bridge testing." : "");
       });
 
       window.postMessage({ type: "FANTASYIQ_DRAFT_COMPANION_PING" }, window.location.origin);

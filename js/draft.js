@@ -349,8 +349,8 @@ function waiverPoolIsReliable() {
 
 function waiverPoolSourceLabel() {
   if (liveLeagueHasRosters()) return "Filtered against active ESPN rosters.";
-  if (liveDraft?.draftedNames?.length) return "Filtered against the synced draft board.";
-  if (liveDraft?.rosteredNames?.length) return "Filtered against synced league rosters.";
+  if (liveDraft?.draftedNames?.length) return "Filtered against the refreshed draft board.";
+  if (liveDraft?.rosteredNames?.length) return "Filtered against refreshed league rosters.";
   return "Using the league-adjusted player board.";
 }
 
@@ -1429,7 +1429,7 @@ function renderMyTeam(snapshot = activeRosterSnapshot({ preferPasted: false })) 
     myTeamHero.innerHTML = `
       <article>
         <span>Roster IQ</span>
-        <strong>${htmlEscape(matchedRoster ? grade.grade : "Synced")}</strong>
+        <strong>${htmlEscape(matchedRoster ? grade.grade : "Loaded")}</strong>
         <small>${htmlEscape(matchedRoster ? `${grade.label} / ${matchedRows.length} matched / ${sourceLabel}` : `${entryCount} ESPN players / value matching pending`)}</small>
       </article>
       <article>
@@ -1500,7 +1500,7 @@ function renderMyTeam(snapshot = activeRosterSnapshot({ preferPasted: false })) 
     if (!matchedRoster) {
       myTeamActions.innerHTML = `
         <div class="trade-lane-summary">
-          <strong>${htmlEscape(`${entryCount} ESPN players synced`)}</strong>
+          <strong>${htmlEscape(`${entryCount} ESPN players loaded`)}</strong>
           <span>${htmlEscape("FantasyIQ can read roster construction now; value grading will improve as player matching completes.")}</span>
         </div>
         <p>${htmlEscape(topNeed ? `Primary count gap: ${topNeed.pos} needs ${topNeed.depthGap} more depth slot(s).` : "Roster counts do not show a forced positional gap.")}</p>
@@ -1824,7 +1824,7 @@ function renderWaiversIqEmpty(message) {
       <article>
         <span>Confidence</span>
         <strong>--</strong>
-        <small>Updates after sync</small>
+        <small>Updates after refresh</small>
       </article>
     `;
   }
@@ -1993,7 +1993,7 @@ function commandWeaknessFromData(data, snapshot) {
   }
   return {
     label: "Needs data",
-    detail: "Load a roster, draft board, or ESPN sync to identify the weak spot.",
+    detail: "Load a roster, draft board, or ESPN refresh to identify the weak spot.",
   };
 }
 
@@ -2017,7 +2017,7 @@ function commandScoreDetailText(score, data, snapshot) {
   const starterQuality = Number(data?.engine?.starterQuality);
   if (Number.isFinite(strength) && strength > 0)
     return `Team strength ${strength.toFixed(1)} / starter quality ${starterQuality.toFixed(1)}`;
-  return "Draft-board score until roster sync is available";
+  return "Draft-board score until roster context is available";
 }
 
 function renderCommandDecision(data = null) {
@@ -2027,7 +2027,7 @@ function renderCommandDecision(data = null) {
   const weakness = commandWeaknessFromData(data, snapshot);
   const reasons = rec.supportingQuantitativeReasons || [];
   const action = rec.action || (intelligenceInFlight ? "RUNNING" : "WAIT");
-  const mainMove = rec.mainMove || (intelligenceInFlight ? "Reading every viable move" : "Run IQ Brief");
+  const mainMove = rec.mainMove || (intelligenceInFlight ? "Reading every viable move" : "Run Main Move Brief");
   const commandPanel = document.querySelector("#command");
   const scoreTone = score >= 88 ? "elite" : score >= 74 ? "strong" : score >= 55 ? "watch" : score ? "limited" : "idle";
 
@@ -2042,7 +2042,7 @@ function renderCommandDecision(data = null) {
       reasons[0] ||
       (intelligenceInFlight
         ? "FantasyIQ is ranking roster, board, schedule, trade, and waiver signals."
-        : "Run the brief to compare every action against doing nothing.");
+        : "Run the Main Move Brief to compare every action against doing nothing.");
   }
   if (commandFantasyIqScore) {
     commandFantasyIqScore.textContent = score ? String(score) : "--";
@@ -2060,7 +2060,7 @@ function renderCommandDecision(data = null) {
   if (commandConfidenceDetail) {
     commandConfidenceDetail.textContent =
       rec.dataFreshnessStatus ||
-      (data?.syncedAt ? `Synced ${formatSyncTime(data.syncedAt)}` : "Awaiting the next IQ Brief");
+      (data?.syncedAt ? `Refreshed ${formatSyncTime(data.syncedAt)}` : "Awaiting the next Main Move Brief");
   }
   if (commandSupportingReasons) {
     commandSupportingReasons.innerHTML = reasons.length
@@ -2068,11 +2068,11 @@ function renderCommandDecision(data = null) {
           .slice(0, 3)
           .map((reason) => `<p>${htmlEscape(reason)}</p>`)
           .join("")
-      : "<p>Run an IQ Brief to turn roster, board, waiver, trade, and schedule context into an executive recommendation.</p>";
+      : "<p>Run a Main Move Brief to turn roster, board, waiver, trade, and schedule context into an executive recommendation.</p>";
   }
   if (commandRiskWarning) commandRiskWarning.textContent = rec.riskWarning || "No elevated risk surfaced yet.";
   if (commandAlternativePath)
-    commandAlternativePath.textContent = rec.alternativePath || "Run the next brief after ESPN sync or board changes.";
+    commandAlternativePath.textContent = rec.alternativePath || "Run the next brief after ESPN refresh or board changes.";
 }
 
 function compactIntelligenceRow(row) {
@@ -2130,7 +2130,7 @@ function buildClientIntelligenceData(serverData = {}) {
   if (!snapshot.rows.length)
     staleWarnings.push("No selected ESPN roster or pasted roster, so roster-specific weekly logic is limited.");
   if (!liveLeagueHasRosters())
-    staleWarnings.push("Opponent roster intelligence is limited until ESPN roster sync is available.");
+    staleWarnings.push("Opponent roster intelligence is limited until ESPN roster context is available.");
   if (!boardData) staleWarnings.push("Player board data is not loaded yet.");
 
   let recommendation = serverData.recommendation || {};
@@ -2156,7 +2156,7 @@ function buildClientIntelligenceData(serverData = {}) {
       alternativePath: tradeIsActionable
         ? `Instead, shop ${compactTradeIdeaSide(tradeIdea, "give")} for ${compactTradeIdeaSide(tradeIdea, "get")}.`
         : "Hold waiver priority/FAAB if news flow weakens the role before lock.",
-      dataFreshnessStatus: `Client synthesis from dashboard data. Board synced ${formatSyncTime(boardFreshness)}.`,
+      dataFreshnessStatus: `Client synthesis from dashboard data. Board refreshed ${formatSyncTime(boardFreshness)}.`,
     };
   } else if (tradeIsActionable) {
     const givePackage = tradeIdea.givePackage || [tradeIdea.give];
@@ -2192,7 +2192,7 @@ function buildClientIntelligenceData(serverData = {}) {
       alternativePath: topWaiver
         ? `Fallback waiver path: add ${compactIntelligenceRow(topWaiver)} if the manager declines.`
         : "Fallback path is to hold and wait for waiver or injury leverage.",
-      dataFreshnessStatus: `Client synthesis from ESPN roster context. Synced ${formatSyncTime(boardFreshness)}.`,
+      dataFreshnessStatus: `Client synthesis from ESPN roster context. Refreshed ${formatSyncTime(boardFreshness)}.`,
     };
   } else if (topDraft && available.length) {
     recommendation = {
@@ -2215,7 +2215,7 @@ function buildClientIntelligenceData(serverData = {}) {
         picks.bestValue?.row && picks.bestValue.row !== topDraft
           ? `Alternative: ${compactIntelligenceRow(picks.bestValue.row)} as the pure value play.`
           : "Hold if the room pushes better tier value to you.",
-      dataFreshnessStatus: `Client synthesis from live draft board. Board synced ${formatSyncTime(boardFreshness)}.`,
+      dataFreshnessStatus: `Client synthesis from draft board context. Board refreshed ${formatSyncTime(boardFreshness)}.`,
     };
   } else {
     recommendation = {
@@ -2236,8 +2236,8 @@ function buildClientIntelligenceData(serverData = {}) {
         : "Recommendation quality is limited until roster context is present.",
       alternativePath: topWaiver
         ? `Monitor ${compactIntelligenceRow(topWaiver)} as the top watchlist add.`
-        : "Refresh after the next ESPN sync or roster update.",
-      dataFreshnessStatus: `Client synthesis from available dashboard context. Synced ${formatSyncTime(boardFreshness)}.`,
+        : "Refresh after the next ESPN refresh or roster update.",
+      dataFreshnessStatus: `Client synthesis from available dashboard context. Refreshed ${formatSyncTime(boardFreshness)}.`,
     };
   }
 
@@ -2254,7 +2254,7 @@ function buildClientIntelligenceData(serverData = {}) {
         mainMove: topDraft ? compactIntelligenceRow(topDraft) : "Waiting for board data",
         supportingQuantitativeReasons: topDraft
           ? [`Value ${valueDisplay(topDraft)} / projection ${projectionDisplay(topDraft)}.`]
-          : ["No live board row available."],
+          : ["No player board row available."],
       },
       weeklyCommandCenter: {
         action: recommendation.mainMove === "Do Nothing" ? "WAIT" : recommendation.action,
@@ -2301,7 +2301,7 @@ function renderIntelligenceOS() {
     if (intelligenceFreshness)
       intelligenceFreshness.textContent = intelligenceInFlight
         ? "Reading ESPN and board context."
-        : "Run an IQ Brief to scan draft, weekly, waiver, trade, and opponent context.";
+        : "Run a Main Move Brief to scan draft, weekly, waiver, trade, and opponent context.";
     if (intelligenceMainCard) {
       intelligenceMainCard.innerHTML = `<strong>Main move</strong><span>${intelligenceInFlight ? "Ranking every viable action." : "Awaiting the next brief."}</span>`;
     }
@@ -2318,7 +2318,7 @@ function renderIntelligenceOS() {
   if (intelligenceMainMove) intelligenceMainMove.textContent = rec.mainMove || "No forced move";
   if (intelligenceFreshness) {
     intelligenceFreshness.textContent =
-      rec.dataFreshnessStatus || `Synced ${formatSyncTime(intelligenceData.syncedAt)}.`;
+      rec.dataFreshnessStatus || `Refreshed ${formatSyncTime(intelligenceData.syncedAt)}.`;
   }
   if (intelligenceMainCard) {
     const action = rec.action || "WAIT";
@@ -2339,7 +2339,7 @@ function renderIntelligenceOS() {
           .join("") || "<p>No quantitative reasons available yet.</p>"
       }
       <p><strong>Risk:</strong> ${htmlEscape(rec.riskWarning || "Normal fantasy variance applies.")}</p>
-      <p><strong>Backup:</strong> ${htmlEscape(rec.alternativePath || "Wait for cleaner data or rerun sync.")}</p>
+      <p><strong>Backup:</strong> ${htmlEscape(rec.alternativePath || "Wait for cleaner data or rerun ESPN refresh.")}</p>
       ${warnings.length ? `<p><strong>Missing:</strong> ${htmlEscape(warnings.slice(0, 2).join(" "))}</p>` : ""}
       ${fallback.length ? `<p><strong>Fallback:</strong> ${htmlEscape(fallback.slice(0, 2).join(" "))}</p>` : ""}
     `;
@@ -2381,6 +2381,28 @@ function loadIntelligence(force = false) {
     renderIntelligenceOS();
     return Promise.resolve();
   }
+  if (appConfig.isDemoPreview && !requiresCustomerAccess()) {
+    intelligenceData = buildClientIntelligenceData({
+      recommendation: {
+        action: "DEMO",
+        mainMove: "Run the Main Move Brief",
+        confidenceScore: 84,
+        supportingQuantitativeReasons: [
+          "Demo mode is using the bundled starter board for instant page load.",
+          "Roster, waiver, trade, schedule, and draft views are available without waiting on live APIs.",
+          "A paid dashboard refreshes public ESPN data when a league profile is connected.",
+        ],
+        riskWarning: "Demo data is illustrative. Connected public ESPN leagues use refreshed league context.",
+        alternativePath: "Open any IQ module for a focused read.",
+        dataFreshnessStatus: "Demo starter board loaded locally.",
+      },
+      phases: {},
+      missingDataWarnings: [],
+      fallbackLogicUsed: ["Local demo intelligence."],
+    });
+    renderIntelligenceOS();
+    return Promise.resolve();
+  }
   intelligenceInFlight = true;
   renderIntelligenceOS();
   return fetch(apiUrl("/api/intelligence", { force: force ? 1 : "" }), { cache: "no-store", headers: apiHeaders() })
@@ -2398,12 +2420,12 @@ function loadIntelligence(force = false) {
           confidenceScore: 20,
           supportingQuantitativeReasons: [
             "The dashboard is still usable.",
-            "Live boards and draft room can continue independently.",
-            "Retry after ESPN or intelligence sync recovers.",
+            "Player board and draft room can continue independently.",
+            "Retry after ESPN or intelligence refresh recovers.",
           ],
-          riskWarning: error.message || "Unknown intelligence sync error.",
+          riskWarning: error.message || "Unknown intelligence refresh error.",
           alternativePath: "Use Schedule IQ, Waiver IQ, and Trade IQ manually for now.",
-          dataFreshnessStatus: "Intelligence sync unavailable.",
+          dataFreshnessStatus: "Intelligence refresh unavailable.",
         },
         phases: {},
         missingDataWarnings: [error.message || "Unknown intelligence API error."],
@@ -2940,7 +2962,7 @@ function liveDraftSlotChangeNote(teamId, firstPick) {
 
 function preDraftSlotSummary(teamId = selectedTeamId()) {
   const pick = firstRoundPickForTeam(teamId);
-  if (!pick) return "Choose your ESPN team; FantasyIQ will keep your slot synced to ESPN.";
+  if (!pick) return "Choose your ESPN team; FantasyIQ can read your slot when ESPN exposes it.";
   return `Live ESPN slot: Round ${pick.round}, Pick ${pick.roundPick}, Overall ${pick.overall}.`;
 }
 
@@ -3067,9 +3089,9 @@ function slotPlan(firstPick) {
     title: "Pick slot needed",
     detail: "Use Schedule IQ with mock practice so FantasyIQ can pair value with schedule leverage.",
     bullets: [
-      "Enter the ESPN draft room before trusting the slot.",
-      "Click Sync Now after ESPN publishes order.",
-      "If ESPN reshuffles, FantasyIQ updates the slot from live draft order.",
+      "Confirm ESPN has published the draft order before trusting the slot.",
+      "Click Refresh ESPN after ESPN publishes order.",
+      "If ESPN reshuffles, rerun Refresh ESPN or update the slot manually.",
     ],
   };
 }
@@ -3250,7 +3272,7 @@ function renderDraftPrep() {
       label: "League Public",
       ok: Boolean(liveDraft),
       value: liveDraft ? "Verified" : "Pending",
-      detail: liveDraft ? "ESPN public sync reached this league" : "Run Sync Now before draft day",
+      detail: liveDraft ? "ESPN public access reached this league" : "Run Refresh ESPN before draft day",
     },
     {
       label: "League IDs",
@@ -3286,7 +3308,7 @@ function renderDraftPrep() {
       label: "Draft Rounds",
       ok: Boolean(draftRoundTotal(settings)),
       value: `${draftRoundTotal(settings)} rounds`,
-      detail: "Used for mock and live pick pacing",
+      detail: "Used for mock and draft pick pacing",
     },
     {
       label: "Board Loaded",
@@ -3295,10 +3317,10 @@ function renderDraftPrep() {
       detail: boardReady ? "Tier and value data ready" : "Load Big Board data",
     },
     {
-      label: "ESPN Sync",
+      label: "ESPN Access",
       ok: Boolean(liveDraft && !liveDraft.staleError),
-      value: liveDraft?.staleError ? "Cached" : liveDraft ? "Live" : "Pending",
-      detail: liveDraft?.staleError ? "Using cached board mode" : "Click Sync Now on draft day",
+      value: liveDraft?.staleError ? "Cached" : liveDraft ? "Checked" : "Pending",
+      detail: liveDraft?.staleError ? "Using cached board mode" : "Click Refresh ESPN on draft day",
     },
     {
       label: "Fallback Mode",
@@ -3419,7 +3441,7 @@ function preDraftRecommendationIntro(teamId) {
   return emptyStateHtml(
     "Pre-draft board value is ready",
     teamId
-      ? `${preDraftSlotSummary(teamId)} These cards use your slot, league scoring, and the live board before picks start.`
+      ? `${preDraftSlotSummary(teamId)} These cards use your slot, league scoring, and the draft board before picks start.`
       : "Choose My ESPN Team to turn overall values into slot-specific survival reads.",
     [
       "Use Pick Now for players you should not risk trying to sneak back.",
@@ -3461,7 +3483,7 @@ function preDraftRecentPicksEmpty() {
     "No picks yet",
     "ESPN has the order loaded, but the room has not started drafting.",
     [
-      "Keep Sync Now handy near draft time.",
+      "Keep Refresh ESPN handy near draft time.",
       "Recent picks will appear here as soon as ESPN records the first selection.",
     ],
     "good",
@@ -3615,7 +3637,7 @@ function renderLiveDraftSlot() {
   if (!liveMySlot || !liveMySlotNote) return;
   if (!liveDraft) {
     liveMySlot.textContent = "Pending";
-    liveMySlotNote.textContent = "Connect ESPN, then click Sync Now after the room opens.";
+    liveMySlotNote.textContent = "Connect ESPN, then click Refresh ESPN after ESPN publishes order.";
     return;
   }
   const teamId = selectedTeamId();
@@ -3627,14 +3649,14 @@ function renderLiveDraftSlot() {
   const firstPick = firstRoundPickForTeam(teamId);
   if (!firstPick) {
     liveMySlot.textContent = "Order pending";
-    liveMySlotNote.textContent = "Click Sync Now after entering the ESPN draft room. Slot is not assumed from setup.";
+    liveMySlotNote.textContent = "Click Refresh ESPN after ESPN publishes the draft order. Slot is not assumed from setup.";
     return;
   }
   const upcoming = pendingPicksForTeam(teamId);
   const nextPick = upcoming[0];
   const changeNote = liveDraftSlotChangeNote(teamId, firstPick);
   liveMySlot.textContent = `Pick ${firstPick.roundPick}`;
-  liveMySlotNote.textContent = `Live ESPN order. First pick overall ${firstPick.overall}.${nextPick ? ` Next turn overall ${nextPick.overall}.` : ""}${changeNote}`;
+  liveMySlotNote.textContent = `ESPN order checked. First pick overall ${firstPick.overall}.${nextPick ? ` Next turn overall ${nextPick.overall}.` : ""}${changeNote}`;
 }
 
 function renderPickCards(container, picks, emptyMessage) {
@@ -4137,12 +4159,12 @@ function renderCheatcodeMode() {
   const heroState = !teamId
     ? "Choose your ESPN team to unlock the full cheatcode read."
     : !hasLive
-      ? "Board intelligence is ready. Live draft sync is still connecting."
+      ? "Board intelligence is ready. Draft picks can be imported when ESPN does not expose them."
       : until === 0
         ? "You are on the clock. Take the highest-confidence edge."
         : `${until} picks until you. ${nowDecision?.label || "Target"}: ${bestPlayer?.Player || "best available"}.`;
 
-  cheatcodeStatus.innerHTML = `<strong>${hasLive ? "Live intelligence ready" : "Board intelligence ready"}</strong>: ${htmlEscape(heroState)}`;
+  cheatcodeStatus.innerHTML = `<strong>${hasLive ? "Draft intelligence ready" : "Board intelligence ready"}</strong>: ${htmlEscape(heroState)}`;
   if (cheatcodeHero) {
     cheatcodeHero.innerHTML = `
       <div>
@@ -4217,7 +4239,7 @@ function renderCheatcodeMode() {
       : [];
     cheatcodeWait.innerHTML = waitList.length
       ? waitList.map((item) => renderRecommendationCard(item.row, counts)).join("")
-      : "<p>Select your team during a live draft to see who can wait.</p>";
+      : "<p>Select your team during the draft to see who can wait.</p>";
   }
 
   if (cheatcodeAvoid) {
@@ -4242,7 +4264,7 @@ function renderCheatcodeMode() {
         <div class="intel-subgrid">
           <div><h4>Last ${windowSize}</h4>${leaders.map(([pos, count]) => `<span>${pos} <b>${count}</b></span>`).join("")}</div>
         </div>`
-      : "<p>Live picks have not started yet.</p>";
+      : "<p>No drafted-player updates yet.</p>";
   }
 }
 
@@ -4341,7 +4363,7 @@ function draftBoardPickTile(pick, round) {
 function renderAllTeamsDraftBoard() {
   if (!allTeamsDraftBoard) return;
   if (!liveDraft) {
-    allTeamsDraftBoard.textContent = "Connecting to ESPN public draft sync.";
+    allTeamsDraftBoard.textContent = "Checking ESPN public draft data.";
     if (allTeamsDraftSummary) allTeamsDraftSummary.textContent = "Waiting for ESPN.";
     return;
   }
@@ -4356,9 +4378,9 @@ function renderAllTeamsDraftBoard() {
   if (!teams.length || !picks.length) {
     allTeamsDraftBoard.innerHTML = emptyStateHtml(
       "Waiting for ESPN draft board",
-      "Keep Auto sync on, then hit Sync Now once the room publishes order or the first pick.",
+      "Use Refresh ESPN to check public ESPN access. If picks are not exposed, paste drafted players below.",
       [
-        "The grid fills by team slot as ESPN records each pick.",
+        "The grid fills by team slot when ESPN exposes picks or when you import drafted players.",
         "Use My ESPN Team above first so your build stays personalized.",
       ],
       "watch",
@@ -4435,17 +4457,17 @@ function liveSyncIntervalMs(data = liveDraft) {
 
 function liveSyncCadenceLabel(data = liveDraft) {
   const seconds = Math.round(liveSyncIntervalMs(data) / 1000);
-  if (liveSyncFailureCount > 0) return `ESPN sync is backing off for ${seconds} seconds after a connection issue.`;
-  if (data?.drafted) return `Draft is complete; auto sync checks ESPN every ${seconds} seconds.`;
+  if (liveSyncFailureCount > 0) return `ESPN refresh is backing off for ${seconds} seconds after a connection issue.`;
+  if (data?.drafted) return `Draft is complete; periodic checks run about every ${seconds} seconds when enabled.`;
   if (data?.inProgress || Number(data?.completedPicks || 0) > 0) {
-    return `Draft-day turbo sync checks ESPN about every ${seconds} seconds.`;
+    return `Periodic checks run about every ${seconds} seconds when public ESPN data is available.`;
   }
-  return `Pre-draft auto sync checks ESPN every ${seconds} seconds.`;
+  return `Periodic checks run about every ${seconds} seconds before draft day when enabled.`;
 }
 
 function renderLiveDraftSummary() {
   if (!liveDraft) {
-    if (liveStatus) liveStatus.textContent = "Connecting to ESPN public draft sync...";
+    if (liveStatus) liveStatus.textContent = "Ready to check public ESPN league data.";
     renderPreDraftPanel();
     renderDraftPrep();
     renderLeagueHealth();
@@ -4458,7 +4480,7 @@ function renderLiveDraftSummary() {
   const totalFallback = leagueTeamTotal() * draftRoundTotal();
   const pct = total || totalFallback ? Math.round((completed / (total || totalFallback)) * 100) : 0;
   const stale = liveDraft.staleError
-    ? ` ESPN sync is delayed. FantasyIQ is using cached board mode. Click Sync Now or continue with manual draft tracking. ${liveDraft.staleError}`
+    ? ` ESPN refresh is delayed. FantasyIQ is using cached board mode. Click Refresh ESPN or continue with manual draft tracking. ${liveDraft.staleError}`
     : "";
   const syncWarnings =
     Array.isArray(liveDraft.fallbackStates) && liveDraft.fallbackStates.length
@@ -4466,7 +4488,7 @@ function renderLiveDraftSummary() {
       : "";
   const preDraft = isPreDraftLeague();
   const state = liveDraft.inProgress
-    ? "Draft live"
+    ? "Draft started"
     : liveDraft.drafted
       ? "Draft complete"
       : preDraft
@@ -4476,9 +4498,9 @@ function renderLiveDraftSummary() {
     liveDraft.draftSyncMode === "rosterFallback"
       ? " ESPN roster fallback is active for drafted-player filtering."
       : liveDraft.draftSyncMode === "espnDraftRoomBridge"
-        ? " ESPN public picks are hidden, so FantasyIQ is using authenticated draft-room bridge events."
+        ? " Draft-room bridge data is experimental; verify picks with the manual importer."
         : liveDraft.draftSyncMode === "espnLiveHidden"
-          ? " ESPN has started this draft but is not exposing live picks through the public feed. Use the drafted-player paste importer below."
+          ? " ESPN has started this draft but is not exposing draft picks through the public feed. Use the drafted-player paste importer below."
           : "";
   const draftOverride = activeDraftLeagueOverride();
   const overrideNote = draftOverride?.leagueId
@@ -4490,7 +4512,7 @@ function renderLiveDraftSummary() {
   const syncContext = liveDraft.demoMode
     ? " Public demo league is connected; subscribers get their ESPN league configured after checkout."
     : preDraft
-      ? " ESPN order is loaded; keep auto sync on when the room opens."
+      ? " ESPN order is loaded when public data is available; use manual import for draft-day picks."
       : ` ${liveSyncCadenceLabel()}`;
 
   if (liveStatus) {
@@ -4500,10 +4522,10 @@ function renderLiveDraftSummary() {
     liveSyncStatus.textContent = liveDraft.demoMode
       ? "Demo league connected"
       : liveDraft.inProgress
-        ? "Draft live"
+        ? "Draft started"
         : preDraft
           ? "Pre-draft ready"
-          : "ESPN connected";
+          : "ESPN checked";
   }
   if (liveCurrentPick) {
     liveCurrentPick.textContent = current ? `Round ${current.round}, Pick ${current.roundPick}` : "Draft complete";
@@ -4526,9 +4548,9 @@ function renderLiveDraftSummary() {
       : liveDraft.draftSyncMode === "rosterFallback"
         ? "ESPN roster fallback"
         : liveDraft.draftSyncMode === "espnDraftRoomBridge"
-          ? "ESPN draft-room bridge"
-          : liveDraft.draftSyncMode === "espnLiveHidden"
-            ? "ESPN live picks hidden"
+          ? "Manual draft bridge"
+        : liveDraft.draftSyncMode === "espnLiveHidden"
+            ? "ESPN picks hidden"
             : activeDraftLeagueOverride()?.leagueId
               ? `ESPN override ${activeDraftLeagueOverride().leagueId}`
               : liveDraft.source || "ESPN public league API";

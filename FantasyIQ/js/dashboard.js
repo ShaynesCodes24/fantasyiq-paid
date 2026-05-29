@@ -425,19 +425,19 @@ function renderLeagueProfile() {
   if (leagueLineupNote) leagueLineupNote.textContent = `${lineupText} / ${benchText}`;
   if (leagueScoring) leagueScoring.textContent = scoringText;
   if (leagueScoringNote) {
-    leagueScoringNote.textContent = "Raw-stat scoring when live board is loaded";
+    leagueScoringNote.textContent = "Raw-stat scoring when the board is loaded";
   }
   if (leagueDraftRounds) leagueDraftRounds.textContent = `${rounds} rounds`;
   if (leagueDraftNote) leagueDraftNote.textContent = `${settings.playoffTeams || 0} playoff teams`;
   if (leagueProfileStrip) {
     const draftOverride = activeDraftLeagueOverride();
-    const overrideText = draftOverride?.leagueId ? ` Live draft override: ESPN league ${draftOverride.leagueId}.` : "";
+    const overrideText = draftOverride?.leagueId ? ` Draft league override: ESPN league ${draftOverride.leagueId}.` : "";
     leagueProfileStrip.innerHTML = `<strong>League engine active</strong><span>${htmlEscape(teamText)} / ${htmlEscape(scoringText)} / ${htmlEscape(lineupText)}. Source: ${htmlEscape(source)}.${htmlEscape(overrideText)}</span>`;
   }
   if (leagueRoomNote) {
     const draftOverride = activeDraftLeagueOverride();
     const roomLeague = draftOverride?.leagueId ? `ESPN league ${draftOverride.leagueId}` : "saved ESPN league";
-    leagueRoomNote.innerHTML = `<strong>${htmlEscape(scoringText)} league profile</strong><span>${htmlEscape(teamText)} with ${htmlEscape(lineupText)}. Live sync is using the ${htmlEscape(roomLeague)}.</span>`;
+    leagueRoomNote.innerHTML = `<strong>${htmlEscape(scoringText)} league profile</strong><span>${htmlEscape(teamText)} with ${htmlEscape(lineupText)}. ESPN refresh uses the ${htmlEscape(roomLeague)}.</span>`;
   }
   if (boardMethodNote) {
     boardMethodNote.textContent = boardData?.scoringProfile
@@ -489,23 +489,23 @@ function leagueHealthItems() {
   const publicSyncDetail = liveDraft?.staleError
     ? `Stale fallback: ${liveDraft.staleError}`
     : liveDraft
-      ? `${liveDraft.demoMode ? "Demo league" : "Public ESPN league"} synced ${formatSyncTime(liveDraft.syncedAt)}`
+      ? `${liveDraft.demoMode ? "Demo league" : "Public ESPN league"} checked ${formatSyncTime(liveDraft.syncedAt)}`
       : liveSyncInFlight
-        ? "Connecting to the selected ESPN league now"
+        ? "Checking the selected ESPN league now"
         : appConfig.leagueId
-          ? "Waiting for first ESPN sync"
+          ? "Waiting for first ESPN refresh"
           : requiresCustomerAccess()
             ? "League setup is still needed"
-            : "Demo league will connect automatically";
+            : "Demo profile is ready to check";
   const draftState = liveDraft?.inProgress
-    ? "Draft live"
+    ? "Draft started"
     : liveDraft?.drafted
       ? "Draft complete"
       : isPreDraftLeague()
         ? "Pre-draft ready"
         : liveDraft
           ? "Board loaded"
-          : "Awaiting sync";
+            : "Awaiting check";
   return [
     {
       label: "Account",
@@ -518,15 +518,15 @@ function leagueHealthItems() {
       state: requiresCustomerAccess() && !hasCustomerAccess() ? "warn" : "good",
     },
     {
-      label: "ESPN Sync",
+      label: "ESPN Access",
       value: liveDraft?.staleError
         ? "Needs review"
         : liveDraft
-          ? "Connected"
+          ? "Checked"
           : liveSyncInFlight
-            ? "Syncing"
+            ? "Checking"
             : appConfig.leagueId
-              ? "Awaiting sync"
+              ? "Awaiting check"
               : requiresCustomerAccess()
                 ? "Setup needed"
                 : "Demo ready",
@@ -556,7 +556,7 @@ function leagueHealthItems() {
         ? `${(liveDraft?.draftOrder || []).length || leagueTeamTotal()} draft slots loaded; 0 picks made.`
         : liveDraft
           ? `${Number(liveDraft.completedPicks || 0)}/${Number(liveDraft.totalPicks || 0) || leagueTeamTotal() * draftRoundTotal(settings)} picks complete.`
-          : "Sync once before draft day.",
+          : "Run Refresh ESPN before draft day.",
       state: liveDraft ? "good" : "warn",
     },
   ];
@@ -599,7 +599,7 @@ function additionalLeaguePaymentUrl() {
 
 function leagueSlotText(count = configuredLeagueCount()) {
   const limit = includedLeagueLimit();
-  const price = appConfig.additionalLeaguePriceLabel || "$5 / season";
+  const price = appConfig.additionalLeaguePriceLabel || "$5/year";
   if (count < limit) return `${count}/${limit} included leagues`;
   if (count === limit) return `${limit}/${limit} included / + extra ${price}`;
   return `${count} leagues / extras ${price} each`;
@@ -621,7 +621,7 @@ function accountFreshnessTime(value) {
 function accountFreshnessLabel(row) {
   const source = String(row?.source || "").toLowerCase();
   if (source.includes("fantasycalc")) return "Fantasy IQ Data";
-  if (source === "live-boards") return "Live board";
+  if (source === "live-boards") return "Player board";
   if (source === "daily-cron" || source === "fantasyiq-cron") return "Daily refresh";
   return "Data refresh";
 }
@@ -720,7 +720,7 @@ function renderAccountPanel() {
   const count = configuredLeagueCount(options);
   const limit = includedLeagueLimit();
   const active = activeLeagueOption();
-  const price = appConfig.additionalLeaguePriceLabel || "$5 / season";
+  const price = appConfig.additionalLeaguePriceLabel || "$5/year";
   const support = appConfig.supportEmail || "support@myfantasyiq.com";
 
   if (accountDashboardName)
@@ -778,7 +778,7 @@ function renderAccountPanel() {
       ? `<article class="setup-needed">
         <div>
           <span>League setup</span>
-          <strong>Connect your ESPN league</strong>
+          <strong>Validate your ESPN league</strong>
           <p>Your account is active. Add your public ESPN league ID and team ID once so FantasyIQ can personalize every tool.</p>
         </div>
         <div class="account-league-actions">
@@ -823,7 +823,7 @@ function renderAccountProgress(count, limit) {
 
 function addLeagueActionTitle(count = configuredLeagueCount()) {
   const limit = includedLeagueLimit();
-  const price = appConfig.additionalLeaguePriceLabel || "$5 / season";
+  const price = appConfig.additionalLeaguePriceLabel || "$5/year";
   if (requiresCustomerAccess() && count <= 0) return "Finish league setup";
   return count < limit ? "Add included league" : `Add extra league (${price})`;
 }
@@ -1104,7 +1104,7 @@ function openAddLeagueDialog() {
   const dialog = ensureAddLeagueDialog();
   const count = configuredLeagueCount();
   const limit = includedLeagueLimit();
-  const price = appConfig.additionalLeaguePriceLabel || "$5 / season";
+  const price = appConfig.additionalLeaguePriceLabel || "$5/year";
   const includedRemaining = Math.max(0, limit - count);
   const needsPayment = count >= limit;
   const needsInitialSetup = requiresCustomerAccess() && count <= 0;
@@ -1129,7 +1129,7 @@ function openAddLeagueDialog() {
   if (summary) {
     summary.innerHTML = `
       <span>${count}/${limit} included leagues configured</span>
-      <strong>${needsInitialSetup ? "Setup required before live sync" : needsPayment ? `Extra league add-on: ${htmlEscape(price)}` : "No extra payment needed yet"}</strong>
+      <strong>${needsInitialSetup ? "Setup required before ESPN refresh" : needsPayment ? `Extra league add-on: ${htmlEscape(price)}` : "No extra payment needed yet"}</strong>
     `;
   }
   if (primary) {
@@ -1406,7 +1406,7 @@ function clearManualDraftOverrides() {
   manualDraftOverrides = [];
   saveManualDraftOverrides();
   if (liveStatus)
-    liveStatus.innerHTML = "<strong>Manual draft tracker cleared.</strong> Pulling a fresh ESPN sync now.";
+    liveStatus.innerHTML = "<strong>Manual draft tracker cleared.</strong> Pulling a fresh ESPN refresh now.";
   loadLiveDraft(true);
 }
 
@@ -2018,15 +2018,15 @@ function renderBoard() {
   if (boardStatus) {
     const title = activeBoardPayload()?.title || "Board";
     const updated = boardData.live
-      ? ` Live ${boardData.source || "board"} synced ${formatSyncTime(boardData.syncedAt)}.`
+      ? ` ${boardData.source || "Board"} refreshed ${formatSyncTime(boardData.syncedAt)}.`
       : boardData.updated
         ? ` Updated ${boardData.updated}.`
         : "";
     const rosteredCount = Number(liveDraft?.rosteredNames?.length || 0);
     const drafted = liveDraft?.completedPicks
-      ? ` ESPN live sync has ${liveDraft.completedPicks} drafted players.`
+      ? ` ESPN public draft data has ${liveDraft.completedPicks} drafted players.`
       : rosteredCount
-        ? ` ESPN roster sync is filtering ${rosteredCount} rostered players.`
+        ? ` ESPN roster data is filtering ${rosteredCount} rostered players.`
         : "";
     const tierHint = positionFilter?.value ? " Tier dividers are grouped by simplified position tiers." : "";
     boardStatus.innerHTML = `<strong>${title}</strong>: showing ${rows.length} players in ESPN ADP order. Click any player name for analysis.${tierHint}${updated}${drafted}`;

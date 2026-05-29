@@ -14,8 +14,8 @@ from datetime import date, datetime
 SITE_URL = os.environ.get("FANTASYIQ_SITE_URL", "https://myfantasyiq.com/").rstrip("/")
 VERCEL_APP_URL = os.environ.get("FANTASYIQ_VERCEL_APP_URL", "https://fantasyiq-paid.vercel.app").rstrip("/")
 ROOT_URL = f"{SITE_URL}/"
-DASHBOARD_URL = ROOT_URL
-COMPAT_DASHBOARD_URL = f"{SITE_URL}/FantasyIQ/"
+DASHBOARD_URL = f"{SITE_URL}/FantasyIQ/"
+COMPAT_DASHBOARD_URL = DASHBOARD_URL
 STRIPE_URL = os.environ.get(
     "FANTASYIQ_STRIPE_URL",
     "https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01",
@@ -135,11 +135,9 @@ def root_check() -> CheckResult:
         return CheckResult("Root URL", "FAIL", f"{ROOT_URL} returned HTTP {status}")
     if "FantasyIQ" not in body:
         return CheckResult("Root URL", "FAIL", f"{ROOT_URL} missing: FantasyIQ")
-    if "Command Center" in body and "next-move-panel" in body:
-        return CheckResult("Root URL", "PASS", f"{ROOT_URL} is the production Command Center")
-    if "Active" in body and "Configured for" in body:
-        return CheckResult("Root URL", "PASS", f"{ROOT_URL} redirects to paid customer dashboard")
-    return CheckResult("Root URL", "FAIL", f"{ROOT_URL} is not serving the Command Center app")
+    if "Your best move" in body and "Main Move" in body:
+        return CheckResult("Root URL", "PASS", f"{ROOT_URL} is the public landing page")
+    return CheckResult("Root URL", "FAIL", f"{ROOT_URL} is not serving the approved landing page")
 
 
 def stripe_check() -> CheckResult:
@@ -159,7 +157,7 @@ def api_check() -> CheckResult:
     if status == 200 and payload.get("ok") is True:
         league = payload.get("leagueName") or "configured league"
         mode = "demo league" if payload.get("demoMode") else "customer league"
-        return CheckResult("Live draft API", "PASS", f"{API_URL} is syncing {mode}: {league}")
+        return CheckResult("Live draft API", "PASS", f"{API_URL} is checking {mode}: {league}")
 
     error = str(payload.get("error", "unknown error"))
     if status == 503 and "FANTASY_IQ_LEAGUE_ID" in error:
@@ -305,12 +303,12 @@ def main() -> int:
         page_check("Privacy", f"{SITE_URL}/privacy.html", ["Privacy"]),
         page_check("Refund policy", f"{SITE_URL}/refund-policy.html", ["Refund"]),
         page_check("Help", f"{SITE_URL}/help.html", ["FantasyIQ Q&A"]),
-        page_check("Checkout success page", SUCCESS_URL, ["Welcome to FantasyIQ", "Finish league setup"]),
+        page_check("Checkout success page", SUCCESS_URL, ["Season Pass confirmed", "Finish league setup"]),
         stripe_check(),
         api_check(),
         board_freshness_check(),
         trade_history_check(),
-        page_check("Setup page", f"{SITE_URL}/setup.html", ["Set up FantasyIQ in two minutes", "Create or reset your password", "auto-fills"]),
+        page_check("Setup page", f"{SITE_URL}/setup.html", ["Check your ESPN league before checkout", "Create or reset your password", "auto-fills"]),
         page_check("Admin gate page", f"{SITE_URL}/admin-login.html", ["Admin sign in"]),
         setup_validate_check(),
         customer_status_check(),
