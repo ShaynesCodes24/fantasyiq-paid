@@ -1,0 +1,40 @@
+{
+  "name": "FantasyIQ",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-24-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.12"
+    }
+  },
+  "postCreateCommand": "npm ci && python -m pip install --user -r requirements.txt && npm install -g vercel@latest && npx playwright install --with-deps chromium",
+  "forwardPorts": [3000, 4173, 8000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Vercel dev",
+      "onAutoForward": "notify"
+    },
+    "4173": {
+      "label": "Static preview",
+      "onAutoForward": "notify"
+    },
+    "8000": {
+      "label": "Python/API dev",
+      "onAutoForward": "silent"
+    }
+  },
+  "remoteEnv": {
+    "HOST": "0.0.0.0"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-playwright.playwright",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "stylelint.vscode-stylelint",
+        "github.vscode-github-actions",
+        "github.vscode-pull-request-github"
+      ]
+    }
+  }
+}
