@@ -6,7 +6,7 @@
       "version": "3.12"
     }
   },
-  "postCreateCommand": "npm ci && python -m pip install --user -r requirements.txt && npm install -g vercel@latest && npx playwright install --with-deps chromium",
+  "postCreateCommand": "npm ci && python -m pip install --user -r requirements.txt && npm install -g vercel@latest",
   "forwardPorts": [3000, 4173, 8000],
   "portsAttributes": {
     "3000": {
