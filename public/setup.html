@@ -25,7 +25,7 @@
 
     <main class="policy-main">
       <section class="policy-card">
-        <p class="eyebrow">Customer Setup</p>
+        <p class="eyebrow" id="setup-eyebrow">Customer Setup</p>
         <h1 id="setup-title">Check your ESPN league before checkout</h1>
         <p id="setup-intro">
           Paste your ESPN league ID and team ID. MyFantasyIQ checks public access, finds your team, and reads the
@@ -268,6 +268,7 @@
       const seasonPassPaymentLink = "https://buy.stripe.com/00wdR9dN7gBRacMb9fefC01";
       const setupStorageKey = "fantasyiq:last-validated-league";
       const setupTitle = document.querySelector("#setup-title");
+      const setupEyebrow = document.querySelector("#setup-eyebrow");
       const setupIntro = document.querySelector("#setup-intro");
       const setupModeNote = document.querySelector("#setup-mode-note");
       const setupAccessCode = document.querySelector("#setup-access-code");
@@ -369,6 +370,7 @@
         setupSeasonPassCard.hidden = true;
       }
       if (precheckMode) {
+        if (setupEyebrow) setupEyebrow.textContent = "ESPN Precheck";
         if (setupTitle) setupTitle.textContent = "Check your ESPN league before checkout";
         if (setupIntro) {
           setupIntro.textContent =

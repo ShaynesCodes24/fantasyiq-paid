@@ -21,11 +21,11 @@
         <span>MyFantasyIQ</span>
       </a>
       <nav aria-label="Checkout navigation">
-        <a href="./setup.html">Setup check</a>
+        <a id="success-nav-setup-link" href="./setup.html">Setup check</a>
         <a href="./help.html">Help</a>
         <a href="./feedback.html">Feedback</a>
         <a href="mailto:support@myfantasyiq.com">Support</a>
-        <a class="dashboard-link" href="/FantasyIQ/?login=1">Customer Login</a>
+        <a class="dashboard-link" id="success-nav-dashboard-link" href="/FantasyIQ/?login=1">Customer Login</a>
       </nav>
     </header>
 
@@ -125,12 +125,19 @@
       const setupLink = document.querySelector("#success-setup-link");
       const dashboardLink = document.querySelector("#success-dashboard-link");
       const feedbackLink = document.querySelector("#success-feedback-link");
+      const navSetupLink = document.querySelector("#success-nav-setup-link");
+      const navDashboardLink = document.querySelector("#success-nav-dashboard-link");
 
       function successUrlWithParams(path, options = {}) {
         const url = new URL(path, window.location.href);
         ["customer", "dashboard", "league"].forEach((key) => {
           const value = successParams.get(key);
-          if (value) url.searchParams.set(key === "dashboard" ? "customer" : key, value);
+          if (!value) return;
+          if (key === "dashboard") {
+            if (!url.searchParams.has("customer")) url.searchParams.set("customer", value);
+            return;
+          }
+          url.searchParams.set(key, value);
         });
         if (options.login || path.includes("FantasyIQ")) url.searchParams.set("login", "1");
         return `${url.pathname}${url.search}`;
@@ -139,6 +146,8 @@
       if (setupLink) setupLink.href = successUrlWithParams("./setup.html");
       if (dashboardLink) dashboardLink.href = successUrlWithParams("/FantasyIQ/", { login: true });
       if (feedbackLink) feedbackLink.href = successUrlWithParams("./feedback.html");
+      if (navSetupLink) navSetupLink.href = successUrlWithParams("./setup.html");
+      if (navDashboardLink) navDashboardLink.href = successUrlWithParams("/FantasyIQ/", { login: true });
 
       try {
         if (["127.0.0.1", "localhost"].includes(window.location.hostname)) throw new Error("local preview");

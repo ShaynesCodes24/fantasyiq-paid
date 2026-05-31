@@ -190,9 +190,6 @@ async function checkDashboard(browser, viewport) {
   const navItems = await page.locator(".nav-item").count();
   if (navItems < 7) throw new Error(`${viewport.name} dashboard expected at least 7 nav items, found ${navItems}`);
 
-  const boardRows = await page.locator("#board-table tbody tr").count();
-  if (boardRows < 50) throw new Error(`${viewport.name} dashboard expected board rows, found ${boardRows}`);
-
   await screenshot(page, `${viewport.name}-dashboard-command`);
   await page.locator("#manual-sync").waitFor({ state: "visible", timeout: 15000 });
   await page.locator("#live-sync-toggle").waitFor({ state: "visible", timeout: 15000 });
@@ -200,9 +197,15 @@ async function checkDashboard(browser, viewport) {
   for (const section of ["draft", "live", "simulator", "trade", "workbooks", "account"]) {
     await activateDashboardSection(page, section);
     if (section === "live") await checkScheduleIqState(page, viewport);
-    if (section === "workbooks") await checkOptionalUdkView(page, viewport);
+    if (section === "workbooks") {
+      await page.locator("#board-table tbody tr").first().waitFor({ state: "attached", timeout: 15000 });
+      await checkOptionalUdkView(page, viewport);
+    }
     await screenshot(page, `${viewport.name}-dashboard-${section}`);
   }
+
+  const boardRows = await page.locator("#board-table tbody tr").count();
+  if (boardRows < 50) throw new Error(`${viewport.name} dashboard expected board rows, found ${boardRows}`);
 
   const tradeText = await page.locator("#trade-finder").innerText({ timeout: 10000 });
   const waiverText = await page.locator("#waiver-assistant").innerText({ timeout: 10000 });
