@@ -2332,6 +2332,59 @@ function setupPlayerAutocomplete() {
   });
 }
 
+function renderRecommendationPanel(refs = {}, content = {}) {
+  const { reasonsEl, riskEl, alternativeEl, confidenceEl, confidenceDetailEl } = refs;
+  if (reasonsEl) {
+    const reasons = (content.reasons || []).filter(Boolean).slice(0, content.maxReasons || 3);
+    reasonsEl.innerHTML = reasons.length
+      ? reasons.map((reason) => `<p>${htmlEscape(reason)}</p>`).join("")
+      : `<p>${htmlEscape(content.reasonsFallback || "No supporting reasons yet.")}</p>`;
+  }
+  if (riskEl) riskEl.textContent = content.risk || content.riskFallback || "No elevated risk surfaced yet.";
+  if (alternativeEl) alternativeEl.textContent = content.alternative || content.alternativeFallback || "No alternative path yet.";
+  if (confidenceEl && content.confidence != null && content.confidence !== "") {
+    confidenceEl.textContent = typeof content.confidence === "number" ? `${content.confidence}%` : content.confidence;
+  }
+  if (confidenceDetailEl && content.confidenceDetail) confidenceDetailEl.textContent = content.confidenceDetail;
+}
+
+function recommendationPanelHtml(content = {}) {
+  const reasons = (content.reasons || []).filter(Boolean).slice(0, content.maxReasons || 3);
+  const reasonsHtml = reasons.length
+    ? reasons.map((reason) => `<p>${htmlEscape(reason)}</p>`).join("")
+    : `<p>${htmlEscape(content.reasonsFallback || "No supporting reasons yet.")}</p>`;
+  return `<section class="decision-support-grid" aria-label="${htmlEscape(content.ariaLabel || "Recommendation support")}">
+      <article>
+        <span>${htmlEscape(content.reasonsLabel || "Why This Move")}</span>
+        <div>${reasonsHtml}</div>
+      </article>
+      <article>
+        <span>${htmlEscape(content.riskLabel || "Risk Limit")}</span>
+        <strong>${htmlEscape(content.risk || content.riskFallback || "No elevated risk surfaced yet.")}</strong>
+      </article>
+      <article>
+        <span>${htmlEscape(content.alternativeLabel || "Next-Best Option")}</span>
+        <strong>${htmlEscape(content.alternative || content.alternativeFallback || "No alternative path yet.")}</strong>
+      </article>
+    </section>`;
+}
+
+function rankProofLine(row) {
+  if (!row) return "";
+  const market = (typeof marketSignal === "function" && marketSignal(row)) || {};
+  const tokens = [
+    row.Rank ? `ESPN rank #${row.Rank}` : "",
+    row.Pos ? `${row.Pos}${row["Pos Rank"] || ""} at position` : "",
+    `tier ${preciseTierDisplay(row)}`,
+    `league value ${valueDisplay(row)}`,
+    `edge ${projectionEdgeDisplay(row)}`,
+    row.Risk != null ? `risk ${row.Risk}/10` : "",
+    market.label ? `market ${market.label}` : "",
+  ].filter(Boolean);
+  if (!tokens.length) return "";
+  return `<div class="recommendation-proof">Why this rank — Based on: ${tokens.map(htmlEscape).join(" / ")}</div>`;
+}
+
 function showAnalysis(row) {
   if (!row || !analysisPane) return;
   selectedBoardPlayerKey = normalizePlayerName(row.Player);
@@ -2364,6 +2417,7 @@ function showAnalysis(row) {
       ${draftedChip}
       ${udkChip}
     </div>
+    ${rankProofLine(row)}
     ${playerSynopsisBlock(row)}
     <p><strong>${row.Action}</strong></p>
     <p><strong>Projection source:</strong> ${row["Projection Source"]}</p>

@@ -125,13 +125,20 @@ function acceptanceProbability(give, get, roster, warnings, giveTotals, getTotal
   const realism = packageRealism(give, get, giveTotals, getTotals);
   const marketPenalty = marketRead.className === "watch" && marketRead.netMarket < marketRead.netFantasyIq - 5 ? 8 : 0;
   const rosterPenalty = warnings.length * 4;
+  const base = 52;
+  const valueTilt = -Math.max(0, netToYou) * 1.8;
+  const realismDelta = (realism.score - 55) * 0.45;
   const score = Math.round(
-    clampNumber(
-      52 - Math.max(0, netToYou) * 1.8 + partnerNeedBonus + (realism.score - 55) * 0.45 - marketPenalty - rosterPenalty,
-      5,
-      95,
-    ),
+    clampNumber(base + valueTilt + partnerNeedBonus + realismDelta - marketPenalty - rosterPenalty, 5, 95),
   );
+  const components = [
+    { label: "Base likelihood", value: base, hint: "Neutral starting point for any offer." },
+    { label: "Value tilt to you", value: Math.round(valueTilt), hint: "Lopsided your-side surplus lowers acceptance." },
+    { label: "Partner need fit", value: Math.round(partnerNeedBonus), hint: "Bonus when the package fills their roster gap." },
+    { label: "Package realism", value: Math.round(realismDelta), hint: "How manager-to-manager the shape looks." },
+    { label: "Market value gap", value: -Math.round(marketPenalty), hint: "Penalty when market disagrees with FantasyIQ." },
+    { label: "Roster-fit warnings", value: -Math.round(rosterPenalty), hint: "Each unresolved fit warning costs acceptance." },
+  ];
   let label = "Long shot";
   let className = "danger";
   if (score >= 68) {
@@ -146,6 +153,7 @@ function acceptanceProbability(give, get, roster, warnings, giveTotals, getTotal
     label,
     className,
     realism,
+    components,
     detail: `${realism.detail} ${partnerNeedBonus ? "The partner roster gives you a need-based pitch." : "You need to create a stronger reason for the other manager."}`,
   };
 }
@@ -842,6 +850,40 @@ function renderTradeCalc() {
   );
   renderSavedTradeNotes();
 
+  const counters = counterOfferIdeas(give, get, roster, breakdown);
+  const acceptanceMathHtml = (acceptance.components || []).length
+    ? `<div class="trade-acceptance-math">
+        <span class="trade-verdict-label">Acceptance math — ${acceptance.score}% likely to accept</span>
+        <div class="trade-breakdown-grid">
+          ${acceptance.components
+            .map((part) => {
+              const signed = `${part.value > 0 ? "+" : ""}${part.value}`;
+              const tone = part.value > 0 ? "good" : part.value < 0 ? "danger" : "watch";
+              return `<article><span>${htmlEscape(part.label)}</span><strong class="${tone}">${htmlEscape(signed)}</strong><small>${htmlEscape(part.hint || "")}</small></article>`;
+            })
+            .join("")}
+        </div>
+      </div>`
+    : "";
+  const tradeReasons = [
+    `Net value ${net >= 0 ? "+" : ""}${net.toFixed(1)} and ${scoringProjectionLabel()} ${projectionDelta >= 0 ? "+" : ""}${projectionDelta.toFixed(1)} in ${tradeModeLabel()} mode.`,
+    `${breakdown.marketRead.label}: ${breakdown.marketRead.detail}`,
+    `Roster fit ${breakdown.fit.label}: ${breakdown.fit.detail}`,
+  ];
+  const tradeRisk = warnings.length
+    ? `${riskRead.label}. Clear ${warnings.length} roster-fit warning${warnings.length > 1 ? "s" : ""} first: ${warnings[0]}`
+    : `${riskRead.label}. ${riskRead.detail}`;
+  const tradeAlternative = counters[0] || "Hold and revisit after the next ESPN refresh or when a roster need changes.";
+  const tradeDecisionPanelHtml = recommendationPanelHtml({
+    reasons: tradeReasons,
+    risk: tradeRisk,
+    alternative: tradeAlternative,
+    reasonsLabel: "Why This Verdict",
+    riskLabel: "Risk Limit",
+    alternativeLabel: "Counter / Next-Best",
+    ariaLabel: "Trade recommendation support",
+  });
+
   if (!give.length || !get.length) {
     tradeOutput.innerHTML = `
       <span class="trade-verdict-label">Deal Verdict</span>
@@ -911,12 +953,12 @@ function renderTradeCalc() {
         <p>${htmlEscape(partnerLens(give, get))}</p>
       </article>
     </div>
+    ${acceptanceMathHtml}
+    ${tradeDecisionPanelHtml}
     ${renderLineupComparison(roster, give, get)}
     <div class="trade-counteroffers">
       <span>Negotiation Script</span>
-      <ul>${counterOfferIdeas(give, get, roster, breakdown)
-        .map((idea) => `<li>${htmlEscape(idea)}</li>`)
-        .join("")}</ul>
+      <ul>${counters.map((idea) => `<li>${htmlEscape(idea)}</li>`).join("")}</ul>
     </div>
     <p><strong>Positions:</strong> Send ${tradePositionSummary(give)}. Receive ${tradePositionSummary(get)}.</p>
     ${warnings.length ? `<div class="trade-warning-list">${warnings.map((warning) => `<span>${htmlEscape(warning)}</span>`).join("")}</div>` : ""}

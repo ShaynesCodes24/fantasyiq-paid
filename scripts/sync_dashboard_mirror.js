@@ -17,9 +17,9 @@ const files = [
   path.join("data", "boards_data.js"),
 ];
 
-const shellFiles = ["index.html", "styles.css"];
+const shellFiles = ["index.html", "styles.css", "redesign.css"];
 
-const directories = ["js", path.join("assets", "premium-icons")];
+const directories = ["js", path.join("assets", "premium-icons"), path.join("assets", "fonts")];
 
 for (const relativePath of files) {
   const source = path.join(sourceRoot, relativePath);

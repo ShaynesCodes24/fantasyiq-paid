@@ -34,6 +34,7 @@
     <link rel="shortcut icon" href="/favicon-myfantasyiq.svg?v=20260521-premium-3">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260521-premium-3">
     <link rel="stylesheet" href="./styles.css?v=20260528_command_status_2">
+    <link rel="stylesheet" href="./redesign.css?v=20260531_phase1_3">
   </head>
   <body>
     <div class="field-overlay" aria-hidden="true">
@@ -160,7 +161,7 @@
                 returns a Main Move Brief with confidence, risk, and the next-best option.
               </p>
               <div class="hero-actions command-primary-actions">
-                <button class="primary-action" id="command-refresh" type="button">Run Main Move Brief</button>
+                <button class="primary-action" id="command-refresh-legacy" type="button">Run Main Move Brief</button>
                 <button class="secondary-action nav-jump" type="button" data-jump="my-team">Open Roster IQ</button>
               </div>
             </div>
@@ -183,45 +184,72 @@
             <button class="nav-jump" type="button" data-jump="trade">Trade IQ</button>
           </div>
 
-          <section class="next-move-panel premium-iq-brief" aria-label="FantasyIQ next move">
-            <article class="next-move-primary" id="command-main-move-card">
-              <span>Main Move</span>
-              <strong id="command-main-move"><span class="skeleton-line wide"></span></strong>
-              <p id="command-main-reason">
-                Run the Main Move Brief to compare every roster, waiver, trade, schedule, and draft action against standing still.
-              </p>
-            </article>
-            <article class="next-move-score">
-              <span>Decision Quality</span>
-              <strong id="command-fantasyiq-score" class="score-glow">--</strong>
-              <small id="command-score-detail">Decision quality and roster fit</small>
-            </article>
-            <article class="next-move-score">
-              <span>Primary Constraint</span>
-              <strong id="command-roster-weakness">Awaiting scan</strong>
-              <small id="command-weakness-detail">Roster context will refine the pressure point</small>
-            </article>
-            <article class="next-move-score">
-              <span>Confidence</span>
-              <strong id="command-confidence">Ready</strong>
-              <small id="command-confidence-detail">Updates after the next brief</small>
-            </article>
-          </section>
+          <!-- Snapshot stat row (sample figures shown in demo mode; wire to live league data) -->
+          <div class="grid g-4 cc-statrow">
+            <div class="card stat"><div class="k">Record</div><div class="v">7&ndash;3</div><div class="d">W3 · 1,284.6 PF</div></div>
+            <div class="card stat"><div class="k">League rank</div><div class="v">#2</div><div class="d">of 12 teams</div></div>
+            <div class="card stat"><div class="k">Playoff odds</div><div class="v"><span class="up">82%</span></div><div class="d">+6% this week</div></div>
+            <div class="card stat"><div class="k">Open decisions</div><div class="v">3</div><div class="d">2 lineup · 1 waiver</div></div>
+          </div>
 
-          <section class="decision-support-grid" aria-label="Recommendation support">
-            <article>
-              <span>Why This Move</span>
-              <div id="command-supporting-reasons">Waiting for league data.</div>
-            </article>
-            <article>
-              <span>Risk Limit</span>
-              <strong id="command-risk-warning">Pending</strong>
-            </article>
-            <article>
-              <span>Next-Best Option</span>
-              <strong id="command-alternative-path">Pending</strong>
-            </article>
-          </section>
+          <div class="cc-grid">
+            <div class="card brief-card" id="command-main-move-card">
+              <div class="brief-tabs">
+                <button class="bt active" type="button">Lineup IQ</button>
+                <button class="bt nav-jump" type="button" data-jump="waivers">Waivers IQ</button>
+                <button class="bt nav-jump" type="button" data-jump="trade">Trade IQ</button>
+                <button class="bt nav-jump" type="button" data-jump="live">Schedule IQ</button>
+              </div>
+              <div class="brief-in">
+                <div class="brief-top">
+                  <div class="pl-badge"><span class="pos">IQ</span><span class="num">★</span></div>
+                  <div>
+                    <div class="brief-lbl">Main Move</div>
+                    <div class="brief-move" id="command-main-move"><span class="skeleton-line wide"></span></div>
+                    <div class="brief-reason" id="command-main-reason">
+                      Run the Main Move Brief to compare every roster, waiver, trade, schedule, and draft action against standing still.
+                    </div>
+                  </div>
+                </div>
+                <div class="brief-mets">
+                  <div class="bm s">
+                    <div class="k">FantasyIQ Score</div>
+                    <div class="v score-glow" id="command-fantasyiq-score">--</div>
+                    <div class="cap" id="command-score-detail">Decision quality and roster fit</div>
+                  </div>
+                  <div class="bm c">
+                    <div class="k">Confidence</div>
+                    <div class="v" id="command-confidence">Ready</div>
+                    <div class="cap" id="command-confidence-detail">Updates after the next brief</div>
+                  </div>
+                  <div class="bm r">
+                    <div class="k">Risk Limit</div>
+                    <div class="risk-line"><strong id="command-risk-warning">Pending</strong></div>
+                    <div class="cap"><span id="command-roster-weakness">Awaiting scan</span> · <span id="command-weakness-detail">roster context refines this</span></div>
+                  </div>
+                </div>
+                <div class="brief-foot">
+                  <div class="bf alt"><div class="k"><span class="dot"></span>Backup plan</div><p id="command-alternative-path">Pending</p></div>
+                  <div class="bf next"><div class="k"><span class="dot"></span>Why this move</div><div id="command-supporting-reasons">Waiting for league data.</div></div>
+                </div>
+                <button class="btn btn-green btn-block brief-cta" id="command-refresh" type="button">Run Main Move Brief</button>
+              </div>
+            </div>
+
+            <div class="rail">
+              <div class="card card-pad">
+                <div class="sec-title"><h2>Waiver targets</h2><span class="more nav-jump" data-jump="waivers">Run waivers →</span></div>
+                <div class="list-row"><div class="mini">JW</div><div class="info"><div class="nm">Jaylen Wright</div><div class="meta">RB · MIA · 38% ros</div></div><div class="act"><span class="tag add">Role opening</span></div></div>
+                <div class="list-row"><div class="mini">JM</div><div class="info"><div class="nm">Jordan Mason</div><div class="meta">RB · SF · 21% ros</div></div><div class="act"><span class="tag hold">Handcuff value</span></div></div>
+                <div class="list-row"><div class="mini">DD</div><div class="info"><div class="nm">Demario Douglas</div><div class="meta">WR · NE · 12% ros</div></div><div class="act"><span class="tag add">Watch list</span></div></div>
+              </div>
+              <div class="card card-pad">
+                <div class="sec-title"><h2>Trade &amp; roster alerts</h2><span class="more nav-jump" data-jump="trade">Open desk →</span></div>
+                <div class="list-row"><div class="mini">GG</div><div class="info"><div class="nm">Incoming 2-for-1 offer</div><div class="meta">From: Gridiron Goblins</div></div><div class="act"><span class="tag drop">Counter advised</span></div></div>
+                <div class="list-row"><div class="mini">CMC</div><div class="info"><div class="nm">CMC questionable</div><div class="meta">Game-time decision</div></div><div class="act"><span class="tag hold">Have backup</span></div></div>
+              </div>
+            </div>
+          </div>
 
           <div class="metric-grid">
             <div class="metric">

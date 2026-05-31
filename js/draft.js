@@ -1901,21 +1901,27 @@ function renderWaiversIQ(snapshot = activeRosterSnapshot({ preferPasted: true })
     `;
   }
 
-  if (waiverIqSupportingReasons) {
-    waiverIqSupportingReasons.innerHTML = claimReasons.map((reason) => `<p>${htmlEscape(reason)}</p>`).join("");
-  }
-  if (waiverIqRiskWarning) {
-    waiverIqRiskWarning.textContent =
-      Number(top.row.Risk || 0) >= 6
-        ? `${risk.label}. Keep the bid under ${faab} unless late news confirms the role.`
-        : `${risk.label}. Waiver value still depends on role/news before claims process.`;
-  }
-  if (waiverIqAlternativePath) {
-    waiverIqAlternativePath.textContent =
-      top.gain >= 3
-        ? `If ${top.row.Player} is claimed, pivot to ${profiles[1]?.row?.Player || "the next same-position value"} or hold priority.`
-        : "Hold priority and monitor news-driven roles.";
-  }
+  const waiverRisk =
+    Number(top.row.Risk || 0) >= 6
+      ? `${risk.label}. Keep the bid under ${faab} unless late news confirms the role.`
+      : `${risk.label}. Waiver value still depends on role/news before claims process.`;
+  const waiverAlternative =
+    top.gain >= 3
+      ? `If ${top.row.Player} is claimed, pivot to ${profiles[1]?.row?.Player || "the next same-position value"} or hold priority.`
+      : "Hold priority and monitor news-driven roles.";
+  renderRecommendationPanel(
+    {
+      reasonsEl: waiverIqSupportingReasons,
+      riskEl: waiverIqRiskWarning,
+      alternativeEl: waiverIqAlternativePath,
+    },
+    {
+      reasons: claimReasons,
+      maxReasons: 4,
+      risk: waiverRisk,
+      alternative: waiverAlternative,
+    },
+  );
   if (waiverIqWatchlist) {
     waiverIqWatchlist.innerHTML = profiles.length
       ? profiles.map(waiverClaimCard).join("")
@@ -2062,17 +2068,21 @@ function renderCommandDecision(data = null) {
       rec.dataFreshnessStatus ||
       (data?.syncedAt ? `Refreshed ${formatSyncTime(data.syncedAt)}` : "Awaiting the next Main Move Brief");
   }
-  if (commandSupportingReasons) {
-    commandSupportingReasons.innerHTML = reasons.length
-      ? reasons
-          .slice(0, 3)
-          .map((reason) => `<p>${htmlEscape(reason)}</p>`)
-          .join("")
-      : "<p>Run a Main Move Brief to turn roster, board, waiver, trade, and schedule context into an executive recommendation.</p>";
-  }
-  if (commandRiskWarning) commandRiskWarning.textContent = rec.riskWarning || "No elevated risk surfaced yet.";
-  if (commandAlternativePath)
-    commandAlternativePath.textContent = rec.alternativePath || "Run the next brief after ESPN refresh or board changes.";
+  renderRecommendationPanel(
+    {
+      reasonsEl: commandSupportingReasons,
+      riskEl: commandRiskWarning,
+      alternativeEl: commandAlternativePath,
+    },
+    {
+      reasons,
+      reasonsFallback:
+        "Run a Main Move Brief to turn roster, board, waiver, trade, and schedule context into an executive recommendation.",
+      risk: rec.riskWarning,
+      alternative: rec.alternativePath,
+      alternativeFallback: "Run the next brief after ESPN refresh or board changes.",
+    },
+  );
 }
 
 function compactIntelligenceRow(row) {
