@@ -34,6 +34,16 @@
   box-sizing: border-box;
 }
 
+.landing-footer .footer-disclaimer,
+.footer-disclaimer {
+  margin: 6px 0 0;
+  max-width: 720px;
+  color: var(--fiq-muted);
+  font-size: 0.74rem;
+  line-height: 1.5;
+  opacity: 0.78;
+}
+
 html {
   background: var(--fiq-ink);
   scroll-behavior: smooth;
