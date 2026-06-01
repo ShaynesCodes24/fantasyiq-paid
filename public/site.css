@@ -11,6 +11,22 @@
   --leather: #8a4f24;
 }
 
+/* self-hosted type system (shared with the command-center dashboard) */
+@font-face{font-family:'Bricolage Grotesque';font-style:normal;font-weight:600;font-display:swap;src:url('/assets/fonts/bricolage-600.woff2') format('woff2');}
+@font-face{font-family:'Bricolage Grotesque';font-style:normal;font-weight:700;font-display:swap;src:url('/assets/fonts/bricolage-700.woff2') format('woff2');}
+@font-face{font-family:'Bricolage Grotesque';font-style:normal;font-weight:800;font-display:swap;src:url('/assets/fonts/bricolage-800.woff2') format('woff2');}
+@font-face{font-family:'Geist';font-style:normal;font-weight:400;font-display:swap;src:url('/assets/fonts/geist-400.woff2') format('woff2');}
+@font-face{font-family:'Geist';font-style:normal;font-weight:500;font-display:swap;src:url('/assets/fonts/geist-500.woff2') format('woff2');}
+@font-face{font-family:'Geist';font-style:normal;font-weight:600;font-display:swap;src:url('/assets/fonts/geist-600.woff2') format('woff2');}
+@font-face{font-family:'Geist';font-style:normal;font-weight:700;font-display:swap;src:url('/assets/fonts/geist-700.woff2') format('woff2');}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;src:url('/assets/fonts/jbmono-500.woff2') format('woff2');}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:600;font-display:swap;src:url('/assets/fonts/jbmono-600.woff2') format('woff2');}
+:root{
+  --display:'Bricolage Grotesque', system-ui, sans-serif;
+  --body-font:'Geist', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mono:'JetBrains Mono', ui-monospace, monospace;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -27,7 +43,8 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--body-font);
+  -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
@@ -124,9 +141,10 @@ footer a {
 .eyebrow {
   margin: 0 0 8px;
   color: var(--gold);
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 
@@ -135,6 +153,13 @@ h2,
 h3,
 p {
   margin-top: 0;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--display);
+  letter-spacing: -0.02em;
 }
 
 .field-hint,

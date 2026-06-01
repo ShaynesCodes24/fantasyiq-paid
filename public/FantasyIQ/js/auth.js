@@ -410,7 +410,8 @@ function applyAppConfig() {
     const message = demoBanner.querySelector("span");
     if (label) label.textContent = appConfig.demoLabel || "Demo Mode";
     if (message) {
-      message.textContent = appConfig.demoMessage || "Sample league only. No customer account is loaded.";
+      message.textContent =
+        appConfig.demoMessage || "Preview league with notes, scout, trade, schedule, and draft-prep examples.";
     }
   }
   renderLeagueProfile();

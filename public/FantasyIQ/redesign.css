@@ -123,18 +123,60 @@ h1, h2, h3,
   background:rgba(231,221,200,.08) !important; border-color:var(--rd-line-3) !important;
 }
 
-/* ---------- demo banner ---------- */
+/* ---------- demo / status banner ---------- */
 .demo-banner{
-  background:var(--rd-gold-dim) !important; border:1px solid var(--rd-line-gold) !important;
-  border-radius:10px !important; color:var(--rd-text-2) !important;
+  display:flex !important; align-items:center; gap:14px; flex-wrap:wrap;
+  padding:11px 16px !important;
+  background:linear-gradient(180deg, rgba(231,185,90,.10), rgba(231,185,90,.05)) !important;
+  border:1px solid var(--rd-line-gold) !important;
+  border-radius:11px !important; color:var(--rd-text-2) !important;
 }
 .demo-banner strong{
-  color:var(--rd-gold) !important; font-family:var(--rd-mono); font-size:11px;
-  letter-spacing:.1em; text-transform:uppercase;
+  display:inline-flex; align-items:center; gap:7px; flex-shrink:0;
+  color:var(--rd-gold) !important; font-family:var(--rd-mono); font-size:10.5px;
+  letter-spacing:.14em; text-transform:uppercase; font-weight:700;
+  padding:5px 10px; border-radius:7px; background:var(--rd-gold-dim);
+  border:1px solid var(--rd-line-gold);
 }
-.demo-banner a{
-  color:var(--rd-btn-text) !important; font-weight:700;
-  display:inline-flex; align-items:center; justify-content:center; border-radius:9px;
+.demo-banner strong::before{
+  content:""; width:6px; height:6px; border-radius:50%;
+  background:var(--rd-gold); box-shadow:0 0 0 3px var(--rd-gold-glow);
+}
+.demo-banner > span{ font-size:13px; color:var(--rd-text-2); min-width:0; }
+/* "Works with ESPN" compatibility lockup */
+.demo-espn-badge{
+  display:inline-flex; align-items:center; gap:8px; flex-shrink:0;
+  padding:6px 11px; border-radius:8px;
+  background:rgba(231,221,200,.04); border:1px solid var(--rd-line-2);
+}
+.demo-espn-badge em{
+  font-style:normal; font-family:var(--rd-mono); font-size:9.5px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--rd-text-3);
+}
+.demo-espn-badge .espn-mark{
+  display:inline-block; width:50px; height:13px; background:var(--rd-text);
+  -webkit-mask:url('/assets/espn-green-wordmark.svg') no-repeat center/contain;
+  mask:url('/assets/espn-green-wordmark.svg') no-repeat center/contain;
+}
+.demo-banner-actions{ display:flex; align-items:center; gap:10px; margin-left:auto; flex-shrink:0; }
+.demo-banner .demo-precheck{
+  color:var(--rd-btn-text) !important; font-weight:700; font-size:13px;
+  padding:8px 15px; border-radius:9px;
+  background:linear-gradient(180deg, var(--rd-gold-2), var(--rd-gold)) !important;
+  box-shadow:0 0 0 1px rgba(231,185,90,.5), 0 10px 26px -14px var(--rd-gold-glow);
+  display:inline-flex; align-items:center; justify-content:center;
+  transition:transform .3s var(--rd-ease);
+}
+.demo-banner .demo-precheck:hover{ transform:translateY(-1px); }
+.demo-banner .demo-signin{
+  color:var(--rd-text-2) !important; font-weight:600; font-size:13px;
+  text-decoration:none; padding:8px 4px; transition:color .18s;
+  background:none !important; border:none !important; box-shadow:none !important;
+}
+.demo-banner .demo-signin:hover{ color:var(--rd-text) !important; }
+@media (max-width:720px){
+  .demo-banner-actions{ margin-left:0; width:100%; }
+  .demo-espn-badge{ order:3; }
 }
 
 /* ---------- sidebar nav ---------- */
@@ -333,6 +375,199 @@ h1, h2, h3,
 .my-team-lineup-row strong{ font-size:14px; font-weight:600; color:var(--rd-text); }
 .my-team-lineup-row small{ font-family:var(--rd-mono); font-size:11px; color:var(--rd-text-3); }
 @media (max-width:900px){ .my-team-hero{ grid-template-columns:1fr; } .my-team-position-grid{ grid-template-columns:repeat(3,1fr); } .my-team-layout{ grid-template-columns:1fr; } }
+
+/* ============================================================
+   Phase 2 — global section polish
+   Reskins the legacy half-migrated surfaces (form controls,
+   tables, sub-cards) across every dashboard section so the
+   un-rebuilt panels match the command-center system.
+   ============================================================ */
+
+/* ---------- form controls: kill the cream "paper" inputs ---------- */
+input, select, textarea,
+.paste-box,
+.board-tools input, .board-tools select, .tier-board-tools input,
+.draft-paste-sync textarea,
+.trade-card textarea, .trade-card-roster textarea, .trade-source-textarea,
+.trade-package-builder input, .trade-package-builder textarea,
+.external-grader-input textarea, .external-grader-settings select,
+.sim-tools select, .sim-tools input,
+.live-switches select, .live-select, .live-select select,
+[contenteditable="true"]{
+  background:rgba(231,221,200,.045) !important;
+  border:1px solid var(--rd-line-2) !important;
+  color:var(--rd-text) !important;
+  box-shadow:none !important;
+  border-radius:var(--rd-radius-sm) !important;
+  font-family:var(--rd-body);
+}
+input::placeholder, textarea::placeholder{ color:var(--rd-text-4) !important; opacity:1; }
+input:focus, select:focus, textarea:focus, [contenteditable="true"]:focus{
+  border-color:var(--rd-gold) !important;
+  box-shadow:0 0 0 3px var(--rd-gold-dim) !important;
+  outline:none !important;
+}
+/* field labels above inputs */
+.trade-package-builder label > span,
+.trade-card-head span, .sim-tools label, .live-switches label{
+  font-family:var(--rd-mono); font-size:10px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--rd-text-3);
+}
+
+/* ---------- panel headers: consistent eyebrow + display title ---------- */
+.panel-head h2{ font-family:var(--rd-display); font-weight:700; letter-spacing:-.02em; color:var(--rd-text); }
+.panel-head .eyebrow, .panel > .eyebrow{ color:var(--rd-gold) !important; }
+
+/* ---------- tab + toggle pills: align to chip aesthetic ---------- */
+.tab, .position-toggles button,
+.trade-mode-toggle, .trade-package-options button,
+.bt{
+  font-family:var(--rd-mono); letter-spacing:.04em; text-transform:uppercase;
+  transition:background .18s, color .18s, border-color .18s;
+}
+.trade-mode-toggle, .trade-package-options button{
+  background:rgba(231,221,200,.04) !important; color:var(--rd-text-2) !important;
+  border:1px solid var(--rd-line-2) !important; border-radius:9px !important; font-size:11.5px; font-weight:600;
+}
+.trade-mode-toggle:hover, .trade-package-options button:hover{
+  background:rgba(231,221,200,.08) !important; color:var(--rd-text) !important;
+}
+.trade-mode-toggle.active, .trade-package-options button.active{
+  background:var(--rd-gold-dim) !important; color:var(--rd-gold) !important; border-color:var(--rd-line-gold) !important;
+}
+.tab.active, .position-toggles button.active{
+  background:var(--rd-gold-dim) !important; color:var(--rd-gold) !important; border-color:var(--rd-line-gold) !important;
+}
+
+/* ---------- tables (Big Board etc.) ---------- */
+#board-table th{
+  background:linear-gradient(180deg, var(--rd-ink-700), var(--rd-ink-850)) !important;
+  color:var(--rd-gold) !important; font-family:var(--rd-mono); font-size:10.5px;
+  letter-spacing:.08em; text-transform:uppercase; border-color:var(--rd-line) !important;
+}
+#board-table td{ border-color:var(--rd-line) !important; color:var(--rd-text-2); }
+#board-table tbody tr:hover:not(.board-tier-divider-row){ background:rgba(231,185,90,.07) !important; }
+
+/* ---------- generic content sub-cards used across sections ---------- */
+.trade-card, .trade-verdict, .trade-finder-card,
+.sim-card, .sim-panel, .grader,
+.live-card, .live-panel, .live-hero,
+.draft-card-panel, .draft-room, .draft-paste-sync,
+.board-tools, .analysis-panel, .web-board{
+  background:linear-gradient(180deg, var(--rd-ink-850), var(--rd-ink-900)) !important;
+  border:1px solid var(--rd-line) !important; border-radius:var(--rd-radius) !important;
+}
+.trade-verdict, .trade-card-roster.trade-card{ border-color:var(--rd-line-gold) !important; }
+.trade-verdict-label{
+  font-family:var(--rd-mono); color:var(--rd-gold); letter-spacing:.08em;
+  text-transform:uppercase; font-size:11px;
+}
+
+/* ---------- Draft Prep IQ: retire leftover cream/beige panels ---------- */
+.draft-prep-panel, .draft-watchlist-panel{
+  background:linear-gradient(180deg, var(--rd-ink-850), var(--rd-ink-900)) !important;
+  border:1px solid var(--rd-line) !important; border-radius:var(--rd-radius) !important;
+  box-shadow:none !important;
+}
+.draft-prep-panel h3, .draft-watchlist-panel h3{ color:var(--rd-text) !important; }
+.draft-prep-panel p, .draft-prep-panel li,
+.draft-watchlist-list small, .draft-watchlist-list p{ color:var(--rd-text-2) !important; }
+.draft-prep-panel .eyebrow, .draft-watchlist-panel .eyebrow{ color:var(--rd-gold) !important; }
+.draft-prep-panel ul li::marker{ color:var(--rd-gold); }
+
+/* round-map "value pockets" rows: beige + white text → dark + readable */
+.draft-pocket-list article{
+  background:rgba(231,221,200,.04) !important;
+  border-left:3px solid var(--rd-gold) !important;
+  border-radius:var(--rd-radius-sm) !important;
+}
+.draft-pocket-list strong{ color:var(--rd-text) !important; }
+.draft-pocket-list small{ color:var(--rd-text-3) !important; }
+.draft-watchlist-list span{ color:var(--rd-gold) !important; }
+
+/* readiness/status pills + tier-cliff chips → dark chip aesthetic */
+.draft-prep-meta span, .draft-chip-list span{
+  background:rgba(231,221,200,.05) !important;
+  border:1px solid var(--rd-line-2) !important;
+  color:var(--rd-text-2) !important;
+  border-radius:7px !important;
+}
+
+/* ============================================================
+   Phase 2b — contrast cleanup
+   The lux dark theme left several light-theme tokens at their
+   original (light-surface) values. Components still referencing
+   them render dark-on-dark or light-on-light. Fix at the source.
+   ============================================================ */
+
+/* --muted (#465247) and --ink (#111713) are used ONLY as text in this
+   app — never as a bg/border/fill — so flipping them to dark-surface
+   values is safe and fixes dim/invisible copy app-wide in one shot. */
+:root{ --muted:#99a399; --ink:#F6F2E9; }
+
+/* --accent (#123f34) DOES double as a background, so we can't flip it —
+   fix its specific TEXT uses instead. */
+.trade-card-head strong{ color:var(--rd-text) !important; }
+.waiver-iq-hero article strong,
+.decision-support-grid article > strong{ color:var(--rd-text) !important; }
+.player-focus-button{ color:var(--rd-text) !important; }
+.recommendation-block h4, .pick-list h4, .intel-list h4, .intel-card h4,
+.live-panel h4, .sim-panel h4{ color:var(--rd-text) !important; }
+.pick-card em{ color:var(--rd-volt) !important; font-style:normal; }
+/* class-less buttons fall back to base "var(--surface) bg + var(--ink) text";
+   after the --ink flip that became light-on-light. Give them the dark
+   secondary-button treatment (classed buttons keep their own styles). */
+button:not([class]){
+  background:rgba(231,221,200,.05) !important; color:var(--rd-text) !important;
+  border:1px solid var(--rd-line-2) !important; border-radius:9px !important;
+}
+button:not([class]):hover{ background:rgba(231,221,200,.09) !important; }
+/* mock-sim recommendation cards: light-green tint → dark + green accent */
+.pick-card{
+  background:linear-gradient(180deg, var(--rd-ink-850), var(--rd-ink-900)) !important;
+  border:1px solid var(--rd-line) !important; border-left:3px solid var(--rd-volt) !important;
+  border-radius:var(--rd-radius-sm) !important;
+}
+.pick-card.reach, .pick-card.watch{ border-left-color:var(--rd-amber) !important; }
+.pick-card.danger, .pick-card.avoid{ border-left-color:var(--rd-red) !important; }
+
+/* leftover cream containers (use --control-bg/--panel-bg/--surface) */
+.draft-room-cheatcode, .compact-draft-context,
+.external-grader-settings, .external-grader-input{
+  background:linear-gradient(180deg, var(--rd-ink-850), var(--rd-ink-900)) !important;
+  border:1px solid var(--rd-line) !important; border-radius:var(--rd-radius) !important;
+}
+.draft-room-advanced summary{
+  background:rgba(231,221,200,.04) !important; border-color:var(--rd-line-2) !important;
+  color:var(--rd-text-2) !important;
+}
+
+/* Trade verdict populated state (JS-renders many cream/tinted cards
+   only after a trade is computed). Darken every sub-card and convey
+   good/watch/danger via a colored left border instead of a light tint. */
+#trade-output article,
+#trade-output .trade-fairness,
+#trade-output .trade-lineup-card,
+#trade-output .trade-counteroffers{
+  background:linear-gradient(180deg, var(--rd-ink-850), var(--rd-ink-900)) !important;
+  border:1px solid var(--rd-line) !important; border-radius:var(--rd-radius-sm) !important;
+}
+#trade-output article.good, #trade-output .trade-fairness.good,
+#trade-output article.watch, #trade-output .trade-fairness.watch,
+#trade-output article.danger, #trade-output .trade-fairness.danger{ border-left-width:3px !important; }
+#trade-output .good{ border-left-color:var(--rd-volt) !important; }
+#trade-output .watch{ border-left-color:var(--rd-amber) !important; }
+#trade-output .danger{ border-left-color:var(--rd-red) !important; }
+/* verdict text: default light, status strongs use bright tokens */
+.trade-verdict strong{ color:var(--rd-text) !important; }
+.trade-verdict strong.good{ color:var(--rd-volt) !important; }
+.trade-verdict strong.watch{ color:var(--rd-amber) !important; }
+.trade-verdict strong.danger{ color:var(--rd-red) !important; }
+.trade-verdict small{ color:var(--rd-text-3) !important; }
+.trade-quality-track b{ color:var(--rd-text-3) !important; }
+/* label spans inside verdict cards use --accent (dark green) → invisible */
+#trade-output span{ color:var(--rd-text-3) !important; }
+#trade-output .trade-verdict-label{ color:var(--rd-gold) !important; }
 
 @media (prefers-reduced-motion: reduce){
   *, *::before, *::after{ animation-duration:.001ms !important; transition-duration:.01ms !important; }
