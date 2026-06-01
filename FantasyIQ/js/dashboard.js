@@ -2007,7 +2007,91 @@ function filteredRows() {
   return rows.sort(boardAdpCompare);
 }
 
+// ---- Command snapshot (season-aware stat row) -------------------------------
+// In-season this shows real ESPN record / rank / matchup / open decisions.
+// During the offseason (no games yet) it shows real draft-prep stats instead.
+// All values are derived from real league settings + the live board — never faked.
+function commandSnapshotPhase() {
+  // In-season data (standings/matchup) is exposed via the server customer context
+  // once games are played. Until then we render the offseason model.
+  const standings = boardData?.customer?.standings || liveDraft?.customer?.standings;
+  return standings && standings.gamesPlayed > 0 ? "in-season" : "offseason";
+}
+
+function commandSnapshotCells() {
+  const settings = boardData?.customer?.leagueSettings || liveDraft?.customer?.leagueSettings || appConfig.leagueSettings || {};
+  const teamCount = Number(settings.teamCount || 0);
+  const scoringLabel = settings.scoringLabel || (settings.scoringType ? String(settings.scoringType).toUpperCase() : "");
+  const draftRounds = Number(settings.draftRounds || 0);
+  const playoffTeams = Number(settings.playoffTeams || 0);
+  const slots = settings.lineupSlots || {};
+  const starters = ["QB", "RB", "WR", "TE", "FLEX", "SUPERFLEX", "DST", "K"].reduce((sum, k) => sum + Number(slots[k] || 0), 0);
+  const bench = Number(slots.BE || 0);
+  const ir = Number(slots.IR || 0);
+  const boardRows = boardData?.boards?.combined?.rows?.length || 0;
+  const updated =
+    boardData?.updated ||
+    (boardData?.syncedAt && typeof formatSyncTime === "function" ? `updated ${formatSyncTime(boardData.syncedAt)}` : "");
+
+  if (commandSnapshotPhase() === "in-season") {
+    const s = boardData?.customer?.standings || liveDraft?.customer?.standings || {};
+    const m = s.matchup || {};
+    const decisions = Number(s.openDecisions ?? 0);
+    return [
+      { k: "Record", v: s.record || "—", d: s.pointsFor ? `${s.pointsFor} PF` : "" },
+      { k: "League Rank", v: s.rank ? `#${s.rank}` : "—", d: teamCount ? `of ${teamCount} teams` : "" },
+      {
+        k: "This Week",
+        v: m.myProjected != null ? `${m.myProjected}` : "—",
+        d: m.opponentProjected != null ? `proj · ${m.opponentName || "Opp"} ${m.opponentProjected}` : "matchup projection",
+      },
+      { k: "Open Decisions", v: String(decisions), d: decisions ? "actions to review" : "you're set" },
+    ];
+  }
+
+  // Offseason model — real draft-prep stats.
+  return [
+    {
+      k: "League",
+      v: teamCount ? `${teamCount}-team` : "—",
+      d: [scoringLabel, draftRounds ? `${draftRounds}-round draft` : ""].filter(Boolean).join(" · ") || "ESPN league",
+    },
+    {
+      k: "Big Board",
+      v: boardRows ? String(boardRows) : "—",
+      d: boardRows ? ["players ranked", updated].filter(Boolean).join(" · ") : "Loading board…",
+    },
+    {
+      k: "Playoff Field",
+      v: playoffTeams && teamCount ? `${playoffTeams} of ${teamCount}` : "—",
+      d: "teams make the playoffs",
+    },
+    {
+      k: "Roster",
+      v: starters ? `${starters} starters` : "—",
+      d: [bench ? `${bench} bench` : "", ir ? `${ir} IR` : ""].filter(Boolean).join(" · ") || "lineup shape",
+    },
+  ];
+}
+
+function renderCommandSnapshot() {
+  const root = document.getElementById("command-snapshot");
+  if (!root) return;
+  const cells = commandSnapshotCells();
+  root.dataset.phase = commandSnapshotPhase();
+  cells.forEach((cell, i) => {
+    const n = i + 1;
+    const kEl = document.getElementById(`cc-snap-${n}-k`);
+    const vEl = document.getElementById(`cc-snap-${n}-v`);
+    const dEl = document.getElementById(`cc-snap-${n}-d`);
+    if (kEl) kEl.textContent = cell.k;
+    if (vEl) vEl.textContent = cell.v;
+    if (dEl) dEl.textContent = cell.d;
+  });
+}
+
 function renderBoard() {
+  renderCommandSnapshot();
   if (!boardData || !boardTable) return;
   syncUdkTabVisibility();
   if (boardCount) {

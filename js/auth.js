@@ -416,6 +416,7 @@ function applyAppConfig() {
   }
   renderLeagueProfile();
   updateBrandHomeLink();
+  if (typeof renderCommandSnapshot === "function") renderCommandSnapshot();
 }
 
 function applyEspnLeagueBranding() {

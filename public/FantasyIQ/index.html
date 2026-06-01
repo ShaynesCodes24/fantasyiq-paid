@@ -191,12 +191,13 @@
             <button class="nav-jump" type="button" data-jump="trade">Trade IQ</button>
           </div>
 
-          <!-- Snapshot stat row (sample figures shown in demo mode; wire to live league data) -->
-          <div class="grid g-4 cc-statrow">
-            <div class="card stat"><div class="k">Record</div><div class="v">7&ndash;3</div><div class="d">W3 · 1,284.6 PF</div></div>
-            <div class="card stat"><div class="k">League rank</div><div class="v">#2</div><div class="d">of 12 teams</div></div>
-            <div class="card stat"><div class="k">Playoff odds</div><div class="v"><span class="up">82%</span></div><div class="d">+6% this week</div></div>
-            <div class="card stat"><div class="k">Open decisions</div><div class="v">3</div><div class="d">2 lineup · 1 waiver</div></div>
+          <!-- Command snapshot: real, season-aware league stats rendered by dashboard.js
+               (in-season: record / rank / matchup / open decisions; offseason: draft-prep stats) -->
+          <div class="grid g-4 cc-statrow" id="command-snapshot" data-phase="offseason">
+            <div class="card stat"><div class="k" id="cc-snap-1-k">League</div><div class="v" id="cc-snap-1-v">&mdash;</div><div class="d" id="cc-snap-1-d">Loading league&hellip;</div></div>
+            <div class="card stat"><div class="k" id="cc-snap-2-k">Big Board</div><div class="v" id="cc-snap-2-v">&mdash;</div><div class="d" id="cc-snap-2-d"></div></div>
+            <div class="card stat"><div class="k" id="cc-snap-3-k">Playoff Field</div><div class="v" id="cc-snap-3-v">&mdash;</div><div class="d" id="cc-snap-3-d"></div></div>
+            <div class="card stat"><div class="k" id="cc-snap-4-k">Roster</div><div class="v" id="cc-snap-4-v">&mdash;</div><div class="d" id="cc-snap-4-d"></div></div>
           </div>
 
           <div class="cc-grid">
